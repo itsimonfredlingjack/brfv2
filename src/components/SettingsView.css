@@ -219,3 +219,25 @@
   border-color: #818cf8;
   box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.2);
 }
+
+/* Save bar */
+.settings-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.settings-save-area {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.settings-save-status {
+  font-size: 13px;
+}
+
+.settings-save-status.ok { color: #4ade80; }
+.settings-save-status.err { color: #f87171; }

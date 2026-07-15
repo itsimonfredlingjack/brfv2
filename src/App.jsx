@@ -27,6 +27,8 @@ function App() {
   const [chatBusy, setChatBusy] = useState(false);
   const fileInputRef = useRef(null);
 
+  const [settingsSaveState, setSettingsSaveState] = useState(null); // null | 'saving' | 'saved' | 'error'
+
   const refreshDocuments = async () => {
     try {
       setDocuments(await api.listDocuments());
@@ -37,7 +39,35 @@ function App() {
 
   useEffect(() => {
     refreshDocuments();
+    // Hydrate settings from the backend (backend keys win; UI-only keys keep defaults)
+    api.getSettings()
+      .then((s) => setSettingsConfig((prev) => ({ ...prev, ...s })))
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  const BACKEND_SETTINGS_KEYS = [
+    'chunkStrategy', 'chunkSize', 'chunkOverlap',
+    'searchWeighting', 'candidateCount', 'topK', 'minRelevance',
+    'aiModel', 'systemPrompt', 'maxResponseLength', 'requireSources', 'insufficientDataBehavior',
+  ];
+
+  const saveSettings = async () => {
+    setSettingsSaveState('saving');
+    try {
+      const payload = Object.fromEntries(
+        BACKEND_SETTINGS_KEYS.map((k) => [k, settingsConfig[k]]).filter(([, v]) => v !== undefined)
+      );
+      const saved = await api.putSettings(payload);
+      setSettingsConfig((prev) => ({ ...prev, ...saved }));
+      await refreshDocuments(); // chunk-knob changes re-chunk documents
+      setSettingsSaveState('saved');
+      setTimeout(() => setSettingsSaveState(null), 2500);
+    } catch (e) {
+      console.error('Kunde inte spara inställningar', e);
+      setSettingsSaveState('error');
+    }
+  };
 
   const openDocViewer = (doc, opts = {}) =>
     setViewer({
@@ -51,7 +81,7 @@ function App() {
   const [activeSettingsTab, setActiveSettingsTab] = useState('dokument');
   const [settingsConfig, setSettingsConfig] = useState({
     // Dokument
-    allowedFormats: ['pdf', 'docx', 'jpg'],
+    allowedFormats: 'pdf',
     maxFileSize: 50,
     ocrMode: 'auto',
     languageDetection: true,
@@ -1093,11 +1123,13 @@ function App() {
             {currentTab === 'review' && renderReview()}
             {currentTab === 'deadlines' && renderDeadlines()}
             {currentTab === 'settings' && (
-              <SettingsView 
-                settingsConfig={settingsConfig} 
+              <SettingsView
+                settingsConfig={settingsConfig}
                 setSettingsConfig={setSettingsConfig}
                 activeSettingsTab={activeSettingsTab}
                 setActiveSettingsTab={setActiveSettingsTab}
+                onSave={saveSettings}
+                saveState={settingsSaveState}
               />
             )}
             {currentTab === 'chat' && (

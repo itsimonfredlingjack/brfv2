@@ -1,7 +1,7 @@
 import React from 'react';
 import './SettingsView.css';
 
-const SettingsView = ({ settingsConfig, setSettingsConfig, activeSettingsTab, setActiveSettingsTab }) => {
+const SettingsView = ({ settingsConfig, setSettingsConfig, activeSettingsTab, setActiveSettingsTab, onSave, saveState }) => {
   const tabs = [
     { id: 'dokument', label: 'Dokument' },
     { id: 'chunking', label: 'Chunking' },
@@ -78,8 +78,17 @@ const SettingsView = ({ settingsConfig, setSettingsConfig, activeSettingsTab, se
   return (
     <div className="settings-view-container">
       <div className="settings-header">
-        <h1>Systeminställningar</h1>
-        <p>Här kan du konfigurera tekniska parametrar för dokumenthantering och AI-modellen.</p>
+        <div>
+          <h1>Systeminställningar</h1>
+          <p>Här kan du konfigurera tekniska parametrar för dokumenthantering och AI-modellen.</p>
+        </div>
+        <div className="settings-save-area">
+          {saveState === 'saved' && <span className="settings-save-status ok">Sparat — index uppdaterat</span>}
+          {saveState === 'error' && <span className="settings-save-status err">Kunde inte spara</span>}
+          <button className="primary-btn" onClick={onSave} disabled={saveState === 'saving'}>
+            {saveState === 'saving' ? 'Sparar…' : 'Spara inställningar'}
+          </button>
+        </div>
       </div>
       
       <div className="settings-layout">
@@ -117,12 +126,13 @@ const SettingsView = ({ settingsConfig, setSettingsConfig, activeSettingsTab, se
           {activeSettingsTab === 'chunking' && (
             <div className="settings-section">
               <h2>Chunking (Textsegmentering)</h2>
-              {renderSelect('Strategi', 'Vilken metod som används för att dela upp texten.', 'chunkStrategy', [
-                { value: 'recursive', label: 'Rekursiv (Semantic)' },
-                { value: 'fixed', label: 'Fast längd' }
+              {renderSelect('Strategi', 'Vilken metod som används för att dela upp texten. Ändring chunkar om alla dokument.', 'chunkStrategy', [
+                { value: 'recursive', label: 'Rekursiv (stycke → mening)' },
+                { value: 'sentence', label: 'Meningsbaserad' },
+                { value: 'fixed', label: 'Fast längd (glidande fönster)' }
               ])}
-              {renderSlider('Chunk-storlek', 'Riktvärde för hur många tokens varje textsegment ska innehålla.', 'chunkSize', 200, 2000, 50, ' tokens')}
-              {renderSlider('Överlappning mellan segment', 'Hur mycket text som återanvänds mellan angränsande segment. Högre värde minskar risken att information delas mitt i ett sammanhang, men ökar indexstorleken.', 'chunkOverlap', 0, 500, 10, ' tokens')}
+              {renderSlider('Chunk-storlek', 'Riktvärde för hur många ord varje textsegment ska innehålla.', 'chunkSize', 40, 1000, 20, ' ord')}
+              {renderSlider('Överlappning mellan segment', 'Hur mycket text som återanvänds mellan angränsande segment. Högre värde minskar risken att information delas mitt i ett sammanhang, men ökar indexstorleken.', 'chunkOverlap', 0, 200, 10, ' ord')}
               {renderToggle('Rubrikhantering', 'Försök hålla ihop rubriker med deras underliggande brödtext istället för att bryta mitt i.', 'headerHandling')}
               {renderSelect('Tabellhantering', 'Hur tabeller ska formateras före vektorisering.', 'tableHandling', [
                 { value: 'markdown', label: 'Markdown (Bäst för LLMs)' },
@@ -135,10 +145,10 @@ const SettingsView = ({ settingsConfig, setSettingsConfig, activeSettingsTab, se
           {activeSettingsTab === 'sokning' && (
             <div className="settings-section">
               <h2>Sökning & Reranking</h2>
-              {renderSlider('Dense/BM25-viktning (Hybrid)', 'Balansen mellan semantisk sökning (0%) och sökning på exakta nyckelord (100%).', 'searchWeighting', 0, 100, 5, '% (BM25)')}
-              {renderSlider('Antal kandidater (Retrieve)', 'Hur många dokumentsegment som ska hämtas initialt från vektordatabasen innan reranking.', 'candidateCount', 10, 200, 10)}
-              {renderSlider('Top-K efter Reranking', 'Antalet segment som ska skickas in till AI-modellen som faktagrund.', 'topK', 3, 20, 1)}
-              {renderSlider('Minimikrav på relevans', 'Lägsta relevanspoäng som krävs för att ett segment ska anses vara användbart (0.0 - 1.0).', 'minRelevance', 0.1, 1.0, 0.05)}
+              {renderSlider('Semantisk/BM25-viktning (hybrid)', 'Balansen mellan exakta nyckelord (0 = ren BM25) och semantisk sökning (100 = ren embedding).', 'searchWeighting', 0, 100, 5, '% semantik')}
+              {renderSlider('Antal kandidater (retrieve)', 'Hur många segment varje delsökning hämtar innan poängen vägs samman.', 'candidateCount', 10, 200, 10)}
+              {renderSlider('Top-K till modellen', 'Antalet segment som skickas till AI-modellen som faktagrund.', 'topK', 1, 20, 1)}
+              {renderSlider('Minimikrav på relevans', 'Konfidensgräns: under denna nivå vägrar systemet hellre än gissar (0 = av).', 'minRelevance', 0, 1.0, 0.01)}
             </div>
           )}
 
@@ -146,16 +156,15 @@ const SettingsView = ({ settingsConfig, setSettingsConfig, activeSettingsTab, se
             <div className="settings-section">
               <h2>AI-svar & Modell</h2>
               {renderSelect('Modell', 'Vilken LLM som ska användas för att generera slutsvar.', 'aiModel', [
-                { value: 'gpt-4o', label: 'GPT-4o' },
-                { value: 'claude-3-5', label: 'Claude 3.5 Sonnet' },
-                { value: 'gemini-1-5', label: 'Gemini 1.5 Pro' }
+                { value: 'claude-opus-4-8', label: 'Claude Opus 4.8' },
+                { value: 'claude-sonnet-5', label: 'Claude Sonnet 5' },
+                { value: 'claude-haiku-4-5', label: 'Claude Haiku 4.5' }
               ])}
-              {renderSlider('Temperatur', 'Hur "kreativ" eller deterministisk modellen får vara (0.0 = strikt, 1.0 = kreativ).', 'temperature', 0.0, 1.0, 0.1)}
               {renderSlider('Maximal svarslängd', 'Högsta antal tokens modellen tillåts generera i ett enskilt svar.', 'maxResponseLength', 200, 4000, 100, ' tokens')}
-              {renderToggle('Krav på källor', 'Svaret MÅSTE innehålla referenser till de hämtade dokumenten.', 'requireSources')}
-              {renderSelect('Beteende vid otillräckligt underlag', 'Vad modellen ska göra om den inte hittar svaret i dokumenten.', 'insufficientDataBehavior', [
-                { value: 'refuse', label: 'Neka artigt (Hallucinationsskydd)' },
-                { value: 'guess', label: 'Försök svara ändå utifrån allmän kunskap' }
+              {renderToggle('Krav på källor', 'Svar utan verifierbara källhänvisningar visas inte alls.', 'requireSources')}
+              {renderSelect('Beteende vid otillräckligt underlag', 'Vad systemet ska göra om dokumenten inte räcker för att svara.', 'insufficientDataBehavior', [
+                { value: 'refuse', label: 'Avstå från att svara (hallucinationsskydd)' },
+                { value: 'warn', label: 'Svara men flagga svaret som osäkert' }
               ])}
             </div>
           )}
