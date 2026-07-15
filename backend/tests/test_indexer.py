@@ -34,13 +34,15 @@ class TestSearch:
         assert hits[0].chunk_id == CORPUS[1].id
 
     def test_weighting_knob_changes_ranking(self):
-        # A: exact token match ("snöröjning"), otherwise unrelated words.
-        # B: no exact token, but three near-morphological variants → n-gram similar.
-        a = mk_chunk(10, "snöröjning avser gatan utanför entrén")
-        b = mk_chunk(11, "snöröjningen snöröjningens snöröjningsarbete på gården")
+        # A: exact token match ("protokoll") → BM25 favors A.
+        # B: suffix-side compound variants that prefix expansion does NOT
+        #    match ("mötesprotokollen" etc.), but whose char n-grams overlap
+        #    heavily → the dense signal favors B.
+        a = mk_chunk(10, "protokoll undertecknades av ordföranden efteråt")
+        b = mk_chunk(11, "mötesprotokollen kvartalsprotokollen extraprotokollen samlas")
         idx = build_index([a, b])
-        bm25_first = idx.search("snöröjning", weight=0.0, candidates=10, top_k=2, min_confidence=0.0)
-        dense_first = idx.search("snöröjning", weight=1.0, candidates=10, top_k=2, min_confidence=0.0)
+        bm25_first = idx.search("protokoll", weight=0.0, candidates=10, top_k=2, min_confidence=0.0)
+        dense_first = idx.search("protokoll", weight=1.0, candidates=10, top_k=2, min_confidence=0.0)
         assert bm25_first[0].chunk_id == a.id
         assert dense_first[0].chunk_id != bm25_first[0].chunk_id
 
@@ -76,3 +78,28 @@ class TestSearch:
         assert hit.document_name == "Testdok"
         assert hit.page == 1
         assert hit.text == CORPUS[1].text
+
+
+class TestCompoundExpansion:
+    """Swedish compounds: query terms must match corpus terms via prefix."""
+
+    def test_compound_query_finds_base_word_chunk(self):
+        idx = build_index()
+        hits = idx.search("När startar snöröjningsjouren?", weight=0.0, candidates=10, top_k=1, min_confidence=0.0)
+        assert hits[0].chunk_id == CORPUS[0].id  # snöröjning chunk
+        assert hits[0].confidence > 0.2
+
+    def test_inflected_form_matches(self):
+        idx = build_index()
+        hits = idx.search("underhållsplanens omfattning", weight=0.0, candidates=10, top_k=1, min_confidence=0.0)
+        assert hits[0].chunk_id == CORPUS[4].id  # "Underhållsplanen omfattar ..."
+
+    def test_short_tokens_do_not_expand(self):
+        idx = build_index()
+        expanded = idx._expand_query(["vad", "är"])
+        assert expanded["vad"] == set() and expanded["är"] == set()
+
+    def test_unrelated_long_word_still_unmatched(self):
+        idx = build_index()
+        expanded = idx._expand_query(["kvantfysikens"])
+        assert expanded["kvantfysikens"] == set()

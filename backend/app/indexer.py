@@ -90,15 +90,42 @@ class HybridIndex:
     def __len__(self) -> int:
         return len(self.chunks)
 
-    def _coverage(self, q_tokens: list[str], idx: int) -> float:
-        uniq = set(q_tokens)
-        if not uniq:
-            return 0.0
-        total = sum(self.bm25.idf(t) for t in uniq)
-        if total <= 0:
-            return 0.0
-        matched = sum(self.bm25.idf(t) for t in uniq if t in self._token_sets[idx])
-        return matched / total
+    def _expand_query(self, q_tokens: list[str]) -> dict[str, set[str]]:
+        """Map each query token to the corpus-vocabulary tokens it matches.
+
+        Swedish is compound-heavy ("snöröjningsjouren" vs "snöröjning"), so a
+        token also matches vocabulary terms sharing a prefix relationship when
+        both sides are ≥ 6 chars and not wildly different in length.
+        """
+        vocab = self.bm25.doc_freq
+        out: dict[str, set[str]] = {}
+        for q in set(q_tokens):
+            matches: set[str] = set()
+            if q in vocab:
+                matches.add(q)
+            if len(q) >= 6:
+                for t in vocab:
+                    if t != q and len(t) >= 6 and abs(len(t) - len(q)) <= 12 and (
+                        t.startswith(q) or q.startswith(t)
+                    ):
+                        matches.add(t)
+            out[q] = matches
+        return out
+
+    def _coverage(self, expanded: dict[str, set[str]], idx: int) -> float:
+        total = 0.0
+        matched = 0.0
+        for q, matches in expanded.items():
+            if q in self.bm25.doc_freq:
+                w = self.bm25.idf(q)
+            elif matches:
+                w = min(self.bm25.idf(m) for m in matches)  # most common variant
+            else:
+                w = self.bm25.idf(q)  # unseen term: max idf, drags coverage down
+            total += w
+            if any(m in self._token_sets[idx] for m in matches):
+                matched += w
+        return matched / total if total > 0 else 0.0
 
     def search(
         self,
@@ -113,7 +140,10 @@ class HybridIndex:
         if not self.chunks:
             return []
         q_tokens = tokenize(query)
-        bm25_all = self.bm25.scores(q_tokens)
+        expanded = self._expand_query(q_tokens)
+        # BM25 sees the original tokens plus their compound-prefix expansions.
+        bm25_query = list(q_tokens) + sorted({m for ms in expanded.values() for m in ms if m not in q_tokens})
+        bm25_all = self.bm25.scores(bm25_query)
         q_vec = self.embedder.embed([query])[0]
         dense_all = [_cosine(q_vec, v) for v in self.vectors]
 
@@ -130,7 +160,7 @@ class HybridIndex:
         for i in pool:
             fused = weight * dense_n[i] + (1 - weight) * bm25_n[i]
             cos01 = max(0.0, min(1.0, dense_all[i]))
-            conf = 0.5 * self._coverage(q_tokens, i) + 0.5 * cos01
+            conf = 0.5 * self._coverage(expanded, i) + 0.5 * cos01
             scored.append((fused, conf, i))
         scored.sort(key=lambda t: (-t[0], t[2]))
 
