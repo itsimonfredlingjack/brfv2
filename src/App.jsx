@@ -9,6 +9,8 @@ import {
 import ContextCard from './components/ContextCard';
 import DocumentView from './components/DocumentView';
 import SettingsView from './components/SettingsView';
+import PdfViewer from './components/PdfViewer';
+import { api } from './api';
 import './App.css';
 
 function App() {
@@ -18,6 +20,33 @@ function App() {
   const [processingStep, setProcessingStep] = useState(0);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  // Real backend state
+  const [documents, setDocuments] = useState([]);
+  const [uploadError, setUploadError] = useState(null);
+  const [viewer, setViewer] = useState(null); // {url, title, page, rects, highlightPage}
+  const [chatBusy, setChatBusy] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const refreshDocuments = async () => {
+    try {
+      setDocuments(await api.listDocuments());
+    } catch {
+      setDocuments([]);
+    }
+  };
+
+  useEffect(() => {
+    refreshDocuments();
+  }, []);
+
+  const openDocViewer = (doc, opts = {}) =>
+    setViewer({
+      url: api.pdfUrl(doc.document_id || doc.id),
+      title: doc.document_name || doc.name,
+      page: opts.page || 1,
+      rects: opts.rects || [],
+      highlightPage: opts.highlightPage ?? null,
+    });
   // Settings State
   const [activeSettingsTab, setActiveSettingsTab] = useState('dokument');
   const [settingsConfig, setSettingsConfig] = useState({
@@ -58,14 +87,44 @@ function App() {
     { role: 'ai', content: 'Hej Simon! Jag är kopplad till alla dina dokument (Styrelseprotokoll, stadgar, årsredovisningar etc.). Vad vill du ha hjälp med att hitta eller analysera idag?' }
   ]);
 
+  const askQuestion = async (question) => {
+    const q = question.trim();
+    if (!q || chatBusy) return;
+    setCurrentTab('chat');
+    setActiveDocument(null);
+    setChatMessages(prev => [
+      ...prev,
+      { role: 'user', content: q },
+      { role: 'ai', pending: true, content: 'Söker i dokumenten…' },
+    ]);
+    setChatBusy(true);
+    try {
+      const resp = await api.ask(q);
+      setChatMessages(prev => [
+        ...prev.slice(0, -1),
+        {
+          role: 'ai',
+          content: resp.answer,
+          citations: resp.citations || [],
+          rejected: resp.rejected_citations || [],
+          refusal: resp.refusal,
+          warning: resp.warning,
+        },
+      ]);
+    } catch (e) {
+      setChatMessages(prev => [
+        ...prev.slice(0, -1),
+        { role: 'ai', content: `Tekniskt fel: ${e.message}`, refusal: true },
+      ]);
+    } finally {
+      setChatBusy(false);
+    }
+  };
+
   const handleChatSubmit = () => {
-    if (!chatInput.trim()) return;
-    setChatMessages([...chatMessages, { role: 'user', content: chatInput }]);
+    const q = chatInput;
     setChatInput('');
-    // Simulate AI response
-    setTimeout(() => {
-      setChatMessages(prev => [...prev, { role: 'ai', content: 'Jag letar i dina dokument och återkommer strax med ett refererat svar...' }]);
-    }, 1000);
+    askQuestion(q);
   };
 
   // QA Dashboard State
@@ -302,29 +361,36 @@ function App() {
     { id: 't3', date: '15 Apr 2025', title: 'Slut snöröjningsjour', description: 'Perioden för dygnet runt-jour avslutas.', doc: 'SNÖRÖJNINGSAVTAL_2024.pdf', page: 2 },
   ];
 
-  const documentsData = [
-    { id: 'd1', name: 'SNÖRÖJNINGSAVTAL_2024.pdf', date: '2024-10-01', status: 'ready', deadlines: 2 },
-    { id: 'd2', name: 'ANSTÄLLNINGSAVTAL_VD.pdf', date: '2024-09-15', status: 'ready', deadlines: 1 },
-    { id: 'd3', name: 'HYRESAVTAL_LOKAL_1B.pdf', date: '2024-11-02', status: 'pending', deadlines: 0 },
-    { id: 'd4', name: 'LEVERANTÖRSAVTAL_IT.pdf', date: '2024-11-05', status: 'ready', deadlines: 4 },
-  ];
-
   const handleGlobalUpload = () => {
+    setUploadError(null);
     setShowUploadModal(true);
   };
 
-  const startProcessing = () => {
+  const handleFileChosen = async (file) => {
+    if (!file) return;
+    setUploadError(null);
     setShowUploadModal(false);
     setIsProcessing(true);
     setProcessingStep(0);
-
-    setTimeout(() => setProcessingStep(1), 1000);
-    setTimeout(() => setProcessingStep(2), 2500);
-    setTimeout(() => setProcessingStep(3), 4000);
-    setTimeout(() => {
+    const t1 = setTimeout(() => setProcessingStep(1), 600);
+    const t2 = setTimeout(() => setProcessingStep(2), 1500);
+    try {
+      await api.uploadDocument(file);
+      setProcessingStep(3);
+      await refreshDocuments();
+      setTimeout(() => {
+        setIsProcessing(false);
+        setCurrentTab('documents');
+      }, 500);
+    } catch (e) {
       setIsProcessing(false);
-      setCurrentTab('review');
-    }, 5000);
+      setUploadError(e.message);
+      setShowUploadModal(true);
+    } finally {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   const navigateToDoc = () => {
@@ -424,17 +490,38 @@ function App() {
           <button className="icon-btn close-modal-btn" onClick={() => setShowUploadModal(false)}>
             <X size={20} />
           </button>
-          <div className="upload-box" onClick={startProcessing}>
+          <input
+            type="file"
+            accept="application/pdf,.pdf"
+            ref={fileInputRef}
+            style={{ display: 'none' }}
+            onChange={(e) => handleFileChosen(e.target.files?.[0])}
+          />
+          <div
+            className="upload-box"
+            onClick={() => fileInputRef.current?.click()}
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              handleFileChosen(e.dataTransfer.files?.[0]);
+            }}
+          >
             <div className="upload-icon-wrapper">
               <UploadCloud size={64} strokeWidth={1} color="var(--text-secondary)" />
             </div>
             <h2 className="upload-title" style={{fontSize: '28px', marginBottom: '10px'}}>Ladda upp PDF</h2>
-            <p className="upload-subtitle" style={{fontSize: '16px', color: 'var(--text-secondary)'}}>Dra och släpp ditt avtal eller dokument här för att låta AI:n extrahera text, datum och tidsfrister.</p>
+            <p className="upload-subtitle" style={{fontSize: '16px', color: 'var(--text-secondary)'}}>Dra och släpp ditt avtal eller dokument här. Texten extraheras ord för ord med positioner och blir sökbar med källhänvisningar.</p>
+
+            {uploadError && (
+              <div className="upload-error">
+                <AlertCircle size={16} /> {uploadError}
+              </div>
+            )}
 
             <div className="upload-features">
-              <span><CheckCircle2 size={16} /> Extraherar text</span>
-              <span><CheckCircle2 size={16} /> Hittar tidsfrister</span>
-              <span><CheckCircle2 size={16} /> Gör sökbart</span>
+              <span><CheckCircle2 size={16} /> Extraherar text + positioner</span>
+              <span><CheckCircle2 size={16} /> Chunkar & indexerar</span>
+              <span><CheckCircle2 size={16} /> Gör sökbart med källor</span>
             </div>
 
             <button className="primary-btn" style={{marginTop: '40px'}}>Välj fil lokalt</button>
@@ -449,7 +536,7 @@ function App() {
       {/* Hero Search Section */}
       <div className="hero-search-container">
         <h1 className="hero-search-title">Vad vill du veta?</h1>
-        <p className="hero-search-subtitle">Sök i alla dokument, ställ frågor och få insikter direkt från RAG-systemet.</p>
+        <p className="hero-search-subtitle">Ställ frågor på svenska och få svar med exakta, verifierade källhänvisningar i dina PDF:er.</p>
 
         <div className="hero-search-box">
           <SearchIcon size={24} color="var(--accent-search)" className="hero-search-icon" />
@@ -457,53 +544,62 @@ function App() {
             type="text"
             placeholder="T.ex. 'Vad säger stadgarna om andrahandsuthyrning?'"
             className="hero-search-input"
+            value={chatInput}
+            onChange={(e) => setChatInput(e.target.value)}
+            onKeyDown={(e) => e.key === 'Enter' && handleChatSubmit()}
           />
-          <button className="hero-search-btn">
-            Sök <ArrowRight size={18} />
+          <button className="hero-search-btn" onClick={handleChatSubmit}>
+            Fråga <ArrowRight size={18} />
           </button>
         </div>
 
         <div className="hero-search-suggestions">
-          <span className="suggestion-pill">Styrelseprotokoll 2023</span>
-          <span className="suggestion-pill">Underhållsplan</span>
-          <span className="suggestion-pill">Årsredovisningar</span>
+          {['Vad krävs för andrahandsuthyrning?', 'När startar snöröjningsjouren?', 'Vad kostar stambytet?'].map((q) => (
+            <span key={q} className="suggestion-pill" onClick={() => askQuestion(q)} style={{ cursor: 'pointer' }}>
+              {q}
+            </span>
+          ))}
         </div>
       </div>
       <div className="overview-grid">
         <div className="overview-stats">
           <div className="stat-card glass-panel">
-            <span className="stat-value">42</span>
+            <span className="stat-value">{documents.length}</span>
             <span className="stat-label">Dokument</span>
           </div>
           <div className="stat-card glass-panel">
-            <span className="stat-value" style={{color: 'var(--accent-date)'}}>3</span>
-            <span className="stat-label">Granskningar väntar</span>
+            <span className="stat-value">{documents.reduce((a, d) => a + (d.pages || 0), 0)}</span>
+            <span className="stat-label">Sidor indexerade</span>
           </div>
           <div className="stat-card glass-panel">
-            <span className="stat-value">12</span>
-            <span className="stat-label">Kommande Tidsfrister</span>
+            <span className="stat-value">{documents.reduce((a, d) => a + (d.chunks || 0), 0)}</span>
+            <span className="stat-label">Chunks i sökindex</span>
           </div>
         </div>
 
         <div className="overview-main-sections" style={{ display: 'flex', gap: '30px', marginTop: '40px' }}>
 
           <div className="documents-section" style={{ flex: 1 }}>
-            <h3 className="section-title">Senast aktivitet</h3>
+            <h3 className="section-title">Dokument i arbetsytan</h3>
             <div className="documents-grid">
-              <div className="document-card glass-panel" onClick={navigateToDoc}>
-                <div className="doc-icon"><FileText size={24} color="var(--accent-search)" /></div>
-                <div className="doc-info">
-                  <h4>SNÖRÖJNINGSAVTAL_2024.pdf</h4>
-                  <span>Bearbetad • 2 bevakningar</span>
+              {documents.slice(0, 4).map((doc) => (
+                <div key={doc.id} className="document-card glass-panel" onClick={() => openDocViewer(doc)}>
+                  <div className="doc-icon"><FileText size={24} color="var(--accent-search)" /></div>
+                  <div className="doc-info">
+                    <h4>{doc.name}</h4>
+                    <span>{doc.pages} sidor • {doc.chunks} chunks</span>
+                  </div>
                 </div>
-              </div>
-              <div className="document-card glass-panel">
-                <div className="doc-icon dimmed"><FileText size={24} color="var(--text-secondary)" /></div>
-                <div className="doc-info">
-                  <h4>ANSTÄLLNINGSAVTAL_VD.pdf</h4>
-                  <span>Bearbetad • 1 bevakning</span>
+              ))}
+              {documents.length === 0 && (
+                <div className="document-card glass-panel" onClick={handleGlobalUpload}>
+                  <div className="doc-icon dimmed"><UploadCloud size={24} color="var(--text-secondary)" /></div>
+                  <div className="doc-info">
+                    <h4>Ladda upp din första PDF</h4>
+                    <span>Texten indexeras och blir frågebar</span>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           </div>
 
@@ -545,28 +641,33 @@ function App() {
               <th>Dokument</th>
               <th>Uppladdat</th>
               <th>Status</th>
-              <th>Bevakningar</th>
+              <th>Sidor</th>
+              <th>Chunks</th>
               <th style={{textAlign: 'right'}}>Åtgärd</th>
             </tr>
           </thead>
           <tbody>
-            {documentsData.map(doc => (
-              <tr key={doc.id} onClick={navigateToDoc} style={{ cursor: 'pointer' }}>
+            {documents.length === 0 && (
+              <tr>
+                <td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '40px' }}>
+                  Inga dokument ännu — ladda upp en PDF för att komma igång.
+                </td>
+              </tr>
+            )}
+            {documents.map(doc => (
+              <tr key={doc.id} onClick={() => openDocViewer(doc)} style={{ cursor: 'pointer' }}>
                 <td style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <FileText size={18} color={doc.status === 'ready' ? 'var(--accent-search)' : 'var(--text-secondary)'} />
+                  <FileText size={18} color="var(--accent-search)" />
                   <span style={{ fontWeight: 500 }}>{doc.name}</span>
                 </td>
-                <td style={{ color: 'var(--text-secondary)' }}>{doc.date}</td>
+                <td style={{ color: 'var(--text-secondary)' }}>{(doc.uploaded_at || '').slice(0, 10)}</td>
                 <td>
-                  <span className={`status-badge ${doc.status}`}>
-                    {doc.status === 'ready' ? 'Klar' : 'Väntar på granskning'}
-                  </span>
+                  <span className="status-badge ready">Klar</span>
                 </td>
-                <td style={{ color: doc.deadlines > 0 ? 'var(--accent-date)' : 'var(--text-secondary)' }}>
-                  {doc.deadlines} st
-                </td>
+                <td style={{ color: 'var(--text-secondary)' }}>{doc.pages}</td>
+                <td style={{ color: 'var(--text-secondary)' }}>{doc.chunks}</td>
                 <td style={{textAlign: 'right'}}>
-                  <button className="icon-btn" onClick={(e) => { e.stopPropagation(); navigateToDoc(); }}>
+                  <button className="icon-btn" onClick={(e) => { e.stopPropagation(); openDocViewer(doc); }}>
                     <ArrowRight size={16} />
                   </button>
                 </td>
@@ -980,6 +1081,7 @@ function App() {
       {/* Main Content Area */}
       <main className="main-content-scroll">
         {renderUploadModal()}
+        {viewer && <PdfViewer {...viewer} onClose={() => setViewer(null)} />}
         {isProcessing && renderProcessingOverlay()}
 
         {!isProcessing && activeDocument && renderDocumentCanvas()}
@@ -1007,12 +1109,34 @@ function App() {
 
                 <div className="chat-messages-area">
                   {chatMessages.map((msg, idx) => (
-                    <div key={idx} className={`chat-message ${msg.role}`}>
+                    <div key={idx} className={`chat-message ${msg.role} ${msg.refusal ? 'refusal' : ''} ${msg.pending ? 'pending' : ''}`}>
                       <div className="chat-avatar">
-                        {msg.role === 'ai' ? <Sparkles size={16} /> : 'SR'}
+                        {msg.role === 'ai' ? (msg.pending ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />) : 'SR'}
                       </div>
                       <div className="chat-content">
+                        {msg.refusal && <div className="chat-refusal-tag"><AlertCircle size={13} /> Avstår från att svara</div>}
                         {msg.content}
+                        {msg.warning && <div className="chat-warning"><AlertCircle size={13} /> {msg.warning}</div>}
+                        {msg.citations?.length > 0 && (
+                          <div className="chat-citations">
+                            {msg.citations.map((c, i) => (
+                              <button
+                                key={i}
+                                className="citation-chip"
+                                title={`"${c.quote}"`}
+                                onClick={() => openDocViewer(c, { page: c.page, rects: c.rects, highlightPage: c.page })}
+                              >
+                                <FileText size={12} />
+                                {c.document_name} · s.{c.page}
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                        {msg.rejected?.length > 0 && (
+                          <div className="chat-warning">
+                            <AlertCircle size={13} /> {msg.rejected.length} källhänvisning(ar) kunde inte verifieras mot dokumenten och visas inte.
+                          </div>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -1027,8 +1151,8 @@ function App() {
                       onChange={(e) => setChatInput(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleChatSubmit()}
                     />
-                    <button className="chat-send-btn" onClick={handleChatSubmit}>
-                      <Send size={18} />
+                    <button className="chat-send-btn" onClick={handleChatSubmit} disabled={chatBusy}>
+                      {chatBusy ? <Loader2 size={18} className="spin" /> : <Send size={18} />}
                     </button>
                   </div>
                 </div>
