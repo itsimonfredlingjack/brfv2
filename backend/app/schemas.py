@@ -46,7 +46,8 @@ class DocumentMeta(BaseModel):
 
 class RetrievalHit(BaseModel):
     chunk_id: str
-    score: float
+    score: float  # fused, min-max normalized over the candidate pool (ranking)
+    confidence: float  # absolute 0..1 (IDF-weighted query coverage ⊕ cosine) — refusal gate
     bm25: float
     dense: float
     document_id: str
