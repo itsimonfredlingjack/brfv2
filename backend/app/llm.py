@@ -108,7 +108,8 @@ class ClaudeCLIProvider:
     timeout_s = 300
 
     def complete(self, system: str, user: str, *, max_tokens: int, model: str) -> str:
-        prompt = f"{system}\n\n{user}"
+        import tempfile
+
         cmd = [
             "claude",
             "-p",
@@ -118,14 +119,20 @@ class ClaudeCLIProvider:
             model,
             "--max-turns",
             "1",
+            # Replace the coding-assistant persona with our grounding contract
+            # and drop repo/tool context — this is pure text generation.
+            "--system-prompt",
+            system,
+            "--exclude-dynamic-system-prompt-sections",
         ]
         try:
             proc = subprocess.run(
                 cmd,
-                input=prompt.encode("utf-8"),
+                input=user.encode("utf-8"),
                 capture_output=True,
                 timeout=self.timeout_s,
                 check=False,
+                cwd=tempfile.gettempdir(),  # neutral cwd: no repo pickup
             )
         except subprocess.TimeoutExpired as exc:
             raise LLMError(f"claude CLI timeout efter {self.timeout_s}s") from exc

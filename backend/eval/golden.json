@@ -1,0 +1,842 @@
+{
+  "corpus": [
+    "Stadgar Brf Gjutformen 12.pdf",
+    "Årsredovisning 2025.pdf",
+    "Styrelseprotokoll 2026-03-12.pdf",
+    "Snöröjningsavtal 2026.pdf",
+    "Underhållsplan 2026-2036.pdf"
+  ],
+  "answerable": [
+    {
+      "id": "g00",
+      "question": "Var har styrelsen sitt säte?",
+      "document": "Stadgar Brf Gjutformen 12.pdf",
+      "page": 1,
+      "passage": "Styrelsen har sitt säte i Göteborgs kommun",
+      "rects": [
+        [
+          341.56,
+          144.35,
+          442.71,
+          158.09
+        ],
+        [
+          72.0,
+          158.15,
+          159.81,
+          171.89
+        ]
+      ]
+    },
+    {
+      "id": "g01",
+      "question": "Hur fördelas årsavgiften mellan lägenheterna?",
+      "document": "Stadgar Brf Gjutformen 12.pdf",
+      "page": 1,
+      "passage": "Årsavgiften fördelas på bostadsrätterna i förhållande till lägenheternas andelstal",
+      "rects": [
+        [
+          261.52,
+          348.5,
+          441.05,
+          362.24
+        ],
+        [
+          72.0,
+          362.3,
+          242.64,
+          376.04
+        ]
+      ]
+    },
+    {
+      "id": "g02",
+      "question": "När ska årsavgiften betalas?",
+      "document": "Stadgar Brf Gjutformen 12.pdf",
+      "page": 1,
+      "passage": "Årsavgiften betalas månadsvis i förskott senast sista vardagen före varje kalendermånads början",
+      "rects": [
+        [
+          248.2,
+          362.3,
+          456.62,
+          376.04
+        ],
+        [
+          72.0,
+          376.1,
+          288.76,
+          389.84
+        ]
+      ]
+    },
+    {
+      "id": "g03",
+      "question": "Hur stor överlåtelseavgift får föreningen ta ut?",
+      "document": "Stadgar Brf Gjutformen 12.pdf",
+      "page": 2,
+      "passage": "Överlåtelseavgift får tas ut med högst 2,5 procent av prisbasbeloppet",
+      "rects": [
+        [
+          72.0,
+          85.5,
+          377.15,
+          99.24
+        ]
+      ]
+    },
+    {
+      "id": "g04",
+      "question": "Vem betalar pantsättningsavgiften?",
+      "document": "Stadgar Brf Gjutformen 12.pdf",
+      "page": 2,
+      "passage": "Pantsättningsavgift får tas ut med högst 1 procent av prisbasbeloppet och betalas av pantsättaren",
+      "rects": [
+        [
+          128.13,
+          99.3,
+          453.86,
+          113.04
+        ],
+        [
+          72.0,
+          113.1,
+          175.95,
+          126.84
+        ]
+      ]
+    },
+    {
+      "id": "g05",
+      "question": "Vad krävs för att hyra ut sin lägenhet i andra hand?",
+      "document": "Stadgar Brf Gjutformen 12.pdf",
+      "page": 2,
+      "passage": "får upplåta sin lägenhet i andra hand endast om styrelsen ger sitt skriftliga samtycke",
+      "rects": [
+        [
+          174.83,
+          158.15,
+          462.2,
+          171.89
+        ],
+        [
+          72.0,
+          171.95,
+          153.68,
+          185.69
+        ]
+      ]
+    },
+    {
+      "id": "g06",
+      "question": "Hur hög avgift får tas ut vid andrahandsuthyrning?",
+      "document": "Stadgar Brf Gjutformen 12.pdf",
+      "page": 2,
+      "passage": "Avgift för andrahandsupplåtelse får tas ut med högst 10 procent av prisbasbeloppet per år",
+      "rects": [
+        [
+          159.24,
+          171.95,
+          454.4,
+          185.69
+        ],
+        [
+          72.0,
+          185.75,
+          171.49,
+          199.49
+        ]
+      ]
+    },
+    {
+      "id": "g07",
+      "question": "Vem ansvarar för lägenhetens inre underhåll?",
+      "document": "Stadgar Brf Gjutformen 12.pdf",
+      "page": 2,
+      "passage": "Bostadsrättshavaren skall på egen bekostnad hålla lägenhetens inre i gott skick",
+      "rects": [
+        [
+          72.0,
+          230.8,
+          424.4,
+          244.54
+        ]
+      ]
+    },
+    {
+      "id": "g08",
+      "question": "Vem ansvarar för vatten- och avloppsstammarna?",
+      "document": "Stadgar Brf Gjutformen 12.pdf",
+      "page": 2,
+      "passage": "Föreningen svarar för husets skick i övrigt, däribland stammar för vatten- och avloppssystem",
+      "rects": [
+        [
+          156.48,
+          258.4,
+          444.35,
+          272.14
+        ],
+        [
+          72.0,
+          272.2,
+          190.38,
+          285.94
+        ]
+      ]
+    },
+    {
+      "id": "g09",
+      "question": "Hur många ledamöter ska styrelsen ha?",
+      "document": "Stadgar Brf Gjutformen 12.pdf",
+      "page": 2,
+      "passage": "Styrelsen består av lägst tre och högst fem ledamöter med högst två suppleanter",
+      "rects": [
+        [
+          72.0,
+          317.25,
+          429.39,
+          330.99
+        ]
+      ]
+    },
+    {
+      "id": "g10",
+      "question": "Hur lång är styrelseledamöternas mandattid?",
+      "document": "Stadgar Brf Gjutformen 12.pdf",
+      "page": 2,
+      "passage": "Ledamöter väljs av föreningsstämman för en mandattid om ett år",
+      "rects": [
+        [
+          434.95,
+          317.25,
+          482.75,
+          330.99
+        ],
+        [
+          72.0,
+          331.05,
+          307.65,
+          344.79
+        ]
+      ]
+    },
+    {
+      "id": "g11",
+      "question": "Vem får teckna föreningens firma?",
+      "document": "Stadgar Brf Gjutformen 12.pdf",
+      "page": 3,
+      "passage": "Föreningens firma tecknas av två styrelseledamöter i förening",
+      "rects": [
+        [
+          72.0,
+          85.5,
+          344.88,
+          99.24
+        ]
+      ]
+    },
+    {
+      "id": "g12",
+      "question": "När måste kallelse till föreningsstämman skickas ut?",
+      "document": "Stadgar Brf Gjutformen 12.pdf",
+      "page": 3,
+      "passage": "Kallelse till föreningsstämma skall ske tidigast sex veckor och senast två veckor före stämman",
+      "rects": [
+        [
+          364.34,
+          189.4,
+          411.57,
+          203.14
+        ],
+        [
+          72.0,
+          203.2,
+          438.24,
+          216.94
+        ]
+      ]
+    },
+    {
+      "id": "g13",
+      "question": "Måste revisorn vara auktoriserad?",
+      "document": "Stadgar Brf Gjutformen 12.pdf",
+      "page": 3,
+      "passage": "Revisorn behöver inte vara auktoriserad",
+      "rects": [
+        [
+          348.22,
+          130.55,
+          467.71,
+          144.29
+        ],
+        [
+          72.0,
+          144.35,
+          127.02,
+          158.09
+        ]
+      ]
+    },
+    {
+      "id": "g14",
+      "question": "Vilket år byggdes fastigheten?",
+      "document": "Årsredovisning 2025.pdf",
+      "page": 1,
+      "passage": "uppfördes 1962 och omfattar 48 bostadslägenheter samt två kommersiella lokaler",
+      "rects": [
+        [
+          286.55,
+          144.35,
+          428.3,
+          158.09
+        ],
+        [
+          72.0,
+          158.15,
+          288.74,
+          171.89
+        ]
+      ]
+    },
+    {
+      "id": "g15",
+      "question": "Hur många lägenheter finns i föreningen?",
+      "document": "Årsredovisning 2025.pdf",
+      "page": 1,
+      "passage": "omfattar 48 bostadslägenheter samt två kommersiella lokaler",
+      "rects": [
+        [
+          377.72,
+          144.35,
+          428.3,
+          158.09
+        ],
+        [
+          72.0,
+          158.15,
+          288.74,
+          171.89
+        ]
+      ]
+    },
+    {
+      "id": "g16",
+      "question": "Vem sköter den tekniska förvaltningen?",
+      "document": "Årsredovisning 2025.pdf",
+      "page": 1,
+      "passage": "Den tekniska förvaltningen har under året skötts av Driftia Fastighetsservice AB",
+      "rects": [
+        [
+          72.0,
+          192.75,
+          423.25,
+          206.49
+        ]
+      ]
+    },
+    {
+      "id": "g17",
+      "question": "Vad kostade reliningen av avloppsstammarna?",
+      "document": "Årsredovisning 2025.pdf",
+      "page": 1,
+      "passage": "etapp 1 av relining av avloppsstammarna till en kostnad av 1 850 000 kronor",
+      "rects": [
+        [
+          188.17,
+          265.4,
+          494.99,
+          279.14
+        ],
+        [
+          72.0,
+          279.2,
+          100.34,
+          292.94
+        ]
+      ]
+    },
+    {
+      "id": "g18",
+      "question": "Hur stor var nettoomsättningen 2025?",
+      "document": "Årsredovisning 2025.pdf",
+      "page": 2,
+      "passage": "Nettoomsättningen uppgick till 4 312 000 kronor",
+      "rects": [
+        [
+          72.0,
+          85.5,
+          283.77,
+          99.24
+        ]
+      ]
+    },
+    {
+      "id": "g19",
+      "question": "Vad blev årets resultat 2025?",
+      "document": "Årsredovisning 2025.pdf",
+      "page": 2,
+      "passage": "Årets resultat blev -142 000 kronor",
+      "rects": [
+        [
+          105.9,
+          113.1,
+          259.3,
+          126.84
+        ]
+      ]
+    },
+    {
+      "id": "g20",
+      "question": "Hur stora är föreningens lån?",
+      "document": "Årsredovisning 2025.pdf",
+      "page": 2,
+      "passage": "fastighetslån uppgick vid årets utgång till 21 500 000 kronor",
+      "rects": [
+        [
+          130.36,
+          133.9,
+          393.83,
+          147.64
+        ]
+      ]
+    },
+    {
+      "id": "g21",
+      "question": "Med hur mycket höjdes årsavgifterna 2026?",
+      "document": "Årsredovisning 2025.pdf",
+      "page": 2,
+      "passage": "höja årsavgifterna med 4 procent från och med den 1 januari 2026",
+      "rects": [
+        [
+          253.76,
+          168.5,
+          488.88,
+          182.24
+        ],
+        [
+          72.0,
+          182.3,
+          127.03,
+          196.04
+        ]
+      ]
+    },
+    {
+      "id": "g22",
+      "question": "Hur mycket avsätts till underhållsfonden varje år?",
+      "document": "Årsredovisning 2025.pdf",
+      "page": 2,
+      "passage": "Avsättning till underhållsfonden sker enligt stadgarna med 300 000 kronor per år",
+      "rects": [
+        [
+          72.0,
+          227.35,
+          427.17,
+          241.09
+        ]
+      ]
+    },
+    {
+      "id": "g23",
+      "question": "Hur hög var soliditeten?",
+      "document": "Årsredovisning 2025.pdf",
+      "page": 3,
+      "passage": "Soliditeten uppgick till 38 procent",
+      "rects": [
+        [
+          72.0,
+          99.3,
+          218.18,
+          113.04
+        ]
+      ]
+    },
+    {
+      "id": "g24",
+      "question": "Vem är ordförande i styrelsen?",
+      "document": "Styrelseprotokoll 2026-03-12.pdf",
+      "page": 1,
+      "passage": "Karin Lindqvist (ordförande)",
+      "rects": [
+        [
+          423.26,
+          85.5,
+          488.84,
+          99.24
+        ],
+        [
+          72.0,
+          99.3,
+          127.02,
+          113.04
+        ]
+      ]
+    },
+    {
+      "id": "g25",
+      "question": "Vilket företag ska utföra fasadmålningen?",
+      "document": "Styrelseprotokoll 2026-03-12.pdf",
+      "page": 1,
+      "passage": "Uppdraget tilldelas Måleri Väst AB enligt offert om 450 000 kronor",
+      "rects": [
+        [
+          72.0,
+          230.8,
+          362.68,
+          244.54
+        ]
+      ]
+    },
+    {
+      "id": "g26",
+      "question": "Vad kostar fasadmålningen?",
+      "document": "Styrelseprotokoll 2026-03-12.pdf",
+      "page": 1,
+      "passage": "offert om 450 000 kronor inklusive ställning och materiel",
+      "rects": [
+        [
+          253.18,
+          230.8,
+          462.16,
+          244.54
+        ],
+        [
+          72.0,
+          244.6,
+          107.56,
+          258.34
+        ]
+      ]
+    },
+    {
+      "id": "g27",
+      "question": "När ska OVK-besiktningen genomföras?",
+      "document": "Styrelseprotokoll 2026-03-12.pdf",
+      "page": 1,
+      "passage": "Obligatorisk ventilationskontroll skall genomföras i maj 2026",
+      "rects": [
+        [
+          72.0,
+          289.65,
+          337.09,
+          303.39
+        ]
+      ]
+    },
+    {
+      "id": "g28",
+      "question": "Vad kostar installationen av laddstolpar enligt offerten?",
+      "document": "Styrelseprotokoll 2026-03-12.pdf",
+      "page": 2,
+      "passage": "offert från Chargepark AB om 96 000 kronor för installation av sex laddplatser",
+      "rects": [
+        [
+          174.82,
+          85.5,
+          466.06,
+          99.24
+        ],
+        [
+          72.0,
+          99.3,
+          120.91,
+          113.04
+        ]
+      ]
+    },
+    {
+      "id": "g29",
+      "question": "Vad beslutades om tvättstugans avgift?",
+      "document": "Styrelseprotokoll 2026-03-12.pdf",
+      "page": 2,
+      "passage": "avgiften för tvättstugan höjs till 20 kronor per bokat pass från den 1 april 2026",
+      "rects": [
+        [
+          176.5,
+          158.15,
+          463.87,
+          171.89
+        ],
+        [
+          72.0,
+          171.95,
+          124.25,
+          185.69
+        ]
+      ]
+    },
+    {
+      "id": "g30",
+      "question": "När hålls nästa styrelsemöte?",
+      "document": "Styrelseprotokoll 2026-03-12.pdf",
+      "page": 2,
+      "passage": "Nästa styrelsemöte hålls den 16 april 2026 klockan 18:30",
+      "rects": [
+        [
+          72.0,
+          275.85,
+          325.45,
+          289.59
+        ]
+      ]
+    },
+    {
+      "id": "g31",
+      "question": "Vilken dag startar snöröjningsjouren?",
+      "document": "Snöröjningsavtal 2026.pdf",
+      "page": 1,
+      "passage": "Jourperioden löper från den 15 november till den 15 april",
+      "rects": [
+        [
+          72.0,
+          217.0,
+          323.23,
+          230.74
+        ]
+      ]
+    },
+    {
+      "id": "g32",
+      "question": "Vid vilket snödjup sker utryckning?",
+      "document": "Snöröjningsavtal 2026.pdf",
+      "page": 1,
+      "passage": "Utryckning sker automatiskt vid ett snödjup om 5 centimeter",
+      "rects": [
+        [
+          328.79,
+          217.0,
+          467.16,
+          230.74
+        ],
+        [
+          72.0,
+          230.8,
+          195.39,
+          244.54
+        ]
+      ]
+    },
+    {
+      "id": "g33",
+      "question": "Hur snabbt efter snöröjning ska halkbekämpning ske?",
+      "document": "Snöröjningsavtal 2026.pdf",
+      "page": 1,
+      "passage": "Halkbekämpning utförs i förebyggande syfte eller senast en timme efter avslutad snöröjning",
+      "rects": [
+        [
+          72.0,
+          244.6,
+          476.62,
+          258.34
+        ]
+      ]
+    },
+    {
+      "id": "g34",
+      "question": "Vad kostar maskinell snöröjning per timme?",
+      "document": "Snöröjningsavtal 2026.pdf",
+      "page": 2,
+      "passage": "maskinell snöröjning med traktor 1 250 kronor per timme",
+      "rects": [
+        [
+          249.3,
+          85.5,
+          452.15,
+          99.24
+        ],
+        [
+          72.0,
+          99.3,
+          116.45,
+          113.04
+        ]
+      ]
+    },
+    {
+      "id": "g35",
+      "question": "Hur lång är uppsägningstiden för snöröjningsavtalet?",
+      "document": "Snöröjningsavtal 2026.pdf",
+      "page": 2,
+      "passage": "Uppsägning skall ske skriftligen senast tre månader före avtalstidens utgång",
+      "rects": [
+        [
+          321.56,
+          171.95,
+          461.05,
+          185.69
+        ],
+        [
+          72.0,
+          185.75,
+          267.1,
+          199.49
+        ]
+      ]
+    },
+    {
+      "id": "g36",
+      "question": "Inom vilken tid ska anmärkningar mot snöröjningen anmälas?",
+      "document": "Snöröjningsavtal 2026.pdf",
+      "page": 2,
+      "passage": "anmälas till Entreprenören inom 24 timmar efter avslutat arbetspass",
+      "rects": [
+        [
+          125.91,
+          258.4,
+          426.02,
+          272.14
+        ]
+      ]
+    },
+    {
+      "id": "g37",
+      "question": "Vem har upprättat underhållsplanen?",
+      "document": "Underhållsplan 2026-2036.pdf",
+      "page": 1,
+      "passage": "upprättad i februari 2026 av Byggkonsult Väst AB på uppdrag av styrelsen",
+      "rects": [
+        [
+          183.72,
+          85.5,
+          468.88,
+          99.24
+        ],
+        [
+          72.0,
+          99.3,
+          112.01,
+          113.04
+        ]
+      ]
+    },
+    {
+      "id": "g38",
+      "question": "Hur stort är det samlade underhållsbehovet?",
+      "document": "Underhållsplan 2026-2036.pdf",
+      "page": 1,
+      "passage": "Det samlade underhållsbehovet under planperioden bedöms till 18 650 000 kronor",
+      "rects": [
+        [
+          72.0,
+          230.8,
+          436.07,
+          244.54
+        ]
+      ]
+    },
+    {
+      "id": "g39",
+      "question": "När planeras fönsterbytet och vad beräknas det kosta?",
+      "document": "Underhållsplan 2026-2036.pdf",
+      "page": 2,
+      "passage": "År 2027 planeras fönsterbyte på söderfasaden till en beräknad kostnad av 2 400 000 kronor",
+      "rects": [
+        [
+          72.0,
+          120.1,
+          477.78,
+          133.84
+        ]
+      ]
+    },
+    {
+      "id": "g40",
+      "question": "Vad beräknas takomläggningen kosta?",
+      "document": "Underhållsplan 2026-2036.pdf",
+      "page": 2,
+      "passage": "takomläggning inklusive ny plåtbeslagning till en beräknad kostnad av 3 100 000 kronor",
+      "rects": [
+        [
+          159.82,
+          154.7,
+          476.64,
+          168.44
+        ],
+        [
+          72.0,
+          168.5,
+          139.26,
+          182.24
+        ]
+      ]
+    },
+    {
+      "id": "g41",
+      "question": "Vilket år ska stambytet genomföras?",
+      "document": "Underhållsplan 2026-2036.pdf",
+      "page": 3,
+      "passage": "År 2032 genomförs stambyte av badrumsstammarna med tillhörande våtrumsrenovering",
+      "rects": [
+        [
+          72.0,
+          85.5,
+          462.14,
+          99.24
+        ]
+      ]
+    },
+    {
+      "id": "g42",
+      "question": "Vad kostar stambytet enligt planen?",
+      "document": "Underhållsplan 2026-2036.pdf",
+      "page": 3,
+      "passage": "stambyte av badrumsstammarna med tillhörande våtrumsrenovering till en beräknad kostnad av 8 500 000 kronor",
+      "rects": [
+        [
+          159.82,
+          85.5,
+          488.26,
+          99.24
+        ],
+        [
+          72.0,
+          99.3,
+          243.21,
+          113.04
+        ]
+      ]
+    }
+  ],
+  "unanswerable": [
+    {
+      "id": "u00",
+      "question": "Vad kostar en parkeringsplats i garaget per månad?"
+    },
+    {
+      "id": "u01",
+      "question": "Vilka regler gäller för bastun?"
+    },
+    {
+      "id": "u02",
+      "question": "Vilket arvode får styrelsens ledamöter?"
+    },
+    {
+      "id": "u03",
+      "question": "Vilken bredbandsleverantör har föreningen avtal med?"
+    },
+    {
+      "id": "u04",
+      "question": "Vilket försäkringsbolag har föreningen sin fastighetsförsäkring hos?"
+    },
+    {
+      "id": "u05",
+      "question": "Vilket datum hålls årsstämman 2026?"
+    },
+    {
+      "id": "u06",
+      "question": "Vad kostar det att hyra föreningens övernattningslägenhet?"
+    },
+    {
+      "id": "u07",
+      "question": "Hur många hundar får man ha i lägenheten?"
+    },
+    {
+      "id": "u08",
+      "question": "Vad blev resultatet av radonmätningen?"
+    },
+    {
+      "id": "u09",
+      "question": "Vilken bank gav bäst ränta vid den senaste omsättningen av lån?"
+    }
+  ]
+}

@@ -11,6 +11,7 @@ dependencies = [
     "anthropic>=0.40",
     "python-multipart>=0.0.9",
     "httpx>=0.27",
+    "model2vec>=0.8.2",
 ]
 
 [dependency-groups]
