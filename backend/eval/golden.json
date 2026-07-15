@@ -453,6 +453,51 @@
     },
     {
       "id": "g24",
+      "question": "Vilket företag sköter den ekonomiska förvaltningen?",
+      "document": "Årsredovisning 2025.pdf",
+      "page": 1,
+      "passage": "har skötts av SBC Sveriges BostadsrättsCentrum AB",
+      "rects": [
+        [
+          120.36,
+          220.35,
+          354.89,
+          234.09
+        ]
+      ]
+    },
+    {
+      "id": "g25",
+      "question": "Hur ofta ska underhållsplanen uppdateras?",
+      "document": "Underhållsplan 2026-2036.pdf",
+      "page": 1,
+      "passage": "revideras vart tredje år",
+      "rects": [
+        [
+          72.0,
+          113.1,
+          172.03,
+          126.84
+        ]
+      ]
+    },
+    {
+      "id": "g26",
+      "question": "Vad ersätts de gamla fönstren med?",
+      "document": "Underhållsplan 2026-2036.pdf",
+      "page": 2,
+      "passage": "Befintliga tvåglasfönster ersätts med energiglas",
+      "rects": [
+        [
+          72.0,
+          133.9,
+          282.09,
+          147.64
+        ]
+      ]
+    },
+    {
+      "id": "g27",
       "question": "Vem är ordförande i styrelsen?",
       "document": "Styrelseprotokoll 2026-03-12.pdf",
       "page": 1,
@@ -473,7 +518,7 @@
       ]
     },
     {
-      "id": "g25",
+      "id": "g28",
       "question": "Vilket företag ska utföra fasadmålningen?",
       "document": "Styrelseprotokoll 2026-03-12.pdf",
       "page": 1,
@@ -488,7 +533,7 @@
       ]
     },
     {
-      "id": "g26",
+      "id": "g29",
       "question": "Vad kostar fasadmålningen?",
       "document": "Styrelseprotokoll 2026-03-12.pdf",
       "page": 1,
@@ -509,7 +554,7 @@
       ]
     },
     {
-      "id": "g27",
+      "id": "g30",
       "question": "När ska OVK-besiktningen genomföras?",
       "document": "Styrelseprotokoll 2026-03-12.pdf",
       "page": 1,
@@ -524,7 +569,7 @@
       ]
     },
     {
-      "id": "g28",
+      "id": "g31",
       "question": "Vad kostar installationen av laddstolpar enligt offerten?",
       "document": "Styrelseprotokoll 2026-03-12.pdf",
       "page": 2,
@@ -545,7 +590,7 @@
       ]
     },
     {
-      "id": "g29",
+      "id": "g32",
       "question": "Vad beslutades om tvättstugans avgift?",
       "document": "Styrelseprotokoll 2026-03-12.pdf",
       "page": 2,
@@ -566,7 +611,7 @@
       ]
     },
     {
-      "id": "g30",
+      "id": "g33",
       "question": "När hålls nästa styrelsemöte?",
       "document": "Styrelseprotokoll 2026-03-12.pdf",
       "page": 2,
@@ -581,7 +626,7 @@
       ]
     },
     {
-      "id": "g31",
+      "id": "g34",
       "question": "Vilken dag startar snöröjningsjouren?",
       "document": "Snöröjningsavtal 2026.pdf",
       "page": 1,
@@ -596,7 +641,7 @@
       ]
     },
     {
-      "id": "g32",
+      "id": "g35",
       "question": "Vid vilket snödjup sker utryckning?",
       "document": "Snöröjningsavtal 2026.pdf",
       "page": 1,
@@ -617,7 +662,7 @@
       ]
     },
     {
-      "id": "g33",
+      "id": "g36",
       "question": "Hur snabbt efter snöröjning ska halkbekämpning ske?",
       "document": "Snöröjningsavtal 2026.pdf",
       "page": 1,
@@ -632,7 +677,7 @@
       ]
     },
     {
-      "id": "g34",
+      "id": "g37",
       "question": "Vad kostar maskinell snöröjning per timme?",
       "document": "Snöröjningsavtal 2026.pdf",
       "page": 2,
@@ -653,7 +698,7 @@
       ]
     },
     {
-      "id": "g35",
+      "id": "g38",
       "question": "Hur lång är uppsägningstiden för snöröjningsavtalet?",
       "document": "Snöröjningsavtal 2026.pdf",
       "page": 2,
@@ -674,7 +719,7 @@
       ]
     },
     {
-      "id": "g36",
+      "id": "g39",
       "question": "Inom vilken tid ska anmärkningar mot snöröjningen anmälas?",
       "document": "Snöröjningsavtal 2026.pdf",
       "page": 2,
@@ -689,7 +734,7 @@
       ]
     },
     {
-      "id": "g37",
+      "id": "g40",
       "question": "Vem har upprättat underhållsplanen?",
       "document": "Underhållsplan 2026-2036.pdf",
       "page": 1,
@@ -710,7 +755,7 @@
       ]
     },
     {
-      "id": "g38",
+      "id": "g41",
       "question": "Hur stort är det samlade underhållsbehovet?",
       "document": "Underhållsplan 2026-2036.pdf",
       "page": 1,
@@ -725,7 +770,7 @@
       ]
     },
     {
-      "id": "g39",
+      "id": "g42",
       "question": "När planeras fönsterbytet och vad beräknas det kosta?",
       "document": "Underhållsplan 2026-2036.pdf",
       "page": 2,
@@ -740,7 +785,7 @@
       ]
     },
     {
-      "id": "g40",
+      "id": "g43",
       "question": "Vad beräknas takomläggningen kosta?",
       "document": "Underhållsplan 2026-2036.pdf",
       "page": 2,
@@ -761,7 +806,7 @@
       ]
     },
     {
-      "id": "g41",
+      "id": "g44",
       "question": "Vilket år ska stambytet genomföras?",
       "document": "Underhållsplan 2026-2036.pdf",
       "page": 3,
@@ -776,7 +821,7 @@
       ]
     },
     {
-      "id": "g42",
+      "id": "g45",
       "question": "Vad kostar stambytet enligt planen?",
       "document": "Underhållsplan 2026-2036.pdf",
       "page": 3,

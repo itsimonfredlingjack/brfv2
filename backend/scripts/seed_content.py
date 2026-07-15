@@ -182,6 +182,12 @@ GOLDEN_ANSWERABLE: list[dict] = [
     {"question": "Med hur mycket höjdes årsavgifterna 2026?", "document": "Årsredovisning 2025.pdf", "passage": "höja årsavgifterna med 4 procent från och med den 1 januari 2026"},
     {"question": "Hur mycket avsätts till underhållsfonden varje år?", "document": "Årsredovisning 2025.pdf", "passage": "Avsättning till underhållsfonden sker enligt stadgarna med 300 000 kronor per år"},
     {"question": "Hur hög var soliditeten?", "document": "Årsredovisning 2025.pdf", "passage": "Soliditeten uppgick till 38 procent"},
+    # Adversarial: the passage sits right after the planted hyphenation split
+    # ("för-" / "valtningen") — exercises §2.5 through the whole pipeline.
+    {"question": "Vilket företag sköter den ekonomiska förvaltningen?", "document": "Årsredovisning 2025.pdf", "passage": "har skötts av SBC Sveriges BostadsrättsCentrum AB"},
+    # Adversarial: passage phrased differently from the natural question.
+    {"question": "Hur ofta ska underhållsplanen uppdateras?", "document": "Underhållsplan 2026-2036.pdf", "passage": "revideras vart tredje år"},
+    {"question": "Vad ersätts de gamla fönstren med?", "document": "Underhållsplan 2026-2036.pdf", "passage": "Befintliga tvåglasfönster ersätts med energiglas"},
     # --- Protokoll ---
     {"question": "Vem är ordförande i styrelsen?", "document": "Styrelseprotokoll 2026-03-12.pdf", "passage": "Karin Lindqvist (ordförande)"},
     {"question": "Vilket företag ska utföra fasadmålningen?", "document": "Styrelseprotokoll 2026-03-12.pdf", "passage": "Uppdraget tilldelas Måleri Väst AB enligt offert om 450 000 kronor"},

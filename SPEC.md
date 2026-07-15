@@ -157,7 +157,7 @@ Golden passage boxes are computed **independently** of the citation pipeline via
 |---|---|---|
 | `recall@k` | golden passage's word range overlaps any top-k chunk | ≥ 0.85 @ k=topK |
 | `citation_verification_rate` | LLM citations passing §2 verification | ≥ 0.90 |
-| `highlight_correctness` | verified citations whose rects overlap the golden passage rects (IoU ≥ 0.30 on union, same doc+page) | ≥ 0.90 |
+| `highlight_correctness` | answered questions where a citation rect lands on the golden passage (same doc+page; IoU ≥ 0.30 **or** ≥ 60 % of the citation rect inside the golden rect — shorter-but-correct quotes count) | ≥ 0.90 |
 | `false_answer_rate` | unanswerable questions answered instead of refused | = 0.00 |
 
 `--retrieval-only` skips the LLM (fast loop); full mode exercises the LLM provider.

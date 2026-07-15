@@ -61,6 +61,10 @@ def _cosine(a: list[float], b: list[float]) -> float:
     return sum(x * y for x, y in zip(a, b))  # vectors are L2-normalized
 
 
+def _trigrams(t: str) -> frozenset[str]:
+    return frozenset(t[i : i + 3] for i in range(len(t) - 2)) if len(t) >= 3 else frozenset()
+
+
 def _minmax(values: dict[int, float]) -> dict[int, float]:
     if not values:
         return {}
@@ -78,6 +82,7 @@ class HybridIndex:
         self.bm25 = BM25()
         self.vectors: list[list[float]] = []
         self._token_sets: list[set[str]] = []
+        self._vocab_trigrams: dict[str, frozenset[str]] = {}
 
     def build(self, chunks: list[Chunk], doc_names: dict[str, str]) -> None:
         self.chunks = list(chunks)
@@ -85,50 +90,61 @@ class HybridIndex:
         docs = [tokenize(c.text) for c in self.chunks]
         self.bm25.fit(docs)
         self._token_sets = [set(d) for d in docs]
+        self._vocab_trigrams = {
+            t: _trigrams(t) for t in self.bm25.doc_freq if len(t) >= 5
+        }
         self.vectors = self.embedder.embed([c.text for c in self.chunks]) if self.chunks else []
 
     def __len__(self) -> int:
         return len(self.chunks)
 
-    def _expand_query(self, q_tokens: list[str]) -> dict[str, set[str]]:
-        """Map each query token to the corpus-vocabulary tokens it matches.
+    def _expand_query(self, q_tokens: list[str]) -> dict[str, tuple[set[str], set[str]]]:
+        """Map each query token to (strong, fuzzy) corpus-vocabulary matches.
 
-        Swedish is compound-heavy ("snöröjningsjouren" vs "snöröjning"), so a
-        token also matches vocabulary terms sharing a prefix relationship when
-        both sides are ≥ 6 chars and not wildly different in length.
+        Strong = exact or substring containment — Swedish is compound-heavy
+        ("snöröjningsjouren" ⊃ "snöröjning", "lägenheter" ⊂
+        "bostadslägenheter"); safe enough to feed the BM25 ranking query.
+        Fuzzy = trigram overlap ≥ 0.5 — catches inflection with vowel elision
+        ("fönstren" ↔ "fönsterbyte"); used only by the confidence gate, at
+        reduced weight, because it is too noisy for ranking.
         """
         vocab = self.bm25.doc_freq
-        out: dict[str, set[str]] = {}
+        out: dict[str, tuple[set[str], set[str]]] = {}
         for q in set(q_tokens):
-            matches: set[str] = set()
+            strong: set[str] = set()
+            fuzzy: set[str] = set()
             if q in vocab:
-                matches.add(q)
+                strong.add(q)
             if len(q) >= 5:
+                q_tri = _trigrams(q)
                 for t in vocab:
-                    if (
-                        t != q
-                        and min(len(t), len(q)) >= 5
-                        and max(len(t), len(q)) >= 6
-                        and abs(len(t) - len(q)) <= 12
-                        and (t.startswith(q) or q.startswith(t))
-                    ):
-                        matches.add(t)
-            out[q] = matches
+                    if t == q or min(len(t), len(q)) < 5 or max(len(t), len(q)) < 6:
+                        continue
+                    if abs(len(t) - len(q)) <= 12 and (q in t or t in q):
+                        strong.add(t)
+                        continue
+                    tri = self._vocab_trigrams.get(t)
+                    if tri and q_tri and len(q_tri & tri) / len(q_tri) >= 0.5:
+                        fuzzy.add(t)
+            out[q] = (strong, fuzzy)
         return out
 
-    def _coverage(self, expanded: dict[str, set[str]], idx: int) -> float:
+    def _coverage(self, expanded: dict[str, tuple[set[str], set[str]]], idx: int) -> float:
         total = 0.0
         matched = 0.0
-        for q, matches in expanded.items():
+        for q, (strong, fuzzy) in expanded.items():
+            all_matches = strong | fuzzy
             if q in self.bm25.doc_freq:
                 w = self.bm25.idf(q)
-            elif matches:
-                w = min(self.bm25.idf(m) for m in matches)  # most common variant
+            elif all_matches:
+                w = min(self.bm25.idf(m) for m in all_matches)  # most common variant
             else:
                 w = self.bm25.idf(q)  # unseen term: max idf, drags coverage down
             total += w
-            if any(m in self._token_sets[idx] for m in matches):
+            if any(m in self._token_sets[idx] for m in strong):
                 matched += w
+            elif any(m in self._token_sets[idx] for m in fuzzy):
+                matched += 0.6 * w  # fuzzy hit: partial credit
         return matched / total if total > 0 else 0.0
 
     def search(
@@ -145,8 +161,11 @@ class HybridIndex:
             return []
         q_tokens = tokenize(query)
         expanded = self._expand_query(q_tokens)
-        # BM25 sees the original tokens plus their compound-prefix expansions.
-        bm25_query = list(q_tokens) + sorted({m for ms in expanded.values() for m in ms if m not in q_tokens})
+        # BM25 sees the original tokens plus their STRONG expansions only —
+        # fuzzy matches are gate-only (too noisy for ranking).
+        bm25_query = list(q_tokens) + sorted(
+            {m for strong, _ in expanded.values() for m in strong if m not in q_tokens}
+        )
         bm25_all = self.bm25.scores(bm25_query)
         q_vec = self.embedder.embed([query])[0]
         dense_all = [_cosine(q_vec, v) for v in self.vectors]
