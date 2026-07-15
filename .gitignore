@@ -12,6 +12,23 @@ dist
 dist-ssr
 *.local
 
+# Private customer documents & transfers — never commit
+DONT_PUSH_brf_stuff/
+wetransfer_*
+docs-external/
+
+# Backend runtime data, venvs, caches
+backend/data/
+backend/.venv/
+backend/out/
+__pycache__/
+*.pyc
+.pytest_cache/
+.model_cache/
+
+# Evidence artifacts are committed selectively; eval scratch is not
+backend/eval/last_run.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

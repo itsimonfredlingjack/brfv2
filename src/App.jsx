@@ -1,13 +1,14 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
-  Search as SearchIcon, BellRing, X, UploadCloud, FileText,
-  Loader2, CheckCircle2, ChevronLeft, Calendar as CalendarIcon,
+  Search as SearchIcon, BellRing, X, UploadCloud, FileText, Circle,
+  Loader2, CheckCircle2, ChevronLeft, ChevronRight, Calendar as CalendarIcon,
   ArrowRight, AlertCircle, LayoutDashboard, Folders, CheckSquare, Clock,
   Trash2, Edit3, ChevronUp, Settings, HelpCircle, LogOut,
   Filter, ArrowDownUp, List, LayoutGrid, MessageSquare, Send, Sparkles
 } from 'lucide-react';
 import ContextCard from './components/ContextCard';
 import DocumentView from './components/DocumentView';
+import SettingsView from './components/SettingsView';
 import './App.css';
 
 function App() {
@@ -17,6 +18,39 @@ function App() {
   const [processingStep, setProcessingStep] = useState(0);
   const [showUploadModal, setShowUploadModal] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  // Settings State
+  const [activeSettingsTab, setActiveSettingsTab] = useState('dokument');
+  const [settingsConfig, setSettingsConfig] = useState({
+    // Dokument
+    allowedFormats: ['pdf', 'docx', 'jpg'],
+    maxFileSize: 50,
+    ocrMode: 'auto',
+    languageDetection: true,
+    duplicateCheck: true,
+    // Chunking
+    chunkStrategy: 'recursive',
+    chunkSize: 1000,
+    chunkOverlap: 200,
+    headerHandling: true,
+    tableHandling: 'markdown',
+    // Sökning
+    searchWeighting: 50,
+    candidateCount: 100,
+    topK: 10,
+    minRelevance: 0.7,
+    // AI-svar
+    aiModel: 'gpt-4o',
+    systemPrompt: 'Du är en hjälpsam AI-assistent...',
+    temperature: 0.3,
+    maxResponseLength: 1000,
+    requireSources: true,
+    insufficientDataBehavior: 'refuse',
+    // Källmarkering
+    requirePageNumbers: true,
+    requireBoundingBoxes: false,
+    allowPassageWithoutCoords: true,
+    fallbackToPageLevel: true
+  });
 
   // Chat State
   const [chatInput, setChatInput] = useState('');
@@ -33,6 +67,218 @@ function App() {
       setChatMessages(prev => [...prev, { role: 'ai', content: 'Jag letar i dina dokument och återkommer strax med ett refererat svar...' }]);
     }, 1000);
   };
+
+  // QA Dashboard State
+  const [activeQaDoc, setActiveQaDoc] = useState(0);
+  const [qaActiveSubTab, setQaActiveSubTab] = useState('pages');
+  const [qaActivePage, setQaActivePage] = useState(1);
+  const [showPageDropdown, setShowPageDropdown] = useState(false);
+  const dropdownRef = useRef(null);
+  
+  const originalScrollRef = useRef(null);
+  const extractedScrollRef = useRef(null);
+  const isSyncScrolling = useRef(false);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setShowPageDropdown(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const handleSyncScroll = (fromRef, toRef) => {
+    if (isSyncScrolling.current) {
+      isSyncScrolling.current = false;
+      return;
+    }
+    if (fromRef.current && toRef.current) {
+      isSyncScrolling.current = true;
+      const percentage = fromRef.current.scrollTop / (fromRef.current.scrollHeight - fromRef.current.clientHeight);
+      toRef.current.scrollTop = percentage * (toRef.current.scrollHeight - toRef.current.clientHeight);
+    }
+  };
+
+  const togglePageStatus = (docId, pageNum) => {
+    setQaDocuments(prevDocs => prevDocs.map(doc => {
+      if (doc.id !== docId) return doc;
+      
+      const newPagesContent = doc.pagesContent.map(p => {
+        if (p.pageNum !== pageNum) return p;
+        const nextStatus = p.status === 'approved' ? 'unchecked' : 'approved';
+        return { ...p, status: nextStatus };
+      });
+
+      // Recalculate dynamic metrics
+      const approvedCount = newPagesContent.filter(p => p.status === 'approved').length;
+      const warningCount = newPagesContent.filter(p => p.status === 'warning').length;
+      const total = doc.pages;
+      
+      const nextProblemsCount = warningCount; // Problem upptäckta matches warning status count
+
+      return {
+        ...doc,
+        problemsCount: nextProblemsCount,
+        pagesContent: newPagesContent
+      };
+    }));
+  };
+
+  const [qaDocuments, setQaDocuments] = useState([
+    {
+      id: 0,
+      title: 'SNÖRÖJNINGSAVTAL_2024.pdf',
+      health: 98,
+      pages: 3,
+      ocrPages: 1,
+      chunks: 45,
+      problemsCount: 0,
+      textCoverage: '100%',
+      warnings: [],
+      date: '2024-10-01',
+      pagesContent: [
+        {
+          pageNum: 1,
+          isOcr: false,
+          status: 'approved',
+          originalMock: {
+            header: 'AVTAL OM SNÖRÖJNING 2024',
+            meta: 'Datum: 2024-10-01 | Referens: SNÖ-BRF-99',
+            paragraphs: [
+              'Detta avtal har ingåtts mellan Bostadsrättsföreningen Lappen (nedan kallad Föreningen) och Snösvängen AB (nedan kallad Entreprenören).',
+              '§1. OMFATTNING',
+              'Entreprenören åtar sig att utföra snöröjning, maskinell sopning samt halkbekämpning på Föreningens gemensamma körytor, gångbanor samt entréer i enlighet med överenskommet schema.'
+            ]
+          },
+          extractedText: `AVTAL OM SNÖRÖJNING 2024\nDatum: 2024-10-01 | Referens: SNÖ-BRF-99\n\nDetta avtal har ingåtts mellan Bostadsrättsföreningen Lappen (nedan kallad Föreningen) och Snösvängen AB (nedan kallad Entreprenören).\n\n§1. OMFATTNING\nEntreprenören åtar sig att utföra snöröjning, maskinell sopning samt halkbekämpning på Föreningens gemensamma körytor, gångbanor samt entréer i enlighet med överenskommet schema.`
+        },
+        {
+          pageNum: 2,
+          isOcr: true,
+          status: 'unchecked',
+          originalMock: {
+            header: '§2. PRISER OCH JOURTIDER',
+            meta: 'Utrustning och Timers',
+            paragraphs: [
+              'Aktiviteter debiteras enligt följande prislista:',
+              '- Maskinell snöröjning (traktor): 1 250 kr/tim',
+              '- Manuell skottning (trappor & entréer): 450 kr/tim',
+              '- Halkbekämpning (salt/sand): 350 kr/säck',
+              'Jourperioden löper oavkortat från 15 november till 15 april.'
+            ]
+          },
+          extractedText: `§2. PRISER OCH JOURTIDER\nUtrustning och Timers\n\nAktiviteter debiteras enligt följande prislista:\n- Maskinell snöröjning (traktor): 1 250 kr/tim\n- Manuell skottning (trappor & entréer): 450 kr/tim\n- Halkbekämpning (salt/sand): 350 kr/säck\n\nJourperioden löper oavkortat från 15 november till 15 april.`
+        },
+        {
+          pageNum: 3,
+          isOcr: false,
+          status: 'unchecked',
+          originalMock: {
+            header: '§3. UPPFÖLJNING & SIGNATUR',
+            meta: 'Särskilda avtalsvillkor',
+            paragraphs: [
+              'Eventuella anmärkningar mot utfört arbete skall anmälas senast 24 timmar efter slutfört pass.',
+              'Underskrivet elektroniskt:',
+              'Brf Lappen: Simon R. (Styrelseordförande)',
+              'Snösvängen AB: Gunnar S. (VD)'
+            ]
+          },
+          extractedText: `§3. UPPFÖLJNING & SIGNATUR\nSärskilda avtalsvillkor\n\nEventuella anmärkningar mot utfört arbete skall anmälas senast 24 timmar efter slutfört pass.\n\nUnderskrivet elektroniskt:\nBrf Lappen: Simon R. (Styrelseordförande)\nSnösvängen AB: Gunnar S. (VD)`
+        }
+      ]
+    },
+    {
+      id: 1,
+      title: 'STYRELSEPROTOKOLL_MARS.pdf',
+      health: 65,
+      pages: 2,
+      ocrPages: 2,
+      chunks: 12,
+      problemsCount: 2,
+      textCoverage: '89%',
+      warnings: ['Sida 2: Otydlig tabellstruktur identifierad under parsing', 'Sida 2: Innehåller handskrivna anteckningar i marginalen som kan ha förbisetts'],
+      date: '2024-03-12',
+      pagesContent: [
+        {
+          pageNum: 1,
+          isOcr: true,
+          status: 'approved',
+          originalMock: {
+            header: 'STYRELSEPROTOKOLL - BRF LAPPEN',
+            meta: 'Mötesdatum: 2024-03-12 | Närvarande: Simon, Karin, Johan',
+            paragraphs: [
+              'Mötet öppnades kl 19:00 av ordförande Simon.',
+              '§1. FÖREGÅENDE PROTOKOLL',
+              'Protokollet från februarmötet lades till handlingarna utan anmärkningar.'
+            ]
+          },
+          extractedText: `STYRELSEPROTOKOLL - BRF LAPPEN\nMötesdatum: 2024-03-12 | Närvarande: Simon, Karin, Johan\n\nMötet öppnades kl 19:00 av ordförande Simon.\n\n§1. FÖREGÅENDE PROTOKOLL\nProtokollet från februarmötet lades till handlingarna utan anmärkningar.`
+        },
+        {
+          pageNum: 2,
+          isOcr: true,
+          status: 'warning',
+          originalMock: {
+            header: '§2. BESLUT OM UNDERHÅLL OCH BUDGET',
+            meta: 'Protokollfört ekonomibeslut',
+            isTable: true,
+            tableRows: [
+              { col1: 'Åtgärd', col2: 'Budget', col3: 'Status' },
+              { col1: 'Fasadmålning', col2: '150 000 kr', col3: 'Beviljad' },
+              { col1: 'OVK-besiktning', col2: '22 000 kr', col3: 'Påbörjad' },
+              { col1: 'Stamspolning', col2: '85 000 kr', col3: 'Skjuten' }
+            ]
+          },
+          extractedText: `§2. BESLUT OM UNDERHÅLL OCH BUDGET\nProtokollfört ekonomibeslut\n\n[PARSING ERROR - MERGED TABLE CELL VALUES]\nÅtgärdBudgetStatus\nFasadmålning150 000 krBeviljad\nOVK-besiktning22 000 krPåbörjad\nStamspolning85 000 krSkjuten`
+        }
+      ]
+    },
+    {
+      id: 2,
+      title: 'STADGAR_BRF_LAPPEN.pdf',
+      health: 100,
+      pages: 2,
+      ocrPages: 0,
+      chunks: 120,
+      problemsCount: 0,
+      textCoverage: '100%',
+      warnings: [],
+      date: '2023-11-20',
+      pagesContent: [
+        {
+          pageNum: 1,
+          isOcr: false,
+          status: 'unchecked',
+          originalMock: {
+            header: 'STADGAR FÖR BOSTADSRÄTTSFÖRENINGEN LAPPEN',
+            meta: 'Registrerad hos Bolagsverket: 2023-11-20',
+            paragraphs: [
+              'Föreningens firma är Bostadsrättsföreningen Lappen. Föreningen har till ändamål att främja medlemmarnas ekonomiska intressen genom att upplåta bostadslägenheter under nyttjanderätt.',
+              '§1. MEDLEMSKAP',
+              'Medlemskap i föreningen kan sökas av fysisk eller juridisk person som förvärvat bostadsrätt i föreningens fastighet.'
+            ]
+          },
+          extractedText: `STADGAR FÖR BOSTADSRÄTTSFÖRENINGEN LAPPEN\nRegistrerad hos Bolagsverket: 2023-11-20\n\nFöreningens firma är Bostadsrättsföreningen Lappen. Föreningen har till ändamål att främja medlemmarnas ekonomiska intressen genom att upplåta bostadslägenheter under nyttjanderätt.\n\n§1. MEDLEMSKAP\nMedlemskap i föreningen kan sökas av fysisk eller juridisk person som förvärvat bostadsrätt i föreningens fastighet.`
+        },
+        {
+          pageNum: 2,
+          isOcr: false,
+          status: 'unchecked',
+          originalMock: {
+            header: '§2. AVGIFTER & ÖVERLÅTELSE',
+            meta: 'Ekonomiska förpliktelser',
+            paragraphs: [
+              'Årsavgiften fastställs av styrelsen och fördelas på bostadsrätterna efter lägenheternas andelstal.',
+              'Överlåtelseavgift och pantsättningsavgift får tas ut efter beslut av styrelsen.'
+            ]
+          },
+          extractedText: `§2. AVGIFTER & ÖVERLÅTELSE\nEkonomiska förpliktelser\n\nÅrsavgiften fastställs av styrelsen och fördelas på bostadsrätterna efter lägenheternas andelstal.\n\nÖverlåtelseavgift och pantsättningsavgift får tas ut efter beslut av styrelsen.`
+        }
+      ]
+    }
+  ]);
 
   // Document Canvas State
   const [activeId, setActiveId] = useState(null);
@@ -268,17 +514,15 @@ function App() {
 
   const renderDocuments = () => (
     <div className="tab-content">
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-        <h2 className="tab-title" style={{ marginBottom: 0 }}>Alla Dokument</h2>
-        <div className="search-input-wrapper" style={{ width: '300px', background: 'var(--glass-bg)', border: '1px solid var(--glass-border)', padding: '8px 16px', borderRadius: '8px' }}>
-          <SearchIcon size={16} color="var(--text-secondary)" />
-          <input type="text" placeholder="Sök dokumentnamn..." style={{ background: 'transparent', border: 'none', color: '#fff', width: '100%', outline: 'none', marginLeft: '8px' }} />
-        </div>
-      </div>
+      <h2 className="tab-title">Alla Dokument</h2>
 
       {/* Toolbar */}
       <div className="documents-toolbar">
         <div className="toolbar-left">
+          <div className="search-input-wrapper">
+            <SearchIcon size={14} />
+            <input type="text" placeholder="Sök dokumentnamn..." className="toolbar-search-input" />
+          </div>
           <button className="toolbar-btn">
             <Filter size={14} /> Filter
           </button>
@@ -334,48 +578,266 @@ function App() {
     </div>
   );
 
-  const renderReview = () => (
-    <div className="tab-content flex-center">
-      <div className="validation-box glass-panel">
-        <div className="validation-header">
-          <AlertCircle size={32} color="var(--accent-date)" />
-          <h2>Validera Innehåll</h2>
-          <p>Systemet har nyligen extraherat följande information. Vänligen granska innan de sparas till den globala tidslinjen.</p>
+  const renderReview = () => {
+    const doc = qaDocuments[activeQaDoc];
+    const activePageNum = qaActivePage > doc.pages ? 1 : qaActivePage;
+    const currentPage = doc.pagesContent ? doc.pagesContent[activePageNum - 1] : null;
+
+    return (
+      <div className="qa-container">
+        <div className="qa-sidebar glass-panel">
+          <h3 style={{ margin: '0 0 16px 0', fontSize: '14px', textTransform: 'uppercase', color: 'var(--text-secondary)' }}>Granskning (QA)</h3>
+          <div className="qa-doc-list">
+            {qaDocuments.map((d, index) => (
+              <div 
+                key={d.id} 
+                className={`qa-list-item ${activeQaDoc === index ? 'active' : ''}`}
+                onClick={() => {
+                  setActiveQaDoc(index);
+                  setQaActivePage(1);
+                }}
+              >
+                <div className="qa-list-header">
+                  <span className="qa-doc-title">{d.title}</span>
+                  {d.warnings.length > 0 ? (
+                    <AlertCircle size={14} color="var(--accent-date)" />
+                  ) : (
+                    <CheckCircle2 size={14} color="#4ade80" />
+                  )}
+                </div>
+                <div className="qa-list-meta">
+                  {d.date}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
 
-        <div className="validation-items">
-          <div className="validation-item">
-            <CalendarIcon size={18} color="var(--accent-date)" />
-            <div className="v-info">
-              <h4>Start av snöröjningsjour (15 nov)</h4>
-              <span>Hittat på Sida 2 i SNÖRÖJNINGSAVTAL_2024</span>
+        <div className="qa-main glass-panel">
+          <div className="qa-main-header">
+            <div>
+              <h2 style={{ fontSize: '24px', marginBottom: '8px' }}>{doc.title}</h2>
+              <div style={{ display: 'flex', gap: '16px', color: 'var(--text-secondary)', fontSize: '13px' }}>
+                <span>ID: {doc.id}</span>
+                <span>Inläst: {doc.date}</span>
+              </div>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+              <button className="toolbar-btn" style={{ borderColor: 'rgba(239, 68, 68, 0.3)', color: '#ef4444' }} onClick={() => alert('Fel rapportat till systemadministratör.')}>
+                Rapportera fel
+              </button>
+              <button className="primary-btn" style={{ padding: '8px 16px', fontSize: '13px' }} onClick={() => alert('Dokumentet har markerats som granskat och godkänt.')}>
+                Markera dokumentet som granskat
+              </button>
             </div>
           </div>
-          <div className="validation-item">
-            <CalendarIcon size={18} color="var(--accent-date)" />
-            <div className="v-info">
-              <h4>Slut av snöröjningsjour (15 apr)</h4>
-              <span>Hittat på Sida 2 i SNÖRÖJNINGSAVTAL_2024</span>
-            </div>
-          </div>
-          <div className="validation-item">
-            <SearchIcon size={18} color="var(--accent-search)" />
-            <div className="v-info">
-              <h4>Regel för halkbekämpning (saltning)</h4>
-              <span>Hittat på Sida 2 i SNÖRÖJNINGSAVTAL_2024</span>
-            </div>
-          </div>
-        </div>
 
-        <div className="validation-actions">
-          <button className="icon-btn" onClick={() => setCurrentTab('overview')}>Kassera</button>
-          <button className="primary-btn" onClick={() => {
-            setCurrentTab('overview');
-          }}>Godkänn och Spara</button>
+          <div className="qa-metrics-grid">
+            <div className="qa-metric-box">
+              <span className="qa-metric-value">{doc.pages}</span>
+              <span className="qa-metric-label">Sidor</span>
+            </div>
+            <div className="qa-metric-box">
+              <span className="qa-metric-value" style={{ color: doc.problemsCount > 0 ? 'var(--accent-date)' : 'inherit'}}>{doc.problemsCount}</span>
+              <span className="qa-metric-label">Problem Upptäckta</span>
+            </div>
+          </div>
+
+          {doc.warnings.length > 0 && (
+            <div className="qa-warnings-box">
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px', color: 'var(--accent-date)', fontWeight: 'bold' }}>
+                <AlertCircle size={16} /> Parsing-varningar
+              </div>
+              <ul style={{ margin: 0, paddingLeft: '20px', color: 'var(--text-primary)', fontSize: '14px' }}>
+                {doc.warnings.map((w, i) => <li key={i} style={{ marginBottom: '4px' }}>{w}</li>)}
+              </ul>
+            </div>
+          )}
+
+          <div className="qa-subtabs">
+            <button className={`qa-subtab ${qaActiveSubTab === 'pages' ? 'active' : ''}`} onClick={() => setQaActiveSubTab('pages')}>Jämför original & text</button>
+            <button className={`qa-subtab ${qaActiveSubTab === 'chunks' ? 'active' : ''}`} onClick={() => setQaActiveSubTab('chunks')}>Chunking-karta</button>
+            <button className={`qa-subtab ${qaActiveSubTab === 'search' ? 'active' : ''}`} onClick={() => setQaActiveSubTab('search')}>Test-sök</button>
+          </div>
+
+          <div className="qa-content-area">
+            {qaActiveSubTab === 'pages' && currentPage && (
+              <div className="qa-split-container">
+                {/* Stable Page Dock */}
+                <div className="qa-page-dock-container" ref={dropdownRef}>
+                  <div className={`qa-page-dock ${currentPage.status === 'approved' ? 'approved' : ''}`}>
+                    <button 
+                      className="qa-page-dock-nav-btn" 
+                      disabled={activePageNum === 1} 
+                      onClick={() => setQaActivePage(activePageNum - 1)}
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    
+                    <div className="qa-page-dock-center">
+                      <span 
+                        className="qa-page-dock-text" 
+                        onClick={() => setShowPageDropdown(!showPageDropdown)}
+                        title="Översikt (Alla sidor)"
+                      >
+                        Sida {activePageNum} av {doc.pages}
+                      </span>
+                      <button 
+                        className="qa-page-dock-toggle-btn"
+                        onClick={() => togglePageStatus(doc.id, activePageNum)}
+                        title={currentPage.status === 'approved' ? 'Markera som ogodkänd' : 'Markera sida som granskad'}
+                      >
+                        {currentPage.status === 'approved' ? (
+                          <CheckCircle2 size={16} fill="#4ade80" color="#fff" />
+                        ) : (
+                          <Circle size={16} color="var(--text-secondary)" />
+                        )}
+                      </button>
+                    </div>
+
+                    <button 
+                      className="qa-page-dock-nav-btn" 
+                      disabled={activePageNum === doc.pages} 
+                      onClick={() => setQaActivePage(activePageNum + 1)}
+                    >
+                      <ChevronRight size={16} />
+                    </button>
+                  </div>
+
+                  {/* Filmstrip Popover */}
+                  {showPageDropdown && (
+                    <div className="qa-filmstrip-overlay glass-panel">
+                      <div className="qa-filmstrip-header">
+                        <h4>Sidöversikt</h4>
+                        <span className="qa-filmstrip-subtitle">Klicka på en sida för att hoppa till den</span>
+                      </div>
+                      <div className="qa-filmstrip-grid">
+                        {doc.pagesContent.map((p) => (
+                          <div 
+                            key={p.pageNum} 
+                            className={`qa-page-card ${p.pageNum === activePageNum ? 'active' : ''}`}
+                            onClick={() => {
+                              setQaActivePage(p.pageNum);
+                              setShowPageDropdown(false);
+                            }}
+                          >
+                            <div className="qa-page-card-header">
+                              <span className="qa-page-card-title">Sida {p.pageNum}</span>
+                              <span className={`qa-page-indicator-dot ${p.status}`} style={{ opacity: 1, transform: 'none' }} />
+                            </div>
+                            <div className="qa-page-card-status-text">
+                              {p.status === 'approved' && 'Granskad'}
+                              {p.status === 'warning' && 'Behöver kontroll'}
+                              {p.status === 'unchecked' && 'Inte granskad'}
+                            </div>
+                            {p.isOcr && (
+                              <div className="qa-page-card-meta">
+                                Texten lästes in via OCR
+                              </div>
+                            )}
+                            <button 
+                              className={`qa-page-card-check-btn ${p.status === 'approved' ? 'checked' : ''}`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                togglePageStatus(doc.id, p.pageNum);
+                              }}
+                            >
+                              <CheckCircle2 size={16} />
+                              <span>{p.status === 'approved' ? 'Avmarkera' : 'Markera som granskad'}</span>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="qa-split-workspace">
+                  {/* Left: Original Mock PDF Rendering */}
+                  <div className="qa-split-pane original">
+                    <div className="qa-pane-title">Original PDF (Visualisering)</div>
+                    <div className="qa-pdf-page-mock" ref={originalScrollRef} onScroll={() => handleSyncScroll(originalScrollRef, extractedScrollRef)}>
+                      {currentPage.originalMock.isTable ? (
+                        <div className="qa-pdf-table-wrapper">
+                          <h4 className="qa-pdf-doc-header">{currentPage.originalMock.header}</h4>
+                          <span className="qa-pdf-doc-meta">{currentPage.originalMock.meta}</span>
+                          <table className="qa-pdf-table">
+                            <thead>
+                              <tr>
+                                <th>{currentPage.originalMock.tableRows[0].col1}</th>
+                                <th>{currentPage.originalMock.tableRows[0].col2}</th>
+                                <th>{currentPage.originalMock.tableRows[0].col3}</th>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {currentPage.originalMock.tableRows.slice(1).map((row, index) => (
+                                <tr key={index}>
+                                  <td>{row.col1}</td>
+                                  <td>{row.col2}</td>
+                                  <td>{row.col3}</td>
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      ) : (
+                        <div className="qa-pdf-text-wrapper">
+                          <h4 className="qa-pdf-doc-header">{currentPage.originalMock.header}</h4>
+                          <span className="qa-pdf-doc-meta">{currentPage.originalMock.meta}</span>
+                          <div className="qa-pdf-paragraphs">
+                            {currentPage.originalMock.paragraphs.map((p, i) => (
+                              <p key={i} className="qa-pdf-paragraph">{p}</p>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Right: Extracted Monospace Text */}
+                  <div className="qa-split-pane extracted">
+                    <div className="qa-pane-title">Extraherad Text (OCR / Parser)</div>
+                    <textarea 
+                      ref={extractedScrollRef} 
+                      onScroll={() => handleSyncScroll(extractedScrollRef, originalScrollRef)}
+                      className="qa-extracted-text-area" 
+                      readOnly 
+                      value={currentPage.extractedText}
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            {qaActiveSubTab === 'chunks' && (
+              <div className="qa-mock-content">
+                <div className="qa-chunk-block">
+                  <div className="qa-chunk-meta">Chunk #1 • Sida 1 • 45 tokens</div>
+                  <div className="qa-chunk-text">AVTAL OM SNÖRÖJNING 2024 Parter: Brf Lappen och Snösvängen AB.</div>
+                </div>
+                <div className="qa-chunk-block">
+                  <div className="qa-chunk-meta">Chunk #2 • Sida 1 • 112 tokens</div>
+                  <div className="qa-chunk-text">Detta avtal löper från 2024-10-15 tills vidare. Uppsägningstid är 3 månader. Entreprenören ansvarar för...</div>
+                </div>
+              </div>
+            )}
+
+            {qaActiveSubTab === 'search' && (
+              <div className="qa-mock-content">
+                <div className="search-input-wrapper" style={{ width: '100%', marginBottom: '16px' }}>
+                  <SearchIcon size={16} />
+                  <input type="text" placeholder="Gör en provsökning i dokumentets vektor-index..." className="toolbar-search-input" />
+                </div>
+                <div style={{ color: 'var(--text-secondary)', fontSize: '13px', textAlign: 'center', marginTop: '40px' }}>
+                  Skriv en sökterm för att se vilka chunks som matchar bäst (Cosine Similarity).
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   const renderDeadlines = () => (
     <div className="tab-content" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
@@ -483,15 +945,21 @@ function App() {
           <button className={`nav-item ${currentTab === 'deadlines' && !activeDocument ? 'active' : ''}`} onClick={() => {setCurrentTab('deadlines'); setActiveDocument(null);}}>
             <Clock size={20} /> Bevakningar
           </button>
-          <button className={`nav-item ${currentTab === 'chat' && !activeDocument ? 'active' : ''}`} onClick={() => {setCurrentTab('chat'); setActiveDocument(null);}}>
+        </div>
+        <div className="sidebar-ai-action">
+          <button className={`nav-item ai-chat-btn ${currentTab === 'chat' && !activeDocument ? 'active' : ''}`} onClick={() => {setCurrentTab('chat'); setActiveDocument(null);}}>
             <MessageSquare size={20} /> AI-chatt
+          </button>
+        </div>
+        <div className="sidebar-settings" style={{ marginTop: 'auto', marginBottom: '16px', padding: '0 16px' }}>
+          <button className={`nav-item ${currentTab === 'settings' && !activeDocument ? 'active' : ''}`} onClick={() => {setCurrentTab('settings'); setActiveDocument(null);}}>
+            <Settings size={20} /> Systeminställningar
           </button>
         </div>
 
         <div className="sidebar-footer">
           {showUserMenu && (
             <div className="user-menu-popover glass-panel">
-              <div className="user-menu-item"><Settings size={16} /> Inställningar</div>
               <div className="user-menu-item"><HelpCircle size={16} /> Hjälp & Support</div>
               <div className="user-menu-divider"></div>
               <div className="user-menu-item text-danger"><LogOut size={16} /> Logga ut</div>
@@ -522,6 +990,14 @@ function App() {
             {currentTab === 'documents' && renderDocuments()}
             {currentTab === 'review' && renderReview()}
             {currentTab === 'deadlines' && renderDeadlines()}
+            {currentTab === 'settings' && (
+              <SettingsView 
+                settingsConfig={settingsConfig} 
+                setSettingsConfig={setSettingsConfig}
+                activeSettingsTab={activeSettingsTab}
+                setActiveSettingsTab={setActiveSettingsTab}
+              />
+            )}
             {currentTab === 'chat' && (
               <div className="chat-container">
                 <div className="chat-header">
