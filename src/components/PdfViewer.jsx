@@ -28,7 +28,7 @@ function PdfViewer({ url, title, page: initialPage = 1, rects = [], highlightPag
     let cancelled = false;
     setLoading(true);
     pdfjsLib
-      .getDocument(url)
+      .getDocument({ url: new URL(url, window.location.href).href })
       .promise.then((pdf) => {
         if (cancelled) return;
         pdfRef.current = pdf;
@@ -75,19 +75,17 @@ function PdfViewer({ url, title, page: initialPage = 1, rects = [], highlightPag
       const showHighlights = highlightPage == null || highlightPage === pageNum;
       if (showHighlights && rects.length) {
         const pageHeightPts = page.view[3] - page.view[1];
+        const [a, b, c, d, e, f] = viewport.transform;
+        const tx = (x, y) => [a * x + c * y + e, b * x + d * y + f];
         const boxes = rects.map(([x0, y0, x1, y1]) => {
           // top-left-origin points → PDF user space (y-up) → viewport CSS px
-          const [vx0, vy0, vx1, vy1] = viewport.convertToViewportRectangle([
-            x0,
-            pageHeightPts - y1,
-            x1,
-            pageHeightPts - y0,
-          ]);
+          const p1 = tx(x0, pageHeightPts - y1);
+          const p2 = tx(x1, pageHeightPts - y0);
           return {
-            left: Math.min(vx0, vx1),
-            top: Math.min(vy0, vy1),
-            width: Math.abs(vx1 - vx0),
-            height: Math.abs(vy1 - vy0),
+            left: Math.min(p1[0], p2[0]),
+            top: Math.min(p1[1], p2[1]),
+            width: Math.abs(p2[0] - p1[0]),
+            height: Math.abs(p2[1] - p1[1]),
           };
         });
         setOverlays(boxes);

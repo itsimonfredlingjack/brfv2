@@ -103,10 +103,14 @@ class HybridIndex:
             matches: set[str] = set()
             if q in vocab:
                 matches.add(q)
-            if len(q) >= 6:
+            if len(q) >= 5:
                 for t in vocab:
-                    if t != q and len(t) >= 6 and abs(len(t) - len(q)) <= 12 and (
-                        t.startswith(q) or q.startswith(t)
+                    if (
+                        t != q
+                        and min(len(t), len(q)) >= 5
+                        and max(len(t), len(q)) >= 6
+                        and abs(len(t) - len(q)) <= 12
+                        and (t.startswith(q) or q.startswith(t))
                     ):
                         matches.add(t)
             out[q] = matches

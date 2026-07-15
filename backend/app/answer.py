@@ -22,7 +22,7 @@ ABSOLUTA REGLER:
 1. Använd ENDAST informationen i utdragen nedan. Ingen egen kunskap, inga gissningar.
 2. Varje sakpåstående i svaret ska stödjas av minst en källhänvisning i "citations".
 3. Varje "quote" ska vara ett ORDAGRANT, sammanhängande utdrag ur ETT enda utdrag — kopiera texten exakt som den står, max 40 ord, inga utelämningar, ingen "…".
-4. "chunk_id" ska vara exakt det id som står inom hakparentes före utdraget.
+4. "chunk_id" ska vara exakt den etikett som står inom hakparentes före utdraget, t.ex. "K2".
 5. Citera hellre kort och exakt än långt.
 6. Om utdragen inte räcker för att besvara frågan: sätt "insufficient_data": true och förklara kort i "answer" vad som saknas. Hitta ALDRIG på ett svar.
 
@@ -32,11 +32,18 @@ SVARSFORMAT — svara ENDAST med ett JSON-objekt, ingen annan text:
 _RETRY_NUDGE = "\n\nVIKTIGT: Ditt förra svar gick inte att tolka. Svara ENDAST med JSON-objektet, utan kodblock eller extra text."
 
 
-def _render_excerpts(hits: list[RetrievalHit]) -> str:
+def _render_excerpts(hits: list[RetrievalHit]) -> tuple[str, dict[str, str]]:
+    """Render excerpts labelled with short aliases (K1, K2, …).
+
+    LLMs copy short labels reliably; long structured chunk ids get truncated,
+    which needlessly burns citations on unknown_chunk rejections."""
     parts = []
-    for h in hits:
-        parts.append(f"[{h.chunk_id}] ({h.document_name}, sida {h.page})\n{h.text}")
-    return "\n---\n".join(parts)
+    alias_map: dict[str, str] = {}
+    for i, h in enumerate(hits):
+        alias = f"K{i + 1}"
+        alias_map[alias] = h.chunk_id
+        parts.append(f"[{alias}] ({h.document_name}, sida {h.page})\n{h.text}")
+    return "\n---\n".join(parts), alias_map
 
 
 def _refusal(reason: str, message: str, *, retrieval: list[RetrievalHit], provider: str, model: str, rejected=None) -> AskResponse:
@@ -85,7 +92,8 @@ def ask(store: Store, question: str, provider: LLMProvider | None = None) -> Ask
         )
 
     system = (s.systemPrompt.strip() + "\n\n" if s.systemPrompt.strip() else "") + GROUNDING_CONTRACT
-    user = f"FRÅGA: {question}\n\nUTDRAG:\n{_render_excerpts(hits)}"
+    excerpts, alias_map = _render_excerpts(hits)
+    user = f"FRÅGA: {question}\n\nUTDRAG:\n{excerpts}"
 
     parsed = None
     last_err: Exception | None = None
@@ -130,7 +138,9 @@ def ask(store: Store, question: str, provider: LLMProvider | None = None) -> Ask
     citations: list[CitationOut] = []
     rejected: list[RejectedCitation] = []
     for c in parsed["citations"]:
-        chunk = store.chunks.get(c["chunk_id"])
+        cited = c["chunk_id"].strip().strip("[]")
+        real_id = alias_map.get(cited, cited)  # alias → real id; raw ids also accepted
+        chunk = store.chunks.get(real_id)
         if chunk is None:
             rejected.append(RejectedCitation(chunk_id=c["chunk_id"], quote=c["quote"], reason="unknown_chunk"))
             continue

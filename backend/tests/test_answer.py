@@ -137,7 +137,7 @@ class TestRobustness:
         ask(store, "När löper jourperioden?", provider=fake)
         call = fake.calls[0]
         assert "ORDAGRANT" in call["system"]
-        assert first_chunk_id(store).split(":")[0] in call["user"]
+        assert "[K1] (Snöröjningsavtal.pdf, sida 1)" in call["user"]
         assert "UTDRAG" in call["user"]
 
     def test_settings_model_and_max_tokens_passed_through(self, store):
@@ -146,3 +146,54 @@ class TestRobustness:
         ask(store, "När löper jourperioden?", provider=fake)
         assert fake.calls[0]["model"] == "claude-opus-4-8"
         assert fake.calls[0]["max_tokens"] == 777
+
+
+class TestChunkAliases:
+    def test_alias_citation_resolves(self, store):
+        real_id = first_chunk_id(store)
+        # The excerpt list is deterministic; K1 = top retrieval hit. Use a
+        # question whose top hit is the document's only chunk on page 1.
+        fake = FakeLLM(
+            [
+                {
+                    "answer": "Jourperioden löper från 15 november till 15 april.",
+                    "citations": [{"chunk_id": "K1", "quote": "löper från 15 november till 15 april"}],
+                    "insufficient_data": False,
+                }
+            ]
+        )
+        resp = ask(store, "När löper jourperioden för snöröjning?", provider=fake)
+        assert not resp.refusal
+        assert resp.citations[0].chunk_id == real_id
+
+    def test_bracketed_alias_tolerated(self, store):
+        fake = FakeLLM(
+            [
+                {
+                    "answer": "Svar.",
+                    "citations": [{"chunk_id": "[K1]", "quote": "löper från 15 november till 15 april"}],
+                    "insufficient_data": False,
+                }
+            ]
+        )
+        resp = ask(store, "När löper jourperioden för snöröjning?", provider=fake)
+        assert not resp.refusal
+
+    def test_truncated_unknown_id_still_rejected(self, store):
+        fake = FakeLLM(
+            [
+                {
+                    "answer": "Svar.",
+                    "citations": [{"chunk_id": "K99", "quote": "löper från 15 november till 15 april"}],
+                    "insufficient_data": False,
+                }
+            ]
+        )
+        resp = ask(store, "När löper jourperioden för snöröjning?", provider=fake)
+        assert resp.refusal and resp.refusal_reason == "grounding_failed"
+        assert resp.rejected_citations[0].reason == "unknown_chunk"
+
+    def test_prompt_uses_aliases(self, store):
+        fake = FakeLLM([good_response(store)])
+        ask(store, "När löper jourperioden?", provider=fake)
+        assert "[K1]" in fake.calls[0]["user"]

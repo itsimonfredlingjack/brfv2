@@ -1,0 +1,95 @@
+{
+  "answer": "Snöröjningsjouren (jourperioden) startar den 15 november och löper till den 15 april.",
+  "refusal": false,
+  "refusal_reason": null,
+  "warning": null,
+  "citations": [
+    {
+      "document_id": "9b344d10cad3",
+      "document_name": "Snöröjningsavtal 2026.pdf",
+      "page": 1,
+      "quote": "Jourperioden löper från den 15 november till den 15 april.",
+      "chunk_id": "9b344d10cad3:p1:0-105",
+      "rects": [
+        [
+          72.0,
+          217.0,
+          326.01,
+          230.74
+        ]
+      ],
+      "score": 1.0
+    }
+  ],
+  "rejected_citations": [],
+  "retrieval": [
+    {
+      "chunk_id": "9b344d10cad3:p1:0-105",
+      "score": 1.0,
+      "confidence": 0.4714,
+      "bm25": 5.3499,
+      "dense": 0.567,
+      "document_id": "9b344d10cad3",
+      "document_name": "Snöröjningsavtal 2026.pdf",
+      "page": 1,
+      "text": "AVTAL OM SNÖRÖJNING OCH HALKBEKÄMPNING Mellan Bostadsrättsföreningen Gjutformen 12, org.nr 769621-4455, nedan kallad Föreningen, och Snösvängen Entreprenad AB, org.nr 556812-3344, nedan kallad Entreprenören, har denna dag träffats följande avtal. § 1 Omfattning Entreprenören åtar sig att utföra snöröjning och halkbekämpning av Föreningens gemensamma körytor, gångbanor, entréer samt parkeringsplatser enligt bifogad områdeskarta. § 2 Jourperiod och inställelse Jourperioden löper från den 15 november till den 15 april. Utryckning sker automatiskt vid ett snödjup om 5 centimeter. Inställelsetiden är högst fyra timmar från avslutat snöfall. Halkbekämpning utförs i förebyggande syfte eller senast en timme efter avslutad snöröjning. Brf Gjutformen 12 · Org.nr 769621-4455 · Handlingen förvaras hos styrelsen"
+    },
+    {
+      "chunk_id": "9b344d10cad3:p2:0-116",
+      "score": 0.442,
+      "confidence": 0.2648,
+      "bm25": 1.744,
+      "dense": 0.3652,
+      "document_id": "9b344d10cad3",
+      "document_name": "Snöröjningsavtal 2026.pdf",
+      "page": 2,
+      "text": "§ 3 Ersättning Ersättning utgår enligt följande prislista: maskinell snöröjning med traktor 1 250 kronor per timme, manuell skottning av trappor och entréer 450 kronor per timme samt halkbekämpning med sand eller salt 350 kronor per säck. Samtliga priser är angivna exklusive mervärdesskatt. § 4 Avtalstid och uppsägning Avtalet gäller från den 1 november 2026 och tills vidare. Uppsägning skall ske skriftligen senast tre månader före avtalstidens utgång. § 5 Ansvar och anmärkningar Entreprenören ansvarar för skador på egendom som orsakas av vårdslöshet vid arbetets utförande och skall inneha gällande ansvarsförsäkring. Eventuella anmärkningar mot utfört arbete skall anmälas till Entreprenören inom 24 timmar efter avslutat arbetspass. Brf Gjutformen 12 · Org.nr 769621-4455 · Handlingen förvaras hos styrelsen"
+    },
+    {
+      "chunk_id": "65b277e97ae2:p1:0-59",
+      "score": 0.2023,
+      "confidence": 0.1476,
+      "bm25": 0.0,
+      "dense": 0.2952,
+      "document_id": "65b277e97ae2",
+      "document_name": "Trivselregler.pdf",
+      "page": 1,
+      "text": "TRIVSELREGLER · BRF GJUTFORMEN 12 Antagna av styrelsen den 2 juni 2026. 1. Borrande och annat störande arbete får ske vardagar klockan 08:00 till 19:00 samt lördagar klockan 10:00 till 16:00. Söndagar och helgdagar är arbete förbjudet. 2. Grillning med kolgrill är inte tillåten på balkongerna. Elgrill är tillåten. 3. Tvättstugan bokas via bokningstavlan i källaren. Passet ska lämnas städat."
+    },
+    {
+      "chunk_id": "78471996f79c:p1:0-118",
+      "score": 0.1613,
+      "confidence": 0.1289,
+      "bm25": 0.0,
+      "dense": 0.2578,
+      "document_id": "78471996f79c",
+      "document_name": "Årsredovisning 2025.pdf",
+      "page": 1,
+      "text": "ÅRSREDOVISNING 2025 · BOSTADSRÄTTSFÖRENINGEN GJUTFORMEN 12 Styrelsen för Bostadsrättsföreningen Gjutformen 12, organisationsnummer 769621-4455, avger härmed årsredovisning för räkenskapsåret 1 januari till 31 december 2025. Förvaltningsberättelse Föreningens fastighet Gjutformen 12 i Göteborg uppfördes 1962 och omfattar 48 bostadslägenheter samt två kommersiella lokaler. Den totala boytan uppgår till 3 412 kvadratmeter. Den tekniska förvaltningen har under året skötts av Driftia Fastighetsservice AB medan den löpande ekonomiska för- valtningen har skötts av SBC Sveriges BostadsrättsCentrum AB. Väsentliga händelser under året Under 2025 genomfördes etapp 1 av relining av avloppsstammarna till en kostnad av 1 850 000 kronor. Arbetet slutbesiktigades i oktober utan anmärkning. Vidare färdigställdes en ny gemensam tvättstuga i källarplanet. Brf Gjutformen 12 · Org.nr 769621-4455 · Handlingen förvaras hos styrelsen"
+    },
+    {
+      "chunk_id": "66b7c0ddc41a:p1:0-120",
+      "score": 0.1381,
+      "confidence": 0.1183,
+      "bm25": 0.0,
+      "dense": 0.2366,
+      "document_id": "66b7c0ddc41a",
+      "document_name": "Styrelseprotokoll 2026-03-12.pdf",
+      "page": 1,
+      "text": "PROTOKOLL FÖRT VID STYRELSEMÖTE · BRF GJUTFORMEN 12 Datum: 12 mars 2026. Plats: Föreningslokalen, Gjutformsgatan 4. Närvarande: Karin Lindqvist (ordförande), Jonas Berg (kassör), Amira Chowdhury (sekreterare), Per Sandin (ledamot). Frånvarande: Eva Norlin (suppleant). § 1 Mötets öppnande och föregående protokoll Ordföranden förklarade mötet öppnat. Föregående protokoll från den 5 februari 2026 lades till handlingarna utan anmärkning. § 2 Fasadmålning Styrelsen beslutade att genomföra fasadmålning av gårdsfasaden under sommaren 2026. Uppdraget tilldelas Måleri Väst AB enligt offert om 450 000 kronor inklusive ställning och materiel. Jonas Berg fick i uppdrag att teckna avtalet. § 3 OVK-besiktning Obligatorisk ventilationskontroll skall genomföras i maj 2026. Driftia Fastighetsservice AB samordnar tillträde till samtliga lägenheter. Brf Gjutformen 12 · Org.nr 769621-4455 · Handlingen förvaras hos styrelsen"
+    },
+    {
+      "chunk_id": "ffe01354e81a:p1:0-138",
+      "score": 0.1085,
+      "confidence": 0.1048,
+      "bm25": 0.0,
+      "dense": 0.2096,
+      "document_id": "ffe01354e81a",
+      "document_name": "Stadgar Brf Gjutformen 12.pdf",
+      "page": 1,
+      "text": "STADGAR FÖR BOSTADSRÄTTSFÖRENINGEN GJUTFORMEN 12 Antagna vid ordinarie föreningsstämma den 21 maj 2024 och registrerade hos Bolagsverket den 2 september 2024. § 1 Firma och säte Föreningens firma är Bostadsrättsföreningen Gjutformen 12. Styrelsen har sitt säte i Göteborgs kommun. § 2 Ändamål Föreningen har till ändamål att främja medlemmarnas ekonomiska intressen genom att i föreningens hus upplåta bostadslägenheter och lokaler under nyttjanderätt och utan tidsbegränsning. § 3 Medlemskap Medlemskap kan beviljas fysisk person som övertar bostadsrätt i föreningens hus. Ansökan om medlemskap prövas av styrelsen. Juridisk person som förvärvat bostadsrätt till en bostadslägenhet får vägras medlemskap. § 4 Insats och årsavgift Insats och årsavgift fastställs av styrelsen. Årsavgiften fördelas på bostadsrätterna i förhållande till lägenheternas andelstal. Årsavgiften betalas månadsvis i förskott senast sista vardagen före varje kalendermånads början. Brf Gjutformen 12 · Org.nr 769621-4455 · Handlingen förvaras hos styrelsen"
+    }
+  ],
+  "provider": "claude-cli",
+  "model": "claude-opus-4-8"
+}

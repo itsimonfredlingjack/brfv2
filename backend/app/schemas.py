@@ -113,7 +113,7 @@ class Settings(BaseModel):
     searchWeighting: int = Field(default=50, ge=0, le=100)  # 0=BM25 only, 100=dense only
     candidateCount: int = Field(default=100, ge=1, le=1000)
     topK: int = Field(default=6, ge=1, le=50)
-    minRelevance: float = Field(default=0.25, ge=0.0, le=1.0)
+    minRelevance: float = Field(default=0.18, ge=0.0, le=1.0)
     # Generation
     aiModel: str = "claude-opus-4-8"
     systemPrompt: str = ""
