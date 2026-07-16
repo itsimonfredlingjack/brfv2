@@ -26,8 +26,15 @@ __pycache__/
 .pytest_cache/
 .model_cache/
 
+# Secrets: real env files never commit; .env.example is the tracked template
+.env
+backend/.env
+*.env
+!*.env.example
+
 # Evidence artifacts are committed selectively; eval scratch is not
 backend/eval/last_run.json
+backend/eval/network_audit.json
 
 # Editor directories and files
 .vscode/*

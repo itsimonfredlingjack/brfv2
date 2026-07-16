@@ -1,0 +1,556 @@
+{
+  "corpus": [
+    "Stadgar Brf Sjöutsikten 7.pdf",
+    "Årsredovisning 2025 Brf Sjöutsikten 7.pdf",
+    "Styrelseprotokoll 2026-04-20.pdf",
+    "Städ- och trädgårdsavtal 2026.pdf"
+  ],
+  "answerable": [
+    {
+      "id": "g00",
+      "question": "Hur fördelas årsavgifterna mellan lägenheterna?",
+      "document": "Stadgar Brf Sjöutsikten 7.pdf",
+      "page": 1,
+      "passage": "Årsavgifterna fördelas mellan bostadsrätterna i förhållande till lägenheternas insatser",
+      "rects": [
+        [
+          72.0,
+          376.1,
+          447.16,
+          389.84
+        ]
+      ]
+    },
+    {
+      "id": "g01",
+      "question": "När ska månadsavgiften senast vara betald?",
+      "document": "Stadgar Brf Sjöutsikten 7.pdf",
+      "page": 1,
+      "passage": "Årsavgiften betalas månadsvis i förskott och skall vara föreningen tillhanda senast den tjugofemte dagen i månaden före",
+      "rects": [
+        [
+          72.0,
+          389.9,
+          453.84,
+          403.64
+        ],
+        [
+          72.0,
+          403.7,
+          218.75,
+          417.44
+        ]
+      ]
+    },
+    {
+      "id": "g02",
+      "question": "Hur stor överlåtelseavgift får föreningen ta ut och vem betalar den?",
+      "document": "Stadgar Brf Sjöutsikten 7.pdf",
+      "page": 2,
+      "passage": "en överlåtelseavgift om högst 3,5 procent av prisbasbeloppet. Överlåtelseavgiften betalas av överlåtaren",
+      "rects": [
+        [
+          347.15,
+          85.5,
+          477.21,
+          99.24
+        ],
+        [
+          72.0,
+          99.3,
+          401.05,
+          113.04
+        ]
+      ]
+    },
+    {
+      "id": "g03",
+      "question": "Kan min kusin bo i min bostad medan jag arbetar utomlands i ett år?",
+      "document": "Stadgar Brf Sjöutsikten 7.pdf",
+      "page": 2,
+      "passage": "Upplåtelse av lägenheten i andra hand kräver styrelsens skriftliga medgivande. Medgivande lämnas för högst sex månader åt gången",
+      "rects": [
+        [
+          72.0,
+          171.95,
+          478.29,
+          185.69
+        ],
+        [
+          72.0,
+          185.75,
+          253.76,
+          199.49
+        ]
+      ]
+    },
+    {
+      "id": "g04",
+      "question": "Hur många ledamöter ska styrelsen bestå av?",
+      "document": "Stadgar Brf Sjöutsikten 7.pdf",
+      "page": 2,
+      "passage": "Styrelsen består av lägst fyra och högst sju ledamöter med högst tre suppleanter",
+      "rects": [
+        [
+          72.0,
+          331.05,
+          428.83,
+          344.79
+        ]
+      ]
+    },
+    {
+      "id": "g05",
+      "question": "Vem tecknar föreningens firma?",
+      "document": "Stadgar Brf Sjöutsikten 7.pdf",
+      "page": 2,
+      "passage": "Föreningens firma tecknas av ordföranden i förening med ytterligare en styrelseledamot",
+      "rects": [
+        [
+          72.0,
+          403.7,
+          459.38,
+          417.44
+        ]
+      ]
+    },
+    {
+      "id": "g06",
+      "question": "Måste föreningens revisor vara auktoriserad?",
+      "document": "Stadgar Brf Sjöutsikten 7.pdf",
+      "page": 3,
+      "passage": "Revisorn skall vara auktoriserad eller godkänd",
+      "rects": [
+        [
+          315.4,
+          85.5,
+          457.66,
+          99.24
+        ],
+        [
+          72.0,
+          99.3,
+          132.03,
+          113.04
+        ]
+      ]
+    },
+    {
+      "id": "g07",
+      "question": "Hur länge i sträck kan mina föräldrar sova över när de kommer och hälsar på?",
+      "document": "Stadgar Brf Sjöutsikten 7.pdf",
+      "page": 3,
+      "passage": "Gästlägenheten får hyras i högst fem nätter i följd av samma hushåll",
+      "rects": [
+        [
+          72.0,
+          244.6,
+          373.8,
+          258.34
+        ]
+      ]
+    },
+    {
+      "id": "g08",
+      "question": "Vilket år byggdes huset och hur många lägenheter finns det?",
+      "document": "Årsredovisning 2025 Brf Sjöutsikten 7.pdf",
+      "page": 1,
+      "passage": "Byggnaden uppfördes 1978 och rymmer 62 bostadslägenheter samt en kommersiell lokal",
+      "rects": [
+        [
+          369.93,
+          144.35,
+          492.79,
+          158.09
+        ],
+        [
+          72.0,
+          158.15,
+          341.53,
+          171.89
+        ]
+      ]
+    },
+    {
+      "id": "g09",
+      "question": "Vilket bolag sköter den ekonomiska förvaltningen?",
+      "document": "Årsredovisning 2025 Brf Sjöutsikten 7.pdf",
+      "page": 1,
+      "passage": "Den ekonomiska förvaltningen har under året skötts av Kajkanten Ekonomiförvaltning AB",
+      "rects": [
+        [
+          72.0,
+          206.55,
+          465.51,
+          220.29
+        ]
+      ]
+    },
+    {
+      "id": "g10",
+      "question": "Vad kostade bytet av fjärrvärmecentralen?",
+      "document": "Årsredovisning 2025 Brf Sjöutsikten 7.pdf",
+      "page": 1,
+      "passage": "byttes fjärrvärmecentralen ut till en kostnad av 985 000 kronor",
+      "rects": [
+        [
+          154.82,
+          313.8,
+          428.83,
+          327.54
+        ]
+      ]
+    },
+    {
+      "id": "g11",
+      "question": "Hur stora lån har föreningen och hos vilken bank?",
+      "document": "Årsredovisning 2025 Brf Sjöutsikten 7.pdf",
+      "page": 2,
+      "passage": "fastighetslån uppgick vid årets utgång till 32 400 000 kronor, fördelade på två lån hos Skärgårdsbanken Hypotek AB",
+      "rects": [
+        [
+          130.36,
+          147.7,
+          471.1,
+          161.44
+        ],
+        [
+          72.0,
+          161.5,
+          240.97,
+          175.24
+        ]
+      ]
+    },
+    {
+      "id": "g12",
+      "question": "Vilka lånenummer har föreningens fastighetslån?",
+      "document": "Årsredovisning 2025 Brf Sjöutsikten 7.pdf",
+      "page": 2,
+      "passage": "lånenummer 220445 och 220446",
+      "rects": [
+        [
+          265.98,
+          161.5,
+          412.73,
+          175.24
+        ]
+      ]
+    },
+    {
+      "id": "g13",
+      "question": "Hur mycket höjs årsavgifterna under 2026?",
+      "document": "Årsredovisning 2025 Brf Sjöutsikten 7.pdf",
+      "page": 2,
+      "passage": "höja årsavgifterna med 6 procent från och med den 1 juli 2026",
+      "rects": [
+        [
+          253.76,
+          196.1,
+          488.88,
+          209.84
+        ],
+        [
+          72.0,
+          209.9,
+          109.24,
+          223.64
+        ]
+      ]
+    },
+    {
+      "id": "g14",
+      "question": "Vad blev årets resultat 2025?",
+      "document": "Årsredovisning 2025 Brf Sjöutsikten 7.pdf",
+      "page": 2,
+      "passage": "Årets resultat blev 215 000 kronor",
+      "rects": [
+        [
+          72.0,
+          126.9,
+          222.07,
+          140.64
+        ]
+      ]
+    },
+    {
+      "id": "g15",
+      "question": "Vem är ordförande i föreningen?",
+      "document": "Styrelseprotokoll 2026-04-20.pdf",
+      "page": 1,
+      "passage": "Marta Ceder (ordförande)",
+      "rects": [
+        [
+          461.09,
+          85.5,
+          486.65,
+          99.24
+        ],
+        [
+          72.0,
+          99.3,
+          157.03,
+          113.04
+        ]
+      ]
+    },
+    {
+      "id": "g16",
+      "question": "Vem renoverar bastun och vad kostar det?",
+      "document": "Styrelseprotokoll 2026-04-20.pdf",
+      "page": 1,
+      "passage": "offerten från Västkustbastu & Relax AB om 138 000 kronor inklusive moms",
+      "rects": [
+        [
+          198.74,
+          217.0,
+          458.87,
+          230.74
+        ],
+        [
+          72.0,
+          230.8,
+          140.34,
+          244.54
+        ]
+      ]
+    },
+    {
+      "id": "g17",
+      "question": "Vad kostar gästlägenheten per natt efter höjningen?",
+      "document": "Styrelseprotokoll 2026-04-20.pdf",
+      "page": 1,
+      "passage": "avgiften för gästlägenheten höjs från 250 kronor till 350 kronor per natt från och med den 1 juni 2026",
+      "rects": [
+        [
+          176.5,
+          303.45,
+          468.87,
+          317.19
+        ],
+        [
+          72.0,
+          317.25,
+          220.98,
+          330.99
+        ]
+      ]
+    },
+    {
+      "id": "g18",
+      "question": "Hur många bastupass får ett hushåll boka per vecka?",
+      "document": "Styrelseprotokoll 2026-04-20.pdf",
+      "page": 2,
+      "passage": "varje hushåll får boka högst tre pass per vecka",
+      "rects": [
+        [
+          329.35,
+          171.95,
+          489.98,
+          185.69
+        ],
+        [
+          72.0,
+          185.75,
+          115.35,
+          199.49
+        ]
+      ]
+    },
+    {
+      "id": "g19",
+      "question": "Vilket företag ska byta garageportarna?",
+      "document": "Styrelseprotokoll 2026-04-20.pdf",
+      "page": 2,
+      "passage": "tilldela uppdraget till Portmontage Lindholmen AB enligt offert om 264 000 kronor exklusive moms",
+      "rects": [
+        [
+          132.04,
+          99.3,
+          458.87,
+          113.04
+        ],
+        [
+          72.0,
+          113.1,
+          174.24,
+          126.84
+        ]
+      ]
+    },
+    {
+      "id": "g20",
+      "question": "När hålls föreningsstämman 2026?",
+      "document": "Styrelseprotokoll 2026-04-20.pdf",
+      "page": 2,
+      "passage": "den ordinarie föreningsstämman den 28 maj 2026",
+      "rects": [
+        [
+          309.88,
+          258.4,
+          486.63,
+          272.14
+        ],
+        [
+          72.0,
+          272.2,
+          113.13,
+          285.94
+        ]
+      ]
+    },
+    {
+      "id": "g21",
+      "question": "När är nästa styrelsemöte?",
+      "document": "Styrelseprotokoll 2026-04-20.pdf",
+      "page": 2,
+      "passage": "Nästa ordinarie styrelsemöte hålls måndagen den 25 maj 2026 klockan 19:00",
+      "rects": [
+        [
+          72.0,
+          317.25,
+          414.38,
+          330.99
+        ]
+      ]
+    },
+    {
+      "id": "g22",
+      "question": "Hur ofta städas trapphusen?",
+      "document": "Städ- och trädgårdsavtal 2026.pdf",
+      "page": 1,
+      "passage": "Trappstädning utförs varje helgfri måndag och omfattar sopning och våttorkning av samtliga trapphus",
+      "rects": [
+        [
+          72.0,
+          158.15,
+          477.18,
+          171.89
+        ],
+        [
+          72.0,
+          171.95,
+          110.91,
+          185.69
+        ]
+      ]
+    },
+    {
+      "id": "g23",
+      "question": "Får Leverantören anlita en underentreprenör för trädgårdsskötseln?",
+      "document": "Städ- och trädgårdsavtal 2026.pdf",
+      "page": 1,
+      "passage": "Ansvaret för trädgårdsskötseln får inte överlåtas till en underentreprenör utan Föreningens skriftliga godkännande",
+      "rects": [
+        [
+          109.8,
+          286.0,
+          450.51,
+          299.74
+        ],
+        [
+          72.0,
+          299.8,
+          230.41,
+          313.54
+        ]
+      ]
+    },
+    {
+      "id": "g24",
+      "question": "Hur ofta klipps gräset på gården?",
+      "document": "Städ- och trädgårdsavtal 2026.pdf",
+      "page": 1,
+      "passage": "vilket omfattar gräsklippning varannan vecka",
+      "rects": [
+        [
+          114.24,
+          258.4,
+          311.54,
+          272.14
+        ]
+      ]
+    },
+    {
+      "id": "g25",
+      "question": "Vad betalar föreningen per månad för städning och trädgård?",
+      "document": "Städ- och trädgårdsavtal 2026.pdf",
+      "page": 1,
+      "passage": "fast månadsarvode om 31 800 kronor exklusive mervärdesskatt",
+      "rects": [
+        [
+          172.61,
+          344.85,
+          453.83,
+          358.59
+        ]
+      ]
+    },
+    {
+      "id": "g26",
+      "question": "Med vilken framförhållning måste samarbetet med städfirman avslutas om föreningen är missnöjd?",
+      "document": "Städ- och trädgårdsavtal 2026.pdf",
+      "page": 2,
+      "passage": "Avtalet får sägas upp skriftligen senast sex månader före avtalstidens utgång",
+      "rects": [
+        [
+          304.9,
+          99.3,
+          443.85,
+          113.04
+        ],
+        [
+          72.0,
+          113.1,
+          270.99,
+          126.84
+        ]
+      ]
+    },
+    {
+      "id": "g27",
+      "question": "Ingår snöröjning i städavtalet?",
+      "document": "Städ- och trädgårdsavtal 2026.pdf",
+      "page": 2,
+      "passage": "Snöröjning, halkbekämpning och invändig städning av lägenheter omfattas inte av detta avtal",
+      "rects": [
+        [
+          72.0,
+          244.6,
+          483.33,
+          258.34
+        ]
+      ]
+    }
+  ],
+  "unanswerable": [
+    {
+      "id": "u00",
+      "question": "Vilka tider gäller för tvättstugan?"
+    },
+    {
+      "id": "u01",
+      "question": "Finns det laddstolpar för elbil på föreningens parkering?"
+    },
+    {
+      "id": "u02",
+      "question": "Vad blev resultatet av den senaste OVK-besiktningen?"
+    },
+    {
+      "id": "u03",
+      "question": "Får man ha hund eller katt i lägenheten?"
+    },
+    {
+      "id": "u04",
+      "question": "Vilket försäkringsbolag har föreningen sin fastighetsförsäkring hos?"
+    },
+    {
+      "id": "u05",
+      "question": "Hur hög är insatsen för en trerumslägenhet?"
+    },
+    {
+      "id": "u06",
+      "question": "Vad kostar det att hyra föreningens takterrass för privata fester?"
+    }
+  ]
+}
