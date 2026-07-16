@@ -69,6 +69,11 @@ class CitationOut(BaseModel):
     chunk_id: str
     rects: list[list[float]]  # [[x0, y0, x1, y1], ...] one per text line, union over spans
     score: float
+    # True when the cited document's DocumentMeta.source == "scanned": rects
+    # come from OCR word boxes, which clip ~9-27% of the time vs. exact on
+    # born-digital PDFs (never misplaced — see reality-check evidence). The
+    # UI marks the highlight as approximate; verification is unaffected.
+    approximate: bool = False
 
 
 RejectReason = Literal[

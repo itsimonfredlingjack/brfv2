@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState, useCallback } from 'react';
-import { X, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { X, ChevronLeft, ChevronRight, Loader2, AlertCircle } from 'lucide-react';
 import * as pdfjsLib from 'pdfjs-dist';
 import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
+import { highlightClassName } from './pdfViewerHelpers';
 import './PdfViewer.css';
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
@@ -13,7 +14,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = workerUrl;
  * They are converted through the pdf.js viewport (y-flip into PDF user space
  * first) so scaling and page rotation are handled correctly.
  */
-function PdfViewer({ url, title, page: initialPage = 1, rects = [], highlightPage = null, onClose }) {
+function PdfViewer({ url, title, page: initialPage = 1, rects = [], highlightPage = null, approximate = false, onClose }) {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
   const pdfRef = useRef(null);
@@ -149,6 +150,12 @@ function PdfViewer({ url, title, page: initialPage = 1, rects = [], highlightPag
             <X size={18} />
           </button>
         </header>
+        {approximate && (
+          <div className="pdfviewer-approx-note">
+            <AlertCircle size={13} />
+            Inskannat dokument — markeringen är ungefärlig
+          </div>
+        )}
         <div className="pdfviewer-body" ref={containerRef}>
           {error && <div className="pdfviewer-error">Kunde inte visa PDF: {error}</div>}
           <div className="pdfviewer-canvas-wrap">
@@ -156,7 +163,7 @@ function PdfViewer({ url, title, page: initialPage = 1, rects = [], highlightPag
             {overlays.map((b, i) => (
               <div
                 key={i}
-                className="pdfviewer-highlight"
+                className={highlightClassName(approximate)}
                 style={{ left: b.left, top: b.top, width: b.width, height: b.height }}
               />
             ))}

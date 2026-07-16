@@ -10,6 +10,7 @@ import ContextCard from './components/ContextCard';
 import DocumentView from './components/DocumentView';
 import SettingsView from './components/SettingsView';
 import PdfViewer from './components/PdfViewer';
+import CitationChip from './components/CitationChip';
 import Login from './components/Login';
 import { api } from './api';
 import './App.css';
@@ -24,7 +25,7 @@ function App() {
   // Real backend state
   const [documents, setDocuments] = useState([]);
   const [uploadError, setUploadError] = useState(null);
-  const [viewer, setViewer] = useState(null); // {url, title, page, rects, highlightPage}
+  const [viewer, setViewer] = useState(null); // {url, title, page, rects, highlightPage, approximate}
   const [chatBusy, setChatBusy] = useState(false);
   const fileInputRef = useRef(null);
 
@@ -167,6 +168,7 @@ function App() {
       page: opts.page || 1,
       rects: opts.rects || [],
       highlightPage: opts.highlightPage ?? null,
+      approximate: opts.approximate ?? false,
     });
   // Settings State
   const [activeSettingsTab, setActiveSettingsTab] = useState('dokument');
@@ -1312,15 +1314,7 @@ function App() {
                         {msg.citations?.length > 0 && (
                           <div className="chat-citations">
                             {msg.citations.map((c, i) => (
-                              <button
-                                key={i}
-                                className="citation-chip"
-                                title={`"${c.quote}"`}
-                                onClick={() => openDocViewer(c, { page: c.page, rects: c.rects, highlightPage: c.page })}
-                              >
-                                <FileText size={12} />
-                                {c.document_name} · s.{c.page}
-                              </button>
+                              <CitationChip key={i} citation={c} onOpen={openDocViewer} />
                             ))}
                           </div>
                         )}

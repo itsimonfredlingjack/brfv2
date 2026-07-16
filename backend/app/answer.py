@@ -177,18 +177,21 @@ def ask(store: Store, question: str, provider: LLMProvider | None = None) -> Ask
             continue
         res = resolve_citation(chunk, spans, pages)
         if isinstance(res, Resolved):
+            doc_meta = documents.get(chunk.document_id)
             citations.append(
                 CitationOut(
                     document_id=chunk.document_id,
-                    document_name=documents[chunk.document_id].name
-                    if chunk.document_id in documents
-                    else chunk.document_id,
+                    document_name=doc_meta.name if doc_meta is not None else chunk.document_id,
                     page=res.page,
                     quote=display,
                     quotes=spans,
                     chunk_id=chunk.id,
                     rects=res.rects,
                     score=hit_scores.get(chunk.id, 0.0),
+                    # Reality report condition 3: OCR rects clip more than
+                    # digital ones (never misplaced) — flag so the UI can
+                    # mark the highlight as approximate.
+                    approximate=doc_meta is not None and doc_meta.source == "scanned",
                 )
             )
         else:

@@ -1841,6 +1841,21 @@
   transform: translateY(-1px);
 }
 
+/* Scanned-source citation: rects come from OCR word boxes (clipped ~9-27%
+   of the time vs. exact on digital PDFs, never misplaced) -- flagged so the
+   user doesn't treat the highlight as exact. Reuses .chat-warning's amber. */
+.citation-chip-approx {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-left: 2px;
+  padding-left: 7px;
+  border-left: 1px solid rgba(251, 191, 36, 0.35);
+  color: #fbbf24;
+  font-size: 11px;
+  font-weight: 600;
+}
+
 .chat-refusal-tag {
   display: inline-flex;
   align-items: center;

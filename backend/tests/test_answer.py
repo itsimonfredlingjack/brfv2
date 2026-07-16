@@ -12,7 +12,7 @@ import pytest
 import app.answer as answer_mod
 from app.answer import ask
 from app.llm import FakeLLM, LLMError, OpenAICompatProvider
-from app.schemas import Settings
+from app.schemas import PageData, Settings, Word
 from app.store import Store
 from tests.pdf_fixtures import build_pdf
 
@@ -130,6 +130,64 @@ class TestGrounding:
         fake = FakeLLM([{"answer": "Bara text.", "citations": [], "insufficient_data": False}])
         resp = ask(store, "När löper jourperioden?", provider=fake)
         assert not resp.refusal
+
+
+def _line_words(texts: list[str], *, y0: float = 100.0, block: int = 1, line: int = 1) -> list[Word]:
+    """A single visual line of words, left to right, non-overlapping
+    (matches tests/test_ocr_ingestion.py's helper)."""
+    words = []
+    x = 72.0
+    for t in texts:
+        w = 8.0 * len(t) + 4.0
+        words.append(Word(text=t, x0=x, y0=y0, x1=x + w, y1=y0 + 14.0, block=block, line=line))
+        x += w + 6.0
+    return words
+
+
+class TestApproximateHighlight:
+    """Reality report condition 3: OCR bbox fidelity on scans is ~73-91%
+    (clipped, never misplaced) vs 100% on born-digital PDFs. CitationOut.approximate
+    flags citations resolved against a scanned-source document so the UI can mark
+    the highlight as approximate — verification itself is unchanged either way."""
+
+    def test_scanned_source_citation_marked_approximate(self, tmp_path, monkeypatch):
+        monkeypatch.setattr("app.store.tesseract_available", lambda: True)
+        monkeypatch.setattr(
+            "app.store.ocr_pdf",
+            lambda data, **kw: [
+                PageData(
+                    number=1,
+                    width=595.0,
+                    height=842.0,
+                    rotation=0,
+                    words=_line_words(["Jourperioden", "löper", "till", "15", "april."]),
+                )
+            ],
+        )
+        st = Store(data_dir=tmp_path)
+        st.add_document("Skannat.pdf", build_pdf([[]]))
+        st.update_settings(Settings(minRelevance=0.0))
+        chunk_id = next(iter(st.chunks))
+        fake = FakeLLM(
+            [
+                {
+                    "answer": "Jourperioden löper till 15 april.",
+                    "citations": [{"chunk_id": chunk_id, "quote": "Jourperioden löper till 15 april"}],
+                    "insufficient_data": False,
+                }
+            ]
+        )
+        resp = ask(st, "När löper jourperioden?", provider=fake)
+        assert not resp.refusal
+        assert len(resp.citations) == 1
+        assert resp.citations[0].approximate is True
+
+    def test_digital_source_citation_not_approximate(self, store):
+        fake = FakeLLM([good_response(store)])
+        resp = ask(store, "När löper jourperioden?", provider=fake)
+        assert not resp.refusal
+        assert len(resp.citations) == 1
+        assert resp.citations[0].approximate is False
 
 
 class TestRobustness:

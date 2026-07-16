@@ -85,6 +85,29 @@
   animation: pdfviewer-pulse 1.2s ease-in-out 2;
 }
 
+/* Scanned-source highlight: rects come from OCR word boxes, which clip
+   ~9-27% of the time vs. exact on digital PDFs (never misplaced). Dashed
+   outline + reduced opacity mark it as approximate rather than pixel-exact. */
+.pdfviewer-highlight--approximate {
+  outline-style: dashed;
+  opacity: 0.7;
+}
+
+/* Reuses .pdfviewer-jump's amber styling family for a static (non-button)
+   note shown above the page when the open citation is scanned-source. */
+.pdfviewer-approx-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 18px 0;
+  padding: 8px 14px;
+  border: 1px solid rgba(255, 200, 87, 0.5);
+  background: rgba(255, 200, 87, 0.12);
+  color: #ffc857;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
 @keyframes pdfviewer-pulse {
   0%, 100% { outline-color: rgba(255, 165, 0, 0.85); }
   50% { outline-color: rgba(255, 80, 0, 1); }
