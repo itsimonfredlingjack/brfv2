@@ -121,7 +121,10 @@ class Settings(BaseModel):
     # the value is passed as a CLI argument by one provider)
     aiModel: str = Field(default="claude-opus-4-8", pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$")
     systemPrompt: str = ""
-    maxResponseLength: int = Field(default=1200, ge=100, le=8000)  # LLM max_tokens
+    # Answer budget (tokens). The provider's actual max_tokens is larger:
+    # citation JSON gets separate headroom on top (see answer.py
+    # _CITATION_HEADROOM_TOKENS) so quote-dense answers don't truncate.
+    maxResponseLength: int = Field(default=1200, ge=100, le=8000)
     requireSources: bool = True
     insufficientDataBehavior: Literal["refuse", "warn"] = "refuse"
     # Data lifecycle: documents older than this are hard-deleted (0 = keep forever)

@@ -1,9 +1,17 @@
-"""Orchestration tests: gates, verification, refusal paths — FakeLLM only."""
+"""Orchestration tests: gates, verification, refusal paths.
 
+Mostly FakeLLM; TestEnvelopeTruncation additionally uses OpenAICompatProvider
+with a monkeypatched httpx transport (fixed scripted responses only, no live
+model — same pattern as test_llm.py:138-159)."""
+
+import json
+
+import httpx
 import pytest
 
+import app.answer as answer_mod
 from app.answer import ask
-from app.llm import FakeLLM
+from app.llm import FakeLLM, LLMError, OpenAICompatProvider
 from app.schemas import Settings
 from app.store import Store
 from tests.pdf_fixtures import build_pdf
@@ -145,7 +153,9 @@ class TestRobustness:
         fake = FakeLLM([good_response(store)])
         ask(store, "När löper jourperioden?", provider=fake)
         assert fake.calls[0]["model"] == "claude-opus-4-8"
-        assert fake.calls[0]["max_tokens"] == 777
+        # max_tokens is the envelope budget: maxResponseLength (the user-facing
+        # answer budget) plus fixed citation headroom (punch-list #5).
+        assert fake.calls[0]["max_tokens"] == 777 + answer_mod._CITATION_HEADROOM_TOKENS
 
 
 class TestChunkAliases:
@@ -368,3 +378,108 @@ class TestMultiSpanCitations:
         ask(store, "Vad gäller för snöröjningen?", provider=fake)
         system = fake.calls[0]["system"]
         assert '"quotes"' in system  # the contract explains the multi-span form
+
+
+ENVELOPE_DOC_LINES = [
+    ("Ersättningen för snöröjning regleras i föreningens avtal.", 72, 100),
+    ("Ersättning utgår med 1250 kr per påbörjad timme.", 72, 114),
+    ("Organisationsnummer", 72, 128),
+    ("769600-1234", 72, 142),
+]
+
+
+@pytest.fixture()
+def envelope_store(tmp_path) -> Store:
+    st = Store(data_dir=tmp_path)
+    st.add_document("Ersattningsavtal.pdf", build_pdf([ENVELOPE_DOC_LINES]))
+    st.update_settings(Settings(minRelevance=0.0, topK=3, maxResponseLength=400))
+    return st
+
+
+class TestEnvelopeTruncation:
+    """Regression for punch-list #5 (docs/evidence/reality-report.md:163-165):
+    maxResponseLength bounds the ANSWER, not the whole answer+citations JSON
+    envelope. A quote-dense response (long answer text + a multi-quote
+    citation set) can need more tokens than maxResponseLength alone but fewer
+    than maxResponseLength + the citation headroom — that used to truncate
+    and refuse with a generic provider_error; it must now succeed."""
+
+    @staticmethod
+    def _payload(chunk_id: str, filler_repeat: int) -> dict:
+        filler = (
+            "Ersättningen för snöröjning regleras i föreningens avtal och beskrivs närmare nedan. "
+            * filler_repeat
+        ).strip()
+        return {
+            "answer": filler,
+            "citations": [
+                {"chunk_id": chunk_id, "quote": "Ersättning utgår med 1250 kr per påbörjad timme"},
+                {"chunk_id": chunk_id, "quotes": ["Organisationsnummer", "769600-1234"]},
+            ],
+            "insufficient_data": False,
+        }
+
+    def _provider(self, envelope_store, monkeypatch, filler_repeat: int):
+        monkeypatch.setenv("BRF_LLM_BASE_URL", "http://selfhost.local/v1")
+        monkeypatch.setenv("BRF_LLM_MODEL", "gemma4:e4b")
+        chunk_id = first_chunk_id(envelope_store)
+        full_content = json.dumps(self._payload(chunk_id, filler_repeat), ensure_ascii=False)
+        # Token need computed deterministically from the full (untruncated)
+        # envelope — mirrors a real server's token accounting closely enough
+        # to exercise the budget boundary.
+        tokens_needed = len(full_content) // 4
+        seen_max_tokens: list[int] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            body = json.loads(request.content)
+            seen_max_tokens.append(body["max_tokens"])
+            if body["max_tokens"] < tokens_needed:
+                truncated = full_content[: body["max_tokens"] * 4]
+                return httpx.Response(
+                    200,
+                    json={"choices": [{"message": {"content": truncated}, "finish_reason": "length"}]},
+                )
+            return httpx.Response(
+                200,
+                json={"choices": [{"message": {"content": full_content}, "finish_reason": "stop"}]},
+            )
+
+        provider = OpenAICompatProvider(transport=httpx.MockTransport(handler))
+        return provider, tokens_needed, seen_max_tokens
+
+    def test_quote_dense_envelope_needs_headroom_beyond_maxResponseLength(self, envelope_store, monkeypatch):
+        provider, tokens_needed, seen_max_tokens = self._provider(envelope_store, monkeypatch, filler_repeat=30)
+        s = envelope_store.settings
+
+        # Proves this is the previously-failing case: needs more than the bare
+        # answer budget, but fits inside answer budget + citation headroom.
+        assert s.maxResponseLength < tokens_needed < s.maxResponseLength + answer_mod._CITATION_HEADROOM_TOKENS
+
+        # OLD semantics (max_tokens == maxResponseLength) truncate — independent
+        # of the fix, this documents the regression this test guards against.
+        with pytest.raises(LLMError, match="trunkerades"):
+            provider.complete("sys", "user", max_tokens=s.maxResponseLength, model="m")
+
+        # NEW semantics via ask(): the envelope gets citation headroom, so the
+        # full JSON arrives, both citations verify, and the answer is returned
+        # — no refusal.
+        resp = ask(envelope_store, "Vad gäller ersättningen och organisationsnumret?", provider=provider)
+        assert not resp.refusal, f"unexpected refusal: {resp.refusal_reason}"
+        assert resp.answer.startswith("Ersättningen för snöröjning")
+        assert len(resp.citations) == 2
+        assert {tuple(c.quotes) for c in resp.citations} == {
+            ("Ersättning utgår med 1250 kr per påbörjad timme",),
+            ("Organisationsnummer", "769600-1234"),
+        }
+        assert seen_max_tokens[-1] == s.maxResponseLength + answer_mod._CITATION_HEADROOM_TOKENS
+
+    def test_still_refuses_honestly_when_envelope_budget_also_exceeded(self, envelope_store, monkeypatch):
+        # A genuinely oversized reply — the fix adds headroom, it doesn't
+        # remove the ceiling. filler_repeat chosen with a large margin so this
+        # holds even if the headroom constant changes later.
+        provider, tokens_needed, _ = self._provider(envelope_store, monkeypatch, filler_repeat=60)
+        s = envelope_store.settings
+        assert tokens_needed > s.maxResponseLength + answer_mod._CITATION_HEADROOM_TOKENS + 100
+
+        resp = ask(envelope_store, "Vad gäller ersättningen och organisationsnumret?", provider=provider)
+        assert resp.refusal and resp.refusal_reason == "provider_error"

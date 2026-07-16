@@ -110,9 +110,13 @@ class AnthropicProvider:
         if resp.stop_reason == "refusal":
             raise LLMError("Modellen avböjde att svara (refusal).")
         if resp.stop_reason == "max_tokens":
-            # Truncated JSON must not be parsed as a complete answer.
+            # Truncated JSON must not be parsed as a complete answer. max_tokens
+            # here is the whole envelope budget (answer + citation JSON,
+            # answer.py's _CITATION_HEADROOM_TOKENS already added on top of
+            # the user's "Maximal svarslängd") — don't blame that setting.
             raise LLMError(
-                f"Svaret trunkerades vid max_tokens={max_tokens} — höj 'Maximal svarslängd' i inställningarna."
+                f"Svaret trunkerades vid den totala svarsbudgeten (max_tokens={max_tokens}, "
+                "inkluderar utrymme för källhänvisningar)."
             )
         return "".join(block.text for block in resp.content if block.type == "text")
 
@@ -199,8 +203,12 @@ class OpenAICompatProvider:
                     "och gav inget synligt svar — kontrollera att 'thinking' är avstängt "
                     "för modellen (reasoning_effort/think)."
                 )
+            # max_tokens here is the whole envelope budget (answer + citation
+            # JSON) — the user's "Maximal svarslängd" already has headroom
+            # added on top, so don't point back at that setting.
             raise LLMError(
-                f"Svaret trunkerades vid max_tokens={max_tokens} — höj 'Maximal svarslängd' i inställningarna."
+                f"Svaret trunkerades vid den totala svarsbudgeten (max_tokens={max_tokens}, "
+                "inkluderar utrymme för källhänvisningar)."
             )
         if not isinstance(content, str) or not content.strip():
             raise LLMError("LLM-servern gav ett tomt svar.")
@@ -263,6 +271,7 @@ class ClaudeCLIProvider:
         result = envelope.get("result")
         if not isinstance(result, str):
             raise LLMError(f"claude CLI-svar saknar 'result': {str(envelope)[:200]}")
+        # No finish_reason surfaces here, so truncation is undetectable — out of scope for punch-list #5.
         return result
 
 

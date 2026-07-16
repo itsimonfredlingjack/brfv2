@@ -16,6 +16,22 @@ from .store import Store
 
 logger = logging.getLogger("brf.answer")
 
+# Citation-envelope headroom (punch-list #5): the model must emit the whole
+# JSON envelope — answer text plus all citations[].quote/quotes — inside one
+# token budget. Settings.maxResponseLength is user-facing as the ANSWER
+# budget; without separate headroom, a quote-dense answer can truncate even
+# when the answer text itself is short. Bound the worst case at the default
+# retrieval width (topK=6 excerpts, schemas.py Settings.topK) each cited with
+# MAX_SPANS=4 (citations.py:25) fragments of <=16 words: 6 * 4 * 16 = 384
+# words of quoted text, plus per-citation JSON structure (chunk_id field,
+# quotes list brackets/commas) for up to 6 citation objects. At ~1.3-1.5
+# tokens/word for Swedish, 384 words is ~500-580 tokens; with structural
+# overhead added, ~600 tokens is a defensible bound for the citations[]
+# portion of the envelope. This is a static headroom, not computed from the
+# request's actual topK — a deployment that raises topK well above the
+# default can still see truncation on extreme quote-dense answers.
+_CITATION_HEADROOM_TOKENS = 600
+
 GROUNDING_CONTRACT = """Du är en dokumentassistent för en bostadsrättsförenings styrelse. Du svarar på svenska.
 
 ABSOLUTA REGLER:
@@ -105,6 +121,10 @@ def ask(store: Store, question: str, provider: LLMProvider | None = None) -> Ask
     excerpts, alias_map = _render_excerpts(hits)
     user = f"FRÅGA: {question}\n\nUTDRAG:\n{excerpts}"
 
+    # maxResponseLength keeps its user-facing meaning (answer budget); the
+    # envelope sent to the provider gets extra headroom for citation JSON.
+    envelope_budget = s.maxResponseLength + _CITATION_HEADROOM_TOKENS
+
     parsed = None
     last_err: Exception | None = None
     for attempt in range(2):
@@ -112,7 +132,7 @@ def ask(store: Store, question: str, provider: LLMProvider | None = None) -> Ask
             raw = provider.complete(
                 system if attempt == 0 else system + _RETRY_NUDGE,
                 user,
-                max_tokens=s.maxResponseLength,
+                max_tokens=envelope_budget,
                 model=model,
             )
             parsed = parse_llm_json(raw)
