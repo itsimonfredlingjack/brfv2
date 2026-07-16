@@ -63,14 +63,30 @@ def _hyphen_free(t: str) -> str:
     return t.replace("-", "")
 
 
-def canonical_stream(raw_tokens: list[str]) -> list[tuple[str, list[int]]]:
+# Characters that signal linebreak hyphenation when they end a raw token:
+# hyphen-minus, U+2010 hyphen, U+2011 non-breaking hyphen, soft hyphen.
+# Em/en dashes are deliberately absent — they are punctuation, not
+# hyphenation, even though _CHAR_MAP folds them to "-" for equality.
+_MERGE_SIGNALS = "-‐‑­"
+
+
+def _merge_signal(raw: str) -> bool:
+    r = raw.strip().rstrip(_EDGE_PUNCT)
+    return bool(r) and r[-1] in _MERGE_SIGNALS
+
+
+def canonical_stream(raw_tokens: list[str], *, merge: bool = True) -> list[tuple[str, list[int]]]:
     """Map raw whitespace tokens to canonical tokens with provenance.
 
-    Returns [(canonical_token, [original_indices]), ...]. A token ending in a
-    hyphen merges with the following token (linebreak hyphenation); because
-    both sides of a comparison pass through this function, grammatical
-    suspended hyphens ("vatten- och ...") merge identically on both sides.
-    Tokens that normalize to nothing (pure punctuation) are skipped.
+    Returns [(canonical_token, [original_indices]), ...]. A token whose raw
+    form ends in a hyphenation character merges with the following token —
+    chained, so a word split across 3+ lines still folds into one token.
+    Because both sides of a comparison pass through this function,
+    grammatical suspended hyphens ("vatten- och ...") merge identically on
+    both sides. Em/en dashes never trigger a merge (they fold to '-' for
+    equality only). Tokens that normalize to nothing (pure punctuation) are
+    skipped. merge=False yields the unmerged stream — the fallback matcher
+    for quotes that begin or end inside a merged word.
     """
     out: list[tuple[str, list[int]]] = []
     i = 0
@@ -80,18 +96,22 @@ def canonical_stream(raw_tokens: list[str]) -> list[tuple[str, list[int]]]:
         if not t or not _hyphen_free(t):
             i += 1
             continue
-        if t.endswith("-") and len(t) > 1:
-            # find the next non-empty token to merge with
-            j = i + 1
-            while j < n and not _hyphen_free(norm_token(raw_tokens[j])):
-                j += 1
-            if j < n:
-                merged = t[:-1] + norm_token(raw_tokens[j])
-                out.append((merged, [i, j]))
-                i = j + 1
-                continue
-        out.append((t, [i]))
-        i += 1
+        idxs = [i]
+        merged = t
+        j = i
+        while merge and _merge_signal(raw_tokens[j]):
+            k = j + 1
+            while k < n and not _hyphen_free(norm_token(raw_tokens[k])):
+                k += 1
+            if k >= n:
+                break
+            if merged.endswith("-") and len(merged) > 1:
+                merged = merged[:-1]
+            merged = merged + norm_token(raw_tokens[k])
+            idxs.append(k)
+            j = k
+        out.append((merged, idxs))
+        i = (j + 1) if len(idxs) > 1 else i + 1
     return out
 
 
@@ -99,19 +119,7 @@ def _tokens_equal(a: str, b: str) -> bool:
     return a == b or _hyphen_free(a) == _hyphen_free(b)
 
 
-def find_spans(source_words: list[str], quote: str) -> list[tuple[int, int]]:
-    """Find every occurrence of `quote` in `source_words`.
-
-    Returns inclusive (start_word_index, end_word_index) spans in the original
-    word list, in order of occurrence. Empty list when the quote (after
-    canonicalization) is empty or not present.
-    """
-    quote_stream = canonical_stream(quote.split())
-    q_tokens = [t for t, _ in quote_stream]
-    if not q_tokens:
-        return []
-
-    src_stream = canonical_stream(list(source_words))
+def _match_streams(src_stream: list[tuple[str, list[int]]], q_tokens: list[str]) -> list[tuple[int, int]]:
     spans: list[tuple[int, int]] = []
     m = len(q_tokens)
     for start in range(len(src_stream) - m + 1):
@@ -120,3 +128,25 @@ def find_spans(source_words: list[str], quote: str) -> list[tuple[int, int]]:
             last_idx = src_stream[start + m - 1][1][-1]
             spans.append((first_idx, last_idx))
     return spans
+
+
+def find_spans(source_words: list[str], quote: str) -> list[tuple[int, int]]:
+    """Find every occurrence of `quote` in `source_words`.
+
+    Returns inclusive (start_word_index, end_word_index) spans in the original
+    word list, in order of occurrence. Empty list when the quote (after
+    canonicalization) is empty or not present. Matching runs on the merged
+    canonical streams first; if that finds nothing, an unmerged pass catches
+    quotes that begin or end inside a hyphenation merge (e.g. a quote starting
+    at "valtningen" where the source reads "för-⏎valtningen").
+    """
+    q_tokens = [t for t, _ in canonical_stream(quote.split())]
+    if not q_tokens:
+        return []
+    spans = _match_streams(canonical_stream(list(source_words)), q_tokens)
+    if spans:
+        return spans
+    q_unmerged = [t for t, _ in canonical_stream(quote.split(), merge=False)]
+    if not q_unmerged:
+        return []
+    return _match_streams(canonical_stream(list(source_words), merge=False), q_unmerged)

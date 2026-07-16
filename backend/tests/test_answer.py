@@ -197,3 +197,82 @@ class TestChunkAliases:
         fake = FakeLLM([good_response(store)])
         ask(store, "När löper jourperioden?", provider=fake)
         assert "[K1]" in fake.calls[0]["user"]
+
+
+class TestProviderFailures:
+    def test_provider_exception_is_provider_error_without_detail(self, store):
+        class Boom:
+            name = "boom"
+
+            def complete(self, system, user, *, max_tokens, model):
+                raise RuntimeError("hemlig intern detalj /Users/nagon/nyckel")
+
+        resp = ask(store, "När löper jourperioden?", provider=Boom())
+        assert resp.refusal and resp.refusal_reason == "provider_error"
+        assert "hemlig" not in resp.answer and "/Users/" not in resp.answer
+
+
+class TestWarnModeGrounding:
+    def _warn_store(self, store):
+        store.update_settings(
+            store.settings.model_copy(update={"insufficientDataBehavior": "warn", "minRelevance": 0.0})
+        )
+        return store
+
+    def test_warn_mode_still_verifies_citations(self, store):
+        store = self._warn_store(store)
+        fake = FakeLLM(
+            [
+                {
+                    "answer": "Osäkert: jouren verkar starta 15 november.",
+                    "citations": [{"chunk_id": "K1", "quote": "löper från 15 november till 15 april"}],
+                    "insufficient_data": True,
+                }
+            ]
+        )
+        resp = ask(store, "När löper jourperioden för snöröjning?", provider=fake)
+        assert not resp.refusal
+        assert resp.warning
+        assert len(resp.citations) == 1 and resp.citations[0].rects
+
+    def test_warn_mode_fabricated_citations_still_refuse(self, store):
+        store = self._warn_store(store)
+        fake = FakeLLM(
+            [
+                {
+                    "answer": "Osäkert svar.",
+                    "citations": [{"chunk_id": "K1", "quote": "helt påhittat citat utan täckning"}],
+                    "insufficient_data": True,
+                }
+            ]
+        )
+        resp = ask(store, "När löper jourperioden för snöröjning?", provider=fake)
+        assert resp.refusal and resp.refusal_reason == "grounding_failed"
+
+
+class TestCitationScopeRestriction:
+    def test_raw_id_of_unretrieved_chunk_rejected(self, store):
+        """The model may only cite excerpts it was shown: a real chunk id that
+        was not among the retrieved excerpts must be rejected, not resolved."""
+        store.add_document(
+            "Underhållsplan.pdf",
+            build_pdf([[("Fasadmålning planeras till sommaren 2027 enligt underhållsplanen.", 72, 100)]]),
+        )
+        store.update_settings(store.settings.model_copy(update={"topK": 1, "minRelevance": 0.0}))
+        other_id = next(
+            cid for cid, c in store.chunks.items()
+            if store.documents[c.document_id].name == "Underhållsplan.pdf"
+        )
+        fake = FakeLLM(
+            [
+                {
+                    "answer": "Svar.",
+                    "citations": [{"chunk_id": other_id, "quote": "Fasadmålning planeras till sommaren 2027"}],
+                    "insufficient_data": False,
+                }
+            ]
+        )
+        resp = ask(store, "När löper jourperioden för snöröjning?", provider=fake)
+        assert resp.retrieval and all(h.document_name == "Snöröjningsavtal.pdf" for h in resp.retrieval)
+        assert resp.rejected_citations and resp.rejected_citations[0].reason == "unknown_chunk"
+        assert resp.refusal and resp.refusal_reason == "grounding_failed"

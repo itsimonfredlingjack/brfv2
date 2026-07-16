@@ -51,14 +51,17 @@ def resolve_quote(chunk: Chunk, quote: str, pages_by_doc: dict[str, list[PageDat
 
 
 def _pick_span(spans: list[tuple[int, int]], chunk: Chunk) -> tuple[int, int] | None:
-    """Prefer spans fully inside the chunk's word range; accept overlapping
-    ones (chunk-boundary quotes); reject spans elsewhere on the page."""
+    """Prefer spans fully inside the chunk's word range. A span straddling the
+    chunk boundary is accepted only if at least half of it lies inside the
+    range (chunk-boundary quotes); spans mostly or entirely elsewhere on the
+    page are rejected (§2.6 wrong-occurrence guard)."""
     contained = [s for s in spans if s[0] >= chunk.word_start and s[1] <= chunk.word_end]
     if contained:
         return contained[0]
-    overlapping = [s for s in spans if s[0] <= chunk.word_end and s[1] >= chunk.word_start]
-    if overlapping:
-        return overlapping[0]
+    for s in spans:
+        overlap = min(s[1], chunk.word_end) - max(s[0], chunk.word_start) + 1
+        if overlap > 0 and 2 * overlap >= (s[1] - s[0] + 1):
+            return s
     return None
 
 

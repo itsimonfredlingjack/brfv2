@@ -98,3 +98,31 @@ class TestFindSpans:
     def test_empty_quote_returns_nothing(self):
         assert find_spans(self.WORDS, "") == []
         assert find_spans(self.WORDS, " . , ") == []
+
+
+class TestChainMergeAndDashSignals:
+    def test_chain_merge_three_fragments(self):
+        # A word hyphenated over three lines folds into one canonical token.
+        assert find_spans(["för-", "valt-", "ning"], "förvaltning") == [(0, 2)]
+
+    def test_chain_merge_provenance_indices(self):
+        stream = canonical_stream(["för-", "valt-", "ning", "klar"])
+        assert stream[0] == ("förvaltning", [0, 1, 2])
+        assert stream[1] == ("klar", [3])
+
+    def test_em_dash_does_not_merge_words(self):
+        # "slutet—" + "Nästa": the em dash is punctuation, not hyphenation.
+        assert find_spans(["slutet—", "Nästa", "kapitel"], "Nästa kapitel") == [(1, 2)]
+        assert find_spans(["slutet—", "Nästa"], "slutet") == [(0, 0)]
+
+    def test_trailing_soft_hyphen_merges(self):
+        assert find_spans(["för­", "valtningen", "sköts"], "förvaltningen sköts") == [(0, 2)]
+
+
+class TestUnmergedFallback:
+    def test_quote_starting_inside_a_merge(self):
+        words = ["ordinarie", "för-", "valtningen", "har", "skötts"]
+        assert find_spans(words, "valtningen har skötts") == [(2, 4)]
+
+    def test_quote_ending_at_a_fragment(self):
+        assert find_spans(["ordinarie", "för-", "valtningen"], "ordinarie för-") == [(0, 1)]

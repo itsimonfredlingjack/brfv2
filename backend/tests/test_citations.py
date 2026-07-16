@@ -204,3 +204,22 @@ class TestChunkBoundaryOverlap:
         tail_quote = " ".join(w.text for w in words[mid - 1 : mid + 3])
         res = resolve_quote(chunk, tail_quote, {doc_id: pages})
         assert isinstance(res, Resolved)
+
+    def test_span_mostly_outside_chunk_rejected(self, simple_doc):
+        """§2.6 tightening: a span grazing the chunk by a single word while
+        lying mostly elsewhere on the page is a wrong-occurrence hazard."""
+        doc_id, pages = simple_doc
+        words = pages[0].words
+        assert len(words) >= 8, "fixture must have at least 8 words"
+        chunk = Chunk(
+            id="doc1:p1:0-1",
+            document_id=doc_id,
+            page=1,
+            word_start=0,
+            word_end=1,
+            text=" ".join(w.text for w in words[:2]),
+        )
+        quote = " ".join(w.text for w in words[1:8])  # 1 word inside, 6 outside
+        res = resolve_quote(chunk, quote, {doc_id: pages})
+        assert isinstance(res, Rejected)
+        assert res.reason == "provenance_mismatch"

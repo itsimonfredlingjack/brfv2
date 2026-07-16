@@ -120,8 +120,8 @@ def eval_retrieval(store: Store, golden: dict) -> dict:
 
 
 def eval_full(store: Store, golden: dict, workers: int = 4, limit: int | None = None) -> dict:
-    answerable = golden["answerable"][:limit] if limit else golden["answerable"]
-    unanswerable = golden["unanswerable"][: (max(1, limit // 4) if limit else None)]
+    answerable = golden["answerable"][:limit] if limit is not None else golden["answerable"]
+    unanswerable = golden["unanswerable"][: (max(1, limit // 4) if limit is not None else None)]
     by_name = {m.name: m.id for m in store.documents.values()}
 
     def run_answerable(qa: dict) -> dict:

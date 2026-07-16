@@ -26,6 +26,8 @@ from .schemas import Chunk, DocumentMeta, PageData, Settings
 
 logger = logging.getLogger("brf.store")
 
+MAX_DOCUMENT_PAGES = 400  # resource guard: reject absurd page counts up front
+
 
 class Store:
     def __init__(self, data_dir: str | Path | None = None) -> None:
@@ -41,13 +43,19 @@ class Store:
         self.settings = self._load_settings()
         self.documents: dict[str, DocumentMeta] = self._load_documents()
         self.pages: dict[str, list[PageData]] = {}
+        dropped: list[str] = []
         for doc_id in list(self.documents):
             pages = self._load_extraction(doc_id)
             if pages is None:
                 logger.warning("Extraction saknas för %s — tar bort dokumentet", doc_id)
                 self.documents.pop(doc_id)
+                dropped.append(doc_id)
             else:
                 self.pages[doc_id] = pages
+        if dropped:  # keep disk consistent with the drop, don't leave orphans
+            for doc_id in dropped:
+                (self.data_dir / "docs" / f"{doc_id}.pdf").unlink(missing_ok=True)
+            self._save_documents()
         self.chunks: dict[str, Chunk] = {}
         self.index = HybridIndex(get_embedder())
         self._rebuild()
@@ -121,23 +129,35 @@ class Store:
                 "Dokumentet saknar textlager (troligen en skannad PDF). "
                 "OCR ingår inte i denna version — se OCR-spikriggen."
             )
+        if len(pages) > MAX_DOCUMENT_PAGES:
+            raise ValueError(
+                f"Dokumentet har {len(pages)} sidor — max {MAX_DOCUMENT_PAGES}. Dela upp filen."
+            )
         doc_id = uuid.uuid4().hex[:12]
         with self.lock:
-            (self.data_dir / "docs" / f"{doc_id}.pdf").write_bytes(pdf_bytes)
-            self._save_extraction(doc_id, pages)
-            meta = DocumentMeta(
-                id=doc_id,
-                name=name,
-                pages=len(pages),
-                words=total_words,
-                chunks=0,
-                uploaded_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
-            )
-            self.documents[doc_id] = meta
-            self.pages = {**self.pages, doc_id: pages}
-            self._rebuild()
-            self._save_documents()
-            return self.documents[doc_id]
+            try:
+                (self.data_dir / "docs" / f"{doc_id}.pdf").write_bytes(pdf_bytes)
+                self._save_extraction(doc_id, pages)
+                meta = DocumentMeta(
+                    id=doc_id,
+                    name=name,
+                    pages=len(pages),
+                    words=total_words,
+                    chunks=0,
+                    uploaded_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                )
+                self.documents[doc_id] = meta
+                self.pages = {**self.pages, doc_id: pages}
+                self._rebuild()
+                self._save_documents()
+                return self.documents[doc_id]
+            except Exception:
+                # Roll back: no orphaned files, no half-registered document.
+                self.documents.pop(doc_id, None)
+                self.pages = {k: v for k, v in self.pages.items() if k != doc_id}
+                (self.data_dir / "docs" / f"{doc_id}.pdf").unlink(missing_ok=True)
+                (self.data_dir / "extract" / f"{doc_id}.json").unlink(missing_ok=True)
+                raise
 
     def delete_document(self, doc_id: str) -> bool:
         with self.lock:
@@ -186,13 +206,26 @@ class Store:
 
     def update_settings(self, new: Settings) -> None:
         with self.lock:
-            rechunk = new.chunking_signature() != self.settings.chunking_signature()
+            old = self.settings
+            rechunk = new.chunking_signature() != old.chunking_signature()
             self.settings = new
-            self._save_settings()
             if rechunk:
                 logger.info("Chunk-inställningar ändrade — chunkar om och bygger nytt index")
-                self._rebuild()
+                try:
+                    self._rebuild()
+                except Exception:
+                    # _rebuild publishes only at the end, so the old chunks and
+                    # index are still live — revert settings to match reality.
+                    self.settings = old
+                    raise
+            self._save_settings()
 
     def wipe(self) -> None:
-        for doc_id in list(self.documents):
-            self.delete_document(doc_id)
+        with self.lock:
+            for doc_id in list(self.documents):
+                (self.data_dir / "docs" / f"{doc_id}.pdf").unlink(missing_ok=True)
+                (self.data_dir / "extract" / f"{doc_id}.json").unlink(missing_ok=True)
+            self.documents = {}
+            self.pages = {}
+            self._rebuild()  # once, not once per document
+            self._save_documents()

@@ -85,6 +85,7 @@ RefusalReason = Literal[
     "low_relevance",
     "insufficient_data",
     "grounding_failed",
+    "provider_error",
 ]
 
 
@@ -114,8 +115,9 @@ class Settings(BaseModel):
     candidateCount: int = Field(default=100, ge=1, le=1000)
     topK: int = Field(default=6, ge=1, le=50)
     minRelevance: float = Field(default=0.18, ge=0.0, le=1.0)
-    # Generation
-    aiModel: str = "claude-opus-4-8"
+    # Generation — model ids must be plain identifiers (no leading dash:
+    # the value is passed as a CLI argument by one provider)
+    aiModel: str = Field(default="claude-opus-4-8", pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$")
     systemPrompt: str = ""
     maxResponseLength: int = Field(default=1200, ge=100, le=8000)  # LLM max_tokens
     requireSources: bool = True

@@ -94,6 +94,12 @@ def create_app(store: Store | None = None) -> FastAPI:
     @app.post("/api/reset")
     def reset() -> dict:
         """Wipe all documents and reseed the demo corpus."""
+        import sys
+        from pathlib import Path
+
+        backend_root = str(Path(__file__).resolve().parent.parent)
+        if backend_root not in sys.path:  # robust under any server cwd
+            sys.path.insert(0, backend_root)
         from scripts.seed import seed_store
 
         st.wipe()

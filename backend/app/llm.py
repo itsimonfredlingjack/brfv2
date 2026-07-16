@@ -8,10 +8,13 @@ Tests always inject FakeLLM. Force with BRF_LLM=api|cli|fake.
 from __future__ import annotations
 
 import json
+import logging
 import os
 import shutil
 import subprocess
 from typing import Protocol
+
+logger = logging.getLogger("brf.llm")
 
 ANSWER_SCHEMA: dict = {
     "type": "object",
@@ -145,11 +148,17 @@ class ClaudeCLIProvider:
         except subprocess.TimeoutExpired as exc:
             raise LLMError(f"claude CLI timeout efter {self.timeout_s}s") from exc
         if proc.returncode != 0:
-            raise LLMError(f"claude CLI fel ({proc.returncode}): {proc.stderr.decode()[:300]}")
+            # Detail (paths, account info) goes to the server log only.
+            logger.error("claude CLI fel (kod %d): %s", proc.returncode, proc.stderr.decode(errors="replace")[:500])
+            raise LLMError(f"claude CLI misslyckades (kod {proc.returncode}).")
         try:
             envelope = json.loads(proc.stdout.decode("utf-8"))
         except json.JSONDecodeError as exc:
             raise LLMError(f"claude CLI gav ogiltig JSON: {proc.stdout[:200]!r}") from exc
+        if envelope.get("is_error"):
+            logger.error("claude CLI is_error: subtype=%s result=%s",
+                         envelope.get("subtype"), str(envelope.get("result"))[:300])
+            raise LLMError("claude CLI rapporterade ett internt fel.")
         result = envelope.get("result")
         if not isinstance(result, str):
             raise LLMError(f"claude CLI-svar saknar 'result': {str(envelope)[:200]}")
@@ -191,7 +200,11 @@ def pick_provider() -> LLMProvider:
     if forced == "fake":
         _provider = FakeLLM([])
     elif forced == "api" or (forced == "auto" and os.environ.get("ANTHROPIC_API_KEY")):
-        _provider = AnthropicProvider()
+        try:
+            _provider = AnthropicProvider()
+        except Exception as exc:  # a missing/bad key must not 500 /api/health
+            logger.error("Anthropic-klienten kunde inte initieras: %s", exc)
+            _provider = NoLLMProvider()
     elif forced in ("auto", "cli") and shutil.which("claude"):
         _provider = ClaudeCLIProvider()
     else:
