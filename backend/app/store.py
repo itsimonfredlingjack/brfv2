@@ -15,7 +15,7 @@ import logging
 import os
 import threading
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 from .chunker import chunk_pages
@@ -219,6 +219,25 @@ class Store:
                     self.settings = old
                     raise
             self._save_settings()
+
+    def purge_expired(self, now: datetime | None = None) -> list[str]:
+        """Hard-delete documents older than settings.retentionDays (0 = off).
+        Returns the deleted document ids."""
+        with self.lock:
+            days = self.settings.retentionDays
+            if not days:
+                return []
+            cutoff = (now or datetime.now(timezone.utc)) - timedelta(days=days)
+            doomed = [
+                doc_id
+                for doc_id, meta in self.documents.items()
+                if datetime.fromisoformat(meta.uploaded_at) < cutoff
+            ]
+            for doc_id in doomed:
+                self.delete_document(doc_id)
+            if doomed:
+                logger.info("Retention: raderade %d dokument äldre än %d dagar", len(doomed), days)
+            return doomed
 
     def wipe(self) -> None:
         with self.lock:

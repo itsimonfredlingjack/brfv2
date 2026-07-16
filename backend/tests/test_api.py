@@ -1,131 +1,113 @@
+"""Tenant-scoped API happy paths (auth enforced). Isolation attacks live in
+test_isolation.py; lifecycle in test_lifecycle.py."""
+
 import pytest
 from fastapi.testclient import TestClient
 
+from app.auth import AuthStore
 from app.main import create_app
-from app.store import Store
+from app.registry import TenantRegistry
 from tests.pdf_fixtures import build_pdf
 
 
 @pytest.fixture()
-def client(tmp_path):
-    return TestClient(create_app(Store(data_dir=tmp_path)))
-
-
-@pytest.fixture()
-def uploaded(client):
-    pdf = build_pdf(
-        [
-            [
-                ("Årsavgiften fastställs av styrelsen och fördelas efter andelstal.", 72, 100),
-                ("Överlåtelseavgift får tas ut med högst 2,5 procent av prisbasbeloppet.", 72, 114),
-                ("Pantsättningsavgift får tas ut med högst en procent av prisbasbeloppet.", 72, 128),
-                ("Avgifterna betalas av köparen respektive pantsättaren till föreningen.", 72, 142),
-            ]
-        ]
-    )
-    r = client.post("/api/documents", files={"file": ("Stadgar.pdf", pdf, "application/pdf")})
-    assert r.status_code == 200, r.text
-    return r.json()
+def env(two_tenant_app):
+    return two_tenant_app
 
 
 class TestHealth:
-    def test_health(self, client):
-        r = client.get("/api/health")
-        assert r.status_code == 200
-        body = r.json()
+    def test_health(self, env):
+        body = env.client.get("/api/health").json()
         assert body["status"] == "ok"
         assert body["embedding_provider"] == "hashed-char-ngram"
+        assert body["tenants"] == 2
+
+
+class TestAuthFlow:
+    def test_login_sets_cookie_and_returns_memberships(self, env):
+        r = env.client.post("/api/auth/login", json={"email": "admin-a@a.se", "password": "lösenord-a-admin"})
+        assert r.status_code == 200
+        assert "brf_session" in r.cookies
+        assert r.json()["memberships"][0]["brf_id"] == "brf-a"
+
+    def test_bad_password_401(self, env):
+        r = env.client.post("/api/auth/login", json={"email": "admin-a@a.se", "password": "fel"})
+        assert r.status_code == 401
+
+    def test_me_requires_auth(self, env):
+        assert env.client.get("/api/auth/me").status_code == 401
+        r = env.client.get("/api/auth/me", headers=env.admin_a_headers)
+        assert r.status_code == 200 and r.json()["user"]["email"] == "admin-a@a.se"
+
+    def test_logout_invalidates_session(self, env):
+        tok = env.token("admin-a@a.se", "lösenord-a-admin")
+        h = {"Authorization": f"Bearer {tok}"}
+        assert env.client.get("/api/auth/me", headers=h).status_code == 200
+        env.client.post("/api/auth/logout", headers=h)
+        assert env.client.get("/api/auth/me", headers=h).status_code == 401
 
 
 class TestDocuments:
-    def test_upload_and_list(self, client, uploaded):
-        assert uploaded["pages"] == 1
-        assert uploaded["words"] > 10
-        assert uploaded["chunks"] >= 1
-        docs = client.get("/api/documents").json()
-        assert [d["id"] for d in docs] == [uploaded["id"]]
+    def test_list_and_pdf_roundtrip(self, env):
+        docs = env.client.get("/api/brf/brf-a/documents", headers=env.admin_a_headers).json()
+        assert [d["id"] for d in docs] == [env.doc_a_id]
+        r = env.client.get(f"/api/brf/brf-a/documents/{env.doc_a_id}/pdf", headers=env.admin_a_headers)
+        assert r.status_code == 200 and r.content.startswith(b"%PDF")
 
-    def test_pdf_roundtrip(self, client, uploaded):
-        r = client.get(f"/api/documents/{uploaded['id']}/pdf")
-        assert r.status_code == 200
-        assert r.headers["content-type"] == "application/pdf"
-        assert r.content.startswith(b"%PDF")
+    def test_member_can_read_but_not_upload(self, env):
+        assert env.client.get("/api/brf/brf-a/documents", headers=env.member_a_headers).status_code == 200
+        pdf = build_pdf([[("Nytt dokument från medlem.", 72, 100)]])
+        r = env.client.post(
+            "/api/brf/brf-a/documents", files={"file": ("X.pdf", pdf, "application/pdf")}, headers=env.member_a_headers
+        )
+        assert r.status_code == 403
 
-    def test_extraction_summary(self, client, uploaded):
-        r = client.get(f"/api/documents/{uploaded['id']}/extraction")
-        assert r.status_code == 200
-        body = r.json()
-        assert body["pages"][0]["words"] > 0
-        assert body["chunks"][0]["preview"]
+    def test_admin_delete(self, env):
+        pdf = build_pdf([[("Tillfälligt dokument.", 72, 100)]])
+        rid = env.client.post(
+            "/api/brf/brf-a/documents", files={"file": ("T.pdf", pdf, "application/pdf")}, headers=env.admin_a_headers
+        ).json()["id"]
+        assert env.client.delete(f"/api/brf/brf-a/documents/{rid}", headers=env.admin_a_headers).status_code == 200
 
-    def test_non_pdf_rejected(self, client):
-        r = client.post("/api/documents", files={"file": ("evil.txt", b"hej", "text/plain")})
-        assert r.status_code == 400
-
-    def test_scanned_pdf_rejected_with_explanation(self, client):
-        r = client.post("/api/documents", files={"file": ("scan.pdf", build_pdf([[]]), "application/pdf")})
-        assert r.status_code == 422
-        assert "textlager" in r.json()["detail"]
-
-    def test_delete(self, client, uploaded):
-        assert client.delete(f"/api/documents/{uploaded['id']}").status_code == 200
-        assert client.get("/api/documents").json() == []
-        assert client.delete(f"/api/documents/{uploaded['id']}").status_code == 404
-
-    def test_unknown_doc_404(self, client):
-        assert client.get("/api/documents/nope/pdf").status_code == 404
-        assert client.get("/api/documents/nope/extraction").status_code == 404
+    def test_non_pdf_and_scanned_rejected(self, env):
+        assert env.client.post(
+            "/api/brf/brf-a/documents", files={"file": ("e.txt", b"hej", "text/plain")}, headers=env.admin_a_headers
+        ).status_code == 400
+        assert env.client.post(
+            "/api/brf/brf-a/documents", files={"file": ("s.pdf", build_pdf([[]]), "application/pdf")},
+            headers=env.admin_a_headers,
+        ).status_code == 422
 
 
 class TestSettings:
-    def test_roundtrip(self, client):
-        s = client.get("/api/settings").json()
+    def test_admin_roundtrip_member_readonly(self, env):
+        s = env.client.get("/api/brf/brf-a/settings", headers=env.member_a_headers).json()
         s["topK"] = 3
-        s["searchWeighting"] = 80
-        r = client.put("/api/settings", json=s)
-        assert r.status_code == 200
-        assert client.get("/api/settings").json()["topK"] == 3
+        assert env.client.put("/api/brf/brf-a/settings", json=s, headers=env.member_a_headers).status_code == 403
+        assert env.client.put("/api/brf/brf-a/settings", json=s, headers=env.admin_a_headers).status_code == 200
+        assert env.client.get("/api/brf/brf-a/settings", headers=env.admin_a_headers).json()["topK"] == 3
 
-    def test_invalid_settings_rejected(self, client):
-        s = client.get("/api/settings").json()
+    def test_invalid_settings_rejected(self, env):
+        s = env.client.get("/api/brf/brf-a/settings", headers=env.admin_a_headers).json()
         s["chunkStrategy"] = "magic"
-        assert client.put("/api/settings", json=s).status_code == 422
-
-    def test_chunk_knob_change_rechunks_documents(self, client, uploaded):
-        before = client.get(f"/api/documents/{uploaded['id']}/extraction").json()["chunks"]
-        s = client.get("/api/settings").json()
-        s["chunkStrategy"] = "fixed"
-        s["chunkSize"] = 20
-        s["chunkOverlap"] = 0
-        assert client.put("/api/settings", json=s).status_code == 200
-        after = client.get(f"/api/documents/{uploaded['id']}/extraction").json()["chunks"]
-        assert len(after) > len(before)
+        assert env.client.put("/api/brf/brf-a/settings", json=s, headers=env.admin_a_headers).status_code == 422
 
 
 class TestAsk:
-    def test_empty_question_400(self, client):
-        assert client.post("/api/ask", json={"question": "   "}).status_code == 400
+    def test_empty_question_400(self, env):
+        assert env.client.post("/api/brf/brf-a/ask", json={"question": " "}, headers=env.admin_a_headers).status_code == 400
 
-    def test_no_documents_refusal(self, client):
-        r = client.post("/api/ask", json={"question": "Vad gäller?"})
-        assert r.status_code == 200
-        body = r.json()
-        assert body["refusal"] and body["refusal_reason"] == "no_documents"
-
-    def test_ask_uses_fake_provider_from_env(self, client, uploaded):
-        # BRF_LLM=fake (conftest) → provider has no scripted responses → the
-        # orchestrator degrades to a refusal rather than crashing.
-        r = client.post("/api/ask", json={"question": "Vem fastställer årsavgiften?"})
-        assert r.status_code == 200
-        assert r.json()["refusal"] is True
+    def test_ask_refuses_without_scripted_llm(self, env):
+        # BRF_LLM=fake with no scripted responses → orchestrator degrades to a
+        # refusal rather than crashing.
+        r = env.client.post("/api/brf/brf-a/ask", json={"question": "Vad står i stadgarna?"}, headers=env.admin_a_headers)
+        assert r.status_code == 200 and r.json()["refusal"] is True
 
 
-class TestPersistence:
-    def test_store_reloads_from_disk(self, tmp_path):
-        st1 = Store(data_dir=tmp_path)
-        pdf = build_pdf([[("Underhållsplanen omfattar takrenovering.", 72, 100)]])
-        meta = st1.add_document("Plan.pdf", pdf)
-        st2 = Store(data_dir=tmp_path)
-        assert meta.id in st2.documents
-        assert len(st2.chunks) >= 1
-        assert len(st2.index) == len(st2.chunks)
+class TestDevReset:
+    def test_reset_forbidden_outside_dev(self, tmp_path, monkeypatch):
+        monkeypatch.setenv("BRF_MODE", "staging")
+        auth = AuthStore(tmp_path / "auth.db")
+        registry = TenantRegistry(tmp_path, auth)
+        client = TestClient(create_app(registry=registry, auth=auth, data_root=tmp_path))
+        assert client.post("/api/reset").status_code == 403

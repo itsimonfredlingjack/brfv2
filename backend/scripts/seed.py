@@ -67,13 +67,69 @@ def seed_store(store: Store) -> int:
     return len(DOCUMENTS)
 
 
-def build_golden(store: Store) -> dict:
+# Demo accounts (printed at seed time; local demo only — rotate for any
+# deployment that leaves this machine).
+DEMO_USERS = [
+    ("anna@gjutformen12.se", "gjutformen-demo-2026", "Anna Andersson", [("gjutformen-12", "admin")]),
+    ("bo@gjutformen12.se", "gjutformen-medlem-2026", "Bo Bergström", [("gjutformen-12", "member")]),
+    ("stina@sjoutsikten7.se", "sjoutsikten-demo-2026", "Stina Sjöberg", [("sjoutsikten-7", "admin")]),
+    ("max@demo.se", "max-demo-2026", "Max Demo", [("gjutformen-12", "admin"), ("sjoutsikten-7", "member")]),
+]
+
+
+def seed_demo(registry, auth) -> dict:
+    """Seed the two-tenant demo: corpus A (Gjutformen 12), corpus B
+    (Sjöutsikten 7, when seed_content_b exists) and the demo accounts."""
+    from app.auth import AuthError
+
+    tenants: dict[str, int] = {}
+    try:
+        a = registry.create("Brf Gjutformen 12", "gjutformen-12")
+    except AuthError:
+        a = "gjutformen-12"
+    store_a = registry.get(a)
+    if store_a is not None and not store_a.documents:
+        tenants[a] = seed_store(store_a)
+
+    try:
+        from scripts.seed_content_b import DOCUMENTS_B
+    except ImportError:
+        DOCUMENTS_B = None
+    if DOCUMENTS_B:
+        try:
+            b = registry.create("Brf Sjöutsikten 7", "sjoutsikten-7")
+        except AuthError:
+            b = "sjoutsikten-7"
+        store_b = registry.get(b)
+        if store_b is not None and not store_b.documents:
+            for d in DOCUMENTS_B:
+                store_b.add_document(d["name"], render_pdf(d))
+            tenants[b] = len(DOCUMENTS_B)
+
+    users = 0
+    for email, password, name, mems in DEMO_USERS:
+        try:
+            uid = auth.create_user(email, password, name)
+            users += 1
+        except AuthError:
+            continue  # already present
+        for brf_id, role in mems:
+            if auth.get_tenant(brf_id) is not None:
+                auth.add_membership(uid, brf_id, role)
+    return {"tenants": tenants, "users": users}
+
+
+def build_golden(store: Store, answerable_src: list | None = None, unanswerable_src: list | None = None) -> dict:
     """Locate every golden passage independently of the citation pipeline
     (fitz search_for) and fail loudly if any passage is unfindable."""
+    if answerable_src is None:
+        answerable_src = GOLDEN_ANSWERABLE
+    if unanswerable_src is None:
+        unanswerable_src = GOLDEN_UNANSWERABLE
     by_name: dict[str, str] = {m.name: m.id for m in store.documents.values()}
     answerable = []
     problems = []
-    for i, qa in enumerate(GOLDEN_ANSWERABLE):
+    for i, qa in enumerate(answerable_src):
         doc_id = by_name.get(qa["document"])
         if doc_id is None:
             problems.append(f"[{i}] okänt dokument: {qa['document']}")
@@ -103,32 +159,65 @@ def build_golden(store: Store) -> dict:
         "corpus": [m.name for m in store.documents.values()],
         "answerable": answerable,
         "unanswerable": [
-            {"id": f"u{i:02d}", "question": q} for i, q in enumerate(GOLDEN_UNANSWERABLE)
+            {"id": f"u{i:02d}", "question": q} for i, q in enumerate(unanswerable_src)
         ],
     }
 
 
+def _clean_legacy_layout(root: Path) -> None:
+    """Remove the pre-tenant single-store layout under backend/data/."""
+    import shutil
+
+    for name in ("docs", "extract"):
+        shutil.rmtree(root / name, ignore_errors=True)
+    for name in ("documents.json", "settings.json"):
+        (root / name).unlink(missing_ok=True)
+
+
 def main() -> None:
+    from app.auth import AuthStore
+    from app.registry import TenantRegistry
+
     parser = argparse.ArgumentParser()
-    parser.add_argument("--reset", action="store_true", help="wipe existing documents first")
-    parser.add_argument("--data-dir", default=None)
+    parser.add_argument("--reset", action="store_true", help="wipe all tenants and reseed")
+    parser.add_argument("--data-root", default=None)
     args = parser.parse_args()
 
-    store = Store(data_dir=args.data_dir)
+    root = Path(args.data_root) if args.data_root else Path(__file__).resolve().parent.parent / "data"
+    auth = AuthStore(root / "auth.db")
+    registry = TenantRegistry(root, auth)
+
     if args.reset:
-        store.wipe()
-    if store.documents:
-        print(f"Store innehåller redan {len(store.documents)} dokument — kör med --reset för att börja om.")
+        for t in registry.list():
+            registry.delete(t["brf_id"])
+        _clean_legacy_layout(root)
+    if registry.list():
+        print(f"Det finns redan {len(registry.list())} föreningar — kör med --reset för att börja om.")
         sys.exit(1)
-    n = seed_store(store)
-    golden = build_golden(store)
-    golden_path = Path(__file__).resolve().parent.parent / "eval" / "golden.json"
-    golden_path.parent.mkdir(exist_ok=True)
-    golden_path.write_text(json.dumps(golden, ensure_ascii=False, indent=2), "utf-8")
-    print(f"Seedade {n} dokument ({sum(m.pages for m in store.documents.values())} sidor, "
-          f"{len(store.chunks)} chunks).")
-    print(f"Golden set: {len(golden['answerable'])} besvarbara + {len(golden['unanswerable'])} obesvarbara "
-          f"→ {golden_path}")
+
+    seeded = seed_demo(registry, auth)
+    eval_dir = Path(__file__).resolve().parent.parent / "eval"
+    eval_dir.mkdir(exist_ok=True)
+
+    store_a = registry.get("gjutformen-12")
+    golden = build_golden(store_a)
+    (eval_dir / "golden.json").write_text(json.dumps(golden, ensure_ascii=False, indent=2), "utf-8")
+    print(f"Brf Gjutformen 12: {len(store_a.documents)} dokument, {len(store_a.chunks)} chunks; "
+          f"golden {len(golden['answerable'])}+{len(golden['unanswerable'])} → eval/golden.json")
+
+    store_b = registry.get("sjoutsikten-7")
+    if store_b is not None:
+        from scripts.seed_content_b import GOLDEN_ANSWERABLE_B, GOLDEN_UNANSWERABLE_B
+
+        golden_b = build_golden(store_b, GOLDEN_ANSWERABLE_B, GOLDEN_UNANSWERABLE_B)
+        (eval_dir / "golden_b.json").write_text(json.dumps(golden_b, ensure_ascii=False, indent=2), "utf-8")
+        print(f"Brf Sjöutsikten 7: {len(store_b.documents)} dokument, {len(store_b.chunks)} chunks; "
+              f"golden {len(golden_b['answerable'])}+{len(golden_b['unanswerable'])} → eval/golden_b.json")
+
+    print(f"\nDemokonton ({seeded['users']} skapade):")
+    for email, password, name, mems in DEMO_USERS:
+        roles = ", ".join(f"{b}:{r}" for b, r in mems)
+        print(f"  {email} / {password}  ({name}; {roles})")
 
 
 if __name__ == "__main__":

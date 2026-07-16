@@ -122,6 +122,8 @@ class Settings(BaseModel):
     maxResponseLength: int = Field(default=1200, ge=100, le=8000)  # LLM max_tokens
     requireSources: bool = True
     insufficientDataBehavior: Literal["refuse", "warn"] = "refuse"
+    # Data lifecycle: documents older than this are hard-deleted (0 = keep forever)
+    retentionDays: int = Field(default=0, ge=0, le=3650)
 
     @model_validator(mode="after")
     def _overlap_below_size(self) -> "Settings":
