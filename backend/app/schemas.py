@@ -42,6 +42,10 @@ class DocumentMeta(BaseModel):
     words: int
     chunks: int
     uploaded_at: str
+    # "scanned" = ingested via OCR (no text layer found). Existing
+    # documents.json entries predate this field and load as "digital" via
+    # the default.
+    source: Literal["digital", "scanned"] = "digital"
 
 
 class RetrievalHit(BaseModel):

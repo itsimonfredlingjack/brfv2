@@ -22,6 +22,7 @@ from .chunker import chunk_pages
 from .embeddings import get_embedder
 from .extract import extract_pdf
 from .indexer import HybridIndex
+from .ocr import ocr_pdf, tesseract_available
 from .schemas import Chunk, DocumentMeta, PageData, Settings
 
 logger = logging.getLogger("brf.store")
@@ -124,11 +125,24 @@ class Store:
     def add_document(self, name: str, pdf_bytes: bytes) -> DocumentMeta:
         pages = extract_pdf(pdf_bytes)
         total_words = sum(len(p.words) for p in pages)
+        source: str = "digital"
         if total_words == 0:
-            raise ValueError(
-                "Dokumentet saknar textlager (troligen en skannad PDF). "
-                "OCR ingår inte i denna version — se OCR-spikriggen."
-            )
+            # Document-level dispatch: a scanned PDF has zero digital words on
+            # EVERY page, so "no text layer anywhere" is treated as "this is
+            # the scanned case" and OCR replaces the whole document's
+            # extraction. Mixed digital/scanned documents (e.g. one scanned
+            # page inside an otherwise digital PDF) are out of scope — such a
+            # document already has total_words > 0 and never reaches OCR.
+            if not tesseract_available():
+                raise ValueError(
+                    "Dokumentet saknar textlager (troligen en skannad PDF). "
+                    "OCR ingår inte i denna version — se OCR-spikriggen."
+                )
+            pages = ocr_pdf(pdf_bytes)
+            total_words = sum(len(p.words) for p in pages)
+            if total_words == 0:
+                raise ValueError("OCR kunde inte hitta någon läsbar text i dokumentet.")
+            source = "scanned"
         if len(pages) > MAX_DOCUMENT_PAGES:
             raise ValueError(
                 f"Dokumentet har {len(pages)} sidor — max {MAX_DOCUMENT_PAGES}. Dela upp filen."
@@ -145,6 +159,7 @@ class Store:
                     words=total_words,
                     chunks=0,
                     uploaded_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                    source=source,
                 )
                 self.documents[doc_id] = meta
                 self.pages = {**self.pages, doc_id: pages}
