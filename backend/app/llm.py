@@ -1,8 +1,10 @@
 """Pluggable LLM providers with one strict JSON answer contract.
 
-Provider order: Anthropic SDK when ANTHROPIC_API_KEY (or an SDK-resolvable
-credential) is configured, otherwise the locally authenticated `claude` CLI.
-Tests always inject FakeLLM. Force with BRF_LLM=api|cli|fake.
+Provider order: self-hosted OpenAI-compatible endpoint when BRF_LLM_BASE_URL
+is set (the pilot's only generation path — vLLM or Ollama serving Gemma 4),
+otherwise Anthropic SDK when ANTHROPIC_API_KEY is configured, otherwise the
+locally authenticated `claude` CLI. Tests always inject FakeLLM.
+Force with BRF_LLM=selfhosted|api|cli|fake.
 """
 
 from __future__ import annotations
@@ -106,6 +108,77 @@ class AnthropicProvider:
         return "".join(block.text for block in resp.content if block.type == "text")
 
 
+class OpenAICompatProvider:
+    """Self-hosted OpenAI-compatible chat endpoint (vLLM `vllm serve`,
+    Ollama's /v1). The pilot's generation path: document text goes only to
+    BRF_LLM_BASE_URL, which must point at infrastructure we control.
+
+    Env contract:
+      BRF_LLM_BASE_URL   e.g. http://127.0.0.1:11434/v1  (required)
+      BRF_LLM_MODEL      e.g. gemma4:e4b — overrides settings.aiModel
+      BRF_LLM_API_KEY    bearer token if the server enforces one (vLLM --api-key)
+      BRF_LLM_TIMEOUT_S  request timeout, default 300
+    """
+
+    name = "selfhosted"
+
+    def __init__(self, transport=None) -> None:
+        import httpx
+
+        base_url = os.environ.get("BRF_LLM_BASE_URL", "").rstrip("/")
+        if not base_url:
+            raise LLMError("BRF_LLM_BASE_URL saknas — ange den självhostade LLM-serverns adress.")
+        self.base_url = base_url
+        self.model = os.environ.get("BRF_LLM_MODEL", "")
+        self.timeout_s = float(os.environ.get("BRF_LLM_TIMEOUT_S", "300"))
+        api_key = os.environ.get("BRF_LLM_API_KEY", "")
+        headers = {"Authorization": f"Bearer {api_key}"} if api_key else {}
+        self._client = httpx.Client(
+            base_url=base_url, headers=headers, timeout=self.timeout_s, transport=transport
+        )
+        # Ask for JSON mode; degrade gracefully once if the server rejects it.
+        self._json_mode = True
+
+    def complete(self, system: str, user: str, *, max_tokens: int, model: str) -> str:
+        payload = {
+            "model": self.model or model,
+            "messages": [
+                {"role": "system", "content": system},
+                {"role": "user", "content": user},
+            ],
+            "max_tokens": max_tokens,
+            "temperature": 0,
+        }
+        if self._json_mode:
+            payload["response_format"] = {"type": "json_object"}
+        try:
+            resp = self._client.post("/chat/completions", json=payload)
+        except Exception as exc:
+            raise LLMError(
+                f"Kunde inte nå LLM-servern ({self.base_url}): {exc.__class__.__name__}"
+            ) from exc
+        if resp.status_code == 400 and self._json_mode and "response_format" in resp.text:
+            logger.warning("LLM-servern avvisade response_format — fortsätter utan JSON-läge")
+            self._json_mode = False
+            return self.complete(system, user, max_tokens=max_tokens, model=model)
+        if resp.status_code != 200:
+            logger.error("LLM-servern %s → %d: %s", self.base_url, resp.status_code, resp.text[:300])
+            raise LLMError(f"LLM-servern svarade {resp.status_code}.")
+        try:
+            data = resp.json()
+            choice = data["choices"][0]
+            content = choice["message"]["content"]
+        except Exception as exc:
+            raise LLMError(f"Oväntat svar från LLM-servern: {resp.text[:200]!r}") from exc
+        if choice.get("finish_reason") == "length":
+            raise LLMError(
+                f"Svaret trunkerades vid max_tokens={max_tokens} — höj 'Maximal svarslängd' i inställningarna."
+            )
+        if not isinstance(content, str) or not content.strip():
+            raise LLMError("LLM-servern gav ett tomt svar.")
+        return content
+
+
 class ClaudeCLIProvider:
     """Generation via the locally authenticated Claude Code CLI (`claude -p`).
 
@@ -199,6 +272,12 @@ def pick_provider() -> LLMProvider:
     forced = os.environ.get("BRF_LLM", "auto")
     if forced == "fake":
         _provider = FakeLLM([])
+    elif forced == "selfhosted" or (forced == "auto" and os.environ.get("BRF_LLM_BASE_URL")):
+        try:
+            _provider = OpenAICompatProvider()
+        except Exception as exc:
+            logger.error("Självhostad LLM kunde inte initieras: %s", exc)
+            _provider = NoLLMProvider()
     elif forced == "api" or (forced == "auto" and os.environ.get("ANTHROPIC_API_KEY")):
         try:
             _provider = AnthropicProvider()

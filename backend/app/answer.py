@@ -62,7 +62,9 @@ def _refusal(reason: str, message: str, *, retrieval: list[RetrievalHit], provid
 def ask(store: Store, question: str, provider: LLMProvider | None = None) -> AskResponse:
     provider = provider or pick_provider()
     s = store.settings
-    model = s.aiModel
+    # A self-hosted deployment serves one fixed model (BRF_LLM_MODEL); report
+    # the model actually used, not just the settings value.
+    model = getattr(provider, "model", "") or s.aiModel
     # One consistent view per request — rebuilds swap references, so an
     # in-flight ask never sees a half-built index or a renamed chunk map.
     index, chunks, pages, documents = store.snapshot()

@@ -1,9 +1,11 @@
 import json
 import os
 
+import httpx
 import pytest
 
-from app.llm import FakeLLM, LLMError, LLMFormatError, parse_llm_json
+import app.llm as llm_mod
+from app.llm import FakeLLM, LLMError, LLMFormatError, OpenAICompatProvider, parse_llm_json
 
 
 class TestParseLLMJson:
@@ -46,6 +48,110 @@ class TestFakeLLM:
         assert fake.calls[0]["system"] == "sys"
         with pytest.raises(LLMError):
             fake.complete("sys", "user", max_tokens=100, model="m")
+
+
+def _ok_payload(content: str) -> dict:
+    return {"choices": [{"message": {"content": content}, "finish_reason": "stop"}]}
+
+
+class TestOpenAICompatProvider:
+    def _provider(self, handler, monkeypatch, env_model="gemma4:e4b") -> OpenAICompatProvider:
+        monkeypatch.setenv("BRF_LLM_BASE_URL", "http://selfhost.local/v1")
+        monkeypatch.setenv("BRF_LLM_MODEL", env_model)
+        return OpenAICompatProvider(transport=httpx.MockTransport(handler))
+
+    def test_happy_path_and_request_shape(self, monkeypatch):
+        seen: dict = {}
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            seen["path"] = request.url.path
+            seen["body"] = json.loads(request.content)
+            return httpx.Response(200, json=_ok_payload('{"answer": "ok"}'))
+
+        p = self._provider(handler, monkeypatch)
+        out = p.complete("systemkontrakt", "fråga", max_tokens=500, model="settings-model")
+        assert out == '{"answer": "ok"}'
+        assert seen["path"] == "/v1/chat/completions"
+        body = seen["body"]
+        assert body["model"] == "gemma4:e4b"  # env model wins over settings
+        assert body["temperature"] == 0
+        assert body["max_tokens"] == 500
+        assert body["response_format"] == {"type": "json_object"}
+        assert body["messages"][0] == {"role": "system", "content": "systemkontrakt"}
+
+    def test_settings_model_used_when_env_model_empty(self, monkeypatch):
+        def handler(request: httpx.Request) -> httpx.Response:
+            assert json.loads(request.content)["model"] == "settings-model"
+            return httpx.Response(200, json=_ok_payload("x"))
+
+        p = self._provider(handler, monkeypatch, env_model="")
+        assert p.complete("s", "u", max_tokens=10, model="settings-model") == "x"
+
+    def test_response_format_rejection_degrades_once(self, monkeypatch):
+        bodies: list[dict] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            body = json.loads(request.content)
+            bodies.append(body)
+            if "response_format" in body:
+                return httpx.Response(400, text="unsupported parameter: response_format")
+            return httpx.Response(200, json=_ok_payload("utan json-läge"))
+
+        p = self._provider(handler, monkeypatch)
+        assert p.complete("s", "u", max_tokens=10, model="m") == "utan json-läge"
+        assert len(bodies) == 2 and "response_format" not in bodies[1]
+        assert p._json_mode is False  # sticky — no second 400 round-trip next call
+
+    def test_finish_reason_length_raises(self, monkeypatch):
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(
+                200, json={"choices": [{"message": {"content": '{"trunk'}, "finish_reason": "length"}]}
+            )
+
+        p = self._provider(handler, monkeypatch)
+        with pytest.raises(LLMError, match="trunkerades"):
+            p.complete("s", "u", max_tokens=10, model="m")
+
+    def test_server_error_message_has_no_body_detail(self, monkeypatch):
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(500, text="secret internal traceback /srv/keys")
+
+        p = self._provider(handler, monkeypatch)
+        with pytest.raises(LLMError) as exc:
+            p.complete("s", "u", max_tokens=10, model="m")
+        assert "500" in str(exc.value) and "secret" not in str(exc.value)
+
+    def test_connection_error_wrapped(self, monkeypatch):
+        def handler(request: httpx.Request) -> httpx.Response:
+            raise httpx.ConnectError("connection refused")
+
+        p = self._provider(handler, monkeypatch)
+        with pytest.raises(LLMError, match="Kunde inte nå"):
+            p.complete("s", "u", max_tokens=10, model="m")
+
+    def test_missing_base_url_raises(self, monkeypatch):
+        monkeypatch.delenv("BRF_LLM_BASE_URL", raising=False)
+        with pytest.raises(LLMError, match="BRF_LLM_BASE_URL"):
+            OpenAICompatProvider()
+
+
+class TestPickProviderSelfhosted:
+    @pytest.fixture(autouse=True)
+    def _reset_provider_cache(self):
+        llm_mod._provider = None
+        yield
+        llm_mod._provider = None
+
+    def test_auto_prefers_selfhosted_when_base_url_set(self, monkeypatch):
+        monkeypatch.setenv("BRF_LLM", "auto")
+        monkeypatch.setenv("BRF_LLM_BASE_URL", "http://127.0.0.1:11434/v1")
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-finns-men-ska-inte-väljas")
+        assert llm_mod.pick_provider().name == "selfhosted"
+
+    def test_forced_selfhosted_without_base_url_degrades_to_none(self, monkeypatch):
+        monkeypatch.setenv("BRF_LLM", "selfhosted")
+        monkeypatch.delenv("BRF_LLM_BASE_URL", raising=False)
+        assert llm_mod.pick_provider().name == "none"
 
 
 @pytest.mark.llm

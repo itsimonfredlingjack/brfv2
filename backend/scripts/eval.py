@@ -32,6 +32,50 @@ from scripts.seed import seed_store  # noqa: E402
 
 EVAL_DIR = Path(__file__).resolve().parent.parent / "eval"
 
+
+def install_network_audit() -> tuple[list, set]:
+    """Instrument every TCP connect from this process. Connections are allowed
+    only to loopback and to the configured self-hosted LLM endpoint; anything
+    else raises immediately and is recorded. Returns (log, allowed_hosts).
+
+    Scope: audits connect() calls made by this Python process (httpx, sockets).
+    System-resolver DNS lookups happen in libc and are not connections to
+    document-data endpoints; embeddings load offline (HF_HUB_OFFLINE=1).
+    """
+    import socket
+    import urllib.parse
+
+    allowed_hosts = {"localhost", "127.0.0.1", "::1"}
+    base = os.environ.get("BRF_LLM_BASE_URL", "")
+    if base:
+        host = urllib.parse.urlparse(base).hostname
+        if host:
+            allowed_hosts.add(host)
+            try:
+                for info in socket.getaddrinfo(host, None):
+                    allowed_hosts.add(info[4][0])
+            except OSError:
+                pass
+
+    log: list[dict] = []
+    real_connect = socket.socket.connect
+
+    def audited_connect(self, addr):  # noqa: ANN001
+        host = addr[0] if isinstance(addr, tuple) else str(addr)
+        port = addr[1] if isinstance(addr, tuple) and len(addr) > 1 else None
+        allowed = (
+            not isinstance(addr, tuple)  # unix socket — local by definition
+            or host in allowed_hosts
+            or host.startswith("127.")
+        )
+        log.append({"host": host, "port": port, "allowed": allowed})
+        if not allowed:
+            raise AssertionError(f"OTILLÅTEN extern nätverksanslutning: {addr}")
+        return real_connect(self, addr)
+
+    socket.socket.connect = audited_connect
+    return log, allowed_hosts
+
 GATES = {
     "recall_at_k": 0.85,
     "citation_verification_rate": 0.90,
@@ -246,7 +290,18 @@ def main() -> None:
     parser.add_argument("--settings", default=None, help="JSON settings overrides")
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--workers", type=int, default=4)
+    parser.add_argument(
+        "--network-audit",
+        action="store_true",
+        help="hard-fail on any TCP connect outside loopback/BRF_LLM_BASE_URL; write eval/network_audit.json",
+    )
     args = parser.parse_args()
+
+    audit_log = None
+    if args.network_audit:
+        os.environ.setdefault("HF_HUB_OFFLINE", "1")  # embeddings must load from cache
+        audit_log, allowed = install_network_audit()
+        print(f"Nätverksrevision aktiv — tillåtna värdar: {sorted(allowed)}")
 
     golden = load_golden()
 
@@ -269,6 +324,27 @@ def main() -> None:
     ok = print_report(retrieval, full, store.settings, provider)
     elapsed = time.time() - t0
     print(f"\nKlart på {elapsed:.0f}s.")
+
+    if audit_log is not None:
+        external = [e for e in audit_log if not e["allowed"]]
+        hosts = sorted({f"{e['host']}:{e['port']}" for e in audit_log})
+        (EVAL_DIR / "network_audit.json").write_text(
+            json.dumps(
+                {
+                    "provider": provider,
+                    "llm_base_url": os.environ.get("BRF_LLM_BASE_URL", ""),
+                    "total_connections": len(audit_log),
+                    "distinct_endpoints": hosts,
+                    "external_connections": external,
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
+            "utf-8",
+        )
+        print(f"Nätverksrevision: {len(audit_log)} anslutningar, {len(external)} externa "
+              f"→ eval/network_audit.json")
+        ok &= not external
 
     (EVAL_DIR / "last_run.json").write_text(
         json.dumps(
