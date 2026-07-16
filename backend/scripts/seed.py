@@ -119,6 +119,7 @@ def main() -> None:
         store.wipe()
     if store.documents:
         print(f"Store innehåller redan {len(store.documents)} dokument — kör med --reset för att börja om.")
+        sys.exit(1)
     n = seed_store(store)
     golden = build_golden(store)
     golden_path = Path(__file__).resolve().parent.parent / "eval" / "golden.json"

@@ -5,7 +5,7 @@ from __future__ import annotations
 
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class Word(BaseModel):
@@ -120,6 +120,12 @@ class Settings(BaseModel):
     maxResponseLength: int = Field(default=1200, ge=100, le=8000)  # LLM max_tokens
     requireSources: bool = True
     insufficientDataBehavior: Literal["refuse", "warn"] = "refuse"
+
+    @model_validator(mode="after")
+    def _overlap_below_size(self) -> "Settings":
+        if self.chunkOverlap >= self.chunkSize:
+            raise ValueError("chunkOverlap måste vara mindre än chunkSize")
+        return self
 
     def chunking_signature(self) -> tuple:
         """Knobs whose change requires re-chunk + re-index."""

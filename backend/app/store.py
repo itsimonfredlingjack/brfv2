@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import threading
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
@@ -28,6 +29,10 @@ logger = logging.getLogger("brf.store")
 
 class Store:
     def __init__(self, data_dir: str | Path | None = None) -> None:
+        # Guards every mutation; FastAPI runs sync endpoints concurrently in a
+        # threadpool. Rebuilds rebind fresh objects (never mutate in place),
+        # so readers that snapshot references under the lock stay consistent.
+        self.lock = threading.RLock()
         default = Path(__file__).resolve().parent.parent / "data"
         self.data_dir = Path(data_dir or os.environ.get("BRF_DATA_DIR") or default)
         (self.data_dir / "docs").mkdir(parents=True, exist_ok=True)
@@ -86,14 +91,25 @@ class Store:
     # ---------- index ----------
 
     def _rebuild(self) -> None:
-        s = self.settings
-        self.chunks = {}
-        for doc_id, pages in self.pages.items():
-            for c in chunk_pages(doc_id, pages, strategy=s.chunkStrategy, size=s.chunkSize, overlap=s.chunkOverlap):
-                self.chunks[c.id] = c
-            if doc_id in self.documents:
-                self.documents[doc_id].chunks = sum(1 for c in self.chunks.values() if c.document_id == doc_id)
-        self.index.build(list(self.chunks.values()), {d.id: d.name for d in self.documents.values()})
+        """Rebuild chunks + index into FRESH objects, then publish by
+        reference swap — concurrent readers keep a consistent (old) view."""
+        with self.lock:
+            s = self.settings
+            new_chunks: dict[str, Chunk] = {}
+            for doc_id, pages in self.pages.items():
+                for c in chunk_pages(doc_id, pages, strategy=s.chunkStrategy, size=s.chunkSize, overlap=s.chunkOverlap):
+                    new_chunks[c.id] = c
+                if doc_id in self.documents:
+                    self.documents[doc_id].chunks = sum(1 for c in new_chunks.values() if c.document_id == doc_id)
+            new_index = HybridIndex(self.index.embedder)
+            new_index.build(list(new_chunks.values()), {d.id: d.name for d in self.documents.values()})
+            self.chunks = new_chunks
+            self.index = new_index
+
+    def snapshot(self) -> tuple[HybridIndex, dict, dict, dict]:
+        """Consistent (index, chunks, pages, documents) view for one request."""
+        with self.lock:
+            return self.index, self.chunks, dict(self.pages), dict(self.documents)
 
     # ---------- public API ----------
 
@@ -106,32 +122,34 @@ class Store:
                 "OCR ingår inte i denna version — se OCR-spikriggen."
             )
         doc_id = uuid.uuid4().hex[:12]
-        (self.data_dir / "docs" / f"{doc_id}.pdf").write_bytes(pdf_bytes)
-        self._save_extraction(doc_id, pages)
-        meta = DocumentMeta(
-            id=doc_id,
-            name=name,
-            pages=len(pages),
-            words=total_words,
-            chunks=0,
-            uploaded_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        )
-        self.documents[doc_id] = meta
-        self.pages[doc_id] = pages
-        self._rebuild()
-        self._save_documents()
-        return self.documents[doc_id]
+        with self.lock:
+            (self.data_dir / "docs" / f"{doc_id}.pdf").write_bytes(pdf_bytes)
+            self._save_extraction(doc_id, pages)
+            meta = DocumentMeta(
+                id=doc_id,
+                name=name,
+                pages=len(pages),
+                words=total_words,
+                chunks=0,
+                uploaded_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            )
+            self.documents[doc_id] = meta
+            self.pages = {**self.pages, doc_id: pages}
+            self._rebuild()
+            self._save_documents()
+            return self.documents[doc_id]
 
     def delete_document(self, doc_id: str) -> bool:
-        if doc_id not in self.documents:
-            return False
-        self.documents.pop(doc_id)
-        self.pages.pop(doc_id, None)
-        (self.data_dir / "docs" / f"{doc_id}.pdf").unlink(missing_ok=True)
-        (self.data_dir / "extract" / f"{doc_id}.json").unlink(missing_ok=True)
-        self._rebuild()
-        self._save_documents()
-        return True
+        with self.lock:
+            if doc_id not in self.documents:
+                return False
+            self.documents.pop(doc_id)
+            self.pages = {k: v for k, v in self.pages.items() if k != doc_id}
+            (self.data_dir / "docs" / f"{doc_id}.pdf").unlink(missing_ok=True)
+            (self.data_dir / "extract" / f"{doc_id}.json").unlink(missing_ok=True)
+            self._rebuild()
+            self._save_documents()
+            return True
 
     def list_documents(self) -> list[dict]:
         return [m.model_dump() for m in sorted(self.documents.values(), key=lambda d: d.name)]
@@ -141,11 +159,14 @@ class Store:
         return p.read_bytes() if doc_id in self.documents and p.exists() else None
 
     def get_extraction_summary(self, doc_id: str) -> dict | None:
-        if doc_id not in self.documents:
+        with self.lock:
+            meta = self.documents.get(doc_id)
+            pages = self.pages.get(doc_id)
+            chunks = self.chunks
+        if meta is None or pages is None:
             return None
-        pages = self.pages[doc_id]
         return {
-            "document": self.documents[doc_id].model_dump(),
+            "document": meta.model_dump(),
             "pages": [
                 {"number": p.number, "width": p.width, "height": p.height, "words": len(p.words)} for p in pages
             ],
@@ -158,18 +179,19 @@ class Store:
                     "preview": c.text[:160],
                     "words": c.word_end - c.word_start + 1,
                 }
-                for c in self.chunks.values()
+                for c in chunks.values()
                 if c.document_id == doc_id
             ],
         }
 
     def update_settings(self, new: Settings) -> None:
-        rechunk = new.chunking_signature() != self.settings.chunking_signature()
-        self.settings = new
-        self._save_settings()
-        if rechunk:
-            logger.info("Chunk-inställningar ändrade — chunkar om och bygger nytt index")
-            self._rebuild()
+        with self.lock:
+            rechunk = new.chunking_signature() != self.settings.chunking_signature()
+            self.settings = new
+            self._save_settings()
+            if rechunk:
+                logger.info("Chunk-inställningar ändrade — chunkar om och bygger nytt index")
+                self._rebuild()
 
     def wipe(self) -> None:
         for doc_id in list(self.documents):

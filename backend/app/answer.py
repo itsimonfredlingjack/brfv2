@@ -62,8 +62,11 @@ def ask(store: Store, question: str, provider: LLMProvider | None = None) -> Ask
     provider = provider or pick_provider()
     s = store.settings
     model = s.aiModel
+    # One consistent view per request — rebuilds swap references, so an
+    # in-flight ask never sees a half-built index or a renamed chunk map.
+    index, chunks, pages, documents = store.snapshot()
 
-    if len(store.index) == 0:
+    if len(index) == 0:
         return _refusal(
             "no_documents",
             "Det finns inga dokument uppladdade ännu. Ladda upp PDF:er så kan jag svara på frågor om dem.",
@@ -72,7 +75,7 @@ def ask(store: Store, question: str, provider: LLMProvider | None = None) -> Ask
             model=model,
         )
 
-    hits = store.index.search(
+    hits = index.search(
         question,
         weight=s.searchWeighting / 100.0,
         candidates=s.candidateCount,
@@ -140,17 +143,17 @@ def ask(store: Store, question: str, provider: LLMProvider | None = None) -> Ask
     for c in parsed["citations"]:
         cited = c["chunk_id"].strip().strip("[]")
         real_id = alias_map.get(cited, cited)  # alias → real id; raw ids also accepted
-        chunk = store.chunks.get(real_id)
+        chunk = chunks.get(real_id)
         if chunk is None:
             rejected.append(RejectedCitation(chunk_id=c["chunk_id"], quote=c["quote"], reason="unknown_chunk"))
             continue
-        res = resolve_quote(chunk, c["quote"], store.pages)
+        res = resolve_quote(chunk, c["quote"], pages)
         if isinstance(res, Resolved):
             citations.append(
                 CitationOut(
                     document_id=chunk.document_id,
-                    document_name=store.documents[chunk.document_id].name
-                    if chunk.document_id in store.documents
+                    document_name=documents[chunk.document_id].name
+                    if chunk.document_id in documents
                     else chunk.document_id,
                     page=res.page,
                     quote=c["quote"],

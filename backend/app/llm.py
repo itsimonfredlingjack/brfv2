@@ -95,6 +95,11 @@ class AnthropicProvider:
         )
         if resp.stop_reason == "refusal":
             raise LLMError("Modellen avböjde att svara (refusal).")
+        if resp.stop_reason == "max_tokens":
+            # Truncated JSON must not be parsed as a complete answer.
+            raise LLMError(
+                f"Svaret trunkerades vid max_tokens={max_tokens} — höj 'Maximal svarslängd' i inställningarna."
+            )
         return "".join(block.text for block in resp.content if block.type == "text")
 
 
@@ -110,6 +115,9 @@ class ClaudeCLIProvider:
     def complete(self, system: str, user: str, *, max_tokens: int, model: str) -> str:
         import tempfile
 
+        # The CLI has no output-token cap flag; honor maxResponseLength as a
+        # soft instruction so the setting is not silently ignored.
+        system = f"{system}\n\nHåll hela svaret under cirka {max_tokens} tokens."
         cmd = [
             "claude",
             "-p",

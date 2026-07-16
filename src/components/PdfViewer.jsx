@@ -48,6 +48,8 @@ function PdfViewer({ url, title, page: initialPage = 1, rects = [], highlightPag
     const canvas = canvasRef.current;
     if (!pdf || !canvas) return;
     setLoading(true);
+    setOverlays([]); // never let a previous page's highlights linger
+    let task = null;
     try {
       const page = await pdf.getPage(pageNum);
       const containerWidth = containerRef.current?.clientWidth || 760;
@@ -63,7 +65,7 @@ function PdfViewer({ url, title, page: initialPage = 1, rects = [], highlightPag
       const ctx = canvas.getContext('2d');
 
       renderTaskRef.current?.cancel?.();
-      const task = page.render({
+      task = page.render({
         canvasContext: ctx,
         viewport,
         transform: dpr !== 1 ? [dpr, 0, 0, dpr, 0, 0] : undefined,
@@ -96,7 +98,9 @@ function PdfViewer({ url, title, page: initialPage = 1, rects = [], highlightPag
     } catch (e) {
       if (e?.name !== 'RenderingCancelledException') setError(String(e?.message || e));
     } finally {
-      setLoading(false);
+      // Only the most recent render owns the loading state — a cancelled
+      // render's finally must not hide the spinner of its replacement.
+      if (task === null || renderTaskRef.current === task) setLoading(false);
     }
   }, [pageNum, rects, highlightPage]);
 

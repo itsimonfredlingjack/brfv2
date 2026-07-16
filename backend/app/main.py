@@ -49,11 +49,15 @@ def create_app(store: Store | None = None) -> FastAPI:
     def list_documents() -> list:
         return st.list_documents()
 
+    MAX_UPLOAD_BYTES = 50 * 1024 * 1024
+
     @app.post("/api/documents")
     async def upload_document(file: UploadFile) -> dict:
         if not (file.filename or "").lower().endswith(".pdf"):
             raise HTTPException(status_code=400, detail="Endast PDF-filer stöds.")
         data = await file.read()
+        if len(data) > MAX_UPLOAD_BYTES:
+            raise HTTPException(status_code=413, detail="Filen är större än 50 MB.")
         try:
             meta = st.add_document(file.filename or "namnlös.pdf", data)
         except ValueError as exc:
