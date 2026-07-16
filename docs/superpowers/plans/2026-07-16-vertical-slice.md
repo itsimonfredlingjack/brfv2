@@ -180,7 +180,7 @@ räcker → `insufficient_data: true`. Chunks rendered as `[chunk_id] (Dokument,
   seeded digital PDF (rasterize→OCR→drift vs fitz truth); overlay PNGs; metrics.json;
   README-OCR notes. Test: adapter interface + calibration on synthetic page when tesseract
   present, else skipped with reason. Commit.
-- [ ] **Task 20 — Final review & report.** Full pytest + eval + build; workflow-based
+- [x] **Task 20 — Final review & report.** Full pytest + eval + build; workflow-based
   adversarial code review of the diff; fix confirmed findings; final eval numbers; report.
 
 ## Verification commands
