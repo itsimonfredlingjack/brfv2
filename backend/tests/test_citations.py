@@ -3,7 +3,7 @@
 import pytest
 
 from app.chunker import chunk_pages
-from app.citations import Rejected, Resolved, resolve_quote
+from app.citations import MAX_SPANS, Rejected, Resolved, resolve_citation, resolve_quote
 from app.extract import extract_pdf
 from app.schemas import Chunk, PageData, Word
 from tests.pdf_fixtures import build_pdf
@@ -223,3 +223,91 @@ class TestChunkBoundaryOverlap:
         res = resolve_quote(chunk, quote, {doc_id: pages})
         assert isinstance(res, Rejected)
         assert res.reason == "provenance_mismatch"
+
+
+class TestMultiSpanResolution:
+    """Fragment-fact citations: a SET of short spans, each independently
+    verified verbatim in the cited chunk — all-or-nothing (the invariant)."""
+
+    def test_all_spans_verify_rects_are_union(self, simple_doc):
+        doc_id, pages = simple_doc
+        chunk = chunk_covering_page(doc_id, pages, 1)
+        s1, s2 = "Föreningens firma är", "sitt säte i Göteborg"
+        single1 = resolve_quote(chunk, s1, {doc_id: pages})
+        single2 = resolve_quote(chunk, s2, {doc_id: pages})
+        assert isinstance(single1, Resolved) and isinstance(single2, Resolved)
+
+        res = resolve_citation(chunk, [s1, s2], {doc_id: pages})
+        assert isinstance(res, Resolved)
+        assert res.page == 1
+        # Union of both spans' line rects, no others.
+        expected = {tuple(r) for r in single1.rects} | {tuple(r) for r in single2.rects}
+        assert {tuple(r) for r in res.rects} == expected
+
+    def test_invariant_one_unverified_span_rejects_the_whole_citation(self, simple_doc):
+        """THE invariant: a citation with any unverifiable span never resolves."""
+        doc_id, pages = simple_doc
+        chunk = chunk_covering_page(doc_id, pages, 1)
+        res = resolve_citation(
+            chunk, ["Föreningens firma är", "denna text finns inte alls"], {doc_id: pages}
+        )
+        assert isinstance(res, Rejected)
+        assert res.reason == "quote_not_found"
+        assert res.failed_span == "denna text finns inte alls"
+
+    def test_single_span_equivalent_to_resolve_quote(self, simple_doc):
+        doc_id, pages = simple_doc
+        chunk = chunk_covering_page(doc_id, pages, 1)
+        q = "Styrelsen har sitt säte i Göteborg"
+        multi = resolve_citation(chunk, [q], {doc_id: pages})
+        single = resolve_quote(chunk, q, {doc_id: pages})
+        assert isinstance(multi, Resolved) and isinstance(single, Resolved)
+        assert multi.rects == single.rects and multi.page == single.page
+
+    def test_too_many_spans_rejected(self, simple_doc):
+        doc_id, pages = simple_doc
+        chunk = chunk_covering_page(doc_id, pages, 1)
+        spans = ["Föreningens"] * (MAX_SPANS + 1)
+        res = resolve_citation(chunk, spans, {doc_id: pages})
+        assert isinstance(res, Rejected) and res.reason == "too_many_spans"
+
+    def test_blank_span_rejected(self, simple_doc):
+        doc_id, pages = simple_doc
+        chunk = chunk_covering_page(doc_id, pages, 1)
+        res = resolve_citation(chunk, ["Föreningens firma är", "   "], {doc_id: pages})
+        assert isinstance(res, Rejected) and res.reason == "quote_not_found"
+
+    def test_empty_span_list_rejected(self, simple_doc):
+        doc_id, pages = simple_doc
+        chunk = chunk_covering_page(doc_id, pages, 1)
+        res = resolve_citation(chunk, [], {doc_id: pages})
+        assert isinstance(res, Rejected) and res.reason == "quote_not_found"
+
+    def test_span_from_wrong_location_rejects_whole_citation(self):
+        """A span verbatim-findable elsewhere in the corpus but not in the
+        cited chunk is provenance_mismatch — for multi-span too."""
+        pdf = build_pdf(
+            [
+                [("Avgiften betalas kvartalsvis i förskott.", 72, 100)],
+                [("Styrelsen sammanträder minst fyra gånger per år.", 72, 100)],
+            ]
+        )
+        pages = extract_pdf(pdf)
+        chunk = chunk_covering_page("d", pages, 1)
+        res = resolve_citation(
+            chunk,
+            ["Avgiften betalas kvartalsvis", "sammanträder minst fyra gånger"],
+            {"d": pages},
+        )
+        assert isinstance(res, Rejected)
+        assert res.reason == "provenance_mismatch"
+        assert res.failed_span == "sammanträder minst fyra gånger"
+
+    def test_duplicate_spans_do_not_duplicate_rects(self, simple_doc):
+        doc_id, pages = simple_doc
+        chunk = chunk_covering_page(doc_id, pages, 1)
+        q = "Föreningens firma är"
+        res = resolve_citation(chunk, [q, q], {doc_id: pages})
+        single = resolve_quote(chunk, q, {doc_id: pages})
+        assert isinstance(res, Resolved) and isinstance(single, Resolved)
+        assert res.rects == single.rects

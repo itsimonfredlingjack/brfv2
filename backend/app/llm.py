@@ -72,8 +72,17 @@ def parse_llm_json(raw: str) -> dict:
 
     citations = []
     for item in obj.get("citations") or []:
-        if isinstance(item, dict) and isinstance(item.get("chunk_id"), str) and isinstance(item.get("quote"), str):
-            citations.append({"chunk_id": item["chunk_id"], "quote": item["quote"]})
+        if not (isinstance(item, dict) and isinstance(item.get("chunk_id"), str)):
+            continue
+        # Two model-facing forms: "quote" (one contiguous span, the common
+        # case) or "quotes" (a SET of short spans for fragment-facts). Both
+        # normalize to a span list; every span is verified independently and
+        # the citation is all-or-nothing downstream.
+        quotes = item.get("quotes")
+        if isinstance(quotes, list) and quotes and all(isinstance(q, str) for q in quotes):
+            citations.append({"chunk_id": item["chunk_id"], "quotes": list(quotes)})
+        elif isinstance(item.get("quote"), str):
+            citations.append({"chunk_id": item["chunk_id"], "quotes": [item["quote"]]})
     return {
         "answer": obj.get("answer") if isinstance(obj.get("answer"), str) else "",
         "citations": citations,

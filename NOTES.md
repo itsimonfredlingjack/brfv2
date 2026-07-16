@@ -51,6 +51,27 @@
   they must never skip the grounding checks themselves. Why it mattered: the one setting meant to
   trade strictness for helpfulness disabled the product's core guarantee.
 
+- **2026-07-16 — Extend what a citation IS without touching what verification IS.** Fragment-facts
+  (org-nr, party name, amounts split across table cells) had no contiguous sentence to quote, so
+  the model stitched a non-contiguous quote that the verifier rightly rejected → refusal. Fix: a
+  citation became a SET of spans, each run through the SAME `resolve_quote` (verbatim, chunk-local,
+  bbox-checked), accepted only if ALL verify — rects are their union. The invariant ("no unverified
+  text reaches the user") is preserved because `Resolved` still requires every span normalized-
+  verbatim at a chunk-local location; a single bad span rejects the whole citation. A fresh-context
+  adversary threw 10 attack classes at it and found no hole. Why it mattered: the useful questions
+  (who is the counterparty, what's the org-nr) are exactly the fragment-facts, and the safe way to
+  answer them is more-granular verification, never looser verification.
+
+- **2026-07-16 — A safe mechanism can still be blocked by model capability — report that, don't
+  fake it.** The multi-span contract works and resolves the real org-nr fact (proven via
+  `resolve_citation` on the real retrieved chunk), but `gemma4:e4b` emitted ZERO multi-span
+  citations across default/raised budget, pointed questions, and three prompt variants incl. a
+  worked example — it stitches instead. So on real docs with the 4B local model, fragment-facts
+  still refuse. The honest deliverable is: mechanism built + invariant proven + the finding that
+  realizing it needs a stronger offline model (a design fork for Simon), NOT a fabricated "it now
+  answers." Why it mattered: the definition of done said a fragment answer only counts if every
+  span verifies — so "the model won't produce verifiable spans" is a real, reportable outcome.
+
 - **2026-07-16 — When truncation survives a bigger budget, suspect a hidden channel, not the
   budget.** On real contract content, 4 of 10 board questions died as "truncated at
   max_tokens" — and still died at 3× the budget. The model (gemma4 on Ollama, thinking-capable)

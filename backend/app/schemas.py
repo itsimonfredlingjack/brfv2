@@ -60,9 +60,10 @@ class CitationOut(BaseModel):
     document_id: str
     document_name: str
     page: int
-    quote: str
+    quote: str  # display string; for multi-span citations the joined fragments
+    quotes: list[str] = Field(default_factory=list)  # the verified spans (1..MAX_SPANS)
     chunk_id: str
-    rects: list[list[float]]  # [[x0, y0, x1, y1], ...] one per text line
+    rects: list[list[float]]  # [[x0, y0, x1, y1], ...] one per text line, union over spans
     score: float
 
 
@@ -71,6 +72,7 @@ RejectReason = Literal[
     "provenance_mismatch",
     "bbox_out_of_bounds",
     "unknown_chunk",
+    "too_many_spans",
 ]
 
 

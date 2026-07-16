@@ -9,18 +9,21 @@ from app.llm import FakeLLM, LLMError, LLMFormatError, OpenAICompatProvider, par
 
 
 class TestParseLLMJson:
+    # Model-facing shape: "quote" (string) or "quotes" (list of strings).
+    # Internal normalized shape: always {"chunk_id", "quotes": [...]}.
     GOOD = {"answer": "Svar.", "citations": [{"chunk_id": "d:p1:0-9", "quote": "ordagrant"}], "insufficient_data": False}
+    NORM = {"answer": "Svar.", "citations": [{"chunk_id": "d:p1:0-9", "quotes": ["ordagrant"]}], "insufficient_data": False}
 
     def test_clean_json(self):
-        assert parse_llm_json(json.dumps(self.GOOD)) == self.GOOD
+        assert parse_llm_json(json.dumps(self.GOOD)) == self.NORM
 
     def test_fenced_json(self):
         raw = "```json\n" + json.dumps(self.GOOD) + "\n```"
-        assert parse_llm_json(raw) == self.GOOD
+        assert parse_llm_json(raw) == self.NORM
 
     def test_prose_wrapped_json(self):
         raw = "Här är svaret:\n" + json.dumps(self.GOOD) + "\nHoppas det hjälper!"
-        assert parse_llm_json(raw) == self.GOOD
+        assert parse_llm_json(raw) == self.NORM
 
     def test_no_json_raises(self):
         with pytest.raises(LLMFormatError):
@@ -33,11 +36,25 @@ class TestParseLLMJson:
     def test_malformed_citation_items_dropped(self):
         obj = {"answer": "x", "citations": [{"chunk_id": "a", "quote": "b"}, {"chunk_id": 5}, "junk"], "insufficient_data": False}
         parsed = parse_llm_json(json.dumps(obj))
-        assert parsed["citations"] == [{"chunk_id": "a", "quote": "b"}]
+        assert parsed["citations"] == [{"chunk_id": "a", "quotes": ["b"]}]
 
     def test_missing_fields_defaulted(self):
         parsed = parse_llm_json('{"answer": "bara svar"}')
         assert parsed == {"answer": "bara svar", "citations": [], "insufficient_data": False}
+
+    def test_quotes_list_parsed(self):
+        obj = {"answer": "x", "citations": [{"chunk_id": "K1", "quotes": ["frag ett", "frag två"]}]}
+        parsed = parse_llm_json(json.dumps(obj))
+        assert parsed["citations"] == [{"chunk_id": "K1", "quotes": ["frag ett", "frag två"]}]
+
+    def test_quotes_wins_over_quote_when_both_present(self):
+        obj = {"answer": "x", "citations": [{"chunk_id": "K1", "quote": "gammal", "quotes": ["a", "b"]}]}
+        assert parse_llm_json(json.dumps(obj))["citations"] == [{"chunk_id": "K1", "quotes": ["a", "b"]}]
+
+    def test_quotes_with_non_string_element_dropped(self):
+        # Structurally malformed — same class as today's dropped items.
+        obj = {"answer": "x", "citations": [{"chunk_id": "K1", "quotes": ["a", 5]}, {"chunk_id": "K2", "quotes": []}]}
+        assert parse_llm_json(json.dumps(obj))["citations"] == []
 
 
 class TestFakeLLM:

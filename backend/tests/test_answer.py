@@ -276,3 +276,95 @@ class TestCitationScopeRestriction:
         assert resp.retrieval and all(h.document_name == "Snöröjningsavtal.pdf" for h in resp.retrieval)
         assert resp.rejected_citations and resp.rejected_citations[0].reason == "unknown_chunk"
         assert resp.refusal and resp.refusal_reason == "grounding_failed"
+
+
+class TestMultiSpanCitations:
+    """Fragment-fact citations through the full orchestrator. The invariant:
+    a claim reaches the user only if EVERY span verified; otherwise rejected
+    exactly like a fabricated single quote."""
+
+    def test_multispan_citation_accepted_with_union_rects(self, store):
+        cid = first_chunk_id(store)
+        fake = FakeLLM([
+            {
+                "answer": "Jouren gäller vintersäsongen och ersätts per timme.",
+                "citations": [{
+                    "chunk_id": cid,
+                    "quotes": ["Jourperioden för snöröjning", "1250 kr per påbörjad timme"],
+                }],
+                "insufficient_data": False,
+            }
+        ])
+        resp = ask(store, "Vad gäller för jouren och ersättningen?", provider=fake)
+        assert not resp.refusal
+        assert len(resp.citations) == 1
+        c = resp.citations[0]
+        assert c.quotes == ["Jourperioden för snöröjning", "1250 kr per påbörjad timme"]
+        # Display string carries both fragments.
+        assert "Jourperioden" in c.quote and "1250 kr" in c.quote
+        # Union: the two spans sit on different lines → at least two rects.
+        assert len(c.rects) >= 2
+        assert resp.rejected_citations == []
+
+    def test_invariant_one_bad_span_rejects_whole_citation(self, store):
+        cid = first_chunk_id(store)
+        fake = FakeLLM([
+            {
+                "answer": "Svar med delvis påhittad källa.",
+                "citations": [{
+                    "chunk_id": cid,
+                    "quotes": ["Jourperioden för snöröjning", "helt påhittat fragment"],
+                }],
+                "insufficient_data": False,
+            }
+        ])
+        resp = ask(store, "Vad gäller för jourperioden vid snöröjning?", provider=fake)
+        # requireSources default: all citations failed → refusal, nothing shown.
+        assert resp.refusal and resp.refusal_reason == "grounding_failed"
+        assert resp.citations == []
+        assert len(resp.rejected_citations) == 1
+        rej = resp.rejected_citations[0]
+        assert rej.reason == "quote_not_found"
+        assert "påhittat" in rej.quote  # the failing span is the observable one
+
+    def test_mixed_good_single_and_bad_multi(self, store):
+        cid = first_chunk_id(store)
+        fake = FakeLLM([
+            {
+                "answer": "Jourperioden löper 15 november till 15 april.",
+                "citations": [
+                    {"chunk_id": cid, "quote": "löper från 15 november till 15 april"},
+                    {"chunk_id": cid, "quotes": ["Halkbekämpning utförs", "fragment som inte finns"]},
+                ],
+                "insufficient_data": False,
+            }
+        ])
+        resp = ask(store, "När är jourperioden?", provider=fake)
+        assert not resp.refusal
+        assert len(resp.citations) == 1 and resp.citations[0].quotes == ["löper från 15 november till 15 april"]
+        assert len(resp.rejected_citations) == 1
+        assert resp.warning and "verifieras" in resp.warning
+
+    def test_multispan_with_alias_chunk_id(self, store):
+        fake = FakeLLM([
+            {
+                "answer": "Halkbekämpning sker efter snöröjning.",
+                "citations": [{
+                    "chunk_id": "K1",
+                    "quotes": ["Halkbekämpning utförs", "efter avslutad snöröjning"],
+                }],
+                "insufficient_data": False,
+            }
+        ])
+        resp = ask(store, "När sker halkbekämpning?", provider=fake)
+        assert not resp.refusal
+        assert len(resp.citations) == 1
+        assert len(resp.citations[0].quotes) == 2
+
+    def test_prompt_documents_multispan_contract(self, store):
+        fake = FakeLLM([
+            {"answer": "x", "citations": [], "insufficient_data": True}
+        ])
+        ask(store, "Vad gäller för snöröjningen?", provider=fake)
+        system = fake.calls[0]["system"]
+        assert '"quotes"' in system  # the contract explains the multi-span form

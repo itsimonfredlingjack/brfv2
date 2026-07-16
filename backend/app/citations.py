@@ -3,6 +3,11 @@
 A quote is only rendered if it is verbatim-findable (canonical normalization,
 hyphenation-aware) *at the cited chunk's location*. Every rejection carries a
 reason so failures are observable, never silent.
+
+A citation is one or more spans (fragment-facts live in table cells and
+letterheads where no contiguous sentence exists). Each span is verified
+independently through the same machinery; the citation is accepted only if
+EVERY span verifies — a single failing span rejects the whole citation.
 """
 
 from __future__ import annotations
@@ -15,17 +20,22 @@ from .schemas import Chunk, PageData
 # Tolerated overflow beyond the page rect before a box is declared invalid.
 _EDGE_EPSILON_PT = 3.0
 
+# Upper bound on spans per citation — enough for label+value+unit facts,
+# small enough that a citation cannot paint a whole page.
+MAX_SPANS = 4
+
 
 @dataclass
 class Resolved:
     page: int
     rects: list[list[float]]  # [[x0, y0, x1, y1], ...] one per text line
-    span: tuple[int, int]  # inclusive word indices on the page
+    span: tuple[int, int]  # inclusive word indices on the page (first span for multi)
 
 
 @dataclass
 class Rejected:
     reason: str  # RejectReason value
+    failed_span: str | None = None  # multi-span: the span that failed verification
 
 
 def resolve_quote(chunk: Chunk, quote: str, pages_by_doc: dict[str, list[PageData]]) -> Resolved | Rejected:
@@ -48,6 +58,42 @@ def resolve_quote(chunk: Chunk, quote: str, pages_by_doc: dict[str, list[PageDat
     if rects is None:
         return Rejected(reason="bbox_out_of_bounds")
     return Resolved(page=page.number, rects=rects, span=chosen)
+
+
+def resolve_citation(
+    chunk: Chunk, spans: list[str], pages_by_doc: dict[str, list[PageData]]
+) -> Resolved | Rejected:
+    """Verify a citation of one or more verbatim spans — all-or-nothing.
+
+    Every span goes through resolve_quote (same verbatim check, same
+    wrong-occurrence guard, same bbox validation). If ANY span fails, the
+    whole citation is rejected with that span's reason; nothing partial is
+    ever returned. On success the rects are the union of the spans' line
+    rects (deduplicated, reading order)."""
+    if not spans:
+        return Rejected(reason="quote_not_found")
+    if len(spans) > MAX_SPANS:
+        return Rejected(reason="too_many_spans")
+
+    page = -1
+    first_span: tuple[int, int] | None = None
+    rects: list[list[float]] = []
+    seen: set[tuple[float, ...]] = set()
+    for q in spans:
+        res = resolve_quote(chunk, q, pages_by_doc)
+        if isinstance(res, Rejected):
+            return Rejected(reason=res.reason, failed_span=q)
+        page = res.page
+        if first_span is None:
+            first_span = res.span
+        for r in res.rects:
+            key = tuple(r)
+            if key not in seen:
+                seen.add(key)
+                rects.append(r)
+    rects.sort(key=lambda r: (r[1], r[0]))
+    assert first_span is not None
+    return Resolved(page=page, rects=rects, span=first_span)
 
 
 def _pick_span(spans: list[tuple[int, int]], chunk: Chunk) -> tuple[int, int] | None:

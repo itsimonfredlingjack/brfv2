@@ -103,7 +103,14 @@ def main() -> None:
                 "refusal_reason": resp.refusal_reason,
                 "answer": resp.answer,
                 "citations": [
-                    {"page": c.page, "quote": c.quote, "n_rects": len(c.rects), "rects": c.rects}
+                    {
+                        "page": c.page,
+                        "quote": c.quote,
+                        "quotes": c.quotes,
+                        "n_spans": len(c.quotes),
+                        "n_rects": len(c.rects),
+                        "rects": c.rects,
+                    }
                     for c in resp.citations
                 ],
                 "rejected": [{"reason": r.reason, "quote": r.quote[:120]} for r in resp.rejected_citations],
