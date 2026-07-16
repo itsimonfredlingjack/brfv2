@@ -28,6 +28,7 @@ function App() {
   const fileInputRef = useRef(null);
 
   const [settingsSaveState, setSettingsSaveState] = useState(null); // null | 'saving' | 'saved' | 'error'
+  const settingsSaveTimerRef = useRef(null);
 
   const refreshDocuments = async () => {
     try {
@@ -53,6 +54,8 @@ function App() {
   ];
 
   const saveSettings = async () => {
+    // A stale timer from a previous save must not wipe this save's state.
+    clearTimeout(settingsSaveTimerRef.current);
     setSettingsSaveState('saving');
     try {
       const payload = Object.fromEntries(
@@ -62,7 +65,8 @@ function App() {
       setSettingsConfig((prev) => ({ ...prev, ...saved }));
       await refreshDocuments(); // chunk-knob changes re-chunk documents
       setSettingsSaveState('saved');
-      setTimeout(() => setSettingsSaveState(null), 2500);
+      clearTimeout(settingsSaveTimerRef.current);
+      settingsSaveTimerRef.current = setTimeout(() => setSettingsSaveState(null), 2500);
     } catch (e) {
       console.error('Kunde inte spara inställningar', e);
       setSettingsSaveState('error');
@@ -98,7 +102,7 @@ function App() {
     topK: 10,
     minRelevance: 0.7,
     // AI-svar
-    aiModel: 'gpt-4o',
+    aiModel: 'claude-opus-4-8',
     systemPrompt: 'Du är en hjälpsam AI-assistent...',
     temperature: 0.3,
     maxResponseLength: 1000,
@@ -152,7 +156,10 @@ function App() {
   };
 
   const handleChatSubmit = () => {
-    const q = chatInput;
+    const q = chatInput.trim();
+    // Guard BEFORE clearing the input — otherwise a submit while a previous
+    // question is in flight silently discards what the user typed.
+    if (!q || chatBusy) return;
     setChatInput('');
     askQuestion(q);
   };
@@ -419,7 +426,6 @@ function App() {
     } finally {
       clearTimeout(t1);
       clearTimeout(t2);
-      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -525,7 +531,13 @@ function App() {
             accept="application/pdf,.pdf"
             ref={fileInputRef}
             style={{ display: 'none' }}
-            onChange={(e) => handleFileChosen(e.target.files?.[0])}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              // Reset now (the input unmounts with the modal before any async
+              // finally runs) so re-picking the same file fires onChange again.
+              e.target.value = '';
+              handleFileChosen(file);
+            }}
           />
           <div
             className="upload-box"
@@ -577,8 +589,9 @@ function App() {
             value={chatInput}
             onChange={(e) => setChatInput(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && handleChatSubmit()}
+            disabled={chatBusy}
           />
-          <button className="hero-search-btn" onClick={handleChatSubmit}>
+          <button className="hero-search-btn" onClick={handleChatSubmit} disabled={chatBusy}>
             Fråga <ArrowRight size={18} />
           </button>
         </div>
@@ -1182,6 +1195,7 @@ function App() {
                       value={chatInput}
                       onChange={(e) => setChatInput(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleChatSubmit()}
+                      disabled={chatBusy}
                     />
                     <button className="chat-send-btn" onClick={handleChatSubmit} disabled={chatBusy}>
                       {chatBusy ? <Loader2 size={18} className="spin" /> : <Send size={18} />}

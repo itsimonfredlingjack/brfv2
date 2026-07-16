@@ -27,10 +27,14 @@ function PdfViewer({ url, title, page: initialPage = 1, rects = [], highlightPag
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    pdfjsLib
-      .getDocument({ url: new URL(url, window.location.href).href })
-      .promise.then((pdf) => {
-        if (cancelled) return;
+    const loadingTask = pdfjsLib.getDocument({ url: new URL(url, window.location.href).href });
+    loadingTask.promise
+      .then((pdf) => {
+        if (cancelled) {
+          // Cleanup already ran; make sure the late-resolved document is torn down.
+          pdf.destroy().catch(() => {});
+          return;
+        }
         pdfRef.current = pdf;
         setNumPages(pdf.numPages);
         setPageNum(Math.min(Math.max(1, initialPage), pdf.numPages));
@@ -38,7 +42,9 @@ function PdfViewer({ url, title, page: initialPage = 1, rects = [], highlightPag
       .catch((e) => !cancelled && setError(String(e?.message || e)));
     return () => {
       cancelled = true;
-      pdfRef.current?.destroy?.();
+      // Destroys the worker/transport whether the load is still in flight or
+      // already resolved (PDFDocumentProxy.destroy delegates here anyway).
+      loadingTask.destroy().catch(() => {});
       pdfRef.current = null;
     };
   }, [url, initialPage]);
