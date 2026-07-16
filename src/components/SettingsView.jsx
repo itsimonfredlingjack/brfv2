@@ -166,7 +166,7 @@ const SettingsView = ({ settingsConfig, setSettingsConfig, activeSettingsTab, se
                 { value: 'claude-sonnet-5', label: 'Claude Sonnet 5' },
                 { value: 'claude-haiku-4-5', label: 'Claude Haiku 4.5' }
               ])}
-              {renderSlider('Maximal svarslängd', 'Högsta antal tokens modellen tillåts generera i ett enskilt svar.', 'maxResponseLength', 200, 4000, 100, ' tokens')}
+              {renderSlider('Maximal svarslängd', 'Högsta antal tokens för själva svarstexten. Källhänvisningar får eget utrymme utöver detta.', 'maxResponseLength', 200, 4000, 100, ' tokens')}
               {renderToggle('Krav på källor', 'Svar utan verifierbara källhänvisningar visas inte alls.', 'requireSources')}
               {renderSelect('Beteende vid otillräckligt underlag', 'Vad systemet ska göra om dokumenten inte räcker för att svara.', 'insufficientDataBehavior', [
                 { value: 'refuse', label: 'Avstå från att svara (hallucinationsskydd)' },

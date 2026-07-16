@@ -227,8 +227,9 @@ class ClaudeCLIProvider:
     def complete(self, system: str, user: str, *, max_tokens: int, model: str) -> str:
         import tempfile
 
-        # The CLI has no output-token cap flag; honor maxResponseLength as a
-        # soft instruction so the setting is not silently ignored.
+        # The CLI has no output-token cap flag; honor the envelope budget
+        # (max_tokens, already includes citation headroom) as a soft
+        # instruction so it is not silently ignored.
         system = f"{system}\n\nHåll hela svaret under cirka {max_tokens} tokens."
         cmd = [
             "claude",
