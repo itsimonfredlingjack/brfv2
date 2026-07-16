@@ -1,7 +1,13 @@
 .PHONY: backend backend-pilot frontend test test-isolation eval eval-b eval-fast eval-sweep \
-        eval-selfhosted demo-reset build
+        eval-selfhosted eval-b-selfhosted demo-reset build
 
-# Self-hosted LLM endpoint (EU GPU host in production; local Ollama for the demo).
+# Generation default for dev + eval is the standard hosted provider (logged-in `claude`
+# CLI, or Anthropic SDK when ANTHROPIC_API_KEY is set) — no env needed. Dev/eval use only
+# synthetic BRF data, so no data-residency constraint applies there.
+#
+# The self-hosted path below (local Ollama, or an EU GPU host in production) is the
+# PILOT/production swap, forced only by `backend-pilot` (BRF_MODE=pilot). The `*-selfhosted`
+# eval targets run through it with a network audit to prove zero external egress.
 BRF_LLM_BASE_URL ?= http://127.0.0.1:11434/v1
 BRF_LLM_MODEL ?= gemma4:e4b
 SELFHOSTED_ENV = BRF_LLM=selfhosted BRF_LLM_BASE_URL=$(BRF_LLM_BASE_URL) BRF_LLM_MODEL=$(BRF_LLM_MODEL)
@@ -21,10 +27,16 @@ test:               ## Backend-tester (offline, deterministiska)
 test-isolation:     ## Bara isolering + livscykel + auth
 	cd backend && uv run pytest -q tests/test_isolation.py tests/test_lifecycle.py tests/test_auth.py
 
-eval:               ## Full eval, tenant A, självhostad LLM + nätverksrevision
+eval:               ## Full eval, tenant A, standardleverantör (dev/eval-default)
+	cd backend && uv run python -m scripts.eval --workers 2
+
+eval-b:             ## Full eval, tenant B (Sjöutsikten 7), standardleverantör
+	cd backend && uv run python -m scripts.eval --golden eval/golden_b.json --workers 2
+
+eval-selfhosted:    ## Egress-bevis: eval tenant A via lokal Ollama + nätverksrevision
 	cd backend && $(SELFHOSTED_ENV) uv run python -m scripts.eval --workers 2 --network-audit
 
-eval-b:             ## Full eval, tenant B (Sjöutsikten 7)
+eval-b-selfhosted:  ## Egress-bevis: eval tenant B via lokal Ollama + nätverksrevision
 	cd backend && $(SELFHOSTED_ENV) uv run python -m scripts.eval --golden eval/golden_b.json --workers 2 --network-audit
 
 eval-fast:          ## Retrieval-eval utan LLM

@@ -7,16 +7,17 @@ svara utifrån dokumenten, säger det det — i stället för att gissa.
 ## Förutsättningar (redan uppfyllda på denna maskin)
 
 - `uv` (Python-miljön sköts automatiskt), Node 22+
-- LLM: självhostad Gemma 4 via Ollama (`gemma4:e4b`) för pilotläge — se
-  `docs/DEPLOY-SELFHOSTED-LLM.md`. I dev-läge duger även `claude` CLI / `ANTHROPIC_API_KEY`.
+- LLM: dev/eval kör mot **standardleverantören** (inloggat `claude` CLI, eller
+  `ANTHROPIC_API_KEY`) — inget att sätta upp. Självhostad Gemma 4 via Ollama
+  (`gemma4:e4b`) är pilot-/produktionsvägen, se `docs/DEPLOY-SELFHOSTED-LLM.md`.
 - Första starten laddar ner embeddingmodellen (~1 min, cachas)
 
 ## Starta (två terminaler)
 
 ```bash
 make demo-reset      # seedar TVÅ föreningar + demokonton (skriver ut inloggningar)
-make backend-pilot   # terminal 1 — API på :8787, kräver självhostad LLM
-# (eller `make backend` för dev-läge med valfri LLM)
+make backend         # terminal 1 — API på :8787 (dev, standardleverantör)
+# (eller `make backend-pilot` för pilotläge med real data — tvingar självhostad LLM)
 make frontend        # terminal 2 — UI på  http://localhost:5173/brfv2/
 ```
 
@@ -39,7 +40,7 @@ används för att bevisa tenant-isolering. Inga kunddokument ingår.
 
 Logga in som **anna@gjutformen12.se** och ställ frågor — du ser bara Gjutformen 12.
 Ingen väg (fråga, källa, URL, dokument-id) når Sjöutsikten 7:s data. Bevis:
-`make test-isolation` kör 18 angreppstester + livscykel + auth. En dedikerad
+`make test-isolation` kör 24 angreppstester + livscykel + auth (47 totalt). En dedikerad
 red-team-körning (`docs/evidence/isolation-redteam.md`) försökte aktivt bryta
 gränsen och misslyckades.
 
@@ -72,16 +73,20 @@ gränsen och misslyckades.
 ## Mätning & kvalitet
 
 ```bash
-make test            # backend-tester (offline, deterministiska) — inkl. isolering
-make eval            # full eval, förening A, självhostad Gemma + nätverksrevision
-make eval-b          # full eval, förening B (Sjöutsikten 7)
-make eval-fast       # retrieval-delen utan LLM (~sekunder)
-make test-isolation  # isolering + livscykel + auth
+make test              # backend-tester (offline, deterministiska) — inkl. isolering
+make eval              # full eval, förening A, standardleverantör (dev-default)
+make eval-b            # full eval, förening B (Sjöutsikten 7)
+make eval-selfhosted   # egress-bevis: förening A via lokal Ollama + nätverksrevision
+make eval-b-selfhosted # egress-bevis: förening B via lokal Ollama + nätverksrevision
+make eval-fast         # retrieval-delen utan LLM (~sekunder)
+make test-isolation    # isolering + livscykel + auth
 ```
 
-`make eval` kör med `--network-audit`: varje TCP-anslutning loggas och allt
-utanför loopback + den självhostade LLM:en får körningen att faila. Ren körning =
-bevis på att dokumenttext bara nådde den egna LLM-servern.
+Dev/eval kör mot standardleverantören på **fiktiv** data — ingen dataresidens-fråga.
+`make eval-selfhosted` kör i stället mot den lokala Ollama-modellen med
+`--network-audit`: varje TCP-anslutning loggas och allt utanför loopback + den
+självhostade LLM:en får körningen att faila. Ren körning = bevis på att
+dokumenttext bara nådde den egna LLM-servern (samma path som pilot/EU-produktion).
 
 ## OCR-spikriggen (för skannade dokument)
 

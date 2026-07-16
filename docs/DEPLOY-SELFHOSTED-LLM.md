@@ -43,7 +43,8 @@ The provider posts to `POST {BRF_LLM_BASE_URL}/chat/completions` with
 - **Swedish support: Spike-item.** The model card claims "35+ languages out of the box" and
   "140+ pre-trained" but does not name Swedish. The demo answers were fluent and correctly
   grounded, but judge Swedish quality on the real corpus before committing. The eval harness
-  (`make eval`) is exactly that judgment tool.
+  (`make eval-selfhosted`) is exactly that judgment tool — it runs the golden set through this
+  endpoint. (Plain `make eval` uses the standard hosted provider and is the dev/eval default.)
 - **VRAM (weights only, excludes KV-cache):** E4B ≈ 17.9 GB BF16 / 8.9 GB 8-bit / 4.5 GB Q4.
   *(Verified: ai.google.dev/gemma/docs/core; the card notes figures vary by inference tool.)*
 
@@ -97,8 +98,8 @@ vllm serve google/gemma-4-E4B-it \
 
 ## Proving zero external LLM calls
 
-`make eval` runs with `--network-audit`: it instruments every TCP connect from the eval process
-and hard-fails if anything connects outside loopback + `BRF_LLM_BASE_URL`. It writes
+`make eval-selfhosted` runs with `--network-audit`: it instruments every TCP connect from the eval
+process and hard-fails if anything connects outside loopback + `BRF_LLM_BASE_URL`. It writes
 `backend/eval/network_audit.json` (total connections, distinct endpoints, any external). A clean
 run is the evidence that document text reached only the self-hosted endpoint. For the app process
 itself in production, pair this with a host firewall egress-deny (below) — belt and braces.

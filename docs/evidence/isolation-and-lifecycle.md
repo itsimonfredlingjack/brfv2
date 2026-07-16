@@ -25,7 +25,7 @@ uv run pytest tests/test_isolation.py tests/test_lifecycle.py tests/test_auth.py
 47 passed, 6 warnings
 ```
 
-### `test_isolation.py` (18 adversarial tests) — every one is an attack that must fail
+### `test_isolation.py` (24 adversarial checks) — every one is an attack that must fail
 
 - **Cross-tenant read (5):** A-admin listing B's documents, fetching B's PDF, reading B's
   extraction, reading B's settings, and requesting B's real doc_id under A's path — all 404, and
@@ -37,15 +37,16 @@ uv run pytest tests/test_isolation.py tests/test_lifecycle.py tests/test_auth.py
   separate objects with disjoint content.
 - **Forged credentials (3):** no session → 401 on every verb; fabricated bearer token → 401; a
   *valid* B session still gets 404 on A's routes (a real login is still a stranger to A).
-- **Id tricks (2):** `../brf-b`, `..%2fbrf-b`, `brf-b/../brf-b`, case and whitespace variants —
-  none reach another tenant; unknown tenant → 404.
+- **Id tricks (8):** `../brf-b`, `..%2fbrf-b`, `brf-b/../brf-b`, `brf-a/../../etc`, `brf_b`,
+  `BRF-B`, leading-space (parametrized across 7 crafted ids) — none reach another tenant; an
+  unknown tenant → 404.
 - **Filesystem separation (1):** tenant directories are disjoint and neither nests in the other;
   each tenant's PDF files live only under its own directory.
 - **Route-coverage meta-guard (1):** walks every `/api/brf/{brf_id}/…` route's dependency tree
   and fails if `tenant_store`/`require_admin` is absent — catches a *future* route added without
   isolation, not just today's.
 
-### `test_auth.py` (23 tests)
+### `test_auth.py` (17 tests)
 
 Password hashing (scrypt, per-user salt, never stored plaintext — asserted against the raw DB
 bytes), login success/failure, throttle after 10 failures + reset on success, session
@@ -53,7 +54,7 @@ round-trip, only the token *hash* stored (asserted against raw DB), expired/dele
 tokens rejected, role scoping (member vs admin vs non-member), and membership cascade on tenant
 delete.
 
-### `test_lifecycle.py` (8 tests)
+### `test_lifecycle.py` (6 tests)
 
 - Document hard-delete removes PDF + extraction + chunks + index entry, verified by reloading the
   Store from disk (nothing resurrects).

@@ -50,3 +50,13 @@
   quietly bypassing requireSources. Behavior settings may choose how failures are presented —
   they must never skip the grounding checks themselves. Why it mattered: the one setting meant to
   trade strictness for helpfulness disabled the product's core guarantee.
+
+- **2026-07-16 — Split the provider default by data, not by aspiration.** The EU-residency
+  requirement is about *real member data*, which only exists in pilot mode. Dev and eval run on
+  synthetic, fictional BRFs — no personal data, so no residency constraint applies there. An
+  earlier pass made self-hosted Gemma the dev/eval default, spending ~55 min/run on a local 4B
+  model to re-prove a citation contract that the hosted provider proves in ~2 min, and coupling
+  everyday dev to a GPU-ish dependency for zero compliance gain. Fix: dev/eval default to the
+  cheap hosted provider; `BRF_MODE=pilot` is the hard gate that forces the self-hosted,
+  EU-resident path the moment real data is in play. Why it mattered: the constraint travels with
+  the data, so the default should too — otherwise you pay production's costs in dev.
