@@ -46,3 +46,6 @@ backend/eval/network_audit.json
 *.njsproj
 *.sln
 *.sw?
+
+# Playwright MCP artifacts
+.playwright-mcp/
