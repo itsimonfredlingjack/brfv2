@@ -46,7 +46,4 @@ export const api = {
   ask: (brfId, question) => request(`/api/brf/${brfId}/ask`, jsonBody('POST', { question })),
   getSettings: (brfId) => request(`/api/brf/${brfId}/settings`),
   putSettings: (brfId, settings) => request(`/api/brf/${brfId}/settings`, jsonBody('PUT', settings)),
-
-  // dev only
-  reset: () => request('/api/reset', { method: 'POST' }),
 };

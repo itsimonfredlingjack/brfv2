@@ -229,8 +229,9 @@ def create_app(
     # ---------- dev only ----------
 
     @app.post("/api/reset")
-    def reset() -> dict:
-        """Wipe every tenant and reseed the demo corpus. Dev mode only."""
+    def reset(user: dict = Depends(current_user)) -> dict:
+        """Wipe every tenant and reseed the demo corpus. Dev mode only, and
+        authenticated — this is a destructive global op, never anonymous."""
         if mode != "dev":
             raise HTTPException(status_code=403, detail="Endast tillgängligt i dev-läge.")
         import sys

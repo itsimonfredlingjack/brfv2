@@ -110,4 +110,9 @@ class TestDevReset:
         auth = AuthStore(tmp_path / "auth.db")
         registry = TenantRegistry(tmp_path, auth)
         client = TestClient(create_app(registry=registry, auth=auth, data_root=tmp_path))
-        assert client.post("/api/reset").status_code == 403
+        # Unauthenticated → 401 before the dev-mode check even matters.
+        assert client.post("/api/reset").status_code == 401
+
+    def test_reset_requires_authentication_in_dev(self, env):
+        # Red-team finding: reset must never be anonymous, even in dev.
+        assert env.client.post("/api/reset").status_code == 401
