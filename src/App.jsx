@@ -10,6 +10,7 @@ import ContextCard from './components/ContextCard';
 import DocumentView from './components/DocumentView';
 import SettingsView from './components/SettingsView';
 import PdfViewer from './components/PdfViewer';
+import Login from './components/Login';
 import { api } from './api';
 import './App.css';
 
@@ -30,22 +31,107 @@ function App() {
   const [settingsSaveState, setSettingsSaveState] = useState(null); // null | 'saving' | 'saved' | 'error'
   const settingsSaveTimerRef = useRef(null);
 
+  // ---- Auth & tenant state ----
+  const [authState, setAuthState] = useState('loading'); // 'loading' | 'loggedOut' | 'loggedIn'
+  const [user, setUser] = useState(null);
+  const [memberships, setMemberships] = useState([]);
+  const [activeBrfId, setActiveBrfId] = useState(null);
+
+  const activeMembership = memberships.find((m) => m.brf_id === activeBrfId) || null;
+  const activeRole = activeMembership?.role || 'member';
+  const isAdmin = activeRole === 'admin';
+  const activeBrfName = activeMembership?.name || '';
+  const userInitials = (user?.name || '')
+    .split(' ')
+    .filter(Boolean)
+    .map((w) => w[0].toUpperCase())
+    .slice(0, 2)
+    .join('') || '?';
+
+  const handleLoggedIn = (result) => {
+    setUser(result.user);
+    setMemberships(result.memberships || []);
+    setActiveBrfId(result.memberships?.[0]?.brf_id ?? null);
+    setAuthState('loggedIn');
+  };
+
+  const resetToLogin = () => {
+    setUser(null);
+    setMemberships([]);
+    setActiveBrfId(null);
+    setAuthState('loggedOut');
+    setShowUserMenu(false);
+    setViewer(null);
+    setDocuments([]);
+    setChatMessages([]);
+    setActiveDocument(null);
+    setCurrentTab('overview');
+  };
+
+  // Central 401 handling: an expired session drops straight back to login.
+  const handleApiError = (e) => {
+    if (e?.status === 401) {
+      resetToLogin();
+      return true;
+    }
+    return false;
+  };
+
+  const handleLogout = async () => {
+    try { await api.logout(); } catch { /* clear locally regardless */ }
+    resetToLogin();
+  };
+
+  const switchTenant = (value) => {
+    // <option> values are strings — resolve back to the membership to keep the original id type.
+    const m = memberships.find((mm) => String(mm.brf_id) === String(value));
+    if (!m || m.brf_id === activeBrfId) return;
+    setActiveBrfId(m.brf_id);
+    setViewer(null);
+    setActiveDocument(null);
+    setDocuments([]);
+    setCurrentTab('overview');
+  };
+
   const refreshDocuments = async () => {
+    if (!activeBrfId) return;
     try {
-      setDocuments(await api.listDocuments());
-    } catch {
+      setDocuments(await api.listDocuments(activeBrfId));
+    } catch (e) {
+      handleApiError(e);
       setDocuments([]);
     }
   };
 
+  // Session bootstrap: restore an existing session cookie, else show login.
   useEffect(() => {
-    refreshDocuments();
-    // Hydrate settings from the backend (backend keys win; UI-only keys keep defaults)
-    api.getSettings()
-      .then((s) => setSettingsConfig((prev) => ({ ...prev, ...s })))
-      .catch(() => {});
+    api.me()
+      .then(handleLoggedIn)
+      .catch(() => setAuthState('loggedOut'));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Tenant (re)load: documents + settings follow the active BRF.
+  useEffect(() => {
+    if (authState !== 'loggedIn' || !activeBrfId) return;
+    refreshDocuments();
+    // Hydrate settings from the backend (backend keys win; UI-only keys keep defaults)
+    api.getSettings(activeBrfId)
+      .then((s) => setSettingsConfig((prev) => ({ ...prev, ...s })))
+      .catch((e) => handleApiError(e));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authState, activeBrfId]);
+
+  // Fresh tenant context ⇒ fresh chat greeting (also clears cross-tenant history).
+  useEffect(() => {
+    if (authState !== 'loggedIn' || !user || !activeBrfId) return;
+    const firstName = (user.name || '').split(' ')[0] || user.email;
+    setChatMessages([{
+      role: 'ai',
+      content: `Hej ${firstName}! Jag är kopplad till alla dokument i ${activeBrfName} (styrelseprotokoll, stadgar, årsredovisningar m.m.). Vad vill du ha hjälp med att hitta eller analysera idag?`,
+    }]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [authState, user, activeBrfId]);
 
   const BACKEND_SETTINGS_KEYS = [
     'chunkStrategy', 'chunkSize', 'chunkOverlap',
@@ -61,13 +147,14 @@ function App() {
       const payload = Object.fromEntries(
         BACKEND_SETTINGS_KEYS.map((k) => [k, settingsConfig[k]]).filter(([, v]) => v !== undefined)
       );
-      const saved = await api.putSettings(payload);
+      const saved = await api.putSettings(activeBrfId, payload);
       setSettingsConfig((prev) => ({ ...prev, ...saved }));
       await refreshDocuments(); // chunk-knob changes re-chunk documents
       setSettingsSaveState('saved');
       clearTimeout(settingsSaveTimerRef.current);
       settingsSaveTimerRef.current = setTimeout(() => setSettingsSaveState(null), 2500);
     } catch (e) {
+      if (handleApiError(e)) return;
       console.error('Kunde inte spara inställningar', e);
       setSettingsSaveState('error');
     }
@@ -75,7 +162,7 @@ function App() {
 
   const openDocViewer = (doc, opts = {}) =>
     setViewer({
-      url: api.pdfUrl(doc.document_id || doc.id),
+      url: api.pdfUrl(activeBrfId, doc.document_id || doc.id),
       title: doc.document_name || doc.name,
       page: opts.page || 1,
       rects: opts.rects || [],
@@ -115,11 +202,9 @@ function App() {
     fallbackToPageLevel: true
   });
 
-  // Chat State
+  // Chat State (the greeting is seeded per user + active BRF by the effect above)
   const [chatInput, setChatInput] = useState('');
-  const [chatMessages, setChatMessages] = useState([
-    { role: 'ai', content: 'Hej Simon! Jag är kopplad till alla dina dokument (Styrelseprotokoll, stadgar, årsredovisningar etc.). Vad vill du ha hjälp med att hitta eller analysera idag?' }
-  ]);
+  const [chatMessages, setChatMessages] = useState([]);
 
   const askQuestion = async (question) => {
     const q = question.trim();
@@ -133,7 +218,7 @@ function App() {
     ]);
     setChatBusy(true);
     try {
-      const resp = await api.ask(q);
+      const resp = await api.ask(activeBrfId, q);
       setChatMessages(prev => [
         ...prev.slice(0, -1),
         {
@@ -146,10 +231,12 @@ function App() {
         },
       ]);
     } catch (e) {
-      setChatMessages(prev => [
-        ...prev.slice(0, -1),
-        { role: 'ai', content: `Tekniskt fel: ${e.message}`, refusal: true },
-      ]);
+      if (!handleApiError(e)) {
+        setChatMessages(prev => [
+          ...prev.slice(0, -1),
+          { role: 'ai', content: `Tekniskt fel: ${e.message}`, refusal: true },
+        ]);
+      }
     } finally {
       setChatBusy(false);
     }
@@ -399,8 +486,21 @@ function App() {
   ];
 
   const handleGlobalUpload = () => {
+    if (!isAdmin) return; // members are read-only — the backend 403s anyway
     setUploadError(null);
     setShowUploadModal(true);
+  };
+
+  const handleDeleteDocument = async (doc) => {
+    if (!isAdmin) return;
+    const name = doc.document_name || doc.name;
+    if (!window.confirm(`Ta bort "${name}"? Dokumentet försvinner ur sökindexet.`)) return;
+    try {
+      await api.deleteDocument(activeBrfId, doc.document_id || doc.id);
+      await refreshDocuments();
+    } catch (e) {
+      if (!handleApiError(e)) alert(`Kunde inte ta bort dokumentet: ${e.message}`);
+    }
   };
 
   const handleFileChosen = async (file) => {
@@ -412,7 +512,7 @@ function App() {
     const t1 = setTimeout(() => setProcessingStep(1), 600);
     const t2 = setTimeout(() => setProcessingStep(2), 1500);
     try {
-      await api.uploadDocument(file);
+      await api.uploadDocument(activeBrfId, file);
       setProcessingStep(3);
       await refreshDocuments();
       setTimeout(() => {
@@ -421,8 +521,10 @@ function App() {
       }, 500);
     } catch (e) {
       setIsProcessing(false);
-      setUploadError(e.message);
-      setShowUploadModal(true);
+      if (!handleApiError(e)) {
+        setUploadError(e.message);
+        setShowUploadModal(true);
+      }
     } finally {
       clearTimeout(t1);
       clearTimeout(t2);
@@ -635,11 +737,11 @@ function App() {
                 </div>
               ))}
               {documents.length === 0 && (
-                <div className="document-card glass-panel" onClick={handleGlobalUpload}>
+                <div className="document-card glass-panel" onClick={handleGlobalUpload} style={{ cursor: isAdmin ? 'pointer' : 'default' }}>
                   <div className="doc-icon dimmed"><UploadCloud size={24} color="var(--text-secondary)" /></div>
                   <div className="doc-info">
-                    <h4>Ladda upp din första PDF</h4>
-                    <span>Texten indexeras och blir frågebar</span>
+                    <h4>{isAdmin ? 'Ladda upp din första PDF' : 'Inga dokument ännu'}</h4>
+                    <span>{isAdmin ? 'Texten indexeras och blir frågebar' : 'En administratör kan ladda upp föreningens dokument'}</span>
                   </div>
                 </div>
               )}
@@ -710,9 +812,20 @@ function App() {
                 <td style={{ color: 'var(--text-secondary)' }}>{doc.pages}</td>
                 <td style={{ color: 'var(--text-secondary)' }}>{doc.chunks}</td>
                 <td style={{textAlign: 'right'}}>
-                  <button className="icon-btn" onClick={(e) => { e.stopPropagation(); openDocViewer(doc); }}>
-                    <ArrowRight size={16} />
-                  </button>
+                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '4px' }}>
+                    {isAdmin && (
+                      <button
+                        className="icon-btn"
+                        title="Ta bort dokument"
+                        onClick={(e) => { e.stopPropagation(); handleDeleteDocument(doc); }}
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                    <button className="icon-btn" onClick={(e) => { e.stopPropagation(); openDocViewer(doc); }}>
+                      <ArrowRight size={16} />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -1061,6 +1174,20 @@ function App() {
     </div>
   );
 
+  // ---- Auth gate: nothing below renders without a session ----
+  if (authState === 'loading') {
+    return (
+      <div className="auth-loading-screen">
+        <Loader2 size={28} className="spin" />
+        <span>Laddar…</span>
+      </div>
+    );
+  }
+
+  if (authState !== 'loggedIn') {
+    return <Login onLoggedIn={handleLoggedIn} />;
+  }
+
   return (
     <div className="app-shell">
       {/* Persistent Sidebar */}
@@ -1069,12 +1196,14 @@ function App() {
           <div className="logo">Simons <span>RAG-system</span></div>
         </div>
 
-        <div className="sidebar-upload">
-          <button className="upload-btn" onClick={handleGlobalUpload}>
-            <UploadCloud size={18} />
-            Ladda upp dokument
-          </button>
-        </div>
+        {isAdmin && (
+          <div className="sidebar-upload">
+            <button className="upload-btn" onClick={handleGlobalUpload}>
+              <UploadCloud size={18} />
+              Ladda upp dokument
+            </button>
+          </div>
+        )}
 
         <div className="sidebar-menu">
           <button className={`nav-item ${currentTab === 'overview' && !activeDocument ? 'active' : ''}`} onClick={() => {setCurrentTab('overview'); setActiveDocument(null);}}>
@@ -1102,19 +1231,36 @@ function App() {
         </div>
 
         <div className="sidebar-footer">
+          {memberships.length > 1 ? (
+            <div className="tenant-switcher">
+              <label htmlFor="tenant-select">Förening</label>
+              <select
+                id="tenant-select"
+                value={String(activeBrfId ?? '')}
+                onChange={(e) => switchTenant(e.target.value)}
+              >
+                {memberships.map((m) => (
+                  <option key={m.brf_id} value={String(m.brf_id)}>{m.name}</option>
+                ))}
+              </select>
+            </div>
+          ) : (
+            activeBrfName && <div className="tenant-label" title={activeBrfName}>{activeBrfName}</div>
+          )}
+
           {showUserMenu && (
             <div className="user-menu-popover glass-panel">
               <div className="user-menu-item"><HelpCircle size={16} /> Hjälp & Support</div>
               <div className="user-menu-divider"></div>
-              <div className="user-menu-item text-danger"><LogOut size={16} /> Logga ut</div>
+              <div className="user-menu-item text-danger" onClick={handleLogout}><LogOut size={16} /> Logga ut</div>
             </div>
           )}
 
           <div className="user-profile" onClick={() => setShowUserMenu(!showUserMenu)}>
-            <div className="user-avatar">SR</div>
+            <div className="user-avatar">{userInitials}</div>
             <div className="user-info">
-              <span className="user-name">Simon R</span>
-              <span className="user-email">simon@docintel.se</span>
+              <span className="user-name">{user?.name || user?.email}</span>
+              <span className="user-email">{user?.email}</span>
             </div>
             <ChevronUp size={16} color="var(--text-secondary)" style={{ marginLeft: 'auto', transform: showUserMenu ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
           </div>
@@ -1143,6 +1289,7 @@ function App() {
                 setActiveSettingsTab={setActiveSettingsTab}
                 onSave={saveSettings}
                 saveState={settingsSaveState}
+                readOnly={!isAdmin}
               />
             )}
             {currentTab === 'chat' && (
@@ -1156,7 +1303,7 @@ function App() {
                   {chatMessages.map((msg, idx) => (
                     <div key={idx} className={`chat-message ${msg.role} ${msg.refusal ? 'refusal' : ''} ${msg.pending ? 'pending' : ''}`}>
                       <div className="chat-avatar">
-                        {msg.role === 'ai' ? (msg.pending ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />) : 'SR'}
+                        {msg.role === 'ai' ? (msg.pending ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />) : userInitials}
                       </div>
                       <div className="chat-content">
                         {msg.refusal && <div className="chat-refusal-tag"><AlertCircle size={13} /> Avstår från att svara</div>}

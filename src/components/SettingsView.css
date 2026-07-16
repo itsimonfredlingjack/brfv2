@@ -241,3 +241,4 @@
 
 .settings-save-status.ok { color: #4ade80; }
 .settings-save-status.err { color: #f87171; }
+.settings-save-status.readonly { color: var(--text-secondary); font-style: italic; }

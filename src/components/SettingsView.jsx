@@ -1,7 +1,7 @@
 import React from 'react';
 import './SettingsView.css';
 
-const SettingsView = ({ settingsConfig, setSettingsConfig, activeSettingsTab, setActiveSettingsTab, onSave, saveState }) => {
+const SettingsView = ({ settingsConfig, setSettingsConfig, activeSettingsTab, setActiveSettingsTab, onSave, saveState, readOnly = false }) => {
   const tabs = [
     { id: 'dokument', label: 'Dokument' },
     { id: 'chunking', label: 'Chunking' },
@@ -83,11 +83,17 @@ const SettingsView = ({ settingsConfig, setSettingsConfig, activeSettingsTab, se
           <p>Här kan du konfigurera tekniska parametrar för dokumenthantering och AI-modellen.</p>
         </div>
         <div className="settings-save-area">
-          {saveState === 'saved' && <span className="settings-save-status ok">Sparat — index uppdaterat</span>}
-          {saveState === 'error' && <span className="settings-save-status err">Kunde inte spara</span>}
-          <button className="primary-btn" onClick={onSave} disabled={saveState === 'saving'}>
-            {saveState === 'saving' ? 'Sparar…' : 'Spara inställningar'}
-          </button>
+          {readOnly ? (
+            <span className="settings-save-status readonly">Endast administratörer kan ändra inställningar</span>
+          ) : (
+            <>
+              {saveState === 'saved' && <span className="settings-save-status ok">Sparat — index uppdaterat</span>}
+              {saveState === 'error' && <span className="settings-save-status err">Kunde inte spara</span>}
+              <button className="primary-btn" onClick={onSave} disabled={saveState === 'saving'}>
+                {saveState === 'saving' ? 'Sparar…' : 'Spara inställningar'}
+              </button>
+            </>
+          )}
         </div>
       </div>
       
