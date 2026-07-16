@@ -120,7 +120,7 @@ DOCUMENTS_B: list[dict] = [
                 "# § 1 Städning av gemensamma utrymmen",
                 "Trappstädning utförs varje helgfri måndag och omfattar sopning och våttorkning av samtliga trapphus, entréer och hissar samt avtorkning av ledstänger och postboxar. Storstädning med maskinskurning av entrégolven utförs två gånger per år, i april och i oktober. Fönsterputsning av entrépartierna ingår fyra gånger per år.",
                 "# § 2 Trädgårdsskötsel",
-                "Under perioden 1 april till 31 oktober ansvarar Leverantören för trädgårds-\nskötseln, vilket omfattar gräsklippning varannan vecka, ogräsrensning av rabatterna en gång per månad, vårstädning av gården samt beskärning av häckar och vresrosor två gånger per säsong.",
+                "Under perioden 1 april till 31 oktober ansvarar Leverantören för trädgårds-\nskötseln, vilket omfattar gräsklippning varannan vecka, ogräsrensning av rabatterna en gång per månad, vårstädning av gården samt beskärning av häckar och vresrosor två gånger per säsong. Ansvaret för trädgårdsskötseln får inte överlåtas till en underentreprenör utan Föreningens skriftliga godkännande.",
                 "# § 3 Ersättning",
                 "Föreningen betalar ett fast månadsarvode om 31 800 kronor exklusive mervärdesskatt. I arvodet ingår samtliga maskiner, redskap och förbrukningsmaterial. Extrabeställda arbeten utförs mot timpris om 495 kronor per person och timme efter skriftlig beställning av styrelsen.",
             ],
@@ -176,9 +176,14 @@ GOLDEN_ANSWERABLE_B: list[dict] = [
     # --- Städ- och trädgårdsavtal ---
     # Lång passage (>12 ord) som spänner över flera renderade rader.
     {"question": "Hur ofta städas trapphusen?", "document": "Städ- och trädgårdsavtal 2026.pdf", "passage": "Trappstädning utförs varje helgfri måndag och omfattar sopning och våttorkning av samtliga trapphus"},
-    # Adversariell: passagen använder den sammanfogade ordformen och korsar den
-    # planterade avstavningen "trädgårds-" / "skötseln" (jfr § 2.5 i pipelinen).
-    {"question": "Vem ansvarar för trädgårdsskötseln under sommarhalvåret?", "document": "Städ- och trädgårdsavtal 2026.pdf", "passage": "ansvarar Leverantören för trädgårdsskötseln"},
+    # Adversariell: stycket innehåller den planterade avstavningen
+    # "trädgårds-" / "skötseln"; passagen använder den sammanfogade ordformen
+    # "trädgårdsskötseln" (senare i samma stycke) och pipelinen måste slå ihop
+    # avstavningen för att förstå stycket (jfr korpus A:s "för-/valtningen").
+    {"question": "Får Leverantören anlita en underentreprenör för trädgårdsskötseln?", "document": "Städ- och trädgårdsavtal 2026.pdf", "passage": "Ansvaret för trädgårdsskötseln får inte överlåtas till en underentreprenör utan Föreningens skriftliga godkännande"},
+    # Adversariell: passagen ligger på raden direkt efter den planterade
+    # avstavningen (samma mönster som korpus A:s golden intill "för-/valtningen").
+    {"question": "Hur ofta klipps gräset på gården?", "document": "Städ- och trädgårdsavtal 2026.pdf", "passage": "vilket omfattar gräsklippning varannan vecka"},
     {"question": "Vad betalar föreningen per månad för städning och trädgård?", "document": "Städ- och trädgårdsavtal 2026.pdf", "passage": "fast månadsarvode om 31 800 kronor exklusive mervärdesskatt"},
     # Parafraserad fråga utan nyckelordsöverlapp med passagen.
     {"question": "Med vilken framförhållning måste samarbetet med städfirman avslutas om föreningen är missnöjd?", "document": "Städ- och trädgårdsavtal 2026.pdf", "passage": "Avtalet får sägas upp skriftligen senast sex månader före avtalstidens utgång"},

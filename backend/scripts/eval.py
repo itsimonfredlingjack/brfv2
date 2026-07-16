@@ -107,16 +107,39 @@ def rect_match(cit: list[float], gold: list[float]) -> bool:
     return iou >= 0.30 or containment >= 0.60
 
 
-def load_golden() -> dict:
-    return json.loads((EVAL_DIR / "golden.json").read_text("utf-8"))
+def load_golden(path: str | None = None) -> dict:
+    p = Path(path) if path else (EVAL_DIR / "golden.json")
+    if not p.is_absolute():
+        p = EVAL_DIR.parent / p
+    return json.loads(p.read_text("utf-8"))
 
 
-def fresh_store(settings_overrides: dict | None = None) -> Store:
+def _seed_for_golden(store: Store, golden: dict) -> None:
+    """Seed the corpus the golden set was built against (A or B), by matching
+    the golden's `corpus` document names."""
+    from scripts.seed import render_pdf, seed_store as seed_a
+
+    corpus = set(golden.get("corpus", []))
+    try:
+        from scripts.seed_content_b import DOCUMENTS_B
+    except ImportError:
+        DOCUMENTS_B = None
+    if DOCUMENTS_B and corpus and corpus == {d["name"] for d in DOCUMENTS_B}:
+        for d in DOCUMENTS_B:
+            store.add_document(d["name"], render_pdf(d))
+    else:
+        seed_a(store)
+
+
+def fresh_store(settings_overrides: dict | None = None, golden: dict | None = None) -> Store:
     """Seed a throwaway store so chunk-knob overrides can re-chunk freely."""
     store = Store(data_dir=tempfile.mkdtemp(prefix="brf-eval-"))
     if settings_overrides:
         store.update_settings(Settings(**{**Settings().model_dump(), **settings_overrides}))
-    seed_store(store)
+    if golden is not None:
+        _seed_for_golden(store, golden)
+    else:
+        seed_store(store)
     return store
 
 
@@ -278,7 +301,7 @@ def run_sweep(golden: dict) -> None:
     for knob, values in grid:
         for v in values:
             overrides = {**base, knob: v}
-            store = fresh_store(overrides)
+            store = fresh_store(overrides, golden=golden)
             res = eval_retrieval(store, golden)
             marker = " (default)" if v == base[knob] else ""
             print(f"| {knob} | {v}{marker} | {res['recall_at_k']:.3f} | {len(store.chunks)} |")
@@ -289,6 +312,7 @@ def main() -> None:
     parser.add_argument("--retrieval-only", action="store_true")
     parser.add_argument("--sweep", action="store_true")
     parser.add_argument("--settings", default=None, help="JSON settings overrides")
+    parser.add_argument("--golden", default=None, help="path to a golden set (default eval/golden.json)")
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--workers", type=int, default=4)
     parser.add_argument(
@@ -304,14 +328,14 @@ def main() -> None:
         audit_log, allowed = install_network_audit()
         print(f"Nätverksrevision aktiv — tillåtna värdar: {sorted(allowed)}")
 
-    golden = load_golden()
+    golden = load_golden(args.golden)
 
     if args.sweep:
         run_sweep(golden)
         return
 
     overrides = json.loads(args.settings) if args.settings else None
-    store = fresh_store(overrides)
+    store = fresh_store(overrides, golden=golden)
 
     t0 = time.time()
     retrieval = eval_retrieval(store, golden)
