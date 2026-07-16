@@ -77,6 +77,9 @@ class TestOpenAICompatProvider:
         assert body["temperature"] == 0
         assert body["max_tokens"] == 500
         assert body["response_format"] == {"type": "json_object"}
+        # Thinking-capable models must not spend the budget in a hidden
+        # reasoning channel (empty content on grounding prompts).
+        assert body["reasoning_effort"] == "none"
         assert body["messages"][0] == {"role": "system", "content": "systemkontrakt"}
 
     def test_settings_model_used_when_env_model_empty(self, monkeypatch):
@@ -101,6 +104,33 @@ class TestOpenAICompatProvider:
         assert p.complete("s", "u", max_tokens=10, model="m") == "utan json-läge"
         assert len(bodies) == 2 and "response_format" not in bodies[1]
         assert p._json_mode is False  # sticky — no second 400 round-trip next call
+
+    def test_reasoning_effort_rejection_degrades_once(self, monkeypatch):
+        bodies: list[dict] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            body = json.loads(request.content)
+            bodies.append(body)
+            if "reasoning_effort" in body:
+                return httpx.Response(400, text="unsupported parameter: reasoning_effort")
+            return httpx.Response(200, json=_ok_payload("utan reasoning-fält"))
+
+        p = self._provider(handler, monkeypatch)
+        assert p.complete("s", "u", max_tokens=10, model="m") == "utan reasoning-fält"
+        assert len(bodies) == 2 and "reasoning_effort" not in bodies[1]
+        assert p._reasoning_off is False  # sticky — no second 400 round-trip next call
+
+    def test_empty_content_at_length_names_reasoning_channel(self, monkeypatch):
+        # The real-world failure: thinking model burns the budget invisibly.
+        # The error must NOT tell the user to raise maxResponseLength.
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(
+                200, json={"choices": [{"message": {"content": ""}, "finish_reason": "length"}]}
+            )
+
+        p = self._provider(handler, monkeypatch)
+        with pytest.raises(LLMError, match="resonemangskanal"):
+            p.complete("s", "u", max_tokens=10, model="m")
 
     def test_finish_reason_length_raises(self, monkeypatch):
         def handler(request: httpx.Request) -> httpx.Response:

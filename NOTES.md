@@ -51,6 +51,30 @@
   they must never skip the grounding checks themselves. Why it mattered: the one setting meant to
   trade strictness for helpfulness disabled the product's core guarantee.
 
+- **2026-07-16 — When truncation survives a bigger budget, suspect a hidden channel, not the
+  budget.** On real contract content, 4 of 10 board questions died as "truncated at
+  max_tokens" — and still died at 3× the budget. The model (gemma4 on Ollama, thinking-capable)
+  was burning the entire budget in a hidden `reasoning` field and returning empty content; the
+  provider's own error message pointed at the wrong knob. Fix: request `reasoning_effort: "none"`
+  (degrade-once if the server rejects it) and make the empty-content case name the reasoning
+  channel. Why it mattered: every synthetic eval was green — the failure only existed on real
+  documents, and the error text actively misdirected the diagnosis.
+
+- **2026-07-16 — Real contracts fail on fragments, not hyphens.** The synthetic corpus planted
+  line-break hyphenations as the hard case; the real corpus has almost none (1 in 13 pages).
+  Instead, 68% of a real contract's lines are ≤2-word table/label fragments, and key facts
+  (parties, org numbers, who-does-what) live in cells and letterheads where no contiguous
+  quotable sentence exists — the model then stitches a "natural" quote that exists word-by-word
+  but not as a span, and the verifier rightly rejects it. Why it mattered: the citation contract
+  itself, not OCR or retrieval, is what real layouts stress first.
+
+- **2026-07-16 — Measure the scariest risk before building around it: OCR turned out mundane.**
+  SPEC's #1 named risk (OCR coordinate fidelity on real Swedish scans) measured fine on a real
+  corpus: conf 90–93, boxes-on-ink 0.93–1.0, drift p95 ≈ 0.24% of page height, quote
+  verifiability ≥0.9 — a conditional GO with a confidence gate and blank-page tolerance. Why it
+  mattered: the phase's build decision now rests on numbers from the actual documents, and the
+  effort saved from the feared-hard problem can go to the actually-hard one (fragment facts).
+
 - **2026-07-16 — Split the provider default by data, not by aspiration.** The EU-residency
   requirement is about *real member data*, which only exists in pilot mode. Dev and eval run on
   synthetic, fictional BRFs — no personal data, so no residency constraint applies there. An

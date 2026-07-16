@@ -138,6 +138,10 @@ class OpenAICompatProvider:
         )
         # Ask for JSON mode; degrade gracefully once if the server rejects it.
         self._json_mode = True
+        # Thinking-capable models (e.g. gemma4 on Ollama) burn the whole token
+        # budget in a hidden reasoning channel and return empty content on
+        # grounding prompts — ask for no reasoning; degrade once if rejected.
+        self._reasoning_off = True
 
     def complete(self, system: str, user: str, *, max_tokens: int, model: str) -> str:
         payload = {
@@ -151,12 +155,18 @@ class OpenAICompatProvider:
         }
         if self._json_mode:
             payload["response_format"] = {"type": "json_object"}
+        if self._reasoning_off:
+            payload["reasoning_effort"] = "none"
         try:
             resp = self._client.post("/chat/completions", json=payload)
         except Exception as exc:
             raise LLMError(
                 f"Kunde inte nå LLM-servern ({self.base_url}): {exc.__class__.__name__}"
             ) from exc
+        if resp.status_code == 400 and self._reasoning_off and "reasoning" in resp.text:
+            logger.warning("LLM-servern avvisade reasoning_effort — fortsätter utan")
+            self._reasoning_off = False
+            return self.complete(system, user, max_tokens=max_tokens, model=model)
         if resp.status_code == 400 and self._json_mode and "response_format" in resp.text:
             logger.warning("LLM-servern avvisade response_format — fortsätter utan JSON-läge")
             self._json_mode = False
@@ -171,6 +181,15 @@ class OpenAICompatProvider:
         except Exception as exc:
             raise LLMError(f"Oväntat svar från LLM-servern: {resp.text[:200]!r}") from exc
         if choice.get("finish_reason") == "length":
+            if not (isinstance(content, str) and content.strip()):
+                # The budget went to a hidden reasoning channel, not the answer —
+                # raising maxResponseLength will not help; the model/serving
+                # config must disable thinking.
+                raise LLMError(
+                    "Modellen förbrukade hela svarsbudgeten i en dold resonemangskanal "
+                    "och gav inget synligt svar — kontrollera att 'thinking' är avstängt "
+                    "för modellen (reasoning_effort/think)."
+                )
             raise LLMError(
                 f"Svaret trunkerades vid max_tokens={max_tokens} — höj 'Maximal svarslängd' i inställningarna."
             )
