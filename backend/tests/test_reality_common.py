@@ -7,10 +7,13 @@ reality.py) of never touching real documents from the offline test suite.
 
 from __future__ import annotations
 
+import pytest
+
 from app.schemas import Word
 from app.store import Store
 from scripts.reality.common import (
     alias_for_chunk,
+    assert_zero_connections,
     corrupt_span,
     independent_rect_verdict,
     multi_span_payload,
@@ -165,3 +168,27 @@ class TestAliasForChunk:
         assert alias_a == "K1"
         assert len(hits_a) == 1
         assert alias_b is None  # B's chunk is outranked, not just absent-by-id
+
+
+class TestAssertZeroConnections:
+    """Task 5 hardening: the audit must self-enforce, not just get printed."""
+
+    def test_empty_log_does_not_raise(self):
+        assert assert_zero_connections([]) is None  # no exception
+
+    def test_single_allowed_loopback_connection_still_hard_fails(self):
+        # Even an "allowed" connection is disqualifying in a no-LLM context —
+        # this function asserts EXACTLY zero, not just zero external.
+        log = [{"host": "127.0.0.1", "port": 11434, "allowed": True}]
+        with pytest.raises(SystemExit):
+            assert_zero_connections(log)
+
+    def test_external_connection_hard_fails(self):
+        log = [{"host": "example.com", "port": 443, "allowed": False}]
+        with pytest.raises(SystemExit):
+            assert_zero_connections(log)
+
+    def test_failure_message_names_the_hosts(self):
+        log = [{"host": "1.2.3.4", "port": 80, "allowed": False}]
+        with pytest.raises(SystemExit, match="1.2.3.4:80"):
+            assert_zero_connections(log)

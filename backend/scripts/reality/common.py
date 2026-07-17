@@ -41,6 +41,29 @@ DEFAULT_FOLDER = BACKEND.parent / "DONT_PUSH_brf_stuff"
 DEFAULT_OUT = BACKEND / "out" / "reality"
 
 
+# ---------- network-audit self-enforcement (hardening, Task 5) ----------
+
+
+def assert_zero_connections(audit_log: list[dict]) -> None:
+    """Hard-fail (non-zero exit, loud message) unless `audit_log` is empty.
+
+    `install_network_audit` records every connect() call, including allowed
+    loopback ones — a script that scripts BOTH the embedder (`BRF_EMBEDDER=
+    hashed`) and the LLM (`FakeLLM`) has no legitimate reason to open a
+    socket at all. Task 4's review flagged that a non-zero-but-all-allowed
+    count could pass silently; this makes the expectation self-enforcing
+    instead of relying on a human reading the printed summary. Callers that
+    are not in a no-LLM context (e.g. a real self-hosted LLM endpoint) must
+    not call this — it asserts EXACTLY zero, not just zero external."""
+    if audit_log:
+        hosts = sorted({f"{e['host']}:{e['port']}" for e in audit_log})
+        raise SystemExit(
+            f"NÄTVERKSREVISION MISSLYCKADES: {len(audit_log)} anslutning(ar) gjordes i en "
+            f"no-LLM-kontext där noll förväntades (FakeLLM + BRF_EMBEDDER=hashed). "
+            f"Värdar: {hosts}"
+        )
+
+
 # ---------- ingestion (the REAL path) ----------
 
 

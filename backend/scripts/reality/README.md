@@ -21,14 +21,25 @@ hard-fails the process on any non-loopback connection.
 - `common.py` — shared helpers for the scripts below: temp-tenant ingestion
   through the REAL `Store.add_document` path, deterministic payload-window
   derivation from chunk text, retrieval-order K-alias resolution (mirrors
-  `app.answer._render_excerpts`), and two independent verification methods
-  (rect-vs-quote token check, ink-darkness check on returned rects).
+  `app.answer._render_excerpts`), two independent verification methods
+  (rect-vs-quote token check, ink-darkness check on returned rects), and
+  `assert_zero_connections` — a self-enforcing hard-fail (non-zero exit) for
+  scripts whose embedder and LLM are both fully scripted and therefore expect
+  EXACTLY zero connections, not just zero external ones.
 - `scanned_ingestion.py` — end-to-end proof of scanned-document ingestion on
   every real scan: OCR through the production dispatch, FIXED citation
   payloads derived from the OCR'd text itself run through the full
   retrieve→generate→verify pipeline (`FakeLLM`, no live model), independent
   rect/ink checks, and a corruption probe proving the all-or-nothing
   multi-span invariant on real OCR text.
+- `fragment_facts.py` — end-to-end proof of the multi-span citation contract
+  on three real fragment-fact classes from the born-digital contract
+  (org-number, party name, appendix cell-value): each located by a
+  deterministic regex/proximity heuristic (no fuzzy matching), confirmed
+  retrievable for an already-committed generic board question, then run
+  through the full retrieve→generate→verify→resolve pipeline (`FakeLLM`, no
+  live model) with a corruption probe (all-or-nothing) and a cross-chunk
+  probe (`provenance_mismatch`) per case.
 
 Usage (from `backend/`):
 
@@ -36,3 +47,4 @@ Usage (from `backend/`):
     uv run python -m scripts.reality.verify_highlights --run RUN_JSON
     uv run python -m scripts.reality.ocr_reality [--folder DIR] [--out DIR]
     uv run python -m scripts.reality.scanned_ingestion [--folder DIR] [--out DIR] [--limit N]
+    uv run python -m scripts.reality.fragment_facts [--folder DIR] [--out DIR]
