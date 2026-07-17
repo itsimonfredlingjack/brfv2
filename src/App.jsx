@@ -13,6 +13,7 @@ import PdfViewer from './components/PdfViewer';
 import Login from './components/Login';
 import ChatMessageList from './components/ChatMessageList';
 import CitationsPanel from './components/CitationsPanel';
+import HeroSearch from './components/HeroSearch';
 import { api } from './api';
 import { runAskQuestion } from './askQuestion';
 import { latestCitations } from './chatResponseMapping';
@@ -655,35 +656,15 @@ function App() {
 
   const renderOverview = () => (
     <div className="tab-content">
-      {/* Hero Search Section */}
-      <div className="hero-search-container">
-        <h1 className="hero-search-title">Vad vill du veta?</h1>
-        <p className="hero-search-subtitle">Ställ frågor på svenska och få svar med exakta, verifierade källhänvisningar i dina PDF:er.</p>
-
-        <div className="hero-search-box">
-          <SearchIcon size={24} color="var(--accent-search)" className="hero-search-icon" />
-          <input
-            type="text"
-            placeholder="T.ex. 'Vad säger stadgarna om andrahandsuthyrning?'"
-            className="hero-search-input"
-            value={chatInput}
-            onChange={(e) => setChatInput(e.target.value)}
-            onKeyDown={(e) => e.key === 'Enter' && handleChatSubmit()}
-            disabled={chatBusy}
-          />
-          <button className="hero-search-btn" onClick={handleChatSubmit} disabled={chatBusy}>
-            Fråga <ArrowRight size={18} />
-          </button>
-        </div>
-
-        <div className="hero-search-suggestions">
-          {['Vad krävs för andrahandsuthyrning?', 'När startar snöröjningsjouren?', 'Vad kostar stambytet?'].map((q) => (
-            <span key={q} className="suggestion-pill" onClick={() => askQuestion(q)} style={{ cursor: 'pointer' }}>
-              {q}
-            </span>
-          ))}
-        </div>
-      </div>
+      {/* Hero Search Section — the Home/App-shell search affordance; routes
+          to the real ask flow (see src/components/HeroSearch.jsx) */}
+      <HeroSearch
+        chatInput={chatInput}
+        setChatInput={setChatInput}
+        chatBusy={chatBusy}
+        onSubmit={handleChatSubmit}
+        onSuggestionClick={askQuestion}
+      />
       <div className="overview-grid">
         <div className="overview-stats">
           <div className="stat-card glass-panel">
