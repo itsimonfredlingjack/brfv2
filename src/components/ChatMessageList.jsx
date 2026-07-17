@@ -1,5 +1,5 @@
 import React from 'react';
-import { Loader2, Sparkles, FileText, AlertCircle } from 'lucide-react';
+import { Loader2, Sparkles, FileText, AlertCircle, Info } from 'lucide-react';
 import { parseCitationMarkers } from '../citationMarkers';
 
 // Pure rendering of the chat message list — extracted verbatim from
@@ -15,6 +15,19 @@ import { parseCitationMarkers } from '../citationMarkers';
 // linkifies ONLY tokens already present in msg.content that map to a real
 // entry in msg.citations; unmatched tokens and answers with no markers at
 // all render exactly as returned — nothing is injected.
+//
+// Near-matches on refusal (cleanup/verified-ui Task 3, salvaging the concept
+// from .superpowers/quarantine/INVENTORY.md §3(c) while dropping its
+// fabrications): when the backend refuses AND AskResponse.retrieval is
+// non-empty, shows the real RetrievalHit fields (document_name, page,
+// score, text — backend/app/schemas.py) as "found but not used" evidence.
+// No invented relevance label ("Mest relevant"), no search count — those
+// were the quarantined stash's fabrications. Gated on msg.refusal, not just
+// retrieval.length, because AskResponse.retrieval is populated on every
+// path including successful answers (backend/app/answer.py) — a normal
+// answer must never show near-matches. Opens via openDocViewer with only
+// { page }, no rects: retrieval hits carry no verified on-page geometry, so
+// passing none is the honest state (cleanup-global-constraints.md #2).
 function ChatMessageList({ messages, userInitials, openDocViewer }) {
   return (
     <div className="chat-messages-area">
@@ -58,6 +71,27 @@ function ChatMessageList({ messages, userInitials, openDocViewer }) {
             {msg.rejected?.length > 0 && (
               <div className="chat-warning">
                 <AlertCircle size={13} /> {msg.rejected.length} källhänvisning(ar) kunde inte verifieras mot dokumenten och visas inte.
+              </div>
+            )}
+            {msg.refusal && msg.retrieval?.length > 0 && (
+              <div className="near-matches-section">
+                <div className="near-matches-header">
+                  <Info size={13} /> Hittade avsnitt — räckte inte för ett säkert svar
+                </div>
+                <p className="near-matches-caption">Dessa avsnitt är inte använda för svaret.</p>
+                <div className="near-matches-list">
+                  {msg.retrieval.map((hit, i) => (
+                    <button
+                      key={i}
+                      className="near-match-card"
+                      onClick={() => openDocViewer(hit, { page: hit.page })}
+                    >
+                      <span className="near-match-title" title={hit.document_name}>{hit.document_name} · s.{hit.page}</span>
+                      <span className="near-match-score">Poäng: {hit.score}</span>
+                      <span className="near-match-text">{hit.text}</span>
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
           </div>

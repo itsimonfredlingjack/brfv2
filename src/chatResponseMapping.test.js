@@ -25,10 +25,11 @@ describe('buildAnswerMessage', () => {
       rejected: [],
       refusal: false,
       warning: null,
+      retrieval: [],
     });
   });
 
-  it('defaults citations/rejected to empty arrays, never a placeholder value, when absent', () => {
+  it('defaults citations/rejected/retrieval to empty arrays, never a placeholder value, when absent', () => {
     const resp = { answer: 'Jag kan inte svara utifrån de verifierade källorna.', refusal: true };
 
     expect(buildAnswerMessage(resp)).toEqual({
@@ -38,6 +39,28 @@ describe('buildAnswerMessage', () => {
       rejected: [],
       refusal: true,
       warning: undefined,
+      retrieval: [],
+    });
+  });
+
+  it('passes retrieval hits through verbatim (Task 3: feeds the near-matches no-answer state)', () => {
+    const resp = {
+      answer: 'Jag hittar inget i de uppladdade dokumenten som verkar besvara den frågan.',
+      refusal: true,
+      refusal_reason: 'low_relevance',
+      retrieval: [
+        { chunk_id: 'c1', score: 0.42, confidence: 0.3, bm25: 0.5, dense: 0.35, document_id: 'd1', document_name: 'Stadgar.pdf', page: 7, text: 'Föreningen ansvarar för...' },
+      ],
+    };
+
+    expect(buildAnswerMessage(resp)).toEqual({
+      role: 'ai',
+      content: resp.answer,
+      citations: [],
+      rejected: [],
+      refusal: true,
+      warning: undefined,
+      retrieval: resp.retrieval,
     });
   });
 });

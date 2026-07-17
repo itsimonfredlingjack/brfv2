@@ -17,6 +17,12 @@ export function buildAnswerMessage(resp) {
     rejected: resp.rejected_citations || [],
     refusal: resp.refusal,
     warning: resp.warning,
+    // Real RetrievalHit[] (cleanup/verified-ui Task 3), carried verbatim so
+    // the considered no-answer state can show real near-matches on refusal.
+    // AskResponse.retrieval is populated on every path — refusals AND
+    // successful answers alike (backend/app/answer.py) — so ChatMessageList
+    // must gate display on msg.refusal, not just msg.retrieval.length.
+    retrieval: resp.retrieval || [],
   };
 }
 

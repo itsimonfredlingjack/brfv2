@@ -158,4 +158,114 @@ describe('ChatMessageList render path', () => {
     expect(screen.getByText('Avstår från att svara')).toBeInTheDocument();
     expect(container.querySelectorAll('.citation-chip')).toHaveLength(0);
   });
+
+  // cleanup-task-3-brief.md: considered no-answer state with real near-matches.
+  // Fixtures use exactly the backend/app/schemas.py RetrievalHit fields
+  // (chunk_id, score, confidence, bm25, dense, document_id, document_name,
+  // page, text) — no invented relevance label, no search count.
+  describe('(g) near-matches (Task 3)', () => {
+    const retrievalHits = [
+      { chunk_id: 'c1', score: 0.42, confidence: 0.3, bm25: 0.5, dense: 0.35, document_id: 'd1', document_name: 'Stadgar.pdf', page: 7, text: 'Föreningen ansvarar för yttre underhåll av fastigheten.' },
+      { chunk_id: 'c2', score: 0.31, confidence: 0.22, bm25: 0.4, dense: 0.2, document_id: 'd2', document_name: 'Årsredovisning 2024.pdf', page: 3, text: 'Styrelsen föreslår ingen förändring av avgiften.' },
+    ];
+
+    it('a refusal with real retrieval hits renders a labeled near-matches section with exactly the hits\' fields', () => {
+      const askResponse = {
+        answer: 'Jag hittar inget i de uppladdade dokumenten som verkar besvara den frågan.',
+        citations: [],
+        rejected_citations: [],
+        refusal: true,
+        warning: null,
+        retrieval: retrievalHits,
+      };
+      const messages = [buildAnswerMessage(askResponse)];
+
+      const { container } = render(
+        <ChatMessageList messages={messages} userInitials="AB" openDocViewer={vi.fn()} />
+      );
+
+      const section = container.querySelector('.near-matches-section');
+      expect(section).not.toBeNull();
+      expect(section.textContent).toContain('inte använda för svaret');
+
+      const cards = container.querySelectorAll('.near-match-card');
+      expect(cards).toHaveLength(retrievalHits.length);
+      retrievalHits.forEach((hit, i) => {
+        expect(cards[i].textContent).toContain(hit.document_name);
+        expect(cards[i].textContent).toContain(String(hit.page));
+        expect(cards[i].textContent).toContain(hit.text);
+        expect(cards[i].textContent).toContain(String(hit.score));
+      });
+
+      // Must be visually distinct from verified citations — no citation-chip
+      // class anywhere on a near-match card.
+      cards.forEach((c) => expect(c.classList.contains('citation-chip')).toBe(false));
+      expect(container.querySelectorAll('.citation-chip')).toHaveLength(0);
+    });
+
+    it('clicking a near-match opens the document at its page WITHOUT rects (no verified rects exist for retrieval hits)', () => {
+      const askResponse = {
+        answer: 'Jag hittar inget i de uppladdade dokumenten som verkar besvara den frågan.',
+        citations: [],
+        rejected_citations: [],
+        refusal: true,
+        warning: null,
+        retrieval: retrievalHits,
+      };
+      const openDocViewer = vi.fn();
+      const messages = [buildAnswerMessage(askResponse)];
+
+      const { container } = render(
+        <ChatMessageList messages={messages} userInitials="AB" openDocViewer={openDocViewer} />
+      );
+
+      container.querySelectorAll('.near-match-card')[1].click();
+
+      expect(openDocViewer).toHaveBeenCalledTimes(1);
+      const [doc, opts] = openDocViewer.mock.calls[0];
+      expect(doc).toBe(retrievalHits[1]);
+      expect(opts.page).toBe(retrievalHits[1].page);
+      expect(opts.rects).toBeUndefined();
+    });
+
+    it('a refusal with empty retrieval renders no near-matches section', () => {
+      const askResponse = {
+        answer: 'Det finns inga dokument uppladdade ännu.',
+        citations: [],
+        rejected_citations: [],
+        refusal: true,
+        warning: null,
+        retrieval: [],
+      };
+      const messages = [buildAnswerMessage(askResponse)];
+
+      const { container } = render(
+        <ChatMessageList messages={messages} userInitials="AB" openDocViewer={vi.fn()} />
+      );
+
+      expect(container.querySelector('.near-matches-section')).toBeNull();
+      expect(container.querySelectorAll('.near-match-card')).toHaveLength(0);
+    });
+
+    it('a normal answered (non-refusal) response does NOT render near-matches, even though AskResponse.retrieval is populated on success too', () => {
+      const askResponse = {
+        answer: 'Enligt stadgarna gäller följande.',
+        citations: [
+          { document_name: 'Stadgar.pdf', page: 4, quote: 'Andrahandsuthyrning kräver styrelsens samtycke.', chunk_id: 'hash-real-1', rects: [[10, 20, 30, 40]], score: 0.81 },
+        ],
+        rejected_citations: [],
+        refusal: false,
+        warning: null,
+        retrieval: retrievalHits,
+      };
+      const messages = [buildAnswerMessage(askResponse)];
+
+      const { container } = render(
+        <ChatMessageList messages={messages} userInitials="AB" openDocViewer={vi.fn()} />
+      );
+
+      expect(container.querySelector('.near-matches-section')).toBeNull();
+      expect(container.querySelectorAll('.near-match-card')).toHaveLength(0);
+    });
+  });
 });
