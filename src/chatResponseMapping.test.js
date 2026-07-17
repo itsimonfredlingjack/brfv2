@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildAnswerMessage, buildErrorMessage } from './chatResponseMapping';
+import { buildAnswerMessage, buildErrorMessage, latestCitations } from './chatResponseMapping';
 
 // Proves the mapping between api.ask()'s AskResponse and the rendered chat
 // message copies fields 1:1 and invents nothing (cleanup-global-constraints
@@ -50,5 +50,44 @@ describe('buildErrorMessage', () => {
 
     expect(msg).toEqual({ role: 'ai', content: 'Tekniskt fel: Failed to fetch', refusal: true });
     expect(msg.citations).toBeUndefined();
+  });
+});
+
+describe('latestCitations', () => {
+  // Feeds the dual-pane source panel (cleanup/verified-ui Task 2): the panel
+  // tracks the most recent *completed* AI message's verified citations[],
+  // never anything invented — see cleanup-global-constraints.md #1.
+
+  it('returns the citations of the most recent completed ai message', () => {
+    const messages = [
+      { role: 'ai', content: 'Hej!' },
+      { role: 'user', content: 'Fråga 1' },
+      buildAnswerMessage({ answer: 'Svar 1', citations: [{ document_name: 'A.pdf', page: 1, quote: 'a' }] }),
+      { role: 'user', content: 'Fråga 2' },
+      buildAnswerMessage({ answer: 'Svar 2', citations: [{ document_name: 'B.pdf', page: 2, quote: 'b' }] }),
+    ];
+
+    expect(latestCitations(messages)).toEqual([{ document_name: 'B.pdf', page: 2, quote: 'b' }]);
+  });
+
+  it('skips a trailing pending message and uses the last completed one instead', () => {
+    const messages = [
+      buildAnswerMessage({ answer: 'Svar 1', citations: [{ document_name: 'A.pdf', page: 1, quote: 'a' }] }),
+      { role: 'user', content: 'Fråga 2' },
+      { role: 'ai', pending: true, content: 'Söker i dokumenten…' },
+    ];
+
+    expect(latestCitations(messages)).toEqual([{ document_name: 'A.pdf', page: 1, quote: 'a' }]);
+  });
+
+  it('returns an empty array (never a placeholder) when there is no completed ai message yet', () => {
+    expect(latestCitations([{ role: 'user', content: 'Fråga' }])).toEqual([]);
+    expect(latestCitations([])).toEqual([]);
+  });
+
+  it('returns an empty array when the latest completed ai message has no citations (refusal)', () => {
+    const messages = [buildAnswerMessage({ answer: 'Nej.', refusal: true })];
+
+    expect(latestCitations(messages)).toEqual([]);
   });
 });

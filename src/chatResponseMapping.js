@@ -26,3 +26,14 @@ export function buildAnswerMessage(resp) {
 export function buildErrorMessage(error) {
   return { role: 'ai', content: `Tekniskt fel: ${error.message}`, refusal: true };
 }
+
+// Finds the source panel's current citations (cleanup/verified-ui Task 2):
+// the most recent *completed* ai message's citations[], skipping any
+// trailing pending placeholder. Design choice — the panel tracks the
+// latest verified response rather than accumulating every message's
+// citations, matching how the salvaged dual-pane concept in
+// .superpowers/quarantine/INVENTORY.md §3(a) reads `lastAiMessage.citations`.
+export function latestCitations(messages) {
+  const lastAi = [...messages].reverse().find((m) => m.role === 'ai' && !m.pending);
+  return lastAi?.citations || [];
+}

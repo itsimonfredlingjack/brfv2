@@ -12,8 +12,10 @@ import SettingsView from './components/SettingsView';
 import PdfViewer from './components/PdfViewer';
 import Login from './components/Login';
 import ChatMessageList from './components/ChatMessageList';
+import CitationsPanel from './components/CitationsPanel';
 import { api } from './api';
 import { runAskQuestion } from './askQuestion';
+import { latestCitations } from './chatResponseMapping';
 import './App.css';
 
 function App() {
@@ -1269,29 +1271,33 @@ function App() {
               />
             )}
             {currentTab === 'chat' && (
-              <div className="chat-container">
-                <div className="chat-header">
-                  <h2 className="tab-title" style={{ marginBottom: '8px' }}>Chatta med dokument</h2>
-                  <p style={{ color: 'var(--text-secondary)', fontSize: '15px', marginBottom: '30px' }}>Ställ frågor i klartext och få svar direkt från din dokumentdatabas.</p>
-                </div>
+              <div className="chat-layout">
+                <div className="chat-container">
+                  <div className="chat-header">
+                    <h2 className="tab-title" style={{ marginBottom: '8px' }}>Chatta med dokument</h2>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '15px', marginBottom: '30px' }}>Ställ frågor i klartext och få svar direkt från din dokumentdatabas.</p>
+                  </div>
 
-                <ChatMessageList messages={chatMessages} userInitials={userInitials} openDocViewer={openDocViewer} />
+                  <ChatMessageList messages={chatMessages} userInitials={userInitials} openDocViewer={openDocViewer} />
 
-                <div className="chat-input-area">
-                  <div className="chat-input-box">
-                    <input
-                      type="text"
-                      placeholder="T.ex. 'Vilka regler gäller för andrahandsuthyrning?'..."
-                      value={chatInput}
-                      onChange={(e) => setChatInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleChatSubmit()}
-                      disabled={chatBusy}
-                    />
-                    <button className="chat-send-btn" onClick={handleChatSubmit} disabled={chatBusy}>
-                      {chatBusy ? <Loader2 size={18} className="spin" /> : <Send size={18} />}
-                    </button>
+                  <div className="chat-input-area">
+                    <div className="chat-input-box">
+                      <input
+                        type="text"
+                        placeholder="T.ex. 'Vilka regler gäller för andrahandsuthyrning?'..."
+                        value={chatInput}
+                        onChange={(e) => setChatInput(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && handleChatSubmit()}
+                        disabled={chatBusy}
+                      />
+                      <button className="chat-send-btn" onClick={handleChatSubmit} disabled={chatBusy}>
+                        {chatBusy ? <Loader2 size={18} className="spin" /> : <Send size={18} />}
+                      </button>
+                    </div>
                   </div>
                 </div>
+
+                <CitationsPanel citations={latestCitations(chatMessages)} openDocViewer={openDocViewer} />
               </div>
             )}
           </div>

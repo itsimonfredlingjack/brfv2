@@ -72,6 +72,80 @@ describe('ChatMessageList render path', () => {
     });
   });
 
+  it('(d) [<n>] tokens already present in the answer that map to a citation render as clickable inline markers', () => {
+    const askResponse = {
+      answer: 'Enligt [1] gäller detta, se även [2] för mer.',
+      citations: [
+        { document_name: 'Stadgar.pdf', page: 4, quote: 'q1', chunk_id: 'hash-1', rects: [[1, 2, 3, 4]], score: 0.81 },
+        { document_name: 'B.pdf', page: 9, quote: 'q2', chunk_id: 'hash-2', rects: [[5, 6, 7, 8]], score: 0.5 },
+      ],
+      rejected_citations: [],
+      refusal: false,
+      warning: null,
+    };
+    const openDocViewer = vi.fn();
+    const messages = [buildAnswerMessage(askResponse)];
+
+    const { container } = render(
+      <ChatMessageList messages={messages} userInitials="AB" openDocViewer={openDocViewer} />
+    );
+
+    const markers = container.querySelectorAll('.inline-citation');
+    expect(markers).toHaveLength(2);
+    expect(markers[0].textContent).toBe('[1]');
+    expect(markers[1].textContent).toBe('[2]');
+    // The surrounding plain text must render exactly as returned, unmodified.
+    expect(container.querySelector('.chat-answer-text').textContent).toBe(askResponse.answer);
+
+    // Clicking the marker opens the exact citation it maps to — verbatim page/rects.
+    markers[1].click();
+    expect(openDocViewer).toHaveBeenCalledWith(askResponse.citations[1], {
+      page: askResponse.citations[1].page,
+      rects: askResponse.citations[1].rects,
+      highlightPage: askResponse.citations[1].page,
+    });
+  });
+
+  it('(e) an answer with no bracket tokens gets zero injected inline markers', () => {
+    const askResponse = {
+      answer: 'Enligt stadgarna gäller följande utan några referenser.',
+      citations: [
+        { document_name: 'Stadgar.pdf', page: 4, quote: 'q1', chunk_id: 'hash-1', rects: [[1, 2, 3, 4]], score: 0.81 },
+      ],
+      rejected_citations: [],
+      refusal: false,
+      warning: null,
+    };
+    const messages = [buildAnswerMessage(askResponse)];
+
+    const { container } = render(
+      <ChatMessageList messages={messages} userInitials="AB" openDocViewer={vi.fn()} />
+    );
+
+    expect(container.querySelectorAll('.inline-citation')).toHaveLength(0);
+    expect(screen.getByText(askResponse.answer)).toBeInTheDocument();
+  });
+
+  it('(f) a bracket token with no matching citation index stays plain text, not a marker', () => {
+    const askResponse = {
+      answer: 'Se [9] för mer information.',
+      citations: [
+        { document_name: 'Stadgar.pdf', page: 4, quote: 'q1', chunk_id: 'hash-1', rects: [[1, 2, 3, 4]], score: 0.81 },
+      ],
+      rejected_citations: [],
+      refusal: false,
+      warning: null,
+    };
+    const messages = [buildAnswerMessage(askResponse)];
+
+    const { container } = render(
+      <ChatMessageList messages={messages} userInitials="AB" openDocViewer={vi.fn()} />
+    );
+
+    expect(container.querySelectorAll('.inline-citation')).toHaveLength(0);
+    expect(container.querySelector('.chat-answer-text').textContent).toBe(askResponse.answer);
+  });
+
   it('(c) an api.ask network error renders the error state with zero citations', () => {
     const networkError = new Error('Failed to fetch');
     const messages = [buildErrorMessage(networkError)];
