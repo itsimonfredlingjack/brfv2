@@ -1096,6 +1096,26 @@
   border: 1px solid rgba(250, 204, 21, 0.2);
 }
 
+/* Dev-only demo/scaffolding marker (cleanup/verified-ui Task 5): flags the
+   pre-existing Granskning/Bevakningar/Document Canvas tabs, which render
+   fabricated demo data (src/demoData.js) and only ever render in dev builds
+   (see src/appModes.js's demoTabsEnabled()). Cheap honesty even in dev. */
+.demo-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  margin-left: 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+  background: rgba(250, 204, 21, 0.15);
+  color: #facc15;
+  border: 1px solid rgba(250, 204, 21, 0.3);
+}
+
 /* AI Chat Interface */
 /* Dual-pane layout: chat column + source panel (cleanup/verified-ui Task 2,
    salvaged shape from .superpowers/quarantine/INVENTORY.md §3(a)). */

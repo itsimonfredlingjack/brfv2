@@ -87,7 +87,7 @@ function ChatMessageList({ messages, userInitials, openDocViewer }) {
                       onClick={() => openDocViewer(hit, { page: hit.page })}
                     >
                       <span className="near-match-title" title={hit.document_name}>{hit.document_name} · s.{hit.page}</span>
-                      <span className="near-match-score">Poäng: {hit.score}</span>
+                      <span className="near-match-score">Sökpoäng: {hit.score}</span>
                       <span className="near-match-text">{hit.text}</span>
                     </button>
                   ))}

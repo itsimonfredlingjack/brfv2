@@ -194,7 +194,10 @@ describe('ChatMessageList render path', () => {
         expect(cards[i].textContent).toContain(hit.document_name);
         expect(cards[i].textContent).toContain(String(hit.page));
         expect(cards[i].textContent).toContain(hit.text);
-        expect(cards[i].textContent).toContain(String(hit.score));
+        // Labeled "Sökpoäng" (not the bare "Poäng"), so it reads as what kind
+        // of score this is — a retrieval match score, never a verification
+        // confidence — and can't be mistaken for a citation-panel label.
+        expect(cards[i].querySelector('.near-match-score').textContent).toBe(`Sökpoäng: ${hit.score}`);
       });
 
       // Must be visually distinct from verified citations — no citation-chip
