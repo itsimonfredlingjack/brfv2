@@ -4,14 +4,16 @@ import {
   Loader2, CheckCircle2, ChevronLeft, ChevronRight, Calendar as CalendarIcon,
   ArrowRight, AlertCircle, LayoutDashboard, Folders, CheckSquare, Clock,
   Trash2, Edit3, ChevronUp, Settings, HelpCircle, LogOut,
-  Filter, ArrowDownUp, List, LayoutGrid, MessageSquare, Send, Sparkles
+  Filter, ArrowDownUp, List, LayoutGrid, MessageSquare, Send
 } from 'lucide-react';
 import ContextCard from './components/ContextCard';
 import DocumentView from './components/DocumentView';
 import SettingsView from './components/SettingsView';
 import PdfViewer from './components/PdfViewer';
 import Login from './components/Login';
+import ChatMessageList from './components/ChatMessageList';
 import { api } from './api';
+import { buildAnswerMessage, buildErrorMessage } from './chatResponseMapping';
 import './App.css';
 
 function App() {
@@ -219,23 +221,10 @@ function App() {
     setChatBusy(true);
     try {
       const resp = await api.ask(activeBrfId, q);
-      setChatMessages(prev => [
-        ...prev.slice(0, -1),
-        {
-          role: 'ai',
-          content: resp.answer,
-          citations: resp.citations || [],
-          rejected: resp.rejected_citations || [],
-          refusal: resp.refusal,
-          warning: resp.warning,
-        },
-      ]);
+      setChatMessages(prev => [...prev.slice(0, -1), buildAnswerMessage(resp)]);
     } catch (e) {
       if (!handleApiError(e)) {
-        setChatMessages(prev => [
-          ...prev.slice(0, -1),
-          { role: 'ai', content: `Tekniskt fel: ${e.message}`, refusal: true },
-        ]);
+        setChatMessages(prev => [...prev.slice(0, -1), buildErrorMessage(e)]);
       }
     } finally {
       setChatBusy(false);
@@ -1299,40 +1288,7 @@ function App() {
                   <p style={{ color: 'var(--text-secondary)', fontSize: '15px', marginBottom: '30px' }}>Ställ frågor i klartext och få svar direkt från din dokumentdatabas.</p>
                 </div>
 
-                <div className="chat-messages-area">
-                  {chatMessages.map((msg, idx) => (
-                    <div key={idx} className={`chat-message ${msg.role} ${msg.refusal ? 'refusal' : ''} ${msg.pending ? 'pending' : ''}`}>
-                      <div className="chat-avatar">
-                        {msg.role === 'ai' ? (msg.pending ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />) : userInitials}
-                      </div>
-                      <div className="chat-content">
-                        {msg.refusal && <div className="chat-refusal-tag"><AlertCircle size={13} /> Avstår från att svara</div>}
-                        {msg.content}
-                        {msg.warning && <div className="chat-warning"><AlertCircle size={13} /> {msg.warning}</div>}
-                        {msg.citations?.length > 0 && (
-                          <div className="chat-citations">
-                            {msg.citations.map((c, i) => (
-                              <button
-                                key={i}
-                                className="citation-chip"
-                                title={`"${c.quote}"`}
-                                onClick={() => openDocViewer(c, { page: c.page, rects: c.rects, highlightPage: c.page })}
-                              >
-                                <FileText size={12} />
-                                {c.document_name} · s.{c.page}
-                              </button>
-                            ))}
-                          </div>
-                        )}
-                        {msg.rejected?.length > 0 && (
-                          <div className="chat-warning">
-                            <AlertCircle size={13} /> {msg.rejected.length} källhänvisning(ar) kunde inte verifieras mot dokumenten och visas inte.
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                <ChatMessageList messages={chatMessages} userInitials={userInitials} openDocViewer={openDocViewer} />
 
                 <div className="chat-input-area">
                   <div className="chat-input-box">
