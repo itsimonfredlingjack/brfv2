@@ -13,7 +13,7 @@ import PdfViewer from './components/PdfViewer';
 import Login from './components/Login';
 import ChatMessageList from './components/ChatMessageList';
 import { api } from './api';
-import { buildAnswerMessage, buildErrorMessage } from './chatResponseMapping';
+import { runAskQuestion } from './askQuestion';
 import './App.css';
 
 function App() {
@@ -208,28 +208,15 @@ function App() {
   const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState([]);
 
-  const askQuestion = async (question) => {
-    const q = question.trim();
-    if (!q || chatBusy) return;
-    setCurrentTab('chat');
-    setActiveDocument(null);
-    setChatMessages(prev => [
-      ...prev,
-      { role: 'user', content: q },
-      { role: 'ai', pending: true, content: 'Söker i dokumenten…' },
-    ]);
-    setChatBusy(true);
-    try {
-      const resp = await api.ask(activeBrfId, q);
-      setChatMessages(prev => [...prev.slice(0, -1), buildAnswerMessage(resp)]);
-    } catch (e) {
-      if (!handleApiError(e)) {
-        setChatMessages(prev => [...prev.slice(0, -1), buildErrorMessage(e)]);
-      }
-    } finally {
-      setChatBusy(false);
-    }
-  };
+  const askQuestion = (question) => runAskQuestion(question, {
+    activeBrfId,
+    chatBusy,
+    setCurrentTab,
+    setActiveDocument,
+    setChatMessages,
+    setChatBusy,
+    handleApiError,
+  });
 
   const handleChatSubmit = () => {
     const q = chatInput.trim();

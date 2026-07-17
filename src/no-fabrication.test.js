@@ -15,11 +15,12 @@ import { fileURLToPath } from 'node:url';
 // objects to exercise the render path (see ChatMessageList.test.jsx).
 
 const SRC_DIR = path.dirname(fileURLToPath(import.meta.url));
-const SELF_BASENAME = path.basename(fileURLToPath(import.meta.url));
 
 const TEST_FILE_RE = /\.test\.jsx?$/;
 const SOURCE_EXT_RE = /\.jsx?$/;
 
+// This file is itself named `no-fabrication.test.js`, so TEST_FILE_RE already
+// excludes it from the walk below — no separate self-exclusion needed.
 function walkSourceFiles(dir) {
   const out = [];
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -30,8 +31,7 @@ function walkSourceFiles(dir) {
       entry.isFile() &&
       SOURCE_EXT_RE.test(entry.name) &&
       !TEST_FILE_RE.test(entry.name) &&
-      entry.name !== 'test-setup.js' &&
-      entry.name !== SELF_BASENAME
+      entry.name !== 'test-setup.js'
     ) {
       out.push(full);
     }
@@ -93,6 +93,14 @@ const SIGNATURES = [
     test: (content) => content.includes('mock-chunk'),
   },
   {
+    // Brief says "literal object/array" — scoped to object literals only,
+    // since a bare array literal (`[...]`) has no `key: value` pairs of its
+    // own to match `quote:`/`rects:`/`page:` against. Every catalogued
+    // fabrication is an object literal (catalog #9-10), including when
+    // nested inside an array (e.g. `citations: [{ quote: ..., rects: ... }]`)
+    // — enclosingBraces() below finds the innermost `{...}` around the
+    // `quote:` match regardless of any enclosing `[...]`, so array-nested
+    // citation objects are already caught without special-casing arrays.
     name: 'citation-shaped literal (quote + rects/page in one literal)',
     guards:
       'stash@{2}: hand-authored citation objects pairing a fake quote with fake rects/page/score, structurally indistinguishable from a verified CitationOut (catalog #9-10)',
