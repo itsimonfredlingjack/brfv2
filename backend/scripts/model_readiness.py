@@ -210,18 +210,38 @@ def compute_verdict(rows: list[dict]) -> tuple[bool, list[str]]:
     """READY iff every fragment-fact question is answered with >=1 verified
     citation AND the unanswerable control refuses. Prose controls are
     reported (per-question table) but do not gate the verdict — context
-    only, per the brief."""
+    only, per the brief.
+
+    Requires >=1 row of EACH gating class to even be eligible for READY:
+    empty input, or input missing the fragment class or the unanswerable
+    class entirely, is NOT READY with an explicit reason — a vacuous pass
+    ("no evidence of failure" != "evidence of readiness") is not a valid
+    verdict for a go/no-go gate."""
     reasons: list[str] = []
-    for r in rows:
-        if r["class_"] == "fragment":
-            if r["refused"] or r["n_citations"] < 1:
-                reasons.append(
-                    f"{r['qid']} ({r['case']}): fragment-fact-fråga inte besvarad med en "
-                    f"verifierad källhänvisning (refused={r['refused']}, citations={r['n_citations']})"
-                )
-        elif r["class_"] == "unanswerable":
-            if not r["refused"]:
-                reasons.append(f"{r['qid']}: den obesvarbara kontrollfrågan avböjde inte")
+    fragment_rows = [r for r in rows if r["class_"] == "fragment"]
+    unanswerable_rows = [r for r in rows if r["class_"] == "unanswerable"]
+
+    if not fragment_rows:
+        reasons.append(
+            "inga fragment-fact-frågor i indata — kan inte fastställa READY "
+            "(kräver minst en fragment-fact-fråga)"
+        )
+    if not unanswerable_rows:
+        reasons.append(
+            "ingen obesvarbar kontrollfråga i indata — kan inte fastställa READY "
+            "(kräver minst en obesvarbar kontrollfråga)"
+        )
+
+    for r in fragment_rows:
+        if r["refused"] or r["n_citations"] < 1:
+            reasons.append(
+                f"{r['qid']} ({r['case']}): fragment-fact-fråga inte besvarad med en "
+                f"verifierad källhänvisning (refused={r['refused']}, citations={r['n_citations']})"
+            )
+    for r in unanswerable_rows:
+        if not r["refused"]:
+            reasons.append(f"{r['qid']}: den obesvarbara kontrollfrågan avböjde inte")
+
     return (not reasons), reasons
 
 

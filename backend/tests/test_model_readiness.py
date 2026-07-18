@@ -11,7 +11,15 @@ from __future__ import annotations
 from scripts.model_readiness import compute_verdict
 
 
-def _row(qid: str, class_: str, *, case: str | None = None, refused: bool = False, n_citations: int = 1) -> dict:
+def _row(
+    qid: str,
+    class_: str,
+    *,
+    case: str | None = None,
+    refused: bool = False,
+    n_citations: int = 1,
+    n_rejected: int = 0,
+) -> dict:
     return {
         "qid": qid,
         "class_": class_,
@@ -20,8 +28,8 @@ def _row(qid: str, class_: str, *, case: str | None = None, refused: bool = Fals
         "refusal_reason": "grounding_failed" if refused else None,
         "n_citations": n_citations,
         "citations_detail": [],
-        "n_rejected": 0,
-        "rejected_reasons": [],
+        "n_rejected": n_rejected,
+        "rejected_reasons": ["quote_not_found"] * n_rejected,
     }
 
 
@@ -66,11 +74,53 @@ class TestComputeVerdictReady:
         assert ready is True
         assert reasons == []
 
-    def test_empty_row_list_is_vacuously_ready(self):
-        assert compute_verdict([]) == (True, [])
+    def test_rejected_citations_alongside_a_verified_one_still_reads_ready(self):
+        # A fragment question can have rejected candidates (e.g. a duplicate
+        # or malformed citation from the same LLM response) alongside the
+        # ONE that verified — n_rejected does not gate the verdict, only
+        # n_citations (the count already past citations.resolve_citation).
+        rows = [
+            _fragment("q09", "org_number", n_citations=1, n_rejected=2),
+            _fragment("q08", "party_name"),
+            _fragment("q03", "cell_value"),
+            _unanswerable("q11", refused=True, n_citations=0),
+        ]
+        ready, reasons = compute_verdict(rows)
+        assert ready is True
+        assert reasons == []
 
 
 class TestComputeVerdictNotReady:
+    def test_empty_row_list_is_not_ready_with_explicit_reasons(self):
+        # A go/no-go gate must not read "no evidence of failure" as "evidence
+        # of readiness" — empty input is NOT READY, with reasons naming what's
+        # missing, not a silent vacuous pass.
+        ready, reasons = compute_verdict([])
+        assert ready is False
+        assert len(reasons) == 2
+        joined = " ".join(reasons)
+        assert "fragment-fact" in joined
+        assert "obesvarbar kontrollfråga" in joined
+
+    def test_fragment_less_input_is_not_ready_even_if_unanswerable_control_refuses(self):
+        rows = [
+            _prose("q01"),
+            _unanswerable("q11", refused=True, n_citations=0),
+        ]
+        ready, reasons = compute_verdict(rows)
+        assert ready is False
+        assert any("fragment-fact" in r for r in reasons)
+
+    def test_missing_unanswerable_control_is_not_ready_even_if_all_fragments_pass(self):
+        rows = [
+            _fragment("q09", "org_number"),
+            _fragment("q08", "party_name"),
+            _fragment("q03", "cell_value"),
+        ]
+        ready, reasons = compute_verdict(rows)
+        assert ready is False
+        assert any("obesvarbar kontrollfråga" in r for r in reasons)
+
     def test_one_refused_fragment_question_fails_the_verdict(self):
         rows = [
             _fragment("q09", "org_number", refused=True, n_citations=0),

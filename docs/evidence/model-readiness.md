@@ -113,6 +113,13 @@ next gate is: point `BRF_LLM_BASE_URL`/`BRF_LLM_MODEL` (or another provider) at 
 and run `make model-readiness` — one command, real corpus, the same READY/NOT READY criterion —
 to get a go/no-go the moment a stronger offline-capable model is available to evaluate.
 
+One more knob a future live-model run should reconsider alongside the LLM swap: this harness
+defaults `BRF_EMBEDDER=hashed` (deterministic, offline, no HF network dependency) for its own
+retrieval side, chosen for this phase's zero-network-dependency discipline, not for maximum
+retrieval quality. A production-parity readiness run should also evaluate the default
+`model2vec` embedder (or whichever embedder production will actually run), not swap only the
+generation model and leave retrieval on the offline fallback.
+
 ## Suite status after this task
 
 `cd backend && uv run pytest -q` → **279 passed, 1 skipped** (was 259 passed, 1 skipped at the
