@@ -53,7 +53,27 @@ const MOCK_TEXT_EXTRACTION = {
   }
 };
 
+// --- CUSTOM HOOKS ---
+function useMediaQuery(query) {
+  const [matches, setMatches] = React.useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.matchMedia(query).matches;
+    }
+    return false;
+  });
+
+  React.useEffect(() => {
+    const mediaQuery = window.matchMedia(query);
+    const handler = (e) => setMatches(e.matches);
+    mediaQuery.addEventListener('change', handler);
+    return () => mediaQuery.removeEventListener('change', handler);
+  }, [query]);
+
+  return matches;
+}
+
 function App() {
+  const isMobile = useMediaQuery('(max-width: 768px)');
   const [documents, setDocuments] = useState(MOCK_DOCUMENTS);
   const [bevakningar, setBevakningar] = useState(MOCK_BEVAKNINGAR);
 
@@ -65,13 +85,40 @@ function App() {
   const sidebarRef = React.useRef(null);
 
   React.useEffect(() => {
+    if (!isMobile && isMobileMenuOpen) {
+      setIsMobileMenuOpen(false);
+    }
+  }, [isMobile, isMobileMenuOpen]);
+
+  React.useEffect(() => {
     const handleKeyDown = (e) => {
-      if (e.key === 'Escape' && isMobileMenuOpen) {
+      if (!isMobile || !isMobileMenuOpen) return;
+      if (e.key === 'Escape') {
         setIsMobileMenuOpen(false);
         mobileMenuBtnRef.current?.focus();
+        return;
+      }
+      if (e.key === 'Tab') {
+        const focusableElements = sidebarRef.current?.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        if (focusableElements && focusableElements.length > 0) {
+          const firstElement = focusableElements[0];
+          const lastElement = focusableElements[focusableElements.length - 1];
+
+          if (e.shiftKey) {
+            if (document.activeElement === firstElement) {
+              lastElement.focus();
+              e.preventDefault();
+            }
+          } else {
+            if (document.activeElement === lastElement) {
+              firstElement.focus();
+              e.preventDefault();
+            }
+          }
+        }
       }
     };
-    if (isMobileMenuOpen) {
+    if (isMobile && isMobileMenuOpen) {
       document.addEventListener('keydown', handleKeyDown);
       setTimeout(() => {
         const firstFocusable = sidebarRef.current?.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
@@ -79,7 +126,7 @@ function App() {
       }, 50);
     }
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isMobileMenuOpen]);
+  }, [isMobile, isMobileMenuOpen]);
 
   const [toastMessage, setToastMessage] = useState(null);
   const showToast = (message, type = 'info') => {
@@ -285,7 +332,7 @@ function App() {
   return (
     <div className="app-shell">
       {toastMessage && (
-        <div style={{ position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)', background: toastMessage.type === 'success' ? 'var(--status-ok)' : 'var(--panel-bg)', color: toastMessage.type === 'success' ? '#000' : '#fff', padding: '12px 24px', borderRadius: '8px', zIndex: 1000, display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)', border: toastMessage.type !== 'success' ? '1px solid var(--panel-border)' : 'none' }}>
+        <div role="status" aria-live="polite" style={{ position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)', background: toastMessage.type === 'success' ? 'var(--status-ok)' : 'var(--panel-bg)', color: toastMessage.type === 'success' ? '#000' : '#fff', padding: '12px 24px', borderRadius: '8px', zIndex: 1000, display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)', border: toastMessage.type !== 'success' ? '1px solid var(--panel-border)' : 'none' }}>
           {toastMessage.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
           <span style={{ fontWeight: '500', fontSize: '14px' }}>{toastMessage.message}</span>
         </div>
@@ -312,8 +359,8 @@ function App() {
           <nav
             ref={sidebarRef}
             className={`sidebar ${isMobileMenuOpen ? 'open' : ''}`}
-            aria-hidden={!isMobileMenuOpen && window.innerWidth < 768 ? "true" : "false"}
-            inert={!isMobileMenuOpen && window.innerWidth < 768 ? true : undefined}
+            aria-hidden={!isMobileMenuOpen && isMobile ? "true" : "false"}
+            inert={!isMobileMenuOpen && isMobile ? true : undefined}
           >
             <div className="sidebar-brand desktop-only">
               <div className="logo">Simons <span>RAG</span></div>
@@ -804,10 +851,9 @@ function App() {
                           <tr>
                             <th scope="col">Dokumentnamn</th>
                             <th scope="col">Uppladdat</th>
-                            <th scope="col">Bearbetning</th>
-                            <th scope="col">Kvalitetskontroll</th>
+                            <th scope="col">Status</th>
+                            <th scope="col">Granskning</th>
                             <th scope="col">Bevakningar</th>
-                            <th scope="col" className="action-col"><span className="visually-hidden">Öppna</span></th>
                           </tr>
                         </thead>
                         <tbody>
@@ -843,9 +889,6 @@ function App() {
                                  {doc.bevakningar > 0 ? (
                                    <span className="status-badge warning outline">{getBevakningLabel(doc.bevakningar)}</span>
                                  ) : <span className="text-muted">{getBevakningLabel(0)}</span>}
-                              </td>
-                              <td className="action-col">
-                                 <ChevronRight size={18} className="chevron-icon" />
                               </td>
                             </tr>
                           ))}
@@ -1044,10 +1087,9 @@ function App() {
             )}
 
             {currentTab === 'settings' && (
-              <div className="tab-content" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
-                <Settings size={48} color="var(--panel-border)" style={{ marginBottom: '16px' }} />
-                <h3 style={{ fontSize: '18px', marginBottom: '8px' }}>Inställningar</h3>
-                <p style={{ color: 'var(--text-secondary)' }}>Inställningar är inte tillgängliga i denna mockup.</p>
+              <div className="settings-placeholder" style={{ padding: '24px', background: 'var(--panel-bg)', borderRadius: '12px', border: '1px solid var(--panel-border)', marginTop: '24px' }}>
+                <h2 style={{ fontSize: '18px', marginBottom: '8px' }}>Inställningar</h2>
+                <p style={{ color: 'var(--text-secondary)' }}>Inställningsvyn är inte implementerad i denna mockup.</p>
               </div>
             )}
           </main>

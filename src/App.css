@@ -596,3 +596,18 @@ button {
   .pdf-canvas { padding: 16px; }
   .mock-pdf-page { width: 300px; min-height: 424px; padding: 16px; }
 }
+
+/* Accessibility Focus & Reduced Motion */
+.doc-open-btn:focus-visible, .filter-pill:focus-visible, .primary-action-btn:focus-visible, .icon-action-btn:focus-visible, .nav-item:focus-visible, .chat-send-btn:focus-visible {
+  outline: 2px solid var(--primary-action);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
