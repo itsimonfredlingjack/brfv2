@@ -11,6 +11,7 @@ import logging
 
 from .citations import Rejected, Resolved, resolve_citation
 from .llm import LLMError, LLMFormatError, LLMProvider, parse_llm_json, pick_provider
+from .rerank import rerank_chunks, reranker_available
 from .schemas import AskResponse, CitationOut, RejectedCitation, RetrievalHit
 from .store import Store
 
@@ -95,16 +96,45 @@ def ask(store: Store, question: str, provider: LLMProvider | None = None) -> Ask
             model=model,
         )
 
+    if s.rerankEnabled and not reranker_available():
+        # Loud failure, never a silent skip: a deployment that turned
+        # reranking on is relying on it to surface financial-table rows that
+        # hybrid retrieval alone buries past the prompt's top_k. Answering
+        # anyway with unreranked hits would look like it worked while
+        # quietly reverting to the exact failure mode this fix addresses.
+        raise LLMError(
+            "Omrankning är aktiverad men omrankningsmodellen är inte tillgänglig "
+            "(kör 'uv sync --extra rerank' i backend, eller inaktivera omrankning i inställningarna)."
+        )
+
+    # Retrieve WIDE when reranking so the cross-encoder has a real pool to
+    # rescore from; candidates (the bm25/dense fusion pool) is widened to
+    # match so a low candidateCount can't silently starve the reranker.
+    search_top_k = max(s.rerankCandidates, s.topK) if s.rerankEnabled else s.topK
     hits = index.search(
         question,
         weight=s.searchWeighting / 100.0,
-        candidates=s.candidateCount,
-        top_k=s.topK,
+        candidates=max(s.candidateCount, search_top_k) if s.rerankEnabled else s.candidateCount,
+        top_k=search_top_k,
         min_confidence=0.0,
     )
 
+    if s.rerankEnabled:
+        hits = rerank_chunks(question, hits, s.topK)
+
     # Gate on the best ABSOLUTE confidence among the hits — fused ranking is
     # relative and not confidence-ordered, so hits[0] may not carry the max.
+    #
+    # DESIGN DECISION (fix/rerank-financial-tables): this gates on retrieval
+    # `confidence` (IDF-weighted query coverage ⊕ cosine — schemas.py's
+    # RetrievalHit.confidence), computed over the RERANKED SURVIVORS (already
+    # cut to topK above), never over the cross-encoder's own 0-1 relevance
+    # score. rerank_chunks() only reorders/selects which topK chunks reach
+    # the prompt; it does not touch `confidence`. minRelevance's semantics
+    # ("does the corpus even contain an answer") stay pinned to the
+    # retrieval signal a deployment already tuned — folding the reranker's
+    # score into this gate would silently redefine minRelevance out from
+    # under that tuning.
     top_confidence = max((h.confidence for h in hits), default=0.0)
     low_relevance = top_confidence < s.minRelevance
     if low_relevance and s.insufficientDataBehavior == "refuse":

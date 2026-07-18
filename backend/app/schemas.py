@@ -58,6 +58,12 @@ class RetrievalHit(BaseModel):
     document_name: str
     page: int
     text: str
+    # Cross-encoder relevance score (0..1, pre-normalized by the jina
+    # reranker), populated only when Settings.rerankEnabled and this hit
+    # survived rerank.rerank_chunks(); None otherwise. Additive — never used
+    # to redefine `score`/`confidence` semantics (see answer.py's
+    # relevance-gate comment). Lets measurement scripts see both signals.
+    rerank_score: float | None = None
 
 
 class CitationOut(BaseModel):
@@ -126,6 +132,14 @@ class Settings(BaseModel):
     candidateCount: int = Field(default=100, ge=1, le=1000)
     topK: int = Field(default=6, ge=1, le=50)
     minRelevance: float = Field(default=0.18, ge=0.0, le=1.0)
+    # Cross-encoder rerank stage (fix/rerank-financial-tables): retrieve a
+    # wide candidate pool, cross-encode each against the query, and pass only
+    # the top topK onward — fixes true financial-table answer rows ranking
+    # 4-37 among 40-54 hybrid candidates where only the top-6 reaches the
+    # prompt. Default OFF: behavior is unchanged everywhere until a
+    # deployment opts in (see app/rerank.py).
+    rerankEnabled: bool = False
+    rerankCandidates: int = Field(default=40, ge=10, le=100)
     # Generation — model ids must be plain identifiers (no leading dash:
     # the value is passed as a CLI argument by one provider)
     aiModel: str = Field(default="claude-opus-4-8", pattern=r"^[A-Za-z0-9][A-Za-z0-9._:-]{0,63}$")
