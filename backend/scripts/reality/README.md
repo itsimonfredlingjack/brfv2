@@ -40,6 +40,18 @@ hard-fails the process on any non-loopback connection.
   through the full retrieve→generate→verify→resolve pipeline (`FakeLLM`, no
   live model) with a corruption probe (all-or-nothing) and a cross-chunk
   probe (`provenance_mismatch`) per case.
+- `annual_reports.py` — citation-verification + highlight validation on real
+  Swedish BRF annual-report FINANCIAL TABLES (räntekostnader, soliditet,
+  kreditinstitut/fastighetslån, yttre underhåll, årsavgift, plus an
+  unanswerable control), each document in its own temp tenant. Beyond the
+  structural verified/rejected counts, an independent geometric check
+  (`row_landing_verdict`) confirms a citation's highlight sits on the SAME
+  table row as the label term the question asked about, not merely the
+  right page. Unlike the scripts above, this one asks with the AMBIENT
+  provider (no `BRF_LLM`/`BRF_EMBEDDER` default set here) — the caller
+  controls whether a real self-hosted model is used — and a nonzero
+  network-connection total is expected (the LLM endpoint); only an
+  EXTERNAL connection hard-fails.
 
 Usage (from `backend/`):
 
@@ -48,3 +60,4 @@ Usage (from `backend/`):
     uv run python -m scripts.reality.ocr_reality [--folder DIR] [--out DIR]
     uv run python -m scripts.reality.scanned_ingestion [--folder DIR] [--out DIR] [--limit N]
     uv run python -m scripts.reality.fragment_facts [--folder DIR] [--out DIR]
+    uv run python -m scripts.reality.annual_reports [--folder DIR] [--docs DOC...] [--out DIR] [--limit-questions N]
