@@ -1,1 +1,6 @@
-178 passed, 1 skipped, 6 warnings in 13.48s
+290 passed, 1 skipped, 6 warnings in 10.73s
+
+Regenerated 2026-07-18 on feat/model-free-completion (commit e8cbde2 + this task's
+review-follow-up fixes): `cd backend && uv run pytest -q`. Isolation/lifecycle/auth
+suite (`uv run pytest -q tests/test_isolation.py tests/test_lifecycle.py tests/test_auth.py`)
+→ 47 passed, unchanged.

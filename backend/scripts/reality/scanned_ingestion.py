@@ -82,6 +82,12 @@ def _process_document(pdf: Path, slug: str, *, max_chunks: int) -> dict:
     with common.temp_store() as store:
         try:
             meta = common.ingest(store, pdf)
+        except (AssertionError, SystemExit):
+            # An audit/invariant failure (e.g. a future network-audit assert
+            # reached mid-ingest) is NOT an ingestion finding to swallow and
+            # keep going on -- it must propagate and stop the run loudly,
+            # same as fragment_facts.py's SystemExit-raising audit check.
+            raise
         except Exception as exc:  # the failure IS a finding — keep going
             doc_report["ingest_error"] = repr(exc)
             return doc_report
@@ -242,6 +248,11 @@ def main() -> None:
     out_json.write_text(json.dumps({"docs": docs, "summary": summary}, ensure_ascii=False, indent=2), "utf-8")
     print(f"DONE → {out_json}", flush=True)
     print(json.dumps(summary, ensure_ascii=False, indent=2), flush=True)
+
+    # Hardening (matches fragment_facts.py): this run context is no-LLM
+    # (FakeLLM + BRF_EMBEDDER=hashed) -- hard-fail loudly rather than let a
+    # non-zero-but-"allowed" connection count pass silently.
+    common.assert_zero_connections(audit_log)
 
 
 if __name__ == "__main__":

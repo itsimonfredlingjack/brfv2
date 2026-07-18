@@ -13,6 +13,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import subprocess
 import threading
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -124,6 +125,15 @@ class Store:
 
     def add_document(self, name: str, pdf_bytes: bytes) -> DocumentMeta:
         pages = extract_pdf(pdf_bytes)
+        # Resource guard runs BEFORE OCR dispatch: extract_pdf already walks
+        # every page of the PDF (text or not), so the page count is known
+        # up front — a 400+ page scanned PDF must be rejected here, not
+        # after burning minutes of tesseract time on a document we're about
+        # to refuse anyway.
+        if len(pages) > MAX_DOCUMENT_PAGES:
+            raise ValueError(
+                f"Dokumentet har {len(pages)} sidor — max {MAX_DOCUMENT_PAGES}. Dela upp filen."
+            )
         total_words = sum(len(p.words) for p in pages)
         source: str = "digital"
         if total_words == 0:
@@ -136,17 +146,26 @@ class Store:
             if not tesseract_available():
                 raise ValueError(
                     "Dokumentet saknar textlager (troligen en skannad PDF). "
-                    "OCR ingår inte i denna version — se OCR-spikriggen."
+                    "OCR kräver tesseract med svenskt språkstöd, vilket inte "
+                    "är tillgängligt på den här servern."
                 )
-            pages = ocr_pdf(pdf_bytes)
+            try:
+                pages = ocr_pdf(pdf_bytes)
+            except RuntimeError as exc:
+                # tesseract exited non-zero (environment problem, not a
+                # content problem) — surface as a user-facing Swedish 422
+                # via main.py's existing ValueError -> HTTPException mapping.
+                raise ValueError(
+                    "OCR-motorn misslyckades — kontrollera tesseract-installationen."
+                ) from exc
+            except subprocess.TimeoutExpired as exc:
+                raise ValueError(
+                    "OCR-motorn tog för lång tid (timeout) — kontrollera tesseract-installationen."
+                ) from exc
             total_words = sum(len(p.words) for p in pages)
             if total_words == 0:
                 raise ValueError("OCR kunde inte hitta någon läsbar text i dokumentet.")
             source = "scanned"
-        if len(pages) > MAX_DOCUMENT_PAGES:
-            raise ValueError(
-                f"Dokumentet har {len(pages)} sidor — max {MAX_DOCUMENT_PAGES}. Dela upp filen."
-            )
         doc_id = uuid.uuid4().hex[:12]
         with self.lock:
             try:

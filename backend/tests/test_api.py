@@ -1,6 +1,8 @@
 """Tenant-scoped API happy paths (auth enforced). Isolation attacks live in
 test_isolation.py; lifecycle in test_lifecycle.py."""
 
+import subprocess
+
 import pytest
 from fastapi.testclient import TestClient
 
@@ -77,6 +79,46 @@ class TestDocuments:
             "/api/brf/brf-a/documents", files={"file": ("s.pdf", build_pdf([[]]), "application/pdf")},
             headers=env.admin_a_headers,
         ).status_code == 422
+
+    def test_ocr_subprocess_nonzero_exit_returns_422_swedish_unchanged_store(self, env, monkeypatch):
+        """End to end: a real tesseract exit-code failure inside app.ocr's
+        subprocess.run must surface as a Swedish 422, not a raw 500 -- and
+        must not register a half-ingested document."""
+        monkeypatch.setattr("app.store.tesseract_available", lambda: True)
+
+        class _FakeProc:
+            returncode = 1
+            stderr = "tesseract: error boom"
+
+        monkeypatch.setattr("app.ocr.subprocess.run", lambda *a, **kw: _FakeProc())
+
+        before = env.client.get("/api/brf/brf-a/documents", headers=env.admin_a_headers).json()
+        r = env.client.post(
+            "/api/brf/brf-a/documents", files={"file": ("scan1.pdf", build_pdf([[]]), "application/pdf")},
+            headers=env.admin_a_headers,
+        )
+        assert r.status_code == 422
+        assert "OCR-motorn misslyckades" in r.json()["detail"]
+        after = env.client.get("/api/brf/brf-a/documents", headers=env.admin_a_headers).json()
+        assert after == before
+
+    def test_ocr_subprocess_timeout_returns_422_swedish_unchanged_store(self, env, monkeypatch):
+        monkeypatch.setattr("app.store.tesseract_available", lambda: True)
+
+        def _timeout(*a, **kw):
+            raise subprocess.TimeoutExpired(cmd="tesseract", timeout=120)
+
+        monkeypatch.setattr("app.ocr.subprocess.run", _timeout)
+
+        before = env.client.get("/api/brf/brf-a/documents", headers=env.admin_a_headers).json()
+        r = env.client.post(
+            "/api/brf/brf-a/documents", files={"file": ("scan2.pdf", build_pdf([[]]), "application/pdf")},
+            headers=env.admin_a_headers,
+        )
+        assert r.status_code == 422
+        assert "OCR-motorn tog för lång tid" in r.json()["detail"]
+        after = env.client.get("/api/brf/brf-a/documents", headers=env.admin_a_headers).json()
+        assert after == before
 
 
 class TestSettings:

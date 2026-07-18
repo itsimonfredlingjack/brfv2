@@ -16,7 +16,7 @@ import pytest
 from app.answer import ask
 from app.llm import FakeLLM
 from app.schemas import PageData, Word
-from app.store import Store
+from app.store import MAX_DOCUMENT_PAGES, Store
 from tests.pdf_fixtures import build_image_only_pdf, build_pdf
 
 
@@ -87,6 +87,58 @@ class TestDispatch:
         pdf = build_pdf([[("Vanlig digital text.", 72, 100)]])
         meta = store.add_document("Digital.pdf", pdf)
         assert meta.source == "digital"
+
+
+class TestPageCountGuardOrdering:
+    """store.py: MAX_DOCUMENT_PAGES must be checked BEFORE the OCR dispatch —
+    a 401-page scanned PDF is rejected on page count alone, never reaching
+    tesseract. `ocr_pdf` is monkeypatched to fail the test outright if
+    invoked, so this is a hard guarantee, not just an assertion on the
+    resulting error."""
+
+    def test_page_count_over_limit_on_textless_pdf_rejected_without_ocr(self, tmp_path, monkeypatch):
+        def _boom(data, **kw):
+            raise AssertionError("ocr_pdf must not run when the page count already exceeds the limit")
+
+        monkeypatch.setattr("app.store.tesseract_available", lambda: True)
+        monkeypatch.setattr("app.store.ocr_pdf", _boom)
+
+        store = Store(data_dir=tmp_path)
+        oversized = build_pdf([[] for _ in range(MAX_DOCUMENT_PAGES + 1)])
+        with pytest.raises(ValueError, match=f"max {MAX_DOCUMENT_PAGES}"):
+            store.add_document("Stor.pdf", oversized)
+        assert store.documents == {}
+
+
+class TestOcrRuntimeErrors:
+    """store.py wraps the ocr_pdf call: a tesseract subprocess failure
+    (RuntimeError) or a hung tesseract (subprocess.TimeoutExpired) must
+    surface as a Swedish ValueError, not propagate raw -- main.py's existing
+    ValueError -> HTTPException(422) mapping only fires on ValueError."""
+
+    def test_tesseract_nonzero_exit_becomes_swedish_valueerror(self, tmp_path, monkeypatch):
+        def _boom(data, **kw):
+            raise RuntimeError("tesseract fel: boom")
+
+        monkeypatch.setattr("app.store.tesseract_available", lambda: True)
+        monkeypatch.setattr("app.store.ocr_pdf", _boom)
+
+        store = Store(data_dir=tmp_path)
+        with pytest.raises(ValueError, match="OCR-motorn misslyckades"):
+            store.add_document("Skannad.pdf", _textless_pdf())
+        assert store.documents == {}
+
+    def test_tesseract_timeout_becomes_swedish_valueerror(self, tmp_path, monkeypatch):
+        def _boom(data, **kw):
+            raise subprocess.TimeoutExpired(cmd="tesseract", timeout=120)
+
+        monkeypatch.setattr("app.store.tesseract_available", lambda: True)
+        monkeypatch.setattr("app.store.ocr_pdf", _boom)
+
+        store = Store(data_dir=tmp_path)
+        with pytest.raises(ValueError, match="OCR-motorn tog för lång tid"):
+            store.add_document("Skannad.pdf", _textless_pdf())
+        assert store.documents == {}
 
 
 class TestUnavailable:

@@ -111,8 +111,8 @@ be the *only* remaining gap across all three, not just one.
 
 ## Suite status after this task
 
-`cd backend && uv run pytest -q` → **259 passed, 1 skipped** (was 238 passed, 1 skipped at the
-branch point; +21 new tests: 17 for the span-derivation heuristics on synthetic fixtures, 4 for
+`cd backend && uv run pytest -q` → **259 passed, 1 skipped** (was 238 passed, 1 skipped before
+this task; +21 new tests: 17 for the span-derivation heuristics on synthetic fixtures, 4 for
 the network-audit hardening helper).
 `uv run pytest -q tests/test_isolation.py tests/test_lifecycle.py tests/test_auth.py` →
 **47 passed** (unchanged).
