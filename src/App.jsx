@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, MessageSquare, Folders, Settings, Search as SearchIcon, Filter, FileText, ArrowRight, Loader2, Sparkles, AlertCircle, Calendar, Upload, CheckCircle2, Clock, AlertTriangle, ArrowUpRight, Plus, X, ChevronRight, CornerDownRight, ArrowLeft, ZoomIn, ZoomOut, Search, Check, ThumbsDown, MessageCircle, Info, Menu } from 'lucide-react';
+import { LayoutDashboard, MessageSquare, Folders, Settings, Search as SearchIcon, FileText, ArrowRight, Loader2, Sparkles, AlertCircle, Calendar, Upload, CheckCircle2, Clock, AlertTriangle, ArrowUpRight, X, ChevronRight, CornerDownRight, ArrowLeft, ZoomIn, ZoomOut, Search, Check, ThumbsDown, MessageCircle, Info, Menu } from 'lucide-react';
 import './App.css';
 
 // --- MOCK DATA ---
@@ -54,21 +54,51 @@ const MOCK_TEXT_EXTRACTION = {
 };
 
 function App() {
+  const [documents, setDocuments] = useState(MOCK_DOCUMENTS);
+  const [bevakningar, setBevakningar] = useState(MOCK_BEVAKNINGAR);
+
   const [currentTab, setCurrentTab] = useState('docs');
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  
+
+  const mobileMenuBtnRef = React.useRef(null);
+  const sidebarRef = React.useRef(null);
+
+  React.useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && isMobileMenuOpen) {
+        setIsMobileMenuOpen(false);
+        mobileMenuBtnRef.current?.focus();
+      }
+    };
+    if (isMobileMenuOpen) {
+      document.addEventListener('keydown', handleKeyDown);
+      setTimeout(() => {
+        const firstFocusable = sidebarRef.current?.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
+        if (firstFocusable) firstFocusable.focus();
+      }, 50);
+    }
+    return () => document.removeEventListener('keydown', handleKeyDown);
+  }, [isMobileMenuOpen]);
+
+  const [toastMessage, setToastMessage] = useState(null);
+  const showToast = (message, type = 'info') => {
+    setToastMessage({ message, type });
+    setTimeout(() => setToastMessage(null), 3000);
+  };
+
   // Search State
   const [searchQuery, setSearchQuery] = useState('');
   const [searchIsLoading, setSearchIsLoading] = useState(false);
   const [searchResults, setSearchResults] = useState(null);
-  
+
   // Doc State
   const [docFilter, setDocFilter] = useState('alla');
   const [docsSearchQuery, setDocsSearchQuery] = useState('');
 
   // Workspace State
   const [workspaceTab, setWorkspaceTab] = useState('read'); // 'read', 'review', 'chat'
+  const [mobileQaSegment, setMobileQaSegment] = useState('pdf'); // 'pdf' or 'text'
   const [pdfPage, setPdfPage] = useState(1);
   const [pdfZoom, setPdfZoom] = useState(100);
   const [workspaceChatInput, setWorkspaceChatInput] = useState('');
@@ -81,7 +111,6 @@ function App() {
   const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState([]);
   const [chatBusy, setChatBusy] = useState(false);
-  const [chatScope, setChatScope] = useState('Alla dokument · 14 dokument');
 
   const executeSearch = (query) => {
     if (!query.trim()) return;
@@ -90,7 +119,7 @@ function App() {
     setSelectedDocument(null);
     setSearchIsLoading(true);
     setIsMobileMenuOpen(false);
-    
+
     setTimeout(() => {
       setSearchResults(MOCK_SEARCH_RESULTS);
       setSearchIsLoading(false);
@@ -98,7 +127,7 @@ function App() {
   };
 
   const openDocument = (docId, initialPage = 1, initialTab = 'read') => {
-    const doc = MOCK_DOCUMENTS.find(d => d.id === docId);
+    const doc = documents.find(d => d.id === docId);
     if (doc) {
       setSelectedDocument(doc);
       setPdfPage(initialPage);
@@ -113,21 +142,32 @@ function App() {
     setSelectedDocument(null);
   };
 
+  const handleApproveQa = () => {
+    setDocuments(prev => prev.map(d => d.id === selectedDocument.id ? { ...d, qa: 'Granskad' } : d));
+    setSelectedDocument(prev => ({ ...prev, qa: 'Granskad' }));
+    showToast('Dokumentet har godkänts och sparats.', 'success');
+  };
+
+  const handleMarkBevakningDone = (bevakningId) => {
+    setBevakningar(prev => prev.map(b => b.id === bevakningId ? { ...b, done: true } : b));
+    showToast('Bevakningen markerades som klar.', 'success');
+  };
+
   const executeWorkspaceChat = () => {
     if (!workspaceChatInput.trim() || workspaceChatBusy) return;
     const query = workspaceChatInput;
     setWorkspaceChatInput('');
-    
+
     const newUserMsg = { role: 'user', content: query };
     const pendingAiMsg = { role: 'ai', pending: true, content: 'Analyserar dokumentet (MOCK)...' };
-    
+
     setWorkspaceChatMessages(prev => [...prev, newUserMsg, pendingAiMsg]);
     setWorkspaceChatBusy(true);
 
     setTimeout(() => {
       setWorkspaceChatMessages(prev => {
         const withoutPending = prev.slice(0, -1);
-        
+
         if (demoState === 'no-answer') {
            return [...withoutPending, {
              role: 'ai',
@@ -135,7 +175,7 @@ function App() {
              refusal: true
            }];
         }
-        
+
         if (demoState === 'conflict') {
            return [...withoutPending, {
              role: 'ai',
@@ -168,10 +208,10 @@ function App() {
     setChatInput('');
     setSelectedDocument(null);
     setIsMobileMenuOpen(false);
-    
+
     const newUserMsg = { role: 'user', content: query };
     const pendingAiMsg = { role: 'ai', pending: true, content: 'Söker och analyserar (MOCK)...' };
-    
+
     setChatMessages(prev => [...prev, newUserMsg, pendingAiMsg]);
     setChatBusy(true);
 
@@ -179,7 +219,7 @@ function App() {
       setChatMessages(prev => {
         const withoutPending = prev.slice(0, -1);
         const q = query.toLowerCase();
-        
+
         if (q.includes('katter') || q.includes('hundar')) {
            return [...withoutPending, {
              role: 'ai',
@@ -217,22 +257,22 @@ function App() {
 
   // Base counts derived directly from MOCK_DOCUMENTS, independent of text search
   const filterCounts = {
-    alla: MOCK_DOCUMENTS.length,
-    granskas: MOCK_DOCUMENTS.filter(d => d.qa === 'Behöver granskas').length,
-    bevakningar: MOCK_DOCUMENTS.filter(d => d.bevakningar > 0).length,
-    behandlas: MOCK_DOCUMENTS.filter(d => d.status === 'Behandlas').length,
-    klara: MOCK_DOCUMENTS.filter(d => d.status === 'Färdigbehandlad' && d.qa === 'Granskad').length
+    alla: documents.length,
+    granskas: documents.filter(d => d.qa === 'Behöver granskas').length,
+    bevakningar: documents.filter(d => d.bevakningar > 0).length,
+    behandlas: documents.filter(d => d.status === 'Behandlas').length,
+    klara: documents.filter(d => d.status === 'Färdigbehandlad' && d.qa === 'Granskad').length
   };
 
-  const filteredDocs = MOCK_DOCUMENTS.filter(doc => {
+  const filteredDocs = documents.filter(doc => {
     const searchMatch = docsSearchQuery === '' || doc.name.toLowerCase().includes(docsSearchQuery.toLowerCase());
-    
+
     let filterMatch = true;
     if (docFilter === 'granskas') filterMatch = doc.qa === 'Behöver granskas';
     else if (docFilter === 'bevakningar') filterMatch = doc.bevakningar > 0;
     else if (docFilter === 'behandlas') filterMatch = doc.status === 'Behandlas';
     else if (docFilter === 'klara') filterMatch = (doc.status === 'Färdigbehandlad' && doc.qa === 'Granskad');
-    
+
     return searchMatch && filterMatch;
   });
 
@@ -244,6 +284,12 @@ function App() {
 
   return (
     <div className="app-shell">
+      {toastMessage && (
+        <div style={{ position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)', background: toastMessage.type === 'success' ? 'var(--status-ok)' : 'var(--panel-bg)', color: toastMessage.type === 'success' ? '#000' : '#fff', padding: '12px 24px', borderRadius: '8px', zIndex: 1000, display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)', border: toastMessage.type !== 'success' ? '1px solid var(--panel-border)' : 'none' }}>
+          {toastMessage.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
+          <span style={{ fontWeight: '500', fontSize: '14px' }}>{toastMessage.message}</span>
+        </div>
+      )}
       <div className="mock-banner-compact">
         <span className="mock-badge-inline">MOCKUP</span>
         All data, filnamn och svar är fiktiva och ej kopplade till en server.
@@ -253,17 +299,22 @@ function App() {
       {!selectedDocument && (
         <header className="mobile-top-nav">
           <div className="logo">Simons <span>RAG</span></div>
-          <button className="icon-action-btn mobile-menu-btn" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} aria-label="Meny" aria-expanded={isMobileMenuOpen}>
+          <button ref={mobileMenuBtnRef} className="icon-action-btn mobile-menu-btn" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} aria-label="Meny" aria-expanded={isMobileMenuOpen}>
             {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
         </header>
       )}
 
       <div className="main-layout">
-        
+
         {/* SIDEBAR - Responsive */}
         {!selectedDocument && (
-          <nav className={`sidebar ${isMobileMenuOpen ? 'open' : ''}`}>
+          <nav
+            ref={sidebarRef}
+            className={`sidebar ${isMobileMenuOpen ? 'open' : ''}`}
+            aria-hidden={!isMobileMenuOpen && window.innerWidth < 768 ? "true" : "false"}
+            inert={!isMobileMenuOpen && window.innerWidth < 768 ? true : undefined}
+          >
             <div className="sidebar-brand desktop-only">
               <div className="logo">Simons <span>RAG</span></div>
             </div>
@@ -278,7 +329,7 @@ function App() {
               <button className={`nav-item ${currentTab === 'chat' ? 'active' : ''}`} onClick={() => { setCurrentTab('chat'); setIsMobileMenuOpen(false); }}>
                 <MessageSquare size={20} /> AI-chatt
               </button>
-              
+
               <div style={{ marginTop: '40px', padding: '0 16px', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '600' }}>
                 ADMINISTRATION
               </div>
@@ -286,7 +337,7 @@ function App() {
                 <Settings size={20} /> Inställningar
               </button>
             </div>
-            
+
             <div style={{ marginTop: 'auto', padding: '16px', borderTop: '1px solid var(--panel-border)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                 <div className="chat-avatar" style={{ background: 'rgba(92, 107, 156, 0.3)' }}>AA</div>
@@ -320,7 +371,7 @@ function App() {
                   </div>
                 </div>
               </div>
-              
+
               <div className="workspace-tabs">
                 <button className={`workspace-tab ${workspaceTab === 'read' ? 'active' : ''}`} onClick={() => setWorkspaceTab('read')}>
                   <FileText size={16}/> <span className="tab-label">Läs dokument</span>
@@ -357,7 +408,7 @@ function App() {
                          <button className="icon-action-btn" title="Sök i dokument" aria-label="Sök"><Search size={16}/></button>
                       </div>
                     </div>
-                    
+
                     <div className="pdf-canvas">
                       <div className="mock-pdf-page" style={{ transform: `scale(${pdfZoom / 100})` }}>
                         {selectedDocument.id === 'd1' && MOCK_TEXT_EXTRACTION.d1[pdfPage] ? (
@@ -401,18 +452,18 @@ function App() {
                     <div className="panel-section">
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                         <h3>Bevakningar i dokumentet</h3>
-                        {MOCK_BEVAKNINGAR.filter(b => b.docId === selectedDocument.id).length > 0 && (
+                        {bevakningar.filter(b => b.docId === selectedDocument.id).length > 0 && (
                           <span className="status-badge warning" style={{ background: 'transparent', border: '1px solid var(--status-warning)', color: 'var(--status-warning)' }}>
-                            {MOCK_BEVAKNINGAR.filter(b => b.docId === selectedDocument.id).length}
+                            {bevakningar.filter(b => b.docId === selectedDocument.id).length}
                           </span>
                         )}
                       </div>
-                      
+
                       <div className="bevakning-list">
-                        {MOCK_BEVAKNINGAR.filter(b => b.docId === selectedDocument.id).length === 0 ? (
+                        {bevakningar.filter(b => b.docId === selectedDocument.id).length === 0 ? (
                           <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Inga bevakningar funna.</div>
                         ) : (
-                          MOCK_BEVAKNINGAR.filter(b => b.docId === selectedDocument.id).map(b => (
+                          bevakningar.filter(b => b.docId === selectedDocument.id).map(b => (
                             <div key={b.id} className={`bevakning-card ${b.done ? 'done' : ''}`}>
                               <div className="bevakning-header">
                                 <div className="bevakning-date"><Calendar size={14}/> {b.date}</div>
@@ -422,7 +473,7 @@ function App() {
                               <div className="bevakning-desc">{b.desc}</div>
                               <div className="bevakning-actions">
                                 <button className="small-action-btn" onClick={() => setPdfPage(b.page)}>Sida {b.page}</button>
-                                {!b.done && <button className="small-action-btn ok"><Check size={14}/> Markera klar</button>}
+                                {!b.done && <button className="small-action-btn ok" onClick={() => handleMarkBevakningDone(b.id)}><Check size={14}/> Markera klar</button>}
                               </div>
                             </div>
                           ))
@@ -435,9 +486,13 @@ function App() {
 
               {workspaceTab === 'review' && (
                 <div className="workspace-split review-mode">
-                  <div className="pdf-viewer-container half">
+                  <div className="mobile-qa-segmented-control mobile-only">
+                     <button className={mobileQaSegment === 'pdf' ? 'active' : ''} onClick={() => setMobileQaSegment('pdf')}>Original (PDF)</button>
+                     <button className={mobileQaSegment === 'text' ? 'active' : ''} onClick={() => setMobileQaSegment('text')}>Extraherad text</button>
+                  </div>
+                  <div className={`pdf-viewer-container half ${mobileQaSegment !== 'pdf' ? 'mobile-hidden' : ''}`}>
                     <div className="pdf-toolbar">
-                       <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-secondary)' }}>Original (PDF)</span>
+                       <span className="desktop-only" style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-secondary)' }}>Original (PDF)</span>
                        <div className="pdf-nav">
                          <button className="icon-action-btn" onClick={() => setPdfPage(Math.max(1, pdfPage - 1))} disabled={pdfPage === 1} aria-label="Föregående sida"><ArrowLeft size={16}/></button>
                          <span>Sid {pdfPage} / {selectedDocument.pages}</span>
@@ -460,9 +515,9 @@ function App() {
                     </div>
                   </div>
 
-                  <div className="extraction-container half">
+                  <div className={`extraction-container half ${mobileQaSegment !== 'text' ? 'mobile-hidden' : ''}`}>
                     <div className="pdf-toolbar extraction-toolbar">
-                      <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-secondary)' }}>Extraherad text</span>
+                      <span className="desktop-only" style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-secondary)' }}>Extraherad text</span>
                     </div>
                     <div className="extraction-content">
                       {selectedDocument.id === 'd1' && MOCK_TEXT_EXTRACTION.d1[pdfPage] ? (
@@ -475,10 +530,10 @@ function App() {
                         </div>
                       )}
                     </div>
-                    
+
                     <div className="extraction-actions">
-                       <button className="primary-action-btn ok">
-                         <CheckCircle2 size={16}/> <span className="action-label">Godkänn sida</span>
+                       <button className="primary-action-btn ok" onClick={handleApproveQa}>
+                         <CheckCircle2 size={16}/> <span className="action-label">Godkänn dokument</span>
                        </button>
                        <div style={{ position: 'relative' }}>
                          <button className="primary-action-btn warning" onClick={() => setReportMenuOpen(!reportMenuOpen)} aria-haspopup="true" aria-expanded={reportMenuOpen}>
@@ -526,7 +581,7 @@ function App() {
                          <Sparkles size={18} />
                          <span style={{ fontWeight: '500' }}>AI-chatt för detta dokument</span>
                        </div>
-                       
+
                        <div className="demo-state-selector">
                           <span style={{ fontSize: '11px', color: 'var(--text-muted)' }} className="desktop-only">MOCK-STATE:</span>
                           <select value={demoState} onChange={e => setDemoState(e.target.value)} title="Ändra vilket svar AI:n tvingas ge i mockupen." aria-label="Välj AI svarstillstånd">
@@ -557,7 +612,7 @@ function App() {
                                 {msg.refusal && !msg.warning && <div className="chat-refusal-header"><AlertCircle size={14} /> Otillräckligt underlag</div>}
                                 {msg.warning && <div className="chat-refusal-header warning"><AlertTriangle size={14} /> Motstridiga källor</div>}
                                 {msg.content}
-                                
+
                                 {msg.citations && (
                                   <div className="chat-citations">
                                     {msg.citations.map((c, i) => (
@@ -570,7 +625,7 @@ function App() {
                                   </div>
                                 )}
                               </div>
-                              
+
                               {msg.followUps && !msg.pending && (
                                 <div className="chat-followups">
                                   {msg.followUps.map((fu, fidx) => (
@@ -617,7 +672,7 @@ function App() {
               <div className="tab-content" style={{ maxWidth: '900px' }}>
                 <div className="hero-section" style={{ textAlign: 'center', margin: '20px 0 40px 0' }}>
                   <h1 style={{ fontSize: '32px', marginBottom: '16px', fontWeight: '600' }}>Sök i dina dokument</h1>
-                  
+
                   <div className="search-input-large-wrapper" style={{ maxWidth: '640px', margin: '0 auto', padding: '8px 8px 8px 20px' }}>
                     <SearchIcon size={20} color="var(--text-secondary)" />
                     <input
@@ -632,7 +687,7 @@ function App() {
                       Sök
                     </button>
                   </div>
-                  
+
                   <div style={{ marginTop: '16px', fontSize: '14px', color: 'var(--text-secondary)' }}>
                     Har du en mer komplex fråga? <button onClick={() => executeGeneralChat(searchQuery || 'Vad gäller för...')} className="link-button ai" style={{ fontWeight: '500', textDecoration: 'underline' }}>Ställ den i AI-chatten istället</button>
                   </div>
@@ -668,7 +723,7 @@ function App() {
                       <Folders size={18} /> Senaste Dokument
                     </h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {MOCK_DOCUMENTS.slice(0, 3).map(doc => (
+                      {documents.slice(0, 3).map(doc => (
                         <button key={doc.id} className="interactive-row text-left" onClick={() => openDocument(doc.id)} aria-label={`Öppna ${doc.name}`}>
                           <FileText size={16} color="var(--text-secondary)" style={{ flexShrink: 0 }} />
                           <span style={{ fontSize: '14px', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{doc.name}</span>
@@ -698,7 +753,7 @@ function App() {
                     <h2 style={{ fontSize: '24px', fontWeight: '600', margin: 0 }}>Dokument</h2>
                     <p style={{ color: 'var(--text-secondary)', fontSize: '14px', margin: '4px 0 0 0' }}>Hantera systembearbetning, kvalitetskontroll och aktiva bevakningar.</p>
                   </div>
-                  <button className="primary-action-btn desktop-only" onClick={() => alert('Endast mockup: Filuppladdning är inte implementerad i denna vy.')} title="Mockup: Ladda upp är avstängt">
+                  <button className="primary-action-btn desktop-only" onClick={() => showToast('Funktionen Ladda upp är inte tillgänglig i denna mockup.')} title="Mockup: Ladda upp är avstängt">
                     <Upload size={16} /> Ladda upp dokument
                   </button>
                 </header>
@@ -706,9 +761,9 @@ function App() {
                 <div className="docs-control-bar">
                   <div className="search-input-small responsive-search">
                     <SearchIcon size={16} />
-                    <input 
-                      type="text" 
-                      placeholder="Sök dokumentnamn..." 
+                    <input
+                      type="text"
+                      placeholder="Sök dokumentnamn..."
                       value={docsSearchQuery}
                       onChange={(e) => setDocsSearchQuery(e.target.value)}
                       aria-label="Sök dokument"
@@ -719,7 +774,7 @@ function App() {
                       </button>
                     )}
                   </div>
-                  
+
                   <div className="filter-pill-container">
                     <button className={`filter-pill ${docFilter === 'alla' ? 'active' : ''}`} onClick={() => setDocFilter('alla')}>Alla ({filterCounts.alla})</button>
                     <button className={`filter-pill warning ${docFilter === 'granskas' ? 'active' : ''}`} onClick={() => setDocFilter('granskas')}>Behöver granskas ({filterCounts.granskas})</button>
@@ -747,28 +802,25 @@ function App() {
                       <table className="docs-table desktop-only">
                         <thead>
                           <tr>
-                            <th>Dokumentnamn</th>
-                            <th>Uppladdat</th>
-                            <th>Bearbetning</th>
-                            <th>Kvalitetskontroll</th>
-                            <th>Bevakningar</th>
-                            <th className="action-col"><span className="visually-hidden">Öppna</span></th>
+                            <th scope="col">Dokumentnamn</th>
+                            <th scope="col">Uppladdat</th>
+                            <th scope="col">Bearbetning</th>
+                            <th scope="col">Kvalitetskontroll</th>
+                            <th scope="col">Bevakningar</th>
+                            <th scope="col" className="action-col"><span className="visually-hidden">Öppna</span></th>
                           </tr>
                         </thead>
                         <tbody>
                           {filteredDocs.map(doc => (
-                            <tr 
-                              key={doc.id} 
-                              className="interactive-table-row" 
-                              onClick={() => openDocument(doc.id)} 
-                              tabIndex={0}
-                              onKeyDown={(e) => e.key === 'Enter' && openDocument(doc.id)}
-                              aria-label={`Öppna ${doc.name}`}
-                              role="button"
+                            <tr
+                              key={doc.id}
+                              className="interactive-table-row"
                             >
                               <td className="doc-name-cell">
-                                 <FileText size={16} color="var(--text-secondary)" className="doc-icon" /> 
-                                 <span className="truncate">{doc.name}</span>
+                                <button className="doc-open-btn" onClick={() => openDocument(doc.id)} aria-label={`Öppna ${doc.name}`}>
+                                  <FileText size={16} color="var(--text-secondary)" className="doc-icon" />
+                                  <span className="truncate">{doc.name}</span>
+                                </button>
                               </td>
                               <td className="meta-cell">{doc.date}</td>
                               <td>
@@ -803,9 +855,9 @@ function App() {
                       {/* Mobile List View */}
                       <div className="docs-mobile-list mobile-only">
                         {filteredDocs.map(doc => (
-                          <button 
-                            key={doc.id} 
-                            className="doc-mobile-card" 
+                          <button
+                            key={doc.id}
+                            className="doc-mobile-card"
                             onClick={() => openDocument(doc.id)}
                             aria-label={`Öppna ${doc.name}`}
                           >
@@ -860,7 +912,7 @@ function App() {
                       {searchIsLoading ? <Loader2 size={16} className="spin" /> : 'Sök'}
                     </button>
                   </div>
-                  
+
                   {!searchIsLoading && searchResults && (
                     <div className="search-summary-text" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
                       <span>Hittade {searchResults.totalPassages} träffar i {searchResults.totalDocuments} dokument.</span>
@@ -883,7 +935,7 @@ function App() {
                         </div>
                         <div className="snippet-meta">
                           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--text-secondary)' }}>
-                             <FileText size={14} /> 
+                             <FileText size={14} />
                              <span style={{ fontWeight: '500', color: 'var(--text-primary)' }}>{res.documentName}</span>
                              <span>· Sid {res.page}</span>
                           </div>
@@ -901,7 +953,7 @@ function App() {
                 )}
               </div>
             )}
-            
+
             {currentTab === 'chat' && (
               <div className="tab-content">
                 <div className="chat-container">
@@ -910,11 +962,11 @@ function App() {
                       <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Sparkles color="var(--ai-accent)" size={24}/> Global AI-assistent (MOCK)</h2>
                       <p style={{ color: 'var(--text-secondary)', fontSize: '14px', margin: '4px 0 0 0' }}>Få svar baserade på alla föreningens indexerade dokument.</p>
                     </div>
-                    
+
                     <div className="chat-scope-selector desktop-only">
                        <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Söker i:</span>
                        <button className="scope-btn" title="Klicka för att välja vilka dokument som ska sökas">
-                         {chatScope} <ChevronRight size={14}/>
+                         Alla dokument · {documents.length} dokument <ChevronRight size={14}/>
                        </button>
                     </div>
                   </div>
@@ -943,7 +995,7 @@ function App() {
                             <div className="chat-content" style={{ borderColor: msg.refusal ? 'var(--status-error-dim)' : '' }}>
                               {msg.refusal && <div className="chat-refusal-header"><AlertCircle size={14} /> Otillräckligt underlag</div>}
                               {msg.content}
-                              
+
                               {msg.citations && (
                                 <div className="chat-citations">
                                   {msg.citations.map((c, i) => (
@@ -956,7 +1008,7 @@ function App() {
                                 </div>
                               )}
                             </div>
-                            
+
                             {msg.followUps && !msg.pending && (
                               <div className="chat-followups">
                                 {msg.followUps.map((fu, fidx) => (
@@ -982,12 +1034,20 @@ function App() {
                         placeholder="Ställ en generell fråga till AI:n..."
                         disabled={chatBusy}
                       />
-                      <button className="chat-send-btn" onClick={() => executeGeneralChat(chatInput)} disabled={chatBusy || !chatInput.trim()}>
+                      <button className="chat-send-btn" onClick={() => executeGeneralChat(chatInput)} disabled={chatBusy || !chatInput.trim()} aria-label="Skicka fråga">
                         {chatBusy ? <Loader2 size={18} className="spin"/> : <ArrowRight size={18} />}
                       </button>
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {currentTab === 'settings' && (
+              <div className="tab-content" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%' }}>
+                <Settings size={48} color="var(--panel-border)" style={{ marginBottom: '16px' }} />
+                <h3 style={{ fontSize: '18px', marginBottom: '8px' }}>Inställningar</h3>
+                <p style={{ color: 'var(--text-secondary)' }}>Inställningar är inte tillgängliga i denna mockup.</p>
               </div>
             )}
           </main>
