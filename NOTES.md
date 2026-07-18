@@ -147,3 +147,23 @@
   before trusting a "zero hits" result. Why it mattered: a regex sweep proves the absence of known
   shapes; a corpus cross-check proves the absence of the actual text, which is the guarantee that
   was actually needed.
+
+- **2026-07-18 — Adjudicate disagreeing analyses by re-derivation, never by confidence.** Two
+  independent refusal diagnoses (a word-index script and an adversarial page-rank pass) disagreed
+  on 4 of 13 cases — and BOTH were wrong, differently: the script counted prose digits, formula
+  constants, and a flow-note row as "answer values" and missed a plural table-header form; the
+  narrative pass conflated page rank with chunk containment. A per-case from-scratch
+  reconciliation moved the distribution from 10/1/2 to 13/0/0. Why it mattered: the fix list
+  hinged on that split — averaging or trusting the more confident layer would have ordered the
+  next phase around a bucket that doesn't exist.
+
+- **2026-07-18 — Before blaming model emission, measure evidence-type discrimination.** All 13
+  annual-report refusals were retrieval-bounded (true rows ranked 4–37 under hashed+BM25; table
+  rows lose to prose sharing their vocabulary). When retrieval was widened as a controlled
+  experiment, the model answered every case where the TRUE row arrived (never citing an adjacent
+  near-miss), and its persistent refusals were correct rejections of wrong-TYPE evidence (flow vs
+  balance, accrual vs expense). The one genuine multi-span-requiring case (a transposed table,
+  label and value 56 word-indices apart) it refused safely rather than stitch. Why it mattered:
+  the honest ceiling is retrieval ranking — the citation contract, extraction order, and the
+  model's judgment all held; a "make the model answer more" fix would have attacked the one part
+  that was working.
