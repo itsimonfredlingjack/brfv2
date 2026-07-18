@@ -26,9 +26,25 @@ ANSWER_SCHEMA: dict = {
             "type": "array",
             "items": {
                 "type": "object",
-                "properties": {"chunk_id": {"type": "string"}, "quote": {"type": "string"}},
-                "required": ["chunk_id", "quote"],
+                "properties": {
+                    "chunk_id": {"type": "string"},
+                    # Common case: one contiguous verbatim quote.
+                    "quote": {"type": "string"},
+                    # Fragment-fact case (multi-span citation contract): 2-4
+                    # short verbatim spans from the SAME chunk (table cell,
+                    # heading, letterhead) — each verified independently and
+                    # accepted only all-or-nothing (citations.resolve_citation,
+                    # citations.MAX_SPANS=4).
+                    "quotes": {"type": "array", "items": {"type": "string"}, "minItems": 2, "maxItems": 4},
+                },
+                "required": ["chunk_id"],
                 "additionalProperties": False,
+                # Exactly one of "quote"/"quotes" per citation — matches the
+                # model-facing contract (GROUNDING_CONTRACT, answer.py) and
+                # parse_llm_json's leniency (llm.py:81-85), which also picks
+                # "quotes" over "quote" if a malformed response somehow
+                # carried both.
+                "oneOf": [{"required": ["quote"]}, {"required": ["quotes"]}],
             },
         },
         "insufficient_data": {"type": "boolean"},

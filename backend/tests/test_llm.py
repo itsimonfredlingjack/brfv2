@@ -5,7 +5,7 @@ import httpx
 import pytest
 
 import app.llm as llm_mod
-from app.llm import FakeLLM, LLMError, LLMFormatError, OpenAICompatProvider, parse_llm_json
+from app.llm import ANSWER_SCHEMA, FakeLLM, LLMError, LLMFormatError, OpenAICompatProvider, parse_llm_json
 
 
 class TestParseLLMJson:
@@ -55,6 +55,104 @@ class TestParseLLMJson:
         # Structurally malformed — same class as today's dropped items.
         obj = {"answer": "x", "citations": [{"chunk_id": "K1", "quotes": ["a", 5]}, {"chunk_id": "K2", "quotes": []}]}
         assert parse_llm_json(json.dumps(obj))["citations"] == []
+
+
+def _validate_citation_item(item: dict, schema: dict) -> bool:
+    """Minimal structural validator for ANSWER_SCHEMA's citation-item shape
+    (Task 6 — jsonschema is not a project dependency; per the task brief,
+    this asserts the schema dict's structure directly rather than adding
+    one). Covers exactly the keywords this one schema fragment uses:
+    properties/required/additionalProperties, array minItems/maxItems, and a
+    two-branch oneOf keyed on "required" — not a general JSON Schema engine.
+    """
+    props = schema["properties"]
+    if not isinstance(item, dict):
+        return False
+    if schema.get("additionalProperties") is False and not set(item) <= set(props):
+        return False
+    for req in schema.get("required", []):
+        if req not in item:
+            return False
+    if "quote" in item and not isinstance(item["quote"], str):
+        return False
+    if "quotes" in item:
+        q = item["quotes"]
+        qschema = props["quotes"]
+        if not (isinstance(q, list) and all(isinstance(x, str) for x in q)):
+            return False
+        if not (qschema["minItems"] <= len(q) <= qschema["maxItems"]):
+            return False
+    one_of = schema.get("oneOf") or []
+    if one_of:
+        matches = sum(1 for sub in one_of if all(k in item for k in sub.get("required", [])))
+        if matches != 1:
+            return False
+    return True
+
+
+class TestAnswerSchemaCitationItem:
+    """Task 6: ANSWER_SCHEMA's citation item was extended (additive only) to
+    accept "quote": str (unchanged) OR "quotes": array[str] (2..4), so a
+    capable model on the Anthropic structured-output path can emit the
+    multi-span fragment-fact form. AnthropicProvider is the only consumer of
+    this schema."""
+
+    ITEM_SCHEMA = ANSWER_SCHEMA["properties"]["citations"]["items"]
+
+    def test_schema_declares_both_quote_and_quotes_properties(self):
+        props = self.ITEM_SCHEMA["properties"]
+        assert props["quote"] == {"type": "string"}
+        assert props["quotes"]["type"] == "array"
+        assert props["quotes"]["minItems"] == 2
+        assert props["quotes"]["maxItems"] == 4
+
+    def test_schema_requires_only_chunk_id_unconditionally(self):
+        assert self.ITEM_SCHEMA["required"] == ["chunk_id"]
+
+    def test_schema_still_forbids_additional_properties(self):
+        assert self.ITEM_SCHEMA["additionalProperties"] is False
+
+    def test_schema_one_of_enforces_exactly_one_of_quote_or_quotes(self):
+        one_of = self.ITEM_SCHEMA["oneOf"]
+        assert {"required": ["quote"]} in one_of
+        assert {"required": ["quotes"]} in one_of
+        assert len(one_of) == 2
+
+    def test_fixed_single_span_payload_validates(self):
+        item = {"chunk_id": "K1", "quote": "ett ordagrant citat"}
+        assert _validate_citation_item(item, self.ITEM_SCHEMA)
+
+    def test_fixed_multi_span_payload_validates(self):
+        item = {"chunk_id": "K1", "quotes": ["Organisationsnummer", "769600-1234"]}
+        assert _validate_citation_item(item, self.ITEM_SCHEMA)
+
+    def test_four_span_payload_at_the_upper_bound_validates(self):
+        item = {"chunk_id": "K1", "quotes": ["a", "b", "c", "d"]}
+        assert _validate_citation_item(item, self.ITEM_SCHEMA)
+
+    def test_single_element_quotes_array_is_invalid(self):
+        item = {"chunk_id": "K1", "quotes": ["bara ett fragment"]}
+        assert not _validate_citation_item(item, self.ITEM_SCHEMA)
+
+    def test_five_element_quotes_array_is_invalid(self):
+        item = {"chunk_id": "K1", "quotes": ["a", "b", "c", "d", "e"]}
+        assert not _validate_citation_item(item, self.ITEM_SCHEMA)
+
+    def test_both_quote_and_quotes_present_is_invalid(self):
+        item = {"chunk_id": "K1", "quote": "x", "quotes": ["a", "b"]}
+        assert not _validate_citation_item(item, self.ITEM_SCHEMA)
+
+    def test_neither_quote_nor_quotes_present_is_invalid(self):
+        item = {"chunk_id": "K1"}
+        assert not _validate_citation_item(item, self.ITEM_SCHEMA)
+
+    def test_missing_chunk_id_is_invalid(self):
+        item = {"quote": "x"}
+        assert not _validate_citation_item(item, self.ITEM_SCHEMA)
+
+    def test_unexpected_extra_property_is_invalid(self):
+        item = {"chunk_id": "K1", "quote": "x", "confidence": 0.9}
+        assert not _validate_citation_item(item, self.ITEM_SCHEMA)
 
 
 class TestFakeLLM:

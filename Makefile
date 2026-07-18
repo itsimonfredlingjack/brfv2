@@ -1,5 +1,6 @@
 .PHONY: backend backend-pilot frontend test test-isolation eval eval-b eval-fast eval-sweep \
-        eval-selfhosted eval-b-selfhosted demo-reset build
+        eval-selfhosted eval-b-selfhosted demo-reset build model-readiness model-readiness-selftest \
+        model-readiness-selftest-negative
 
 # Generation default for dev + eval is the standard hosted provider (logged-in `claude`
 # CLI, or Anthropic SDK when ANTHROPIC_API_KEY is set) — no env needed. Dev/eval use only
@@ -47,6 +48,15 @@ eval-sweep:         ## Bevis: inställningsrattarna ändrar siffrorna
 
 demo-reset:         ## Nollställ och seeda om de två demoföreningarna + golden set
 	cd backend && uv run python -m scripts.seed --reset
+
+model-readiness:               ## Modell-redo-kontroll mot verkliga dokument, standardleverantör (ambient env)
+	cd backend && uv run python -m scripts.model_readiness --network-audit
+
+model-readiness-selftest:          ## Bevis: self-test med KORREKT scriptad FakeLLM -> READY, exit 0
+	cd backend && uv run python -m scripts.model_readiness --selftest
+
+model-readiness-selftest-negative: ## Bevis: self-test med FABRICERAD scriptad FakeLLM -> NOT READY, exit 1
+	cd backend && uv run python -m scripts.model_readiness --selftest-negative
 
 build:              ## Produktionsbygge av frontend
 	npm run build
