@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, MessageSquare, Folders, Settings, Search as SearchIcon, Filter, FileText, ArrowRight, Loader2, Sparkles, AlertCircle, Calendar, Upload, CheckCircle2, Clock, AlertTriangle, ArrowUpRight, Plus, X, ChevronRight, CornerDownRight, ArrowLeft, ZoomIn, ZoomOut, Search, Check, ThumbsDown, MessageCircle, Info } from 'lucide-react';
+import { LayoutDashboard, MessageSquare, Folders, Settings, Search as SearchIcon, Filter, FileText, ArrowRight, Loader2, Sparkles, AlertCircle, Calendar, Upload, CheckCircle2, Clock, AlertTriangle, ArrowUpRight, Plus, X, ChevronRight, CornerDownRight, ArrowLeft, ZoomIn, ZoomOut, Search, Check, ThumbsDown, MessageCircle, Info, Menu } from 'lucide-react';
 import './App.css';
 
 // --- MOCK DATA ---
 const MOCK_DOCUMENTS = [
-  { id: 'd1', name: 'Snöröjningsavtal 2026 MOCK.pdf', date: '2026-07-16', pages: 2, status: 'Klar', qa: 'Klar', bevakningar: 1 },
-  { id: 'd2', name: 'Stadgar Brf Gjutformen 12 MOCK.pdf', date: '2026-07-15', pages: 18, status: 'Klar', qa: 'Behöver granskas', bevakningar: 0 },
-  { id: 'd3', name: 'Styrelseprotokoll 2026-03-12 MOCK.pdf', date: '2026-03-14', pages: 4, status: 'Klar', qa: 'Klar', bevakningar: 2 },
-  { id: 'd4', name: 'Årsredovisning 2025 MOCK.pdf', date: '2026-02-10', pages: 32, status: 'Behandlas', qa: 'Ej påbörjad', bevakningar: 0 },
-  { id: 'd5', name: 'Underhållsplan 2026-2036 MOCK.pdf', date: '2026-01-05', pages: 14, status: 'Klar', qa: 'Klar', bevakningar: 3 },
+  { id: 'd1', name: 'Snöröjningsavtal 2026 MOCK.pdf', date: '2026-07-16', pages: 2, status: 'Färdigbehandlad', qa: 'Granskad', bevakningar: 1 },
+  { id: 'd2', name: 'Stadgar Brf Gjutformen 12 MOCK.pdf', date: '2026-07-15', pages: 18, status: 'Färdigbehandlad', qa: 'Behöver granskas', bevakningar: 0 },
+  { id: 'd3', name: 'Styrelseprotokoll 2026-03-12 MOCK.pdf', date: '2026-03-14', pages: 4, status: 'Färdigbehandlad', qa: 'Granskad', bevakningar: 2 },
+  { id: 'd4', name: 'Årsredovisning 2025 MOCK.pdf', date: '2026-02-10', pages: 32, status: 'Behandlas', qa: 'Behöver granskas', bevakningar: 0 },
+  { id: 'd5', name: 'Underhållsplan 2026-2036 MOCK.pdf', date: '2026-01-05', pages: 14, status: 'Färdigbehandlad', qa: 'Granskad', bevakningar: 3 },
 ];
 
 const MOCK_BEVAKNINGAR = [
@@ -54,16 +54,18 @@ const MOCK_TEXT_EXTRACTION = {
 };
 
 function App() {
-  const [currentTab, setCurrentTab] = useState('home');
+  const [currentTab, setCurrentTab] = useState('docs');
   const [selectedDocument, setSelectedDocument] = useState(null);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   
   // Search State
   const [searchQuery, setSearchQuery] = useState('');
   const [searchIsLoading, setSearchIsLoading] = useState(false);
   const [searchResults, setSearchResults] = useState(null);
   
-  // Doc Filter State
+  // Doc State
   const [docFilter, setDocFilter] = useState('alla');
+  const [docsSearchQuery, setDocsSearchQuery] = useState('');
 
   // Workspace State
   const [workspaceTab, setWorkspaceTab] = useState('read'); // 'read', 'review', 'chat'
@@ -87,6 +89,7 @@ function App() {
     setCurrentTab('search');
     setSelectedDocument(null);
     setSearchIsLoading(true);
+    setIsMobileMenuOpen(false);
     
     setTimeout(() => {
       setSearchResults(MOCK_SEARCH_RESULTS);
@@ -102,6 +105,7 @@ function App() {
       setWorkspaceTab(initialTab);
       setPdfZoom(100);
       setWorkspaceChatMessages([]);
+      setIsMobileMenuOpen(false);
     }
   };
 
@@ -163,6 +167,7 @@ function App() {
     setCurrentTab('chat');
     setChatInput('');
     setSelectedDocument(null);
+    setIsMobileMenuOpen(false);
     
     const newUserMsg = { role: 'user', content: query };
     const pendingAiMsg = { role: 'ai', pending: true, content: 'Söker och analyserar (MOCK)...' };
@@ -210,22 +215,32 @@ function App() {
     );
   };
 
+  // Base counts derived directly from MOCK_DOCUMENTS, independent of text search
   const filterCounts = {
     alla: MOCK_DOCUMENTS.length,
-    granskas: MOCK_DOCUMENTS.filter(d => d.qa === 'Behöver granskas' || d.qa === 'Ej påbörjad').length,
+    granskas: MOCK_DOCUMENTS.filter(d => d.qa === 'Behöver granskas').length,
     bevakningar: MOCK_DOCUMENTS.filter(d => d.bevakningar > 0).length,
     behandlas: MOCK_DOCUMENTS.filter(d => d.status === 'Behandlas').length,
-    klara: MOCK_DOCUMENTS.filter(d => d.status === 'Klar' && d.qa === 'Klar').length
+    klara: MOCK_DOCUMENTS.filter(d => d.status === 'Färdigbehandlad' && d.qa === 'Granskad').length
   };
 
   const filteredDocs = MOCK_DOCUMENTS.filter(doc => {
-    if (docFilter === 'alla') return true;
-    if (docFilter === 'granskas') return doc.qa === 'Behöver granskas' || doc.qa === 'Ej påbörjad';
-    if (docFilter === 'bevakningar') return doc.bevakningar > 0;
-    if (docFilter === 'behandlas') return doc.status === 'Behandlas';
-    if (docFilter === 'klara') return doc.status === 'Klar' && doc.qa === 'Klar';
-    return true;
+    const searchMatch = docsSearchQuery === '' || doc.name.toLowerCase().includes(docsSearchQuery.toLowerCase());
+    
+    let filterMatch = true;
+    if (docFilter === 'granskas') filterMatch = doc.qa === 'Behöver granskas';
+    else if (docFilter === 'bevakningar') filterMatch = doc.bevakningar > 0;
+    else if (docFilter === 'behandlas') filterMatch = doc.status === 'Behandlas';
+    else if (docFilter === 'klara') filterMatch = (doc.status === 'Färdigbehandlad' && doc.qa === 'Granskad');
+    
+    return searchMatch && filterMatch;
   });
+
+  const getBevakningLabel = (count) => {
+    if (count === 0) return "Inga bevakningar";
+    if (count === 1) return "1 bevakning";
+    return `${count} bevakningar`;
+  };
 
   return (
     <div className="app-shell">
@@ -234,30 +249,40 @@ function App() {
         All data, filnamn och svar är fiktiva och ej kopplade till en server.
       </div>
 
-      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+      {/* MOBILE TOP NAVIGATION */}
+      {!selectedDocument && (
+        <header className="mobile-top-nav">
+          <div className="logo">Simons <span>RAG</span></div>
+          <button className="icon-action-btn mobile-menu-btn" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} aria-label="Meny" aria-expanded={isMobileMenuOpen}>
+            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </header>
+      )}
+
+      <div className="main-layout">
         
-        {/* SIDEBAR - Only visible when NO document is selected */}
+        {/* SIDEBAR - Responsive */}
         {!selectedDocument && (
-          <nav className="sidebar">
-            <div className="sidebar-brand">
+          <nav className={`sidebar ${isMobileMenuOpen ? 'open' : ''}`}>
+            <div className="sidebar-brand desktop-only">
               <div className="logo">Simons <span>RAG</span></div>
             </div>
 
             <div className="sidebar-menu">
-              <button className={`nav-item ${currentTab === 'home' ? 'active' : ''}`} onClick={() => setCurrentTab('home')}>
+              <button className={`nav-item ${currentTab === 'home' ? 'active' : ''}`} onClick={() => { setCurrentTab('home'); setIsMobileMenuOpen(false); }}>
                 <LayoutDashboard size={20} /> Hem
               </button>
-              <button className={`nav-item ${currentTab === 'docs' ? 'active' : ''}`} onClick={() => { setCurrentTab('docs'); setDocFilter('alla'); }}>
+              <button className={`nav-item ${currentTab === 'docs' ? 'active' : ''}`} onClick={() => { setCurrentTab('docs'); setDocFilter('alla'); setDocsSearchQuery(''); setIsMobileMenuOpen(false); }}>
                 <Folders size={20} /> Dokument
               </button>
-              <button className={`nav-item ${currentTab === 'chat' ? 'active' : ''}`} onClick={() => setCurrentTab('chat')}>
+              <button className={`nav-item ${currentTab === 'chat' ? 'active' : ''}`} onClick={() => { setCurrentTab('chat'); setIsMobileMenuOpen(false); }}>
                 <MessageSquare size={20} /> AI-chatt
               </button>
               
               <div style={{ marginTop: '40px', padding: '0 16px', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '600' }}>
                 ADMINISTRATION
               </div>
-              <button className={`nav-item ${currentTab === 'settings' ? 'active' : ''}`} onClick={() => setCurrentTab('settings')}>
+              <button className={`nav-item ${currentTab === 'settings' ? 'active' : ''}`} onClick={() => { setCurrentTab('settings'); setIsMobileMenuOpen(false); }}>
                 <Settings size={20} /> Inställningar
               </button>
             </div>
@@ -277,7 +302,6 @@ function App() {
         {/* WORKSPACE MODE - Visible when a document is selected */}
         {selectedDocument && (
           <div className="workspace-container">
-            {/* Workspace Header */}
             <header className="workspace-header">
               <div className="workspace-header-left">
                 <button className="icon-action-btn" onClick={closeDocument} title="Tillbaka till listan" aria-label="Tillbaka">
@@ -286,12 +310,12 @@ function App() {
                 <div className="workspace-doc-info">
                   <h1 className="workspace-doc-title">{selectedDocument.name}</h1>
                   <div className="workspace-doc-meta">
-                    {selectedDocument.status === 'Klar' ? (
-                      <span className="status-text ok"><CheckCircle2 size={12}/> Bearbetad</span>
+                    {selectedDocument.status === 'Färdigbehandlad' ? (
+                      <span className="status-text ok"><CheckCircle2 size={12}/> Färdigbehandlad</span>
                     ) : (
                       <span className="status-text muted"><Loader2 size={12} className="spin"/> Behandlas</span>
                     )}
-                    <span>·</span>
+                    <span className="meta-divider">·</span>
                     <span className="status-text">{selectedDocument.pages} sidor</span>
                   </div>
                 </div>
@@ -299,41 +323,38 @@ function App() {
               
               <div className="workspace-tabs">
                 <button className={`workspace-tab ${workspaceTab === 'read' ? 'active' : ''}`} onClick={() => setWorkspaceTab('read')}>
-                  <FileText size={16}/> Läs dokument
+                  <FileText size={16}/> <span className="tab-label">Läs dokument</span>
                 </button>
                 <button className={`workspace-tab ${workspaceTab === 'review' ? 'active' : ''}`} onClick={() => setWorkspaceTab('review')}>
-                  <CheckCircle2 size={16}/> Kvalitetskontroll
-                  {selectedDocument.qa === 'Behöver granskas' && <span className="tab-badge warning">!</span>}
+                  <CheckCircle2 size={16}/> <span className="tab-label">Kvalitetskontroll</span>
+                  {selectedDocument.qa === 'Behöver granskas' && <span className="tab-badge warning" aria-label="Kräver granskning">!</span>}
                 </button>
                 <button className={`workspace-tab ${workspaceTab === 'chat' ? 'active' : ''}`} onClick={() => setWorkspaceTab('chat')}>
-                  <MessageCircle size={16}/> Fråga dokumentet
+                  <MessageCircle size={16}/> <span className="tab-label">Fråga dokumentet</span>
                 </button>
               </div>
 
-              <div className="workspace-header-right">
-                 {/* Placeholder for Next/Prev if coming from a queue */}
+              <div className="workspace-header-right desktop-only">
                  <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Dokument 1 av 1</span>
               </div>
             </header>
 
             <div className="workspace-content">
-              
-              {/* === TAB: LÄSA (READ) === */}
               {workspaceTab === 'read' && (
                 <div className="workspace-split read-mode">
                   <div className="pdf-viewer-container">
                     <div className="pdf-toolbar">
                       <div className="pdf-nav">
-                         <button className="icon-action-btn" onClick={() => setPdfPage(Math.max(1, pdfPage - 1))} disabled={pdfPage === 1}><ArrowLeft size={16}/></button>
+                         <button className="icon-action-btn" onClick={() => setPdfPage(Math.max(1, pdfPage - 1))} disabled={pdfPage === 1} aria-label="Föregående sida"><ArrowLeft size={16}/></button>
                          <span>Sida {pdfPage} av {selectedDocument.pages}</span>
-                         <button className="icon-action-btn" onClick={() => setPdfPage(Math.min(selectedDocument.pages, pdfPage + 1))} disabled={pdfPage === selectedDocument.pages}><ArrowRight size={16}/></button>
+                         <button className="icon-action-btn" onClick={() => setPdfPage(Math.min(selectedDocument.pages, pdfPage + 1))} disabled={pdfPage === selectedDocument.pages} aria-label="Nästa sida"><ArrowRight size={16}/></button>
                       </div>
                       <div className="pdf-actions">
-                         <button className="icon-action-btn" onClick={() => setPdfZoom(z => Math.max(50, z - 10))} title="Zooma ut"><ZoomOut size={16}/></button>
+                         <button className="icon-action-btn" onClick={() => setPdfZoom(z => Math.max(50, z - 10))} title="Zooma ut" aria-label="Zooma ut"><ZoomOut size={16}/></button>
                          <span style={{ fontSize: '12px', width: '40px', textAlign: 'center' }}>{pdfZoom}%</span>
-                         <button className="icon-action-btn" onClick={() => setPdfZoom(z => Math.min(200, z + 10))} title="Zooma in"><ZoomIn size={16}/></button>
+                         <button className="icon-action-btn" onClick={() => setPdfZoom(z => Math.min(200, z + 10))} title="Zooma in" aria-label="Zooma in"><ZoomIn size={16}/></button>
                          <div className="divider"></div>
-                         <button className="icon-action-btn" title="Sök i dokument"><Search size={16}/></button>
+                         <button className="icon-action-btn" title="Sök i dokument" aria-label="Sök"><Search size={16}/></button>
                       </div>
                     </div>
                     
@@ -362,18 +383,16 @@ function App() {
                           <span className="info-label">Laddades upp</span>
                           <span className="info-value">{selectedDocument.date}</span>
                         </div>
-                        
                         <div className="info-item">
-                          <span className="info-label">Bearbetning</span>
+                          <span className="info-label">Systembearbetning</span>
                           <span className="info-value">
-                            {selectedDocument.status === 'Klar' ? <span className="status-text ok">Klar</span> : <span className="status-text muted">Behandlas</span>}
+                            {selectedDocument.status === 'Färdigbehandlad' ? <span className="status-text ok">Färdigbehandlad</span> : <span className="status-text muted">Behandlas</span>}
                           </span>
                         </div>
-                        
                         <div className="info-item">
                           <span className="info-label">Kvalitetskontroll</span>
                           <span className="info-value">
-                            {selectedDocument.qa === 'Klar' ? <span className="status-text ok">Klar</span> : <span className="status-text warning">Behöver granskas</span>}
+                            {selectedDocument.qa === 'Granskad' ? <span className="status-text ok">Granskad</span> : <span className="status-text warning">Behöver granskas</span>}
                           </span>
                         </div>
                       </div>
@@ -382,7 +401,11 @@ function App() {
                     <div className="panel-section">
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                         <h3>Bevakningar i dokumentet</h3>
-                        <span className="status-badge warning" style={{ background: 'transparent', border: '1px solid var(--status-warning)', color: 'var(--status-warning)' }}>{MOCK_BEVAKNINGAR.filter(b => b.docId === selectedDocument.id).length} st</span>
+                        {MOCK_BEVAKNINGAR.filter(b => b.docId === selectedDocument.id).length > 0 && (
+                          <span className="status-badge warning" style={{ background: 'transparent', border: '1px solid var(--status-warning)', color: 'var(--status-warning)' }}>
+                            {MOCK_BEVAKNINGAR.filter(b => b.docId === selectedDocument.id).length}
+                          </span>
+                        )}
                       </div>
                       
                       <div className="bevakning-list">
@@ -393,7 +416,7 @@ function App() {
                             <div key={b.id} className={`bevakning-card ${b.done ? 'done' : ''}`}>
                               <div className="bevakning-header">
                                 <div className="bevakning-date"><Calendar size={14}/> {b.date}</div>
-                                {b.done ? <span className="status-badge ok" style={{ padding: '2px 6px', fontSize: '10px' }}>Klar</span> : null}
+                                {b.done && <span className="status-badge ok" style={{ padding: '2px 6px', fontSize: '10px' }}>Klar</span>}
                               </div>
                               <div className="bevakning-title">{b.title}</div>
                               <div className="bevakning-desc">{b.desc}</div>
@@ -410,17 +433,15 @@ function App() {
                 </div>
               )}
 
-              {/* === TAB: KVALITETSKONTROLL (REVIEW) === */}
               {workspaceTab === 'review' && (
                 <div className="workspace-split review-mode">
-                  {/* Left: PDF */}
                   <div className="pdf-viewer-container half">
                     <div className="pdf-toolbar">
                        <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-secondary)' }}>Original (PDF)</span>
                        <div className="pdf-nav">
-                         <button className="icon-action-btn" onClick={() => setPdfPage(Math.max(1, pdfPage - 1))} disabled={pdfPage === 1}><ArrowLeft size={16}/></button>
+                         <button className="icon-action-btn" onClick={() => setPdfPage(Math.max(1, pdfPage - 1))} disabled={pdfPage === 1} aria-label="Föregående sida"><ArrowLeft size={16}/></button>
                          <span>Sid {pdfPage} / {selectedDocument.pages}</span>
-                         <button className="icon-action-btn" onClick={() => setPdfPage(Math.min(selectedDocument.pages, pdfPage + 1))} disabled={pdfPage === selectedDocument.pages}><ArrowRight size={16}/></button>
+                         <button className="icon-action-btn" onClick={() => setPdfPage(Math.min(selectedDocument.pages, pdfPage + 1))} disabled={pdfPage === selectedDocument.pages} aria-label="Nästa sida"><ArrowRight size={16}/></button>
                       </div>
                     </div>
                     <div className="pdf-canvas">
@@ -439,7 +460,6 @@ function App() {
                     </div>
                   </div>
 
-                  {/* Right: Extraction */}
                   <div className="extraction-container half">
                     <div className="pdf-toolbar extraction-toolbar">
                       <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-secondary)' }}>Extraherad text</span>
@@ -458,11 +478,11 @@ function App() {
                     
                     <div className="extraction-actions">
                        <button className="primary-action-btn ok">
-                         <CheckCircle2 size={16}/> Godkänn sida
+                         <CheckCircle2 size={16}/> <span className="action-label">Godkänn sida</span>
                        </button>
                        <div style={{ position: 'relative' }}>
-                         <button className="primary-action-btn warning" onClick={() => setReportMenuOpen(!reportMenuOpen)}>
-                           <ThumbsDown size={16}/> Rapportera problem
+                         <button className="primary-action-btn warning" onClick={() => setReportMenuOpen(!reportMenuOpen)} aria-haspopup="true" aria-expanded={reportMenuOpen}>
+                           <ThumbsDown size={16}/> <span className="action-label">Rapportera problem</span>
                          </button>
                          {reportMenuOpen && (
                            <div className="report-menu">
@@ -478,10 +498,9 @@ function App() {
                 </div>
               )}
 
-              {/* === TAB: FRÅGA DOKUMENTET (CHAT) === */}
               {workspaceTab === 'chat' && (
                 <div className="workspace-split chat-mode">
-                  <div className="pdf-viewer-container half">
+                  <div className="pdf-viewer-container half desktop-only">
                     <div className="pdf-toolbar">
                        <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-secondary)' }}>Referensvy</span>
                     </div>
@@ -501,7 +520,7 @@ function App() {
                     </div>
                   </div>
 
-                  <div className="workspace-chat-container half">
+                  <div className="workspace-chat-container half full-width-mobile">
                     <div className="workspace-chat-header">
                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--ai-accent)' }}>
                          <Sparkles size={18} />
@@ -509,8 +528,8 @@ function App() {
                        </div>
                        
                        <div className="demo-state-selector">
-                          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>MOCK-STATE:</span>
-                          <select value={demoState} onChange={e => setDemoState(e.target.value)} title="Ändra vilket svar AI:n tvingas ge i mockupen.">
+                          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }} className="desktop-only">MOCK-STATE:</span>
+                          <select value={demoState} onChange={e => setDemoState(e.target.value)} title="Ändra vilket svar AI:n tvingas ge i mockupen." aria-label="Välj AI svarstillstånd">
                             <option value="standard">Svar med citat</option>
                             <option value="no-answer">Otillräckligt underlag</option>
                             <option value="conflict">Motstridiga källor</option>
@@ -542,7 +561,7 @@ function App() {
                                 {msg.citations && (
                                   <div className="chat-citations">
                                     {msg.citations.map((c, i) => (
-                                      <div key={i} className="citation-pill interactive" onClick={() => setPdfPage(c.page)} title={`Gå till sida ${c.page}`}>
+                                      <div key={i} className="citation-pill interactive" onClick={() => setPdfPage(c.page)} title={`Gå till sida ${c.page}`} tabIndex={0} role="button" onKeyDown={e => e.key === 'Enter' && setPdfPage(c.page)}>
                                         <span className="citation-number">[{i + 1}]</span>
                                         <span className="citation-text">"{c.quote}"</span>
                                         <span className="citation-source">— s.{c.page}</span>
@@ -577,7 +596,7 @@ function App() {
                           placeholder={`Fråga om ${selectedDocument.name}...`}
                           disabled={workspaceChatBusy}
                         />
-                        <button className="chat-send-btn" onClick={() => executeWorkspaceChat()} disabled={workspaceChatBusy || !workspaceChatInput.trim()}>
+                        <button className="chat-send-btn" onClick={() => executeWorkspaceChat()} disabled={workspaceChatBusy || !workspaceChatInput.trim()} aria-label="Skicka fråga">
                           {workspaceChatBusy ? <Loader2 size={18} className="spin"/> : <ArrowRight size={18} />}
                         </button>
                       </div>
@@ -593,6 +612,7 @@ function App() {
         {/* MAIN APPLICATION (Visible when NO document is selected) */}
         {!selectedDocument && (
           <main className="main-content">
+            {/* Omitted Home/Search/Chat logic from earlier mockup to keep code cleaner, but I should keep them intact if the user wants to navigate back */}
             {currentTab === 'home' && (
               <div className="tab-content" style={{ maxWidth: '900px' }}>
                 <div className="hero-section" style={{ textAlign: 'center', margin: '20px 0 40px 0' }}>
@@ -618,47 +638,45 @@ function App() {
                   </div>
                 </div>
 
-                {/* Kräver uppmärksamhet */}
                 <div style={{ marginBottom: '32px' }}>
                   <h3 style={{ fontSize: '16px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--status-warning)' }}>
                     <AlertTriangle size={18} /> Kräver din uppmärksamhet
                   </h3>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px' }}>
-                    <div className="interactive-card" onClick={() => { setCurrentTab('docs'); setDocFilter('granskas'); }}>
+                  <div className="dashboard-grid">
+                    <button className="interactive-card" onClick={() => { setCurrentTab('docs'); setDocFilter('granskas'); setDocsSearchQuery(''); }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div className="status-badge warning">{filterCounts.granskas} Dokument</div>
                         <ArrowUpRight size={16} color="var(--text-secondary)" />
                       </div>
-                      <div style={{ marginTop: '12px', fontSize: '16px', fontWeight: '500' }}>Väntar på kvalitetskontroll</div>
-                      <div style={{ marginTop: '4px', fontSize: '13px', color: 'var(--text-secondary)' }}>Maskinell extraktion är klar, men mänsklig verifiering saknas.</div>
-                    </div>
-                    <div className="interactive-card" onClick={() => { setCurrentTab('docs'); setDocFilter('bevakningar'); }}>
+                      <div style={{ marginTop: '12px', fontSize: '16px', fontWeight: '500', textAlign: 'left' }}>Väntar på kvalitetskontroll</div>
+                      <div style={{ marginTop: '4px', fontSize: '13px', color: 'var(--text-secondary)', textAlign: 'left' }}>Maskinell extraktion är klar, men mänsklig verifiering saknas.</div>
+                    </button>
+                    <button className="interactive-card" onClick={() => { setCurrentTab('docs'); setDocFilter('bevakningar'); setDocsSearchQuery(''); }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                         <div className="status-badge warning">{filterCounts.bevakningar} Dokument</div>
                         <ArrowUpRight size={16} color="var(--text-secondary)" />
                       </div>
-                      <div style={{ marginTop: '12px', fontSize: '16px', fontWeight: '500' }}>Innehåller aktiva bevakningar</div>
-                      <div style={{ marginTop: '4px', fontSize: '13px', color: 'var(--text-secondary)' }}>Håll koll på datum och tidsfrister.</div>
-                    </div>
+                      <div style={{ marginTop: '12px', fontSize: '16px', fontWeight: '500', textAlign: 'left' }}>Innehåller aktiva bevakningar</div>
+                      <div style={{ marginTop: '4px', fontSize: '13px', color: 'var(--text-secondary)', textAlign: 'left' }}>Håll koll på datum och tidsfrister.</div>
+                    </button>
                   </div>
                 </div>
 
-                {/* Översikt */}
-                <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: '24px' }}>
+                <div className="dashboard-grid split">
                   <div className="glass-panel" style={{ padding: '24px' }}>
                     <h3 style={{ fontSize: '16px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <Folders size={18} /> Senaste Dokument
                     </h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                       {MOCK_DOCUMENTS.slice(0, 3).map(doc => (
-                        <div key={doc.id} className="interactive-row" onClick={() => openDocument(doc.id)} tabIndex={0}>
-                          <FileText size={16} color="var(--text-secondary)" />
+                        <button key={doc.id} className="interactive-row text-left" onClick={() => openDocument(doc.id)} aria-label={`Öppna ${doc.name}`}>
+                          <FileText size={16} color="var(--text-secondary)" style={{ flexShrink: 0 }} />
                           <span style={{ fontSize: '14px', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{doc.name}</span>
-                          <span className={`status-text ${doc.qa === 'Klar' ? 'ok' : 'warning'}`}>{doc.qa}</span>
-                        </div>
+                          <span className={`status-text ${doc.qa === 'Granskad' ? 'ok' : 'warning'}`}>{doc.qa}</span>
+                        </button>
                       ))}
                     </div>
-                    <button className="link-button" onClick={() => { setCurrentTab('docs'); setDocFilter('alla'); }} style={{ marginTop: '16px' }}>Visa alla dokument →</button>
+                    <button className="link-button" onClick={() => { setCurrentTab('docs'); setDocFilter('alla'); setDocsSearchQuery(''); }} style={{ marginTop: '16px' }}>Visa alla dokument →</button>
                   </div>
 
                   <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center' }}>
@@ -674,86 +692,160 @@ function App() {
             )}
 
             {currentTab === 'docs' && (
-              <div className="tab-content" style={{ maxWidth: '1200px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
-                  <div>
-                    <h2 style={{ fontSize: '24px', fontWeight: '600' }}>Dokument</h2>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px' }}>Hantera uppladdningar, kvalitetskontroll och bevakningar.</p>
+              <div className="tab-content docs-overview" style={{ maxWidth: '1200px' }}>
+                <header className="page-header">
+                  <div className="page-header-text">
+                    <h2 style={{ fontSize: '24px', fontWeight: '600', margin: 0 }}>Dokument</h2>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px', margin: '4px 0 0 0' }}>Hantera systembearbetning, kvalitetskontroll och aktiva bevakningar.</p>
                   </div>
-                  <button className="primary-action-btn">
+                  <button className="primary-action-btn desktop-only" onClick={() => alert('Endast mockup: Filuppladdning är inte implementerad i denna vy.')} title="Mockup: Ladda upp är avstängt">
                     <Upload size={16} /> Ladda upp dokument
                   </button>
-                </div>
+                </header>
 
-                <div className="docs-filter-bar">
-                  <div style={{ display: 'flex', gap: '8px' }}>
+                <div className="docs-control-bar">
+                  <div className="search-input-small responsive-search">
+                    <SearchIcon size={16} />
+                    <input 
+                      type="text" 
+                      placeholder="Sök dokumentnamn..." 
+                      value={docsSearchQuery}
+                      onChange={(e) => setDocsSearchQuery(e.target.value)}
+                      aria-label="Sök dokument"
+                    />
+                    {docsSearchQuery && (
+                      <button className="icon-action-btn clear-search" onClick={() => setDocsSearchQuery('')} aria-label="Rensa sökning">
+                        <X size={14} />
+                      </button>
+                    )}
+                  </div>
+                  
+                  <div className="filter-pill-container">
                     <button className={`filter-pill ${docFilter === 'alla' ? 'active' : ''}`} onClick={() => setDocFilter('alla')}>Alla ({filterCounts.alla})</button>
                     <button className={`filter-pill warning ${docFilter === 'granskas' ? 'active' : ''}`} onClick={() => setDocFilter('granskas')}>Behöver granskas ({filterCounts.granskas})</button>
                     <button className={`filter-pill warning ${docFilter === 'bevakningar' ? 'active' : ''}`} onClick={() => setDocFilter('bevakningar')}>Har bevakningar ({filterCounts.bevakningar})</button>
                     <button className={`filter-pill ${docFilter === 'behandlas' ? 'active' : ''}`} onClick={() => setDocFilter('behandlas')}>Behandlas ({filterCounts.behandlas})</button>
-                    <button className={`filter-pill ok ${docFilter === 'klara' ? 'active' : ''}`} onClick={() => setDocFilter('klara')}>Klara ({filterCounts.klara})</button>
-                  </div>
-                  <div className="search-input-small">
-                    <SearchIcon size={16} />
-                    <input type="text" placeholder="Sök dokumentnamn..." />
+                    <button className={`filter-pill ok ${docFilter === 'klara' ? 'active' : ''}`} onClick={() => setDocFilter('klara')}>Granskade ({filterCounts.klara})</button>
                   </div>
                 </div>
 
-                <div className="glass-panel" style={{ overflow: 'hidden' }}>
-                  <table className="docs-table">
-                    <thead>
-                      <tr>
-                        <th>Dokument</th>
-                        <th>Uppladdat</th>
-                        <th>Status</th>
-                        <th>Sidor</th>
-                        <th>Kvalitetskontroll</th>
-                        <th>Bevakningar</th>
-                        <th>Åtgärd</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {filteredDocs.map(doc => (
-                        <tr key={doc.id} className="interactive-table-row" onClick={() => openDocument(doc.id)} tabIndex={0}>
-                          <td style={{ fontWeight: '500', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                             <FileText size={16} color="var(--text-secondary)" /> {doc.name}
-                          </td>
-                          <td style={{ color: 'var(--text-secondary)' }}>{doc.date}</td>
-                          <td>
-                            {doc.status === 'Klar' ? (
-                              <span className="status-badge ok"><CheckCircle2 size={12}/> Klar</span>
-                            ) : (
-                              <span className="status-badge processing"><Loader2 size={12} className="spin"/> Behandlas</span>
-                            )}
-                          </td>
-                          <td>{doc.pages}</td>
-                          <td>
-                            {doc.qa === 'Klar' ? (
-                              <span className="status-text ok"><CheckCircle2 size={14}/> {doc.qa}</span>
-                            ) : doc.qa === 'Behöver granskas' ? (
-                              <span className="status-text warning"><AlertTriangle size={14}/> {doc.qa}</span>
-                            ) : (
-                              <span className="status-text muted"><Clock size={14}/> {doc.qa}</span>
-                            )}
-                          </td>
-                          <td>
-                             {doc.bevakningar > 0 ? (
-                               <span className="status-badge warning" style={{ background: 'transparent', border: '1px solid var(--status-warning)', color: 'var(--status-warning)' }}>{doc.bevakningar} st</span>
-                             ) : <span style={{ color: 'var(--text-muted)' }}>-</span>}
-                          </td>
-                          <td>
-                             <button className="icon-action-btn" aria-label="Öppna dokument"><ChevronRight size={18}/></button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                <div className="docs-collection-container">
+                  {filteredDocs.length === 0 ? (
+                    <div className="docs-empty-state">
+                      <FileText size={48} color="var(--panel-border)" style={{ marginBottom: '16px' }} />
+                      <h3>Inga dokument matchar din sökning</h3>
+                      <p>Prova att ändra sökordet eller ditt filter.</p>
+                      {(docsSearchQuery || docFilter !== 'alla') && (
+                        <button className="secondary-action-btn" onClick={() => { setDocsSearchQuery(''); setDocFilter('alla'); }}>
+                          Rensa sökning och filter
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    <>
+                      {/* Desktop Table */}
+                      <table className="docs-table desktop-only">
+                        <thead>
+                          <tr>
+                            <th>Dokumentnamn</th>
+                            <th>Uppladdat</th>
+                            <th>Bearbetning</th>
+                            <th>Kvalitetskontroll</th>
+                            <th>Bevakningar</th>
+                            <th className="action-col"><span className="visually-hidden">Öppna</span></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {filteredDocs.map(doc => (
+                            <tr 
+                              key={doc.id} 
+                              className="interactive-table-row" 
+                              onClick={() => openDocument(doc.id)} 
+                              tabIndex={0}
+                              onKeyDown={(e) => e.key === 'Enter' && openDocument(doc.id)}
+                              aria-label={`Öppna ${doc.name}`}
+                              role="button"
+                            >
+                              <td className="doc-name-cell">
+                                 <FileText size={16} color="var(--text-secondary)" className="doc-icon" /> 
+                                 <span className="truncate">{doc.name}</span>
+                              </td>
+                              <td className="meta-cell">{doc.date}</td>
+                              <td>
+                                {doc.status === 'Färdigbehandlad' ? (
+                                  <span className="status-badge ok"><CheckCircle2 size={12}/> Färdigbehandlad</span>
+                                ) : (
+                                  <span className="status-badge processing"><Loader2 size={12} className="spin"/> Behandlas</span>
+                                )}
+                              </td>
+                              <td>
+                                {doc.qa === 'Granskad' ? (
+                                  <span className="status-text ok"><CheckCircle2 size={14}/> {doc.qa}</span>
+                                ) : doc.qa === 'Behöver granskas' ? (
+                                  <span className="status-text warning"><AlertTriangle size={14}/> {doc.qa}</span>
+                                ) : (
+                                  <span className="status-text muted"><Clock size={14}/> {doc.qa}</span>
+                                )}
+                              </td>
+                              <td>
+                                 {doc.bevakningar > 0 ? (
+                                   <span className="status-badge warning outline">{getBevakningLabel(doc.bevakningar)}</span>
+                                 ) : <span className="text-muted">{getBevakningLabel(0)}</span>}
+                              </td>
+                              <td className="action-col">
+                                 <ChevronRight size={18} className="chevron-icon" />
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+
+                      {/* Mobile List View */}
+                      <div className="docs-mobile-list mobile-only">
+                        {filteredDocs.map(doc => (
+                          <button 
+                            key={doc.id} 
+                            className="doc-mobile-card" 
+                            onClick={() => openDocument(doc.id)}
+                            aria-label={`Öppna ${doc.name}`}
+                          >
+                            <div className="doc-card-header">
+                              <FileText size={16} color="var(--text-secondary)" />
+                              <h4 className="truncate">{doc.name}</h4>
+                            </div>
+                            <div className="doc-card-meta">
+                               <span>{doc.date}</span>
+                               <span>·</span>
+                               {doc.status === 'Färdigbehandlad' ? (
+                                  <span className="status-text ok">Färdig</span>
+                                ) : (
+                                  <span className="status-text muted">Laddar</span>
+                                )}
+                            </div>
+                            <div className="doc-card-statuses">
+                               {doc.qa === 'Granskad' ? (
+                                  <span className="status-badge ok"><CheckCircle2 size={10}/> Granskad</span>
+                                ) : (
+                                  <span className="status-badge warning"><AlertTriangle size={10}/> Granska</span>
+                                )}
+                                {doc.bevakningar > 0 && (
+                                  <span className="status-badge warning outline">{getBevakningLabel(doc.bevakningar)}</span>
+                                )}
+                            </div>
+                            <ChevronRight size={16} className="chevron-icon" />
+                          </button>
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             )}
 
+            {/* Omitted the rest of search/chat for brevity, identical logic */}
             {currentTab === 'search' && (
-              <div className="tab-content" style={{ maxWidth: '800px', margin: '0 auto' }}>
+               // Kept simple for now as it wasn't the main focus, but keeping it functional
+               <div className="tab-content" style={{ maxWidth: '800px', margin: '0 auto' }}>
                 <div className="search-top-bar" style={{ marginBottom: '24px' }}>
                   <div className="search-input-large-wrapper">
                     <SearchIcon size={20} color="var(--text-secondary)" />
@@ -770,7 +862,7 @@ function App() {
                   </div>
                   
                   {!searchIsLoading && searchResults && (
-                    <div className="search-summary-text" style={{ display: 'flex', justifyContent: 'space-between' }}>
+                    <div className="search-summary-text" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
                       <span>Hittade {searchResults.totalPassages} träffar i {searchResults.totalDocuments} dokument.</span>
                       <button onClick={() => executeGeneralChat(searchQuery)} className="link-button ai">Fråga AI:n istället <Sparkles size={14}/></button>
                     </div>
@@ -809,17 +901,17 @@ function App() {
                 )}
               </div>
             )}
-
+            
             {currentTab === 'chat' && (
               <div className="tab-content">
                 <div className="chat-container">
                   <div className="chat-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
                       <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Sparkles color="var(--ai-accent)" size={24}/> Global AI-assistent (MOCK)</h2>
-                      <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginTop: '4px' }}>Få svar baserade på alla föreningens indexerade dokument.</p>
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '14px', margin: '4px 0 0 0' }}>Få svar baserade på alla föreningens indexerade dokument.</p>
                     </div>
                     
-                    <div className="chat-scope-selector">
+                    <div className="chat-scope-selector desktop-only">
                        <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Söker i:</span>
                        <button className="scope-btn" title="Klicka för att välja vilka dokument som ska sökas">
                          {chatScope} <ChevronRight size={14}/>
@@ -855,7 +947,7 @@ function App() {
                               {msg.citations && (
                                 <div className="chat-citations">
                                   {msg.citations.map((c, i) => (
-                                    <div key={i} className="citation-pill interactive" onClick={() => openDocument('d2', c.page, 'read')} title="Öppna källdokumentet">
+                                    <div key={i} className="citation-pill interactive" onClick={() => openDocument('d2', c.page, 'read')} title="Öppna källdokumentet" tabIndex={0} role="button" onKeyDown={e => e.key === 'Enter' && openDocument('d2', c.page, 'read')}>
                                       <span className="citation-number">[{i + 1}]</span>
                                       <span className="citation-text">"{c.quote}"</span>
                                       <span className="citation-source">— {c.document_name} s.{c.page}</span>
@@ -900,7 +992,6 @@ function App() {
             )}
           </main>
         )}
-
       </div>
     </div>
   );
