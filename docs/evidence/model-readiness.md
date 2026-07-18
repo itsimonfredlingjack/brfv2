@@ -122,9 +122,10 @@ generation model and leave retrieval on the offline fallback.
 
 ## Suite status after this task
 
-`cd backend && uv run pytest -q` → **279 passed, 1 skipped** (was 259 passed, 1 skipped at the
-branch point; +20 new tests: 13 for the `ANSWER_SCHEMA` multi-span citation-item shape, 7 for
-`compute_verdict`'s readiness logic on fixed synthetic rows).
+`cd backend && uv run pytest -q` → **282 passed, 1 skipped** (was 259 passed, 1 skipped at the
+branch point; +23 new tests: 13 for the `ANSWER_SCHEMA` multi-span citation-item shape, 10 for
+`compute_verdict`'s readiness logic on fixed synthetic rows, including the fragment-less/empty-
+input fix below).
 `uv run pytest -q tests/test_isolation.py tests/test_lifecycle.py tests/test_auth.py` →
 **47 passed** (unchanged).
 

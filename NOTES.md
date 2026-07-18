@@ -105,3 +105,45 @@
   cheap hosted provider; `BRF_MODE=pilot` is the hard gate that forces the self-hosted,
   EU-resident path the moment real data is in play. Why it mattered: the constraint travels with
   the data, so the default should too — otherwise you pay production's costs in dev.
+
+- **2026-07-18 — The user-facing "max response length" is an answer budget, not an envelope
+  budget.** A quote-dense multi-span citation set could push the whole JSON envelope (answer text
+  plus every citation's `quote`/`quotes`) past `max_tokens` even when the answer text itself was
+  short, truncating mid-JSON and refusing with a generic provider error that blamed the wrong
+  setting. Fix: send the provider `maxResponseLength` plus a separate, documented headroom
+  constant as the real `max_tokens`, and reword the truncation error to name the envelope budget
+  instead of the user-facing setting. Why it mattered: a setting's user-facing meaning ("how long
+  should the answer be") has to stay true even though the wire-level budget the provider actually
+  sees must be larger.
+
+- **2026-07-18 — OCR ingestion is an adapter into the SAME verification chain, not a second
+  path.** Scanned PDFs run through `app.ocr.ocr_pdf` into the identical `PageData`/`Word`
+  structures `extract.extract_pdf` produces from a text layer, so chunking, indexing, citation
+  resolution, and highlighting are all unmodified and unaware the source was ever a scan — the
+  only OCR-specific concessions live upstream, at ingestion (the confidence gate, blank-page
+  tolerance, and the `approximate` flag on `CitationOut`). Why it mattered: real scans measured
+  clean end to end (49/49 payloads verified, 18/18 corruption probes rejected) precisely because
+  verification itself never had to special-case OCR — the constraint against weakening
+  verification for scanned text was met by construction, not by discipline.
+
+- **2026-07-18 — A scripted provider can prove the whole pipeline up to the model boundary.**
+  With `FakeLLM` standing in for generation, every other stage — real ingestion, real retrieval,
+  real multi-span verification, real highlight resolution — was proven end to end on the real
+  corpus across three distinct fragment-fact classes, with both a corruption probe and a
+  cross-chunk provenance probe holding. The one thing a scripted provider cannot prove is whether
+  a live model will spontaneously emit the `quotes[]` payload for these facts; that gap is now
+  isolated to a single question, answerable in one command by pointing a candidate model at the
+  model-readiness harness. Why it mattered: "not proven" shrank from "the mechanism, the
+  retrieval, and the model are all unknowns" down to "everything works except one model
+  capability" — a much smaller, much more honest gap to report.
+
+- **2026-07-18 — Pattern sweeps alone don't prove no leak; check against the extracted corpus
+  text.** An org-number/date regex sweep over the branch diff missed a verbatim appendix-table row
+  that a human reviewer caught by eye — regexes only catch the SHAPES of PII, not arbitrary real
+  prose. Fix: extract the full text of every corpus document (PyMuPDF for the born-digital PDF,
+  the app's own OCR path for the scans) to a gitignored scratch location, and cross-check every
+  ≥4-consecutive-word run added on the branch against it through the app's own normalizer (the
+  same equality the citation verifier itself uses) — validated with an injected positive control
+  before trusting a "zero hits" result. Why it mattered: a regex sweep proves the absence of known
+  shapes; a corpus cross-check proves the absence of the actual text, which is the guarantee that
+  was actually needed.
