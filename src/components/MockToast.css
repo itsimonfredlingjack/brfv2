@@ -1,0 +1,39 @@
+.mock-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: rgba(15, 15, 18, 0.95);
+  border: 1px solid var(--panel-border);
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  padding: 12px 20px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+  z-index: 9999;
+  animation: slideIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.mock-toast.success {
+  border-left: 4px solid var(--status-ok);
+}
+.mock-toast.error {
+  border-left: 4px solid var(--status-error);
+}
+
+@keyframes slideIn {
+  from { transform: translateY(100px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+@media (max-width: 768px) {
+  .mock-toast {
+    bottom: 24px;
+    left: 24px;
+    right: 24px;
+    justify-content: center;
+  }
+}
