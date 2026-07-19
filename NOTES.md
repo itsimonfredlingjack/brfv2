@@ -235,3 +235,21 @@
   re-test would have — when a lever is blocked *only* by license, price the licensable
   substitute first, and keep model id + context length configurable so that pricing is a
   one-command measurement, not a rebuild.
+
+- **2026-07-19 — A reranker's own score is not an "is-this-the-right-row" gate; measure the
+  distributions before assuming a floor fixes wrong-row.** Reranking recovers annual-report
+  rows (licensable mmarco 14/17, bge 17/17) but reintroduces *wrong-row answers* — the model
+  citing a verbatim-real but wrong row (dominant class: `q_fee`/årsavgift-per-m², which 3 of 4
+  docs don't report as a labeled row at all, so any reranker surfaces a plausible neighbor and
+  the 12B answers instead of refusing). The assumed fix was a cross-encoder score FLOOR ("drop
+  reranked chunks below T"). Measured offline over the reranked top-6, tagged answer-bearing vs
+  distractor: the score distributions **overlap** (bge answer-bearing median 0.17 vs distractor
+  0.16; distractors reach 0.93) and the misfire distractors score *high*, not low — a floor that
+  drops them also drops most true rows. Refuted on both rerankers. Verification stayed intact
+  throughout (every citation verbatim-verified, 0 fabrication) — the failure is *relevance*, not
+  fabrication, and verification bounds only the latter. Why it mattered: "recovered more rows"
+  read as progress, but the more aggressive reranker (bge, 20/24 answered) produced the *most*
+  wrong answers; the zero-wrong-answer product is better served by refusing (rerank off) than by
+  a score gate that the data shows cannot separate right rows from confident wrong ones. The
+  real fix is grounding/answer-alignment (does the cited row's label match the question?), not
+  reranker choice or a score threshold.
