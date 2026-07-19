@@ -76,9 +76,9 @@ from scripts.reality.annual_reports import (  # noqa: E402
 )
 
 BACKEND = Path(__file__).resolve().parent.parent.parent
-DEFAULT_FOLDER = (
-    BACKEND.parent / "docs-external" / "swarm-research" / "brf-annual-reports-2026-07-18" / "sample-ars"
-)
+# Corpus lives OUTSIDE the repo (guard/corpus-isolation): a path boundary, not
+# a gitignore convention — see docs/evidence/annual-reports.md.
+DEFAULT_FOLDER = Path.home() / "brf-corpus-public" / "brf-annual-reports-2026-07-18" / "sample-ars"
 DEFAULT_RUN_JSON = BACKEND / "out" / "reality" / "annual_reports" / "annual_reports.json"
 DEFAULT_OUT = BACKEND / "out" / "reality" / "refusal_buckets"
 

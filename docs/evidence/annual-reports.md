@@ -8,7 +8,8 @@ or org numbers. Raw artifacts live in gitignored `backend/out/reality/annual_rep
 
 ## Corpus and method
 
-4 born-digital reports from the gitignored swarm-research corpus (24 PDFs), spanning three
+4 born-digital reports from the public corpus (24 PDFs, stored outside the repo under
+`~/brf-corpus-public/` — see guard/corpus-isolation), spanning three
 property-manager template families: 2 HSB (`hsb-perrongen_2024`, `hsb-taltrasten_2025`),
 1 Riksbyggen (`rb-lycksaligheten_2025`), 1 own-template (`brf-grantorp_2025`); 95 pages,
 1 700–2 130 chars/page. Runner: `backend/scripts/reality/annual_reports.py` (committed,
@@ -62,5 +63,6 @@ default topK=6; none is a citation-contract or extraction failure.
 `cd backend && BRF_EMBEDDER=hashed HF_HUB_OFFLINE=1 BRF_LLM=selfhosted \
 BRF_LLM_BASE_URL=http://127.0.0.1:8000/v1 BRF_LLM_MODEL=<serving-model-id> \
 uv run python -m scripts.reality.annual_reports`
-(requires the gitignored corpus and the self-hosted model endpoint; the script hard-fails
-on any external network connection).
+(requires the public corpus at `~/brf-corpus-public/brf-annual-reports-2026-07-18/sample-ars`
+— the script's default — and the self-hosted model endpoint; the script hard-fails on any
+external network connection).

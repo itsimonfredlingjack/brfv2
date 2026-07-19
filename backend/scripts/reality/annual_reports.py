@@ -50,9 +50,9 @@ from app.schemas import PageData  # noqa: E402
 from scripts.reality import common  # noqa: E402
 
 BACKEND = Path(__file__).resolve().parent.parent.parent
-DEFAULT_FOLDER = (
-    BACKEND.parent / "docs-external" / "swarm-research" / "brf-annual-reports-2026-07-18" / "sample-ars"
-)
+# Corpus lives OUTSIDE the repo (guard/corpus-isolation): a path boundary, not
+# a gitignore convention — see docs/evidence/annual-reports.md.
+DEFAULT_FOLDER = Path.home() / "brf-corpus-public" / "brf-annual-reports-2026-07-18" / "sample-ars"
 DEFAULT_OUT = BACKEND / "out" / "reality" / "annual_reports"
 
 DEFAULT_DOCS: list[str] = [
