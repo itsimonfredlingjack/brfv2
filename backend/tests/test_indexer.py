@@ -96,9 +96,10 @@ class TestSearchTextDrivesRankingButNotDisplay:
         ]
         idx = HybridIndex(HashedNgramEmbedder())
         idx.build(chunks, {"d1": "Doc"})
-        hits = idx.search("Zorbleckynized", weight=0.5, candidates=10, top_k=1, min_confidence=0.0)
+        hits = idx.search("Zorblecksynized", weight=0.5, candidates=10, top_k=1, min_confidence=0.0)
         assert hits[0].chunk_id == "d1:p1:c0"
         assert hits[0].text == frozen  # frozen text returned, NOT the search_text
+        assert hits[0].bm25 > 0  # BM25-fit used search_text: the term is absent from the frozen text
 
 
 class TestCompoundExpansion:
