@@ -167,3 +167,15 @@
   the honest ceiling is retrieval ranking — the citation contract, extraction order, and the
   model's judgment all held; a "make the model answer more" fix would have attacked the one part
   that was working.
+
+- **2026-07-19 — A better ranker can break a guarantee the worse ranker kept.** The
+  cross-encoder reranker fixed exactly what was diagnosed (11/13 true table rows into top-6,
+  9/13 refusals recovered live with exact highlights) — and simultaneously produced the
+  system's first wrong answers: 4 verbatim-exact citations on semantically wrong rows (fee
+  definitions instead of fee values, a non-label page), where the weaker retrieval had
+  produced honest refusals. Verbatim verification bounds fabrication, not relevance; a
+  promoted plausible-but-wrong chunk sails through it. Why it mattered: recovery count alone
+  would have called this a win and shipped it; measuring answer-QUALITY regressions
+  (wrong-row count 0→4) is what showed rerankEnabled must stay off pending a rerank-score
+  gate. The metric that guards a zero-false-answer product is wrong answers introduced, not
+  questions answered.
