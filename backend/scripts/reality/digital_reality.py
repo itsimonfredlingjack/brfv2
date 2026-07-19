@@ -66,6 +66,11 @@ def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--folder", type=Path, default=DEFAULT_FOLDER)
     ap.add_argument("--out", type=Path, default=DEFAULT_OUT)
+    ap.add_argument(
+        "--rerank",
+        action="store_true",
+        help="enable the cross-encoder rerank stage (Settings.rerankEnabled=True; rerankCandidates default 40)",
+    )
     args = ap.parse_args()
 
     audit_log, allowed = install_network_audit()
@@ -85,6 +90,9 @@ def main() -> None:
     store = Store(data_dir=tempfile.mkdtemp(prefix="brf-reality-"))
     meta = store.add_document(pdf.name, pdf.read_bytes())
     print(f"Ingested: pages={meta.pages} words={meta.words} chunks={meta.chunks}", flush=True)
+
+    if args.rerank:
+        store.update_settings(store.settings.model_copy(update={"rerankEnabled": True}))
 
     src = fitz.open(str(pdf))
     results = []
@@ -139,6 +147,7 @@ def main() -> None:
     external = [e for e in audit_log if not e["allowed"]]
     summary = {
         "pdf": pdf.name,
+        "rerank_enabled": args.rerank,
         "pages": meta.pages,
         "words": meta.words,
         "chunks": meta.chunks,

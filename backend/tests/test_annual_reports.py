@@ -11,6 +11,9 @@ offline test suite.
 
 from __future__ import annotations
 
+import contextlib
+from pathlib import Path
+
 import pytest
 
 from app.answer import ask
@@ -19,6 +22,7 @@ from app.schemas import PageData, Word
 from app.store import Store
 from scripts.reality import common
 from scripts.reality.annual_reports import (
+    _process_document,
     doc_slug,
     enforce_no_external_connections,
     find_label_line_occurrences,
@@ -254,3 +258,49 @@ class TestEndToEndRowLanding:
         # The label DOES occur on this page (proving the miss is row-level,
         # not page-level).
         assert verdict["label_pages"] == [cit.page]
+
+
+class TestRerankFlagWiring:
+    """`--rerank` must flip the temp store's own `Settings.rerankEnabled`
+    to True before any question is asked; the default run must leave it
+    untouched (False). No LLM call needed — an empty question list proves
+    the wiring without asking anything."""
+
+    def _spy_temp_store(self, monkeypatch) -> list[Store]:
+        captured: list[Store] = []
+        real_temp_store = common.temp_store
+
+        @contextlib.contextmanager
+        def spy():
+            with real_temp_store() as store:
+                captured.append(store)
+                yield store
+
+        monkeypatch.setattr(common, "temp_store", spy)
+        return captured
+
+    def _pdf_path(self, tmp_path) -> Path:
+        pdf_path = Path(tmp_path) / "doc.pdf"
+        pdf_path.write_bytes(build_pdf([[("Räntekostnader 45 000 kr", 72, 100)]]))
+        return pdf_path
+
+    def test_rerank_flag_enables_rerank_setting_before_asking(self, tmp_path, monkeypatch):
+        captured = self._spy_temp_store(monkeypatch)
+        hl_dir = tmp_path / "hl"
+        hl_dir.mkdir()
+
+        _process_document(self._pdf_path(tmp_path), "doc.pdf", "doc", [], hl_dir, rerank=True)
+
+        assert len(captured) == 1
+        assert captured[0].settings.rerankEnabled is True
+        assert captured[0].settings.rerankCandidates == 40  # unchanged default, per task brief
+
+    def test_without_rerank_flag_setting_stays_disabled(self, tmp_path, monkeypatch):
+        captured = self._spy_temp_store(monkeypatch)
+        hl_dir = tmp_path / "hl"
+        hl_dir.mkdir()
+
+        _process_document(self._pdf_path(tmp_path), "doc.pdf", "doc", [], hl_dir)  # rerank defaults to False
+
+        assert len(captured) == 1
+        assert captured[0].settings.rerankEnabled is False

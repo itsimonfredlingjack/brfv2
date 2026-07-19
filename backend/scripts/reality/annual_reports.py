@@ -252,7 +252,9 @@ def _process_question(store, meta, src, qid: str, question: str, labels: list[st
     return row
 
 
-def _process_document(pdf_path: Path, rel_doc: str, slug: str, questions: list, hl_dir: Path) -> dict:
+def _process_document(
+    pdf_path: Path, rel_doc: str, slug: str, questions: list, hl_dir: Path, *, rerank: bool = False
+) -> dict:
     doc_report: dict = {"path": rel_doc}
     if not pdf_path.exists():
         doc_report["ingest_error"] = f"file not found: {rel_doc}"
@@ -266,6 +268,9 @@ def _process_document(pdf_path: Path, rel_doc: str, slug: str, questions: list, 
         except Exception as exc:  # the failure IS a finding — keep going
             doc_report["ingest_error"] = repr(exc)
             return doc_report
+
+        if rerank:
+            store.update_settings(store.settings.model_copy(update={"rerankEnabled": True}))
 
         doc_report.update(pages=meta.pages, words=meta.words, chunks=meta.chunks, source=meta.source)
         if meta.source != "digital":
@@ -345,6 +350,11 @@ def main() -> None:
     ap.add_argument("--docs", nargs="+", default=list(DEFAULT_DOCS))
     ap.add_argument("--out", type=Path, default=DEFAULT_OUT)
     ap.add_argument("--limit-questions", type=int, default=None, help="cap the question set (cheap iteration only)")
+    ap.add_argument(
+        "--rerank",
+        action="store_true",
+        help="enable the cross-encoder rerank stage (Settings.rerankEnabled=True; rerankCandidates default 40)",
+    )
     args = ap.parse_args()
 
     audit_log, allowed = common.install_network_audit()
@@ -359,7 +369,9 @@ def main() -> None:
     for rel_doc in args.docs:
         slug = doc_slug(rel_doc)
         print(f"== {slug} ({rel_doc}) ==", flush=True)
-        documents[slug] = _process_document(args.folder / rel_doc, rel_doc, slug, questions, hl_dir)
+        documents[slug] = _process_document(
+            args.folder / rel_doc, rel_doc, slug, questions, hl_dir, rerank=args.rerank
+        )
         d = documents[slug]
         if "ingest_error" in d:
             print(f"{slug}: INGEST FAILED {d['ingest_error']}", flush=True)
@@ -370,7 +382,12 @@ def main() -> None:
     args.out.mkdir(parents=True, exist_ok=True)
     out_json = args.out / "annual_reports.json"
     out_json.write_text(
-        json.dumps({"documents": documents, "summary": summary}, ensure_ascii=False, indent=2), "utf-8"
+        json.dumps(
+            {"rerank_enabled": args.rerank, "documents": documents, "summary": summary},
+            ensure_ascii=False,
+            indent=2,
+        ),
+        "utf-8",
     )
     print(f"DONE → {out_json}", flush=True)
     print(json.dumps(summary, ensure_ascii=False, indent=2), flush=True)
