@@ -248,3 +248,11 @@ class TestConfigurableModel:
         from app.rerank import model_name
 
         assert model_name() == "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"
+
+    def test_max_length_default_and_override(self, monkeypatch):
+        from app.rerank import max_length
+
+        monkeypatch.delenv("BRF_RERANK_MAX_LENGTH", raising=False)
+        assert max_length() == 1024  # jina default
+        monkeypatch.setenv("BRF_RERANK_MAX_LENGTH", "512")
+        assert max_length() == 512  # XLM-R-based models cap here

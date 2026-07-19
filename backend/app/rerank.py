@@ -28,11 +28,19 @@ logger = logging.getLogger("brf.rerank")
 # cross-encoder) without code change. Read at CALL time so a test/measurement can
 # select the model via the environment; the lazy singleton still loads only once.
 DEFAULT_MODEL_NAME = "jinaai/jina-reranker-v2-base-multilingual"
-MAX_LENGTH = 1024
+DEFAULT_MAX_LENGTH = 1024
 
 
 def model_name() -> str:
     return os.environ.get("BRF_RERANK_MODEL", DEFAULT_MODEL_NAME)
+
+
+def max_length() -> int:
+    """Tokenizer truncation length. Overridable via BRF_RERANK_MAX_LENGTH because
+    it is model-bound: jina supports 1024, but XLM-R-based cross-encoders
+    (e.g. cross-encoder/mmarco-mMiniLMv2) cap at 512 positions and overflow
+    above that. Set per model when swapping via BRF_RERANK_MODEL."""
+    return int(os.environ.get("BRF_RERANK_MAX_LENGTH", str(DEFAULT_MAX_LENGTH)))
 
 # Lazy singleton, like llm.py's `_provider` — loaded once, on first use.
 _model = None
@@ -57,7 +65,7 @@ def _load_model():
     device = _resolve_device()
     name = model_name()
     logger.info("Laddar cross-encoder-omrankare %s på %s", name, device)
-    _model = CrossEncoder(name, max_length=MAX_LENGTH, trust_remote_code=True, device=device)
+    _model = CrossEncoder(name, max_length=max_length(), trust_remote_code=True, device=device)
     return _model
 
 
