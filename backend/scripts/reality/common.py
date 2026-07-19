@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import contextlib
 import tempfile
+import uuid
 from pathlib import Path
 
 import fitz  # noqa: E402  (PyMuPDF)
@@ -73,9 +74,18 @@ def temp_store():
     `Store.add_document` dispatch the API uses. Real PDF bytes and OCR
     extraction are written under the temp dir for the run's duration only;
     the directory (and any copy of real document content in it) is removed
-    on context exit."""
-    with tempfile.TemporaryDirectory(prefix="brf-reality-") as td:
-        yield Store(data_dir=td)
+    on context exit.
+
+    Corpus-isolation guard (CI2): declared `corpus_origin="public_scraped"` —
+    reality runs never touch real customer tenants — and named with the same
+    `val-` prefix real public_scraped tenants must use, so a leftover temp
+    dir is self-describing. This bypasses TenantRegistry entirely (there is
+    no registered auth tenant here); the naming rule itself is only
+    structurally enforced at TenantRegistry.create, not at bare Store
+    construction, so this is a convention followed here for consistency, not
+    a second enforcement point."""
+    with tempfile.TemporaryDirectory(prefix=f"val-tmp-{uuid.uuid4().hex[:8]}-") as td:
+        yield Store(data_dir=td, corpus_origin="public_scraped")
 
 
 def ingest(store: Store, pdf_path: Path) -> DocumentMeta:

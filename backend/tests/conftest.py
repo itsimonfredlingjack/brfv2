@@ -34,8 +34,8 @@ def two_tenant_app(tmp_path):
     app = create_app(registry=registry, auth=auth, data_root=tmp_path)
     client = TestClient(app)
 
-    registry.create("Brf A", "brf-a")
-    registry.create("Brf B", "brf-b")
+    registry.create("Brf A", "synthetic", "brf-a")
+    registry.create("Brf B", "synthetic", "brf-b")
 
     admin_a = auth.create_user("admin-a@a.se", "lösenord-a-admin", "Admin A")
     member_a = auth.create_user("member-a@a.se", "lösenord-a-medlem", "Member A")

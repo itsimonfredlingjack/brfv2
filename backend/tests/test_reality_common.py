@@ -19,6 +19,7 @@ from scripts.reality.common import (
     multi_span_payload,
     sample_chunks,
     single_span_payload,
+    temp_store,
 )
 from tests.pdf_fixtures import build_pdf
 
@@ -168,6 +169,27 @@ class TestAliasForChunk:
         assert alias_a == "K1"
         assert len(hits_a) == 1
         assert alias_b is None  # B's chunk is outranked, not just absent-by-id
+
+
+class TestTempStore:
+    """CI2 corpus-isolation guard: reality runs never touch real customer
+    tenants, so temp_store's throwaway Store must always declare
+    public_scraped, named with the val- prefix real public_scraped tenants
+    use."""
+
+    def test_declares_public_scraped_origin(self):
+        with temp_store() as store:
+            assert store.corpus_origin == "public_scraped"
+
+    def test_directory_uses_val_prefix(self):
+        with temp_store() as store:
+            assert store.data_dir.name.startswith("val-tmp-")
+
+    def test_directory_removed_on_exit(self):
+        with temp_store() as store:
+            path = store.data_dir
+            assert path.exists()
+        assert not path.exists()
 
 
 class TestAssertZeroConnections:

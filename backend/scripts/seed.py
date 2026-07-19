@@ -84,7 +84,7 @@ def seed_demo(registry, auth) -> dict:
 
     tenants: dict[str, int] = {}
     try:
-        a = registry.create("Brf Gjutformen 12", "gjutformen-12")
+        a = registry.create("Brf Gjutformen 12", "synthetic", "gjutformen-12")
     except AuthError:
         a = "gjutformen-12"
     store_a = registry.get(a)
@@ -97,7 +97,7 @@ def seed_demo(registry, auth) -> dict:
         DOCUMENTS_B = None
     if DOCUMENTS_B:
         try:
-            b = registry.create("Brf Sjöutsikten 7", "sjoutsikten-7")
+            b = registry.create("Brf Sjöutsikten 7", "synthetic", "sjoutsikten-7")
         except AuthError:
             b = "sjoutsikten-7"
         store_b = registry.get(b)

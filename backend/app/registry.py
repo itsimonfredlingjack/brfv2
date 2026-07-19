@@ -14,13 +14,36 @@ from __future__ import annotations
 import logging
 import shutil
 import threading
+import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 
 from .auth import BRF_ID_RE, AuthStore
+from .schemas import CORPUS_ORIGINS, CorpusOrigin
 from .store import Store
 
 logger = logging.getLogger("brf.registry")
+
+_VAL_PREFIX = "val-"
+
+
+def _check_naming(brf_id: str, corpus_origin: CorpusOrigin) -> None:
+    """Naming rule (CI2): a tenant's id namespace must match its declared
+    corpus, so the two are never accidentally out of sync. `synthetic` has no
+    naming constraint (the two pre-existing demo tenants are grandfathered by
+    virtue of that — there is nothing to grandfather, since synthetic origin
+    was never naming-constrained)."""
+    is_val = brf_id.startswith(_VAL_PREFIX)
+    if corpus_origin == "public_scraped" and not is_val:
+        raise ValueError(
+            f"corpus_origin 'public_scraped' kräver ett brf_id som börjar med "
+            f"'{_VAL_PREFIX}' (fick {brf_id!r})."
+        )
+    if corpus_origin == "customer" and is_val:
+        raise ValueError(
+            f"corpus_origin 'customer' får inte ha ett brf_id som börjar med "
+            f"'{_VAL_PREFIX}' (fick {brf_id!r})."
+        )
 
 
 class TenantRegistry:
@@ -37,8 +60,14 @@ class TenantRegistry:
         # separators, no dots — so it cannot traverse out of tenants_dir.
         return self.tenants_dir / brf_id
 
-    def get(self, brf_id: str) -> Store | None:
-        """The tenant's Store, or None for unknown/invalid ids."""
+    def get(self, brf_id: str, *, corpus_origin: CorpusOrigin | None = None) -> Store | None:
+        """The tenant's Store, or None for unknown/invalid ids.
+
+        `corpus_origin` only matters the first time a given tenant's Store is
+        constructed after this directory came into existence (i.e. right
+        after `create()`) — once tenant_meta.json exists on disk it is
+        authoritative and this argument is ignored (see
+        Store._load_or_init_corpus_origin)."""
         if not BRF_ID_RE.match(brf_id or ""):
             return None
         with self._lock:
@@ -47,13 +76,21 @@ class TenantRegistry:
                 return store
             if self.auth.get_tenant(brf_id) is None:
                 return None
-            store = Store(data_dir=self._tenant_dir(brf_id))
+            store = Store(data_dir=self._tenant_dir(brf_id), corpus_origin=corpus_origin)
             self._stores[brf_id] = store
             return store
 
-    def create(self, name: str, brf_id: str | None = None) -> str:
+    def create(self, name: str, corpus_origin: CorpusOrigin, brf_id: str | None = None) -> str:
+        """Create a new tenant. `corpus_origin` is REQUIRED — no default —
+        every tenant must declare which of the three corpora (customer,
+        public_scraped, synthetic) it is, up front, and the naming rule below
+        keeps the id namespace honest about it."""
+        if corpus_origin not in CORPUS_ORIGINS:
+            raise ValueError(f"Ogiltigt corpus_origin: {corpus_origin!r} (tillåtna: {CORPUS_ORIGINS}).")
+        brf_id = brf_id or uuid.uuid4().hex[:12]
+        _check_naming(brf_id, corpus_origin)
         brf_id = self.auth.create_tenant(name, brf_id)
-        self.get(brf_id)  # eager init so the directory exists immediately
+        self.get(brf_id, corpus_origin=corpus_origin)  # eager init so the directory exists immediately
         return brf_id
 
     def delete(self, brf_id: str) -> bool:

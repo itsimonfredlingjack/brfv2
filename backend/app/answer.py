@@ -222,6 +222,7 @@ def ask(store: Store, question: str, provider: LLMProvider | None = None) -> Ask
                     # digital ones (never misplaced) — flag so the UI can
                     # mark the highlight as approximate.
                     approximate=doc_meta is not None and doc_meta.source == "scanned",
+                    corpus_origin=doc_meta.corpus_origin if doc_meta is not None else None,
                 )
             )
         else:

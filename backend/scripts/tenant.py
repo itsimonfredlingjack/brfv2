@@ -2,7 +2,8 @@
 There is deliberately no public signup at pilot scale.
 
 Usage:
-    uv run python -m scripts.tenant create-tenant --name "Brf Exempel 1" [--brf-id exempel-1]
+    uv run python -m scripts.tenant create-tenant --name "Brf Exempel 1" \
+        --corpus-origin customer [--brf-id exempel-1]
     uv run python -m scripts.tenant add-user --email x@y.se --password '...' [--name "..."]
     uv run python -m scripts.tenant add-membership --email x@y.se --brf-id exempel-1 --role admin
     uv run python -m scripts.tenant delete-tenant --brf-id exempel-1 --yes
@@ -28,6 +29,12 @@ def main() -> None:
 
     p = sub.add_parser("create-tenant")
     p.add_argument("--name", required=True)
+    p.add_argument(
+        "--corpus-origin",
+        required=True,
+        choices=["customer", "public_scraped", "synthetic"],
+        help="which of the three corpora this tenant belongs to — required, no default (CI2 guard)",
+    )
     p.add_argument("--brf-id", default=None)
 
     p = sub.add_parser("add-user")
@@ -53,8 +60,8 @@ def main() -> None:
 
     try:
         if args.cmd == "create-tenant":
-            brf_id = registry.create(args.name, args.brf_id)
-            print(f"Skapade förening '{args.name}' → brf_id={brf_id}")
+            brf_id = registry.create(args.name, args.corpus_origin, args.brf_id)
+            print(f"Skapade förening '{args.name}' (corpus_origin={args.corpus_origin}) → brf_id={brf_id}")
         elif args.cmd == "add-user":
             uid = auth.create_user(args.email, args.password, args.name)
             print(f"Skapade användare {args.email} → id={uid}")
@@ -78,8 +85,9 @@ def main() -> None:
             for t in registry.list():
                 store = registry.get(t["brf_id"])
                 docs = len(store.documents) if store else 0
-                print(f"{t['brf_id']:24s} {t['name']:32s} {docs} dokument")
-    except AuthError as exc:
+                origin = store.corpus_origin if store else "?"
+                print(f"{t['brf_id']:24s} {t['name']:32s} {origin:16s} {docs} dokument")
+    except (AuthError, ValueError) as exc:
         sys.exit(f"Fel: {exc}")
 
 

@@ -1,6 +1,7 @@
 """Disk-backed single-tenant document store + in-memory hybrid index.
 
 Layout under BRF_DATA_DIR (default backend/data/):
+  tenant_meta.json    {corpus_origin} — this tenant's corpus, CI2 guard
   documents.json      {doc_id: DocumentMeta}
   settings.json       Settings
   docs/<id>.pdf       original uploads
@@ -24,7 +25,7 @@ from .embeddings import get_embedder
 from .extract import extract_pdf
 from .indexer import HybridIndex
 from .ocr import ocr_pdf, tesseract_available
-from .schemas import Chunk, DocumentMeta, PageData, Settings
+from .schemas import CORPUS_ORIGINS, Chunk, CorpusOrigin, DocumentMeta, PageData, Settings
 
 logger = logging.getLogger("brf.store")
 
@@ -32,7 +33,7 @@ MAX_DOCUMENT_PAGES = 400  # resource guard: reject absurd page counts up front
 
 
 class Store:
-    def __init__(self, data_dir: str | Path | None = None) -> None:
+    def __init__(self, data_dir: str | Path | None = None, corpus_origin: CorpusOrigin | None = None) -> None:
         # Guards every mutation; FastAPI runs sync endpoints concurrently in a
         # threadpool. Rebuilds rebind fresh objects (never mutate in place),
         # so readers that snapshot references under the lock stay consistent.
@@ -42,6 +43,11 @@ class Store:
         (self.data_dir / "docs").mkdir(parents=True, exist_ok=True)
         (self.data_dir / "extract").mkdir(parents=True, exist_ok=True)
 
+        # Corpus-isolation guard (CI2): the tenant's origin, persisted in
+        # tenant_meta.json sibling to documents.json/settings.json. Must be
+        # resolved BEFORE _load_documents() so pre-CI2 document records can
+        # migrate to it.
+        self.corpus_origin = self._load_or_init_corpus_origin(corpus_origin)
         self.settings = self._load_settings()
         self.documents: dict[str, DocumentMeta] = self._load_documents()
         self.pages: dict[str, list[PageData]] = {}
@@ -64,6 +70,39 @@ class Store:
 
     # ---------- persistence helpers ----------
 
+    def _load_or_init_corpus_origin(self, corpus_origin: CorpusOrigin | None) -> CorpusOrigin:
+        """tenant_meta.json — a sibling record to documents.json/settings.json
+        holding the one thing every document in this Store inherits: which of
+        the three corpora (customer / public_scraped / synthetic) it belongs
+        to. If the file already exists on disk, disk wins (the durable record
+        is authoritative — a caller-supplied `corpus_origin` is ignored once a
+        tenant is established). If it doesn't exist yet: an explicit
+        `corpus_origin` (tenant creation, via TenantRegistry.create) is
+        persisted as-is; otherwise (a pre-CI2 tenant directory, or a bare
+        `Store(data_dir=...)` call with no origin declared — tests, ad hoc
+        scripts) this is a migration: default to "synthetic", log it, and
+        write it back so it becomes explicit on disk."""
+        p = self.data_dir / "tenant_meta.json"
+        if p.exists():
+            try:
+                raw = json.loads(p.read_text("utf-8"))
+                origin = raw.get("corpus_origin")
+                if origin in CORPUS_ORIGINS:
+                    return origin
+                logger.warning("tenant_meta.json ogiltig (%r) i %s — migrerar till 'synthetic'", raw, self.data_dir)
+            except Exception as exc:
+                logger.warning("tenant_meta.json kunde inte läsas (%s) i %s — migrerar till 'synthetic'", exc, self.data_dir)
+        if corpus_origin is not None:
+            origin = corpus_origin
+        else:
+            origin = "synthetic"
+            logger.info(
+                "Tenant-katalog %s saknar corpus_origin — migrerar till 'synthetic' och skriver tillbaka",
+                self.data_dir,
+            )
+        p.write_text(json.dumps({"corpus_origin": origin}, ensure_ascii=False, indent=2), "utf-8")
+        return origin
+
     def _load_settings(self) -> Settings:
         p = self.data_dir / "settings.json"
         if p.exists():
@@ -81,7 +120,21 @@ class Store:
         if not p.exists():
             return {}
         raw = json.loads(p.read_text("utf-8"))
-        return {k: DocumentMeta.model_validate(v) for k, v in raw.items()}
+        migrated_ids: list[str] = []
+        docs: dict[str, DocumentMeta] = {}
+        for k, v in raw.items():
+            if "corpus_origin" not in v:
+                v = {**v, "corpus_origin": self.corpus_origin}
+                migrated_ids.append(k)
+            docs[k] = DocumentMeta.model_validate(v)
+        if migrated_ids:
+            logger.info(
+                "Migrerar %d dokument utan corpus_origin -> '%s' (tenant-ursprung) i %s",
+                len(migrated_ids), self.corpus_origin, self.data_dir,
+            )
+            payload = {k: v.model_dump() for k, v in docs.items()}
+            p.write_text(json.dumps(payload, ensure_ascii=False, indent=2), "utf-8")
+        return docs
 
     def _save_documents(self) -> None:
         payload = {k: v.model_dump() for k, v in self.documents.items()}
@@ -179,7 +232,22 @@ class Store:
                     chunks=0,
                     uploaded_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
                     source=source,
+                    # Corpus-isolation guard (CI2): stamped from the tenant's
+                    # own origin. add_document takes NO caller-supplied
+                    # origin parameter — there is no argument to abuse, so a
+                    # customer tenant cannot receive a public_scraped (or any
+                    # other-origin) document through any ingestion API.
+                    corpus_origin=self.corpus_origin,
                 )
+                if meta.corpus_origin != self.corpus_origin:
+                    # Defense-in-depth: this can't happen via the construction
+                    # above, but guards any future refactor that builds
+                    # DocumentMeta elsewhere and hands it to add_document.
+                    raise ValueError(
+                        f"corpus_origin-avvikelse: dokumentet har '{meta.corpus_origin}' men "
+                        f"tenanten har '{self.corpus_origin}' — ett dokument kan aldrig ha ett "
+                        "annat ursprung än sin tenant."
+                    )
                 self.documents[doc_id] = meta
                 self.pages = {**self.pages, doc_id: pages}
                 self._rebuild()

@@ -8,6 +8,14 @@ from typing import Literal
 from pydantic import BaseModel, Field, model_validator
 
 
+# Corpus-isolation guard (CI2): the three document collections that must
+# never blend. Origin is a TENANT property (declared once, at creation,
+# never inferred from path/filename) — every document inherits its tenant's
+# origin at ingestion. See app.registry / app.store for enforcement.
+CorpusOrigin = Literal["customer", "public_scraped", "synthetic"]
+CORPUS_ORIGINS: tuple[CorpusOrigin, ...] = ("customer", "public_scraped", "synthetic")
+
+
 class Word(BaseModel):
     text: str
     x0: float
@@ -46,6 +54,14 @@ class DocumentMeta(BaseModel):
     # documents.json entries predate this field and load as "digital" via
     # the default.
     source: Literal["digital", "scanned"] = "digital"
+    # Corpus-isolation guard (CI2): stamped from the tenant's corpus_origin at
+    # ingestion (Store.add_document) — never caller-supplied, never inferred
+    # from path/filename. Deliberately NO pydantic default: Store loads raw
+    # JSON itself and injects a migrated value for pre-CI2 documents.json
+    # entries missing this key (see Store._load_documents) before this model
+    # ever validates them, so a bare model load never silently mis-defaults a
+    # real tenant's documents to the wrong corpus.
+    corpus_origin: CorpusOrigin
 
 
 class RetrievalHit(BaseModel):
@@ -80,6 +96,10 @@ class CitationOut(BaseModel):
     # born-digital PDFs (never misplaced — see reality-check evidence). The
     # UI marks the highlight as approximate; verification is unaffected.
     approximate: bool = False
+    # The cited document's tenant's corpus_origin (additive; CI2 evidence
+    # surface) — None only if the citation's document meta was somehow
+    # unresolvable (defensive, should not happen in practice).
+    corpus_origin: CorpusOrigin | None = None
 
 
 RejectReason = Literal[

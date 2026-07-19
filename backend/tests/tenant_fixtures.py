@@ -21,8 +21,8 @@ class Harness:
         self.app = create_app(registry=self.registry, auth=self.auth, data_root=tmp_path)
         self.client = TestClient(self.app)
 
-    def make_tenant(self, name: str, brf_id: str | None = None) -> str:
-        return self.registry.create(name, brf_id)
+    def make_tenant(self, name: str, corpus_origin: str, brf_id: str | None = None) -> str:
+        return self.registry.create(name, corpus_origin, brf_id)
 
     def make_user(self, email: str, memberships=(), password: str = DEFAULT_PW) -> str:
         uid = self.auth.create_user(email, password)

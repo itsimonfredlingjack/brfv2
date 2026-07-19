@@ -21,7 +21,7 @@ class TestDocumentHardDelete:
     def test_delete_removes_all_traces(self, tmp_path):
         auth = AuthStore(tmp_path / "auth.db")
         registry = TenantRegistry(tmp_path, auth)
-        registry.create("Brf A", "brf-a")
+        registry.create("Brf A", "synthetic", "brf-a")
         store = registry.get("brf-a")
         meta = store.add_document("Doc.pdf", build_pdf([[("Text att radera.", 72, 100)]]))
         pdf_path = tmp_path / "tenants" / "brf-a" / "docs" / f"{meta.id}.pdf"
@@ -43,8 +43,8 @@ class TestTenantHardDelete:
     def test_delete_tenant_removes_files_index_and_memberships(self, tmp_path):
         auth = AuthStore(tmp_path / "auth.db")
         registry = TenantRegistry(tmp_path, auth)
-        registry.create("Brf A", "brf-a")
-        registry.create("Brf B", "brf-b")
+        registry.create("Brf A", "synthetic", "brf-a")
+        registry.create("Brf B", "synthetic", "brf-b")
         uid = auth.create_user("u@a.se", "lösenord-1", "U")
         auth.add_membership(uid, "brf-a", "admin")
         auth.add_membership(uid, "brf-b", "member")
@@ -70,7 +70,7 @@ class TestTenantHardDelete:
     def test_deleted_tenant_not_recreated_by_registry_get(self, tmp_path):
         auth = AuthStore(tmp_path / "auth.db")
         registry = TenantRegistry(tmp_path, auth)
-        registry.create("Brf A", "brf-a")
+        registry.create("Brf A", "synthetic", "brf-a")
         registry.delete("brf-a")
         assert registry.get("brf-a") is None
         assert not (tmp_path / "tenants" / "brf-a").exists()
@@ -105,8 +105,8 @@ class TestRetention:
     def test_registry_purge_is_per_tenant(self, tmp_path):
         auth = AuthStore(tmp_path / "auth.db")
         registry = TenantRegistry(tmp_path, auth)
-        registry.create("Brf A", "brf-a")
-        registry.create("Brf B", "brf-b")
+        registry.create("Brf A", "synthetic", "brf-a")
+        registry.create("Brf B", "synthetic", "brf-b")
         sa, sb = registry.get("brf-a"), registry.get("brf-b")
         sa.update_settings(Settings(retentionDays=30))  # B keeps default 0
         ma = sa.add_document("A.pdf", build_pdf([[("A gammalt.", 72, 100)]]))
