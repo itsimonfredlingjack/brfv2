@@ -17,13 +17,22 @@ LLM to dance around.
 from __future__ import annotations
 
 import logging
+import os
 
 from .schemas import RetrievalHit
 
 logger = logging.getLogger("brf.rerank")
 
-MODEL_NAME = "jinaai/jina-reranker-v2-base-multilingual"
+# Default cross-encoder. Overridable via BRF_RERANK_MODEL — used by the licensing
+# eval to swap in a commercially-licensed model (e.g. a clean Apache-2.0
+# cross-encoder) without code change. Read at CALL time so a test/measurement can
+# select the model via the environment; the lazy singleton still loads only once.
+DEFAULT_MODEL_NAME = "jinaai/jina-reranker-v2-base-multilingual"
 MAX_LENGTH = 1024
+
+
+def model_name() -> str:
+    return os.environ.get("BRF_RERANK_MODEL", DEFAULT_MODEL_NAME)
 
 # Lazy singleton, like llm.py's `_provider` — loaded once, on first use.
 _model = None
@@ -46,8 +55,9 @@ def _load_model():
     from sentence_transformers import CrossEncoder
 
     device = _resolve_device()
-    logger.info("Laddar cross-encoder-omrankare %s på %s", MODEL_NAME, device)
-    _model = CrossEncoder(MODEL_NAME, max_length=MAX_LENGTH, trust_remote_code=True, device=device)
+    name = model_name()
+    logger.info("Laddar cross-encoder-omrankare %s på %s", name, device)
+    _model = CrossEncoder(name, max_length=MAX_LENGTH, trust_remote_code=True, device=device)
     return _model
 
 
@@ -83,7 +93,7 @@ def reranker_available() -> bool:
     try:
         from huggingface_hub import try_to_load_from_cache
 
-        cached = try_to_load_from_cache(MODEL_NAME, "config.json")
+        cached = try_to_load_from_cache(model_name(), "config.json")
         return isinstance(cached, str)
     except Exception:
         # Any cache-probe surprise (corrupt cache, hub API changes, ...)

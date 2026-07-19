@@ -231,3 +231,20 @@ class TestRealReranker:
 
         assert out[0].chunk_id == "table"
         assert out[0].rerank_score > out[1].rerank_score
+
+
+class TestConfigurableModel:
+    """The cross-encoder model id is overridable via BRF_RERANK_MODEL (for the
+    licensing eval); default is unchanged (jina)."""
+
+    def test_default_is_jina_when_unset(self, monkeypatch):
+        monkeypatch.delenv("BRF_RERANK_MODEL", raising=False)
+        from app.rerank import model_name
+
+        assert model_name() == "jinaai/jina-reranker-v2-base-multilingual"
+
+    def test_env_overrides_model(self, monkeypatch):
+        monkeypatch.setenv("BRF_RERANK_MODEL", "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1")
+        from app.rerank import model_name
+
+        assert model_name() == "cross-encoder/mmarco-mMiniLMv2-L12-H384-v1"
