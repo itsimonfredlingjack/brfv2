@@ -19,6 +19,18 @@ Usage (from backend/):
     BRF_ENRICH=0 uv run python -m scripts.reality.enrichment_recovery --out out/reality/enrichment/baseline.json
     BRF_ENRICH=1 uv run python -m scripts.reality.enrichment_recovery --out out/reality/enrichment/enriched.json
     BRF_ENRICH=1 uv run python -m scripts.reality.enrichment_recovery --rerank --out out/reality/enrichment/enriched_rerank.json
+
+Caveat — --rerank pool width: this harness's --rerank arm reranks the full
+WIDE_TOP_K (=60) raw candidate pool (see true_row_rank below), which is WIDER
+than production's default Settings.rerankCandidates (=40) in app/answer.py.
+A wider pool going into the reranker can only help recovery, never hurt it,
+so the harness's enriched+rerank number is an UPPER BOUND on what shipping
+rerankEnabled=True with default settings would actually achieve in
+production — it is not a production-faithful measurement on its own. The
+production-faithful rerank number comes from the live
+scripts/reality/annual_reports.py --rerank run, which reranks through
+app/answer.py's own ask() path (and therefore the real rerankCandidates=40
+pool), not this script.
 """
 
 from __future__ import annotations
