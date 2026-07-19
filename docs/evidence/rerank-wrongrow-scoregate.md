@@ -3,7 +3,7 @@
 Branch `diag/rerank-wrongrow` (off `main` @ f560db5). **Redaction:** metrics only.
 Closes the thread opened by `reranker-license-eval.md` (a licensable reranker *recovers* the
 rows) and `rerank-recovery.md` (jina introduced a wrong-row failure class). Live model: the
-self-hosted **Gemma 4 12B** on the LAN Ubuntu box (`192.168.86.32:8000`, llama.cpp,
+self-hosted **Gemma 4 12B** on the LAN Ubuntu box (llama.cpp,
 GGUF Q4_K_XL), network-audited. Embedder `hashed`, enrichment off.
 
 ## Question
@@ -78,7 +78,7 @@ plausible-looking neighbor. Candidate directions, each a real project:
 
 ## Guards / provenance
 
-- Live runs network-audited: **1 connection each to `192.168.86.32:8000`, 0 external**;
+- Live runs network-audited: **1 connection each to the self-hosted 12B endpoint, 0 external**;
   controls 4/4 refused; all citations verbatim-verified, 0 violations.
 - No code change this phase (measurement only, on the merged `BRF_RERANK_MODEL` config).
 - Data discipline: metrics-only; raw run JSON + score dumps in gitignored
@@ -91,7 +91,7 @@ cd backend
 MODEL=<served gguf id from GET :8000/v1/models>
 # live wrong-row (self-hosted 12B on the LAN; runner hard-fails on any external connection)
 BRF_EMBEDDER=hashed HF_HUB_OFFLINE=1 BRF_LLM=selfhosted \
-  BRF_LLM_BASE_URL=http://192.168.86.32:8000/v1 BRF_LLM_MODEL="$MODEL" \
+  BRF_LLM_BASE_URL=http://<self-hosted-12b-host>:8000/v1 BRF_LLM_MODEL="$MODEL" \
   BRF_RERANK_MODEL=cross-encoder/mmarco-mMiniLMv2-L12-H384-v1 BRF_RERANK_MAX_LENGTH=512 \
   uv run python -m scripts.reality.annual_reports --rerank --out out/reality/reranker_eval/live_mmarco
 # score-gate analysis (offline, no LLM): scratch script tags reranked top-6 answer-bearing vs distractor
