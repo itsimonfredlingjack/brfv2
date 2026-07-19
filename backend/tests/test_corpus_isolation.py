@@ -154,5 +154,10 @@ class TestCustomerCannotReceiveScrapedOrigin:
             if getattr(r, "path", None) == "/api/brf/{brf_id}/documents" and "POST" in getattr(r, "methods", set())
         )
         params = set(inspect.signature(route.endpoint).parameters)
-        forbidden = {"corpus_origin", "origin", "source_origin"}
-        assert not (forbidden & params), f"upload route gained an origin-shaped parameter: {params & forbidden}"
+        # Exact allowlist (same airtight pattern as the add_document signature
+        # test above): ANY new parameter — origin-shaped or not — fails this
+        # test and forces a deliberate decision about the ingestion boundary.
+        assert params == {"brf_id", "file", "store"}, (
+            f"upload route signature changed: {sorted(params)} — if a new parameter is "
+            "intentional, prove it cannot carry a corpus origin before updating this allowlist"
+        )

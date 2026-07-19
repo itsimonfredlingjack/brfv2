@@ -37,7 +37,10 @@ def _atomic_write(path: Path, content: str) -> None:
     directory, then `os.replace` (atomic on POSIX and Windows). A crash or
     failure mid-write can never leave a truncated/partial file at `path` —
     either the old content survives untouched, or the new content lands
-    whole. Used for documents.json and tenant_meta.json (CI2/CI3 fail-closed
+    whole. NOTE: this guarantees atomicity (no torn reads), not durability —
+    there is no fsync, so a hard power loss immediately after os.replace may
+    still lose the newest write; acceptable for the local single-process
+    pilot. Used for documents.json and tenant_meta.json (CI2/CI3 fail-closed
     hardening): these are the two files a corrupted write could turn into a
     silent corpus-origin mixup."""
     tmp = path.with_name(f"{path.name}.tmp-{uuid.uuid4().hex[:8]}")

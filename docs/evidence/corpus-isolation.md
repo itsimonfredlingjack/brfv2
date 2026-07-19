@@ -176,11 +176,34 @@ with no stale residue. Confirmed the test fails without the fix (reverted
 `registry.py` only, re-ran): `AssertionError: assert not True` on
 `meta_path.exists()` — then restored the fix.
 
+## Fail-closed hardening (post-review fix wave, commit b6c4f45)
+
+A review of the initial implementation found three robustness gaps, all closed
+with fail-closed semantics before this phase shipped:
+
+- **Atomic persistence:** every write to `documents.json` and
+  `tenant_meta.json` goes through temp-file + `os.replace` in the same
+  directory — a crash mid-write can never leave a torn file (atomicity, not
+  fsync durability — documented in the helper's docstring). A malformed
+  `documents.json` at load raises a clear error naming the file and tenant
+  instead of an unhandled traceback.
+- **No silent origin defaults:** a `tenant_meta.json` that exists but is
+  malformed or carries an invalid value raises — it never silently downgrades
+  a tenant to `synthetic`. The migration default applies only to the genuine
+  legacy layout (no `tenant_meta.json` AND unstamped `documents.json`); a
+  fully-stamped `documents.json` without its meta file also raises. And
+  `registry.get()` without an origin only OPENS an existing tenant directory —
+  lazy creation is gone, closing the crash window in which a `customer` tenant
+  could have been recreated as `synthetic` with the naming rule unapplied.
+- **Validation at depth:** `Store.__init__` and `registry.get()` validate any
+  explicit origin against the canonical set; garbage values raise immediately.
+
 ## Suite counts
 
-- Full offline suite: `uv run pytest -q` → **375 passed, 1 skipped**
-  (baseline 361 passed/1 skipped + 14 new: 8 in `test_corpus_tripwire.py`, 5 in
-  `test_corpus_isolation.py`, 1 in `test_lifecycle.py`).
+- Full offline suite: `uv run pytest -q` → **390 passed, 1 skipped**
+  (baseline 361 passed/1 skipped + 14 from the tripwire/guard work: 8 in
+  `test_corpus_tripwire.py`, 5 in `test_corpus_isolation.py`, 1 in
+  `test_lifecycle.py`; + 15 fail-closed hardening tests in `test_registry.py`).
 - Isolation trio (`test_isolation.py test_lifecycle.py test_auth.py`) →
   **48 passed** (baseline 47 + 1 new hardening test).
 
