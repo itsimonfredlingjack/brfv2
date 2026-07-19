@@ -102,6 +102,13 @@ class TenantRegistry:
         with self._lock:
             self._stores.pop(brf_id, None)
         shutil.rmtree(self._tenant_dir(brf_id), ignore_errors=True)
+        # Hardening (CI3): ignore_errors=True can silently leave residue if
+        # rmtree hit a mid-tree failure — but tenant_meta.json specifically
+        # must never survive a delete, or a same-brf_id recreate with a
+        # DIFFERENT corpus_origin would silently inherit the stale one
+        # (Store._load_or_init_corpus_origin treats an existing
+        # tenant_meta.json as authoritative).
+        (self._tenant_dir(brf_id) / "tenant_meta.json").unlink(missing_ok=True)
         self.auth.delete_tenant(brf_id)
         if existed:
             logger.info("Tenant %s hårdraderad (filer + index + medlemskap)", brf_id)

@@ -4,15 +4,25 @@ origin parameter — there is no argument to abuse — and stamps every
 ingested document with the tenant's own `Store.corpus_origin`. A defensive
 check inside `add_document` guards any future refactor that might construct
 a mismatched `DocumentMeta` some other way.
+
+`TestCustomerCannotReceiveScrapedOrigin` (CI3) is the black-box counterpart:
+a customer tenant is exercised through every public ingestion surface (the
+direct Store API, the real HTTP upload route, including an adversarial
+forged form field) and proven to only ever produce "customer" documents,
+then the absence of an origin parameter is proven directly by introspecting
+both signatures.
 """
 
 from __future__ import annotations
+
+import inspect
 
 import pytest
 
 from app.schemas import DocumentMeta
 from app.store import Store
 from tests.pdf_fixtures import build_pdf
+from tests.tenant_fixtures import Harness
 
 
 class TestAddDocumentStampsTenantOrigin:
@@ -65,3 +75,84 @@ class TestMismatchDefenseRaises:
         assert store.documents == {}
         assert not any((tmp_path / "docs").iterdir())
         assert not any((tmp_path / "extract").iterdir())
+
+
+class TestCustomerCannotReceiveScrapedOrigin:
+    """Black-box guard (CI3 phase brief): a customer-origin tenant's
+    documents can ONLY ever carry corpus_origin "customer" — not because
+    some check rejects a different value, but because neither public
+    ingestion surface (the direct Store API, the HTTP upload route) has any
+    parameter through which a caller could ask for one. Exercises both
+    surfaces end to end, including an adversarial attempt to smuggle a
+    different origin through the HTTP form, then proves the absence of the
+    parameter itself by introspecting both signatures — so this starts
+    failing the moment someone adds one, rather than staying silently true
+    by accident."""
+
+    def test_direct_add_document_only_ever_customer(self, tmp_path):
+        store = Store(data_dir=tmp_path, corpus_origin="customer")
+        for i in range(3):
+            meta = store.add_document(f"doc{i}.pdf", build_pdf([[("Text.", 72, 100)]]))
+            assert meta.corpus_origin == "customer"
+        assert {d.corpus_origin for d in store.documents.values()} == {"customer"}
+
+    def test_http_upload_route_only_ever_customer(self, tmp_path):
+        h = Harness(tmp_path)
+        h.make_tenant("Kund AB", "customer", "brf-cust-http")  # non-val name: customer origin
+        h.make_user("admin@kund.se", memberships=[("brf-cust-http", "admin")])
+        token = h.login("admin@kund.se")
+
+        for i in range(2):
+            r = h.client.post(
+                "/api/brf/brf-cust-http/documents",
+                files={"file": (f"doc{i}.pdf", build_pdf([[("Text.", 72, 100)]]), "application/pdf")},
+                headers=h.bearer(token),
+            )
+            assert r.status_code == 200, r.text
+            assert r.json()["corpus_origin"] == "customer"
+
+        store = h.registry.get("brf-cust-http")
+        assert {d.corpus_origin for d in store.documents.values()} == {"customer"}
+        listed = h.client.get("/api/brf/brf-cust-http/documents", headers=h.bearer(token)).json()
+        assert {d["corpus_origin"] for d in listed} == {"customer"}
+
+    def test_http_upload_ignores_forged_origin_field(self, tmp_path):
+        """Even a client that stuffs an extra 'corpus_origin' form field into
+        the multipart request (attempting to smuggle a different origin in)
+        gets nowhere: the upload route has no parameter bound to it — FastAPI
+        silently drops unbound form fields — so the document still lands as
+        'customer'."""
+        h = Harness(tmp_path)
+        h.make_tenant("Kund AB", "customer", "brf-cust-forge")
+        h.make_user("admin@kund.se", memberships=[("brf-cust-forge", "admin")])
+        token = h.login("admin@kund.se")
+
+        r = h.client.post(
+            "/api/brf/brf-cust-forge/documents",
+            files={"file": ("A.pdf", build_pdf([[("Text.", 72, 100)]]), "application/pdf")},
+            data={"corpus_origin": "public_scraped"},
+            headers=h.bearer(token),
+        )
+        assert r.status_code == 200, r.text
+        assert r.json()["corpus_origin"] == "customer"
+
+    def test_add_document_signature_exposes_no_origin_parameter(self):
+        """The whole guard rests on there being NO argument to abuse — this
+        fails the instant Store.add_document grows an origin-shaped
+        parameter, whatever it's named."""
+        params = set(inspect.signature(Store.add_document).parameters) - {"self"}
+        assert params == {"name", "pdf_bytes"}
+
+    def test_upload_route_signature_exposes_no_origin_parameter(self, tmp_path):
+        """Same guarantee at the HTTP boundary: introspects the ACTUAL
+        registered FastAPI route (not a hand-copied assumption of its
+        signature) for the document-upload endpoint."""
+        h = Harness(tmp_path)
+        route = next(
+            r
+            for r in h.app.routes
+            if getattr(r, "path", None) == "/api/brf/{brf_id}/documents" and "POST" in getattr(r, "methods", set())
+        )
+        params = set(inspect.signature(route.endpoint).parameters)
+        forbidden = {"corpus_origin", "origin", "source_origin"}
+        assert not (forbidden & params), f"upload route gained an origin-shaped parameter: {params & forbidden}"

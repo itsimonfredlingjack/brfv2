@@ -1,5 +1,7 @@
 """Data lifecycle: hard delete leaves nothing behind; retention purges."""
 
+import json
+import shutil
 from datetime import datetime, timedelta, timezone
 
 import pytest
@@ -74,6 +76,38 @@ class TestTenantHardDelete:
         registry.delete("brf-a")
         assert registry.get("brf-a") is None
         assert not (tmp_path / "tenants" / "brf-a").exists()
+
+
+class TestTenantMetaHardeningOnDelete:
+    """Hardening (CI3): tenant_meta.json must never survive
+    TenantRegistry.delete, even if shutil.rmtree's ignore_errors=True
+    silently swallows a mid-tree failure — otherwise a same-brf_id recreate
+    with a DIFFERENT corpus_origin would silently inherit the stale meta
+    (Store._load_or_init_corpus_origin treats an existing tenant_meta.json
+    as authoritative — see store.py)."""
+
+    def test_delete_removes_tenant_meta_even_if_rmtree_is_a_noop(self, tmp_path, monkeypatch):
+        auth = AuthStore(tmp_path / "auth.db")
+        registry = TenantRegistry(tmp_path, auth)
+        registry.create("Brf A", "customer", "brf-a")
+        meta_path = tmp_path / "tenants" / "brf-a" / "tenant_meta.json"
+        assert meta_path.exists()
+        assert json.loads(meta_path.read_text("utf-8"))["corpus_origin"] == "customer"
+
+        # Simulate the exact failure ignore_errors=True is designed to
+        # swallow: rmtree does nothing (as if a locked file elsewhere in the
+        # tree blocked full removal). tenant_meta.json itself must still be
+        # gone afterward, via the explicit unlink.
+        monkeypatch.setattr(shutil, "rmtree", lambda *a, **k: None)
+
+        assert registry.delete("brf-a")
+        assert not meta_path.exists()
+
+        # Recreate the SAME brf_id with a DIFFERENT origin: no stale meta to
+        # inherit, so the new origin wins outright — no stale meta.
+        registry.create("Brf A v2", "synthetic", "brf-a")
+        assert registry.get("brf-a").corpus_origin == "synthetic"
+        assert json.loads(meta_path.read_text("utf-8"))["corpus_origin"] == "synthetic"
 
 
 class TestRetention:

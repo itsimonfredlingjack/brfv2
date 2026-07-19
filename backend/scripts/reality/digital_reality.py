@@ -87,7 +87,13 @@ def main() -> None:
     hl_dir = args.out / "highlights"
     hl_dir.mkdir(parents=True, exist_ok=True)
 
-    store = Store(data_dir=tempfile.mkdtemp(prefix="brf-reality-"))
+    # Corpus-isolation guard (CI2/CI3): this ingests a REAL customer document
+    # from the local gitignored corpus (DONT_PUSH_brf_stuff) — the temp
+    # tenant must declare origin explicitly as "customer" (non-val naming),
+    # not fall through Store's bare-construction migration default of
+    # "synthetic" (the gap CI2's review flagged; see
+    # docs/evidence/corpus-isolation.md).
+    store = Store(data_dir=tempfile.mkdtemp(prefix="brf-reality-"), corpus_origin="customer")
     meta = store.add_document(pdf.name, pdf.read_bytes())
     print(f"Ingested: pages={meta.pages} words={meta.words} chunks={meta.chunks}", flush=True)
 

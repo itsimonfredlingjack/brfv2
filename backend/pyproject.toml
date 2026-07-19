@@ -30,4 +30,5 @@ markers = [
     "llm: tests that call a real LLM provider (skipped unless RUN_LLM_TESTS=1)",
     "ocr: tests that need a local tesseract binary",
     "rerank: tests that load the real cross-encoder reranker model",
+    "realdata: tests that walk the real dev data root, backend/data/tenants (gitignored; self-skips if absent)",
 ]
