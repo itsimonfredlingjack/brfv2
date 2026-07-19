@@ -41,6 +41,12 @@ class Chunk(BaseModel):
     word_start: int  # inclusive index into PageData.words
     word_end: int  # inclusive
     text: str
+    # Index-only ENRICHED representation used for BM25 fit + embedding
+    # (app/enrich.py, set in Store._rebuild). NEVER shown to the model and
+    # NEVER cited: RetrievalHit.text stays `text` (frozen), and verification
+    # reads PageData.words. Chunks are rebuilt in memory each boot (not
+    # persisted), so this is no disk-format change. None => use `text`.
+    search_text: str | None = None
 
 
 class DocumentMeta(BaseModel):

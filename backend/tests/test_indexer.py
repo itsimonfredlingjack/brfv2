@@ -82,6 +82,25 @@ class TestSearch:
         assert hit.text == CORPUS[1].text
 
 
+class TestSearchTextDrivesRankingButNotDisplay:
+    def test_search_text_used_for_ranking_display_text_frozen(self):
+        # A chunk whose FROZEN text is a bare row, but whose search_text carries
+        # a distinctive enrichment term. A query for that term must retrieve it,
+        # yet the returned hit.text must be the frozen text (no enrichment leak).
+        frozen = "1 234 567"
+        chunks = [
+            Chunk(id="d1:p1:c0", document_id="d1", page=1, word_start=0, word_end=2,
+                  text=frozen, search_text="Zorblecksynized 2099 " + frozen),
+            Chunk(id="d1:p1:c1", document_id="d1", page=1, word_start=3, word_end=8,
+                  text="föreningen har ett fint hus här", search_text=None),
+        ]
+        idx = HybridIndex(HashedNgramEmbedder())
+        idx.build(chunks, {"d1": "Doc"})
+        hits = idx.search("Zorbleckynized", weight=0.5, candidates=10, top_k=1, min_confidence=0.0)
+        assert hits[0].chunk_id == "d1:p1:c0"
+        assert hits[0].text == frozen  # frozen text returned, NOT the search_text
+
+
 class TestCompoundExpansion:
     """Swedish compounds: query terms must match corpus terms via prefix."""
 

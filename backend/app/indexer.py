@@ -87,13 +87,13 @@ class HybridIndex:
     def build(self, chunks: list[Chunk], doc_names: dict[str, str]) -> None:
         self.chunks = list(chunks)
         self.doc_names = dict(doc_names)
-        docs = [tokenize(c.text) for c in self.chunks]
+        docs = [tokenize(c.search_text or c.text) for c in self.chunks]
         self.bm25.fit(docs)
         self._token_sets = [set(d) for d in docs]
         self._vocab_trigrams = {
             t: _trigrams(t) for t in self.bm25.doc_freq if len(t) >= 5
         }
-        self.vectors = self.embedder.embed([c.text for c in self.chunks]) if self.chunks else []
+        self.vectors = self.embedder.embed([c.search_text or c.text for c in self.chunks]) if self.chunks else []
 
     def __len__(self) -> int:
         return len(self.chunks)
