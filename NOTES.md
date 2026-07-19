@@ -219,3 +219,19 @@
   right, but retrieval only moves when the added signal *discriminates* the target from its
   competitors for *that query* — and when it doesn't, an offline rank check proves the null
   without burning a GPU hour confirming a foregone conclusion.
+
+- **2026-07-19 — A "blocking" license is worth re-testing directly before building around it.**
+  The reranker that recovers annual-report rows was blocked only by its CC-BY-NC license, so a
+  whole enrichment phase was spent trying to avoid it (and failed). Testing licensable drop-ins
+  through the same offline recovery harness took an afternoon and cleared the blocker:
+  `cross-encoder/mmarco-mMiniLMv2` (Apache-2.0, Meta/XLM-R base, non-Chinese) recovers **14/17**
+  vs the unlicensable jina's 16/17 and a no-rerank 10/17; `bge-reranker-v2-m3` (Apache-2.0, but
+  Chinese-origin) recovers **17/17**. Two concrete traps surfaced: (1) the model id was a
+  hardcoded literal — made it an env (`BRF_RERANK_MODEL`) so candidates swap with zero code
+  churn; (2) `max_length` was hardcoded at 1024, but XLM-R-based cross-encoders cap at 512
+  positions and *crash* (`tensor 520 vs 514`) above it, so the clean candidate had to run at 512
+  and lost exactly the large-chunk cases where the answer row got truncated away. Why it
+  mattered: the alternative-lever detour (enrichment) cost far more than the direct license
+  re-test would have — when a lever is blocked *only* by license, price the licensable
+  substitute first, and keep model id + context length configurable so that pricing is a
+  one-command measurement, not a rebuild.
