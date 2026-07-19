@@ -32,6 +32,22 @@ logger = logging.getLogger("brf.store")
 MAX_DOCUMENT_PAGES = 400  # resource guard: reject absurd page counts up front
 
 
+def _atomic_write(path: Path, content: str) -> None:
+    """Write `content` to `path` atomically: write to a temp file in the SAME
+    directory, then `os.replace` (atomic on POSIX and Windows). A crash or
+    failure mid-write can never leave a truncated/partial file at `path` —
+    either the old content survives untouched, or the new content lands
+    whole. Used for documents.json and tenant_meta.json (CI2/CI3 fail-closed
+    hardening): these are the two files a corrupted write could turn into a
+    silent corpus-origin mixup."""
+    tmp = path.with_name(f"{path.name}.tmp-{uuid.uuid4().hex[:8]}")
+    tmp.write_text(content, "utf-8")
+    try:
+        os.replace(tmp, path)
+    finally:
+        tmp.unlink(missing_ok=True)  # no-op once os.replace has moved it away
+
+
 class Store:
     def __init__(self, data_dir: str | Path | None = None, corpus_origin: CorpusOrigin | None = None) -> None:
         # Guards every mutation; FastAPI runs sync endpoints concurrently in a
@@ -74,34 +90,92 @@ class Store:
         """tenant_meta.json — a sibling record to documents.json/settings.json
         holding the one thing every document in this Store inherits: which of
         the three corpora (customer / public_scraped / synthetic) it belongs
-        to. If the file already exists on disk, disk wins (the durable record
-        is authoritative — a caller-supplied `corpus_origin` is ignored once a
-        tenant is established). If it doesn't exist yet: an explicit
-        `corpus_origin` (tenant creation, via TenantRegistry.create) is
-        persisted as-is; otherwise (a pre-CI2 tenant directory, or a bare
-        `Store(data_dir=...)` call with no origin declared — tests, ad hoc
-        scripts) this is a migration: default to "synthetic", log it, and
-        write it back so it becomes explicit on disk."""
+        to.
+
+        Fail-closed (CI3 hardening): if the file already exists on disk, disk
+        wins (the durable record is authoritative — a caller-supplied
+        `corpus_origin` is ignored once a tenant is established) — but a
+        tenant_meta.json that exists and is malformed, or holds a value
+        outside CORPUS_ORIGINS, means something went wrong and this refuses
+        to open the tenant (loud error) rather than silently downgrading to
+        "synthetic". A silent downgrade here could reboot a real customer
+        tenant as synthetic without anyone noticing.
+
+        If the file is missing entirely: an explicit `corpus_origin`
+        (tenant creation, via TenantRegistry.create) is persisted as-is — no
+        migration involved, this is a fresh, explicit declaration. Otherwise
+        (no `corpus_origin` argument given) the "synthetic" migration default
+        applies ONLY when it is safe to assume no origin was ever recorded
+        for this tenant: no documents.json yet (a fresh/empty Store — the
+        common ad hoc test/script shape), or a documents.json that shows a
+        genuinely pre-CI2 legacy tenant (at least one entry missing
+        corpus_origin). If documents.json exists and EVERY entry already
+        carries a corpus_origin, this tenant was already migrated once —
+        tenant_meta.json vanishing on top of that is an anomaly, not a
+        legacy case, and must fail loud rather than paper over it."""
+        if corpus_origin is not None and corpus_origin not in CORPUS_ORIGINS:
+            raise ValueError(f"Ogiltigt corpus_origin: {corpus_origin!r} (tillåtna: {CORPUS_ORIGINS}).")
+
         p = self.data_dir / "tenant_meta.json"
         if p.exists():
             try:
                 raw = json.loads(p.read_text("utf-8"))
-                origin = raw.get("corpus_origin")
-                if origin in CORPUS_ORIGINS:
-                    return origin
-                logger.warning("tenant_meta.json ogiltig (%r) i %s — migrerar till 'synthetic'", raw, self.data_dir)
             except Exception as exc:
-                logger.warning("tenant_meta.json kunde inte läsas (%s) i %s — migrerar till 'synthetic'", exc, self.data_dir)
+                raise RuntimeError(
+                    f"tenant_meta.json är trasig och kan inte tolkas som JSON ({exc}) för tenanten "
+                    f"under {self.data_dir} (tenant-katalog '{self.data_dir.name}') — vägrar öppna "
+                    "tenanten. Undersök och åtgärda filen manuellt; detta tystas aldrig ner."
+                ) from exc
+            origin = raw.get("corpus_origin") if isinstance(raw, dict) else None
+            if origin not in CORPUS_ORIGINS:
+                raise RuntimeError(
+                    f"tenant_meta.json har ett ogiltigt corpus_origin ({origin!r}, tillåtna: "
+                    f"{CORPUS_ORIGINS}) för tenanten under {self.data_dir} (tenant-katalog "
+                    f"'{self.data_dir.name}') — vägrar öppna tenanten. Undersök och åtgärda filen "
+                    "manuellt; detta tystas aldrig ner."
+                )
+            return origin
+
         if corpus_origin is not None:
             origin = corpus_origin
         else:
-            origin = "synthetic"
-            logger.info(
-                "Tenant-katalog %s saknar corpus_origin — migrerar till 'synthetic' och skriver tillbaka",
-                self.data_dir,
-            )
-        p.write_text(json.dumps({"corpus_origin": origin}, ensure_ascii=False, indent=2), "utf-8")
+            if not self._documents_json_shows_already_migrated_tenant():
+                origin = "synthetic"
+                logger.info(
+                    "Tenant-katalog %s saknar corpus_origin — migrerar till 'synthetic' och skriver tillbaka",
+                    self.data_dir,
+                )
+            else:
+                raise RuntimeError(
+                    f"tenant_meta.json saknas under {self.data_dir} (tenant-katalog "
+                    f"'{self.data_dir.name}'), men dokumenten där har redan corpus_origin stämplat "
+                    "— tenanten verkar redan ha migrerats en gång men saknar nu sin tenant_meta.json. "
+                    "Vägrar tyst falla tillbaka till 'synthetic'; undersök manuellt vad som tog bort filen."
+                )
+        _atomic_write(p, json.dumps({"corpus_origin": origin}, ensure_ascii=False, indent=2))
         return origin
+
+    def _documents_json_shows_already_migrated_tenant(self) -> bool:
+        """True only when documents.json exists, is non-empty, and EVERY
+        entry already carries a corpus_origin — the signature of a tenant
+        that already went through CI2 migration once. False for a missing/
+        empty documents.json (nothing recorded yet — safe to default) and
+        for a legacy documents.json with at least one entry missing
+        corpus_origin (the genuine CI2 migration case)."""
+        p = self.data_dir / "documents.json"
+        if not p.exists():
+            return False
+        try:
+            raw = json.loads(p.read_text("utf-8"))
+        except Exception as exc:
+            raise RuntimeError(
+                f"documents.json är trasig och kan inte tolkas som JSON ({exc}) under {self.data_dir} "
+                f"(tenant-katalog '{self.data_dir.name}'), och tenant_meta.json saknas — kan inte "
+                "avgöra om tenanten är legacy. Vägrar öppna tenanten."
+            ) from exc
+        if not raw:
+            return False
+        return all("corpus_origin" in v for v in raw.values())
 
     def _load_settings(self) -> Settings:
         p = self.data_dir / "settings.json"
@@ -119,7 +193,17 @@ class Store:
         p = self.data_dir / "documents.json"
         if not p.exists():
             return {}
-        raw = json.loads(p.read_text("utf-8"))
+        try:
+            raw = json.loads(p.read_text("utf-8"))
+        except Exception as exc:
+            # Fail-closed (CI3 hardening): a corrupt document register must
+            # never crash __init__ with a bare traceback, and must never be
+            # silently skipped — name the file and the tenant, loudly.
+            raise RuntimeError(
+                f"documents.json är trasig och kan inte tolkas som JSON ({exc}) för tenanten "
+                f"under {self.data_dir} (tenant-katalog '{self.data_dir.name}') — vägrar starta "
+                "med ett skadat dokumentregister. Återställ filen från backup eller undersök manuellt."
+            ) from exc
         migrated_ids: list[str] = []
         docs: dict[str, DocumentMeta] = {}
         for k, v in raw.items():
@@ -133,12 +217,12 @@ class Store:
                 len(migrated_ids), self.corpus_origin, self.data_dir,
             )
             payload = {k: v.model_dump() for k, v in docs.items()}
-            p.write_text(json.dumps(payload, ensure_ascii=False, indent=2), "utf-8")
+            _atomic_write(p, json.dumps(payload, ensure_ascii=False, indent=2))
         return docs
 
     def _save_documents(self) -> None:
         payload = {k: v.model_dump() for k, v in self.documents.items()}
-        (self.data_dir / "documents.json").write_text(json.dumps(payload, ensure_ascii=False, indent=2), "utf-8")
+        _atomic_write(self.data_dir / "documents.json", json.dumps(payload, ensure_ascii=False, indent=2))
 
     def _load_extraction(self, doc_id: str) -> list[PageData] | None:
         p = self.data_dir / "extract" / f"{doc_id}.json"

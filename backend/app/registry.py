@@ -67,7 +67,22 @@ class TenantRegistry:
         constructed after this directory came into existence (i.e. right
         after `create()`) — once tenant_meta.json exists on disk it is
         authoritative and this argument is ignored (see
-        Store._load_or_init_corpus_origin)."""
+        Store._load_or_init_corpus_origin).
+
+        Fail-closed (CI3 hardening): called WITHOUT `corpus_origin` (every
+        caller except `create()`'s own eager-init), this only ever OPENS a
+        tenant directory that already exists on disk — it never creates one.
+        If the auth db has a row for `brf_id` (so this isn't the ordinary
+        "unknown tenant" → None case) but the directory was never actually
+        materialized — a crash between `auth.create_tenant` and the eager
+        `Store` construction inside `create()` — this raises loudly rather
+        than silently creating a fresh directory and letting a real tenant
+        reboot as `synthetic`. Callers that legitimately need to create a
+        tenant must go through `create()`, which passes `corpus_origin`
+        explicitly and is the only caller allowed to materialize a new
+        directory."""
+        if corpus_origin is not None and corpus_origin not in CORPUS_ORIGINS:
+            raise ValueError(f"Ogiltigt corpus_origin: {corpus_origin!r} (tillåtna: {CORPUS_ORIGINS}).")
         if not BRF_ID_RE.match(brf_id or ""):
             return None
         with self._lock:
@@ -76,7 +91,16 @@ class TenantRegistry:
                 return store
             if self.auth.get_tenant(brf_id) is None:
                 return None
-            store = Store(data_dir=self._tenant_dir(brf_id), corpus_origin=corpus_origin)
+            tenant_dir = self._tenant_dir(brf_id)
+            if corpus_origin is None and not tenant_dir.exists():
+                raise RuntimeError(
+                    f"Tenant '{brf_id}' finns i auth-databasen men dess katalog ({tenant_dir}) har "
+                    "aldrig skapats på disk — kan inte öppna en tenant som aldrig materialiserats. "
+                    "Detta stänger av krasch-fönstret där en riktig tenant annars tyst skulle "
+                    "återuppstå som 'synthetic'. Använd TenantRegistry.create(...) för att skapa "
+                    "tenanten (med ett explicit corpus_origin) innan get() anropas."
+                )
+            store = Store(data_dir=tenant_dir, corpus_origin=corpus_origin)
             self._stores[brf_id] = store
             return store
 
