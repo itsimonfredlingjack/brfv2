@@ -8,7 +8,7 @@ reads PageData.words and is wholly untouched. When no year/heading is confidentl
 found, the search string is exactly the frozen text (graceful degradation).
 
 Scope (2026-07-19): document year + section heading. Note-level "table context"
-is intentionally deferred (see docs/superpowers/specs/2026-07-19-...).
+is intentionally deferred (see docs/superpowers/specs/2026-07-19-enriched-chunk-representation-design.md).
 """
 
 from __future__ import annotations
@@ -84,3 +84,29 @@ def heading_for(headings: list[tuple[int, int, str]], page: int, word_start: int
         else:
             break
     return chosen
+
+
+def enrichment_enabled() -> bool:
+    """Enrichment is ON by default. Set BRF_ENRICH=0 to disable — used by the
+    measurement harness to produce a clean baseline arm and as a safety escape
+    hatch. Not a user-facing Settings knob."""
+    return os.environ.get("BRF_ENRICH", "1") != "0"
+
+
+def build_search_text(chunk_text: str, *, year: str | None, section_heading: str | None) -> str:
+    prefix = " ".join(p for p in (year, section_heading) if p)
+    return f"{prefix}\n{chunk_text}" if prefix else chunk_text
+
+
+def chunk_search_texts(
+    chunks: list[Chunk], pages_by_doc: dict[str, list[PageData]]
+) -> dict[str, str]:
+    """Per-chunk enriched search string: document year + carried-forward section
+    heading, prepended to the frozen chunk text. Degrades to the frozen text."""
+    years = {d: document_year(p) for d, p in pages_by_doc.items()}
+    headings = {d: document_headings(p) for d, p in pages_by_doc.items()}
+    out: dict[str, str] = {}
+    for c in chunks:
+        heading = heading_for(headings.get(c.document_id, []), c.page, c.word_start)
+        out[c.id] = build_search_text(c.text, year=years.get(c.document_id), section_heading=heading)
+    return out

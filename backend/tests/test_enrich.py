@@ -77,3 +77,44 @@ class TestHeadingDetection:
         ])
         headings = document_headings([p])
         assert headings[0][2] == "Eget kapital"
+
+
+from app.enrich import build_search_text, chunk_search_texts, enrichment_enabled
+from app.schemas import Chunk
+
+
+class TestBuildSearchText:
+    def test_prepends_year_and_heading(self):
+        assert build_search_text("1 234", year="2025", section_heading="Resultaträkning") == \
+            "2025 Resultaträkning\n1 234"
+
+    def test_degrades_to_identity_when_nothing_found(self):
+        assert build_search_text("1 234", year=None, section_heading=None) == "1 234"
+
+    def test_year_only(self):
+        assert build_search_text("rad", year="2024", section_heading=None) == "2024\nrad"
+
+
+class TestChunkSearchTexts:
+    def test_each_chunk_gets_year_and_its_section(self):
+        p1 = PageData(number=1, width=595, height=842, words=[
+            _line("Resultaträkning", y0=100, h=16, block=1, line=1),
+            _line("2025", y0=100, h=16, block=1, line=2, x0=200),
+            _line("intäkt", y0=200, h=10, block=2, line=1),
+        ])
+        # year needs count>=2; add a second 2025 within scan window
+        p1.words.append(_line("2025", y0=300, h=10, block=3, line=1))
+        chunks = [Chunk(id="d1:p1:0", document_id="d1", page=1, word_start=2, word_end=3, text="intäkt 2025")]
+        out = chunk_search_texts(chunks, {"d1": [p1]})
+        assert out["d1:p1:0"].startswith("2025 Resultaträkning\n")
+        assert out["d1:p1:0"].endswith("intäkt 2025")
+
+
+class TestEnrichmentToggle:
+    def test_default_enabled(self, monkeypatch):
+        monkeypatch.delenv("BRF_ENRICH", raising=False)
+        assert enrichment_enabled() is True
+
+    def test_disabled_when_zero(self, monkeypatch):
+        monkeypatch.setenv("BRF_ENRICH", "0")
+        assert enrichment_enabled() is False
