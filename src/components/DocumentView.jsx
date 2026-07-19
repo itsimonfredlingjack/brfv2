@@ -1,36 +1,11 @@
 import React, { forwardRef } from 'react';
-
-// Simulated extracted paragraphs from SNÖRÖJNINGSAVTAL_2024.pdf
-export const documentData = [
-  {
-    id: 'p1',
-    text: 'Detta avtal ("Avtalet") är upprättat mellan Beställaren och Entreprenören avseende snöröjning och halkbekämpning för perioden 2024-2025.',
-  },
-  {
-    id: 'p2',
-    text: 'Entreprenören åtar sig att utföra snöröjning och halkbekämpning på de ytor som anges i Bilaga 1. Arbetet ska utföras fackmannamässigt och i enlighet med gällande branschstandard.',
-  },
-  {
-    id: 'p3',
-    text: 'Snöröjningsjour startar årligen den 15 november och pågår fram till den 15 april. Under denna period ska Entreprenören vara tillgänglig dygnet runt.',
-    highlightWord: '15 november',
-    type: 'deadline'
-  },
-  {
-    id: 'p4',
-    text: 'Vid snöfall som överstiger 5 cm ska plogning påbörjas senast inom 2 timmar från det att snöfallet upphört. Om det snöar ihållande ska kontinuerlig plogning ske för att säkerställa framkomlighet.',
-  },
-  {
-    id: 'p5',
-    text: 'Halkbekämpning (saltning eller sandning) ska utföras förebyggande när risk för frosthalka föreligger, samt senast inom 1 timme efter avslutad snöröjning om behov finns för att förhindra isbildning.',
-    highlightWord: 'saltning eller sandning',
-    type: 'search'
-  },
-  {
-    id: 'p6',
-    text: 'Fakturering sker månadsvis i efterskott. Fakturan ska innehålla specifikation över utförda insatser, datum och klockslag. Betalningsvillkor är 30 dagar netto.',
-  }
-];
+// Dev-gated demo scaffolding (cleanup/verified-ui Task 5) — this component
+// is only ever reached via DemoWorkspace.jsx's dynamic import, which is
+// itself only wired up when import.meta.env.DEV is true (see App.jsx and
+// src/appModes.js). documentData is fabricated: it never came from a real
+// PDF extraction. See src/demoData.js's header comment for the full
+// rationale and src/no-fabrication.test.js for the allowlist it's held to.
+import { documentData } from '../demoData';
 
 const DocumentView = forwardRef(({ activeId, searchMode }, ref) => {
   return (

@@ -1096,13 +1096,42 @@
   border: 1px solid rgba(250, 204, 21, 0.2);
 }
 
+/* Dev-only demo/scaffolding marker (cleanup/verified-ui Task 5): flags the
+   pre-existing Granskning/Bevakningar/Document Canvas tabs, which render
+   fabricated demo data (src/demoData.js) and only ever render in dev builds
+   (see src/appModes.js's demoTabsEnabled()). Cheap honesty even in dev. */
+.demo-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  margin-left: 10px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+  background: rgba(250, 204, 21, 0.15);
+  color: #facc15;
+  border: 1px solid rgba(250, 204, 21, 0.3);
+}
+
 /* AI Chat Interface */
+/* Dual-pane layout: chat column + source panel (cleanup/verified-ui Task 2,
+   salvaged shape from .superpowers/quarantine/INVENTORY.md §3(a)). */
+.chat-layout {
+  display: flex;
+  height: calc(100vh - 100px);
+  gap: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
 .chat-container {
+  flex: 1;
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  height: calc(100vh - 100px); /* Fill screen minus padding */
-  max-width: 900px;
-  margin: 0 auto;
 }
 
 .chat-header {
@@ -1856,6 +1885,155 @@
   font-weight: 600;
 }
 
+/* Inline [K<n>]/[<n>] marker — linkifies a token already present in the
+   answer text; same amber accent as .citation-chip so both affordances
+   read as one system (cleanup/verified-ui Task 2). */
+.inline-citation {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 4px;
+  background: rgba(255, 200, 87, 0.14);
+  border: 1px solid rgba(255, 200, 87, 0.45);
+  color: #ffc857;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1;
+  margin: 0 2px;
+  transform: translateY(-2px);
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+.inline-citation:hover {
+  background: rgba(255, 200, 87, 0.26);
+  transform: translateY(-3px);
+}
+
+/* Source panel (dual-pane chat) — lists the latest verified citations. */
+.citations-panel {
+  width: 320px;
+  flex-shrink: 0;
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.citations-panel-header {
+  flex-shrink: 0;
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--glass-border);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 600;
+  color: var(--text-primary);
+  font-size: 15px;
+}
+
+.citations-panel-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.citations-panel-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  margin-top: 32px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  text-align: center;
+}
+
+.citation-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.citation-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.citation-card-badge {
+  flex-shrink: 0;
+  background: rgba(255, 200, 87, 0.18);
+  color: #ffc857;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.citation-card-title {
+  flex: 1;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.citation-card-quote {
+  font-size: 13px;
+  color: var(--text-secondary);
+  font-style: italic;
+  line-height: 1.5;
+  border-left: 2px solid rgba(255, 200, 87, 0.4);
+  padding-left: 10px;
+  margin: 0;
+}
+
+.citation-card-action {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid var(--glass-border);
+  color: var(--text-primary);
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.citation-card-action:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+@media (max-width: 900px) {
+  .chat-layout {
+    flex-direction: column;
+    height: auto;
+  }
+  .citations-panel {
+    width: 100%;
+    height: 300px;
+  }
+}
+
 .chat-refusal-tag {
   display: inline-flex;
   align-items: center;
@@ -1882,6 +2060,76 @@
   margin-top: 10px;
   font-size: 12px;
   color: #fbbf24;
+}
+
+/* Near-matches (cleanup/verified-ui Task 3) — real but unverified
+   RetrievalHit entries shown only on refusal. Deliberately muted/dashed,
+   NOT the amber .citation-chip/.citation-card treatment, so these can never
+   be mistaken for verified sources. */
+.near-matches-section {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--glass-border);
+}
+
+.near-matches-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.near-matches-caption {
+  font-size: 11px;
+  color: var(--text-secondary);
+  opacity: 0.75;
+  margin: 2px 0 10px;
+}
+
+.near-matches-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.near-match-card {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  text-align: left;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed var(--glass-border);
+  border-radius: 10px;
+  padding: 10px 12px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.near-match-card:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.near-match-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.near-match-score {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.near-match-text {
+  font-size: 12px;
+  color: var(--text-secondary);
+  line-height: 1.4;
 }
 
 .upload-error {
