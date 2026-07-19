@@ -7,14 +7,17 @@ import fitz  # PyMuPDF
 A4 = (595.0, 842.0)
 
 
-def build_pdf(pages: list[list[tuple[str, float, float]]], page_size=A4) -> bytes:
-    """Build a PDF. Each page is a list of (text, x, y) lines; y is the
-    baseline in top-left-origin points. Returns PDF bytes."""
+def build_pdf(pages: list[list[tuple]], page_size=A4) -> bytes:
+    """Build a PDF. Each page is a list of (text, x, y) or (text, x, y, fontsize)
+    lines; y is the baseline in top-left-origin points, fontsize defaults to 11.
+    Returns PDF bytes."""
     doc = fitz.open()
     for lines in pages:
         page = doc.new_page(width=page_size[0], height=page_size[1])
-        for text, x, y in lines:
-            page.insert_text(fitz.Point(x, y), text, fontsize=11, fontname="helv")
+        for line in lines:
+            text, x, y = line[0], line[1], line[2]
+            fontsize = line[3] if len(line) > 3 else 11
+            page.insert_text(fitz.Point(x, y), text, fontsize=fontsize, fontname="helv")
     data = doc.tobytes()
     doc.close()
     return data

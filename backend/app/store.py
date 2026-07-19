@@ -22,6 +22,7 @@ from pathlib import Path
 
 from .chunker import chunk_pages
 from .embeddings import get_embedder
+from .enrich import chunk_search_texts, enrichment_enabled
 from .extract import extract_pdf
 from .indexer import HybridIndex
 from .ocr import ocr_pdf, tesseract_available
@@ -251,6 +252,13 @@ class Store:
                     new_chunks[c.id] = c
                 if doc_id in self.documents:
                     self.documents[doc_id].chunks = sum(1 for c in new_chunks.values() if c.document_id == doc_id)
+            if enrichment_enabled():
+                # Enriched search string per chunk (app/enrich.py). Sets the
+                # index-only search_text; frozen c.text and PageData.words are
+                # untouched, so citation verification is wholly unaffected.
+                search_map = chunk_search_texts(list(new_chunks.values()), self.pages)
+                for cid, search_text in search_map.items():
+                    new_chunks[cid].search_text = search_text
             new_index = HybridIndex(self.index.embedder)
             new_index.build(list(new_chunks.values()), {d.id: d.name for d in self.documents.values()})
             self.chunks = new_chunks
