@@ -1,5 +1,13 @@
-from app.enrich import document_year, document_headings, heading_for, is_heading_line
-from app.schemas import PageData, Word
+from app.enrich import (
+    build_search_text,
+    chunk_search_texts,
+    document_headings,
+    document_year,
+    enrichment_enabled,
+    heading_for,
+    is_heading_line,
+)
+from app.schemas import Chunk, PageData, Word
 
 
 def _w(text: str, y0: float = 100.0) -> Word:
@@ -32,13 +40,18 @@ class TestDocumentYear:
         pages = [_page(1, ["ingen", "siffra", "här"]), _page(2, ["2019", "2019"])]
         assert document_year(pages, scan_pages=1) is None
 
+    def test_year_tie_break_lexicographic_wins(self):
+        # When two years appear with equal counts, the lexicographically-greater (later) year wins.
+        pages = [_page(1, ["2023", "2024", "2023", "2024"])]
+        assert document_year(pages) == "2024"
+
 
 class TestHeadingDetection:
     def test_tall_short_digitfree_line_is_heading(self):
         # median body height 10; a 16-high one-word line stands out.
         body = [_line("löpande", y0=200, h=10, block=2, line=1)]
         heading = [_line("Resultaträkning", y0=100, h=16, block=1, line=1)]
-        page = PageData(number=1, width=595, height=842, words=heading + body)
+        _page = PageData(number=1, width=595, height=842, words=heading + body)
         med = 10.0
         assert is_heading_line(heading, med) is True
         assert is_heading_line(body, med) is False
@@ -65,7 +78,7 @@ class TestHeadingDetection:
         assert [h[2] for h in headings] == ["Resultaträkning"]
         # a chunk starting on page 2 inherits the last heading seen
         assert heading_for(headings, page=2, word_start=0) == "Resultaträkning"
-        # a chunk before the heading gets nothing
+        # a chunk starting at the heading's own word index inherits it
         assert heading_for(headings, page=1, word_start=0) == "Resultaträkning"
 
     def test_heading_words_joined_in_reading_order(self):
@@ -77,10 +90,6 @@ class TestHeadingDetection:
         ])
         headings = document_headings([p])
         assert headings[0][2] == "Eget kapital"
-
-
-from app.enrich import build_search_text, chunk_search_texts, enrichment_enabled
-from app.schemas import Chunk
 
 
 class TestBuildSearchText:
