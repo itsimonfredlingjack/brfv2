@@ -202,3 +202,20 @@
   and finding none, not by trusting the pattern. Why it mattered: "no fabrication in committed
   code" and "no fabrication reachable in production" are different claims: the first was already
   true, the second needed its own proof, gate, and tripwire hardening.
+
+- **2026-07-19 — Enrichment that adds non-discriminating tokens can't re-rank; prove it offline
+  before spending a live model.** To recover annual-report table rows that lose to prose, we
+  embedded an enriched representation (document year + section heading) per chunk, kept for
+  search only (frozen text still cited — invariant proven). It recovered **0 of the refusals**:
+  ranks were byte-identical to baseline on the hashed embedder, −1 on model2vec. The reason is
+  structural, not a bug — the year is *constant across every chunk in a document*, and the
+  section heading is *orthogonal to the query vocabulary* ("räntekostnader" never matches
+  "Resultaträkning") and *shared across a section's chunks*; none of that separates the true row
+  from the prose competing for the same query terms. A deterministic retrieval-recovery harness
+  (true-row-into-topK via the authoritative word-index locator, no LLM) showed this in seconds
+  and made the planned live 12B pass logically redundant: enrichment provably doesn't change the
+  retrieved top-6, and the model is shown only the frozen excerpt, so both arms send byte-
+  identical prompts → identical answers. Why it mattered: "enrich what gets embedded" sounds
+  right, but retrieval only moves when the added signal *discriminates* the target from its
+  competitors for *that query* — and when it doesn't, an offline rank check proves the null
+  without burning a GPU hour confirming a foregone conclusion.
