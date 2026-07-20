@@ -2,6 +2,8 @@
 
 Grundad dokument-Q&A för bostadsrättsföreningar. Varje källa verifieras mot dokumenttexten och kan öppnas på rätt PDF-sida med markering. Frågor som inte kan besvaras ur dokumenten ska avvisas i stället för att gissas.
 
+- **MVP-status:** [docs/MVP-STATUS.md](docs/MVP-STATUS.md)
+
 ## Projektstruktur
 
 Det här arbetsområdet består av två separata Git-repon:

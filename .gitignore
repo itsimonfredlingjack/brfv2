@@ -49,5 +49,6 @@ backend/eval/network_audit.json
 
 # Playwright MCP artifacts
 .playwright-mcp/
+
 # Canonical frontend is a separate nested Git checkout
 /brfv2-mockup/
