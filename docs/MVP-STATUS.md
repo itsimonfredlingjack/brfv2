@@ -34,6 +34,9 @@ MVP kräver inte Granskning, Bevakningar, automatisk datumextraktion, OCR-produk
 - Frontend: **63 passed**.
 - Lint: **0 errors**, fyra sedan tidigare kända varningar i dev-only demo-komponenter.
 - Produktionsbygge: grönt.
+- Pilotläge verifierat mot lokal, självhostad `gemma4:e4b`: `/api/health` rapporterade `mode: pilot` och `llm_provider: selfhosted`.
+- Grundat pilotsvar verifierat via API: korrekt svar om snöröjningsjouren, verifierat citat på sida 1 och exakt bounding-box.
+- Säker relevansvägran verifierad via API för frågan `Hur fungerar kvantdatorer?`.
 
 ### Genomfört på denna branch
 
@@ -48,14 +51,11 @@ Dokumentvyn har konsoliderats till den visuella riktningen från mockupen men an
 
 ### Faktisk blockerare
 
-Den server som körde vid verifieringen rapporterade `llm_provider: fake`. Retrieval fungerade och hittade korrekt avsnitt, men `/ask` slutade med `provider_error` eftersom `FakeLLM` inte har några svar.
+Den gamla utvecklingsprocessen på port 8787 rapporterade `llm_provider: fake` och kunde därför inte generera svar. Det var en start-/konfigurationsfråga, inte ett retrieval- eller frontendfel.
 
-Detta är inte ett retrievalfel och inte ett frontendfel. MVP-blockeraren är att starta backend med en riktig generation-provider:
+Den riktiga pilotvägen är nu separat verifierad på en testport med `BRF_MODE=pilot`, lokal Ollama och `gemma4:e4b`. Den gav ett korrekt grundat svar, en verifierad källa på sida 1 och en korrekt säker vägran. Generationstekniken är alltså inte längre en okänd blockerare.
 
-- utveckling/demo: lokalt autentiserad Claude CLI eller uttryckligen konfigurerad provider;
-- pilot med verkliga dokument: `BRF_MODE=pilot` och självhostad OpenAI-kompatibel LLM-endpoint.
-
-En server som rapporterar `fake` eller `none` är inte MVP-redo.
+Det som återstår är den synliga E2E-gaten: starta den kanoniska backendprocessen i pilotläge, köra huvudfrontenden mot den, ställa frågan i UI:t och klicka igenom källan till PDF-markeringen. En server som rapporterar `fake` eller `none` är fortfarande inte MVP-redo.
 
 ## Vägen till MVP
 
@@ -67,10 +67,11 @@ En server som rapporterar `fake` eller `none` är inte MVP-redo.
 
 ### B. End-to-end generation — nästa hårda gate
 
-- [ ] Starta backend med en verklig provider.
-- [ ] Verifiera frågan `När startar snöröjningsjouren?` genom UI:t.
+- [x] Starta backend i pilotläge med självhostad provider.
+- [x] Verifiera frågan `När startar snöröjningsjouren?` genom det riktiga API-kontraktet.
+- [ ] Verifiera samma fråga genom huvudfrontenden.
 - [ ] Klicka källan och bekräfta rätt PDF-sida och markering.
-- [ ] Verifiera en säker vägran för en fråga som saknar underlag.
+- [x] Verifiera en säker vägran för en fråga som saknar underlag.
 
 ### C. Upload-slingan
 
