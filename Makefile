@@ -1,25 +1,33 @@
-.PHONY: backend backend-pilot frontend test test-isolation eval eval-b eval-fast eval-sweep \
-        eval-selfhosted eval-b-selfhosted demo-reset build model-readiness model-readiness-selftest \
+.PHONY: backend backend-pilot require-pilot-llm frontend frontend-legacy test test-isolation eval eval-b eval-fast eval-sweep \
+        eval-selfhosted eval-b-selfhosted demo-reset build build-legacy model-readiness model-readiness-selftest \
         model-readiness-selftest-negative
 
 # Generation default for dev + eval is the standard hosted provider (logged-in `claude`
 # CLI, or Anthropic SDK when ANTHROPIC_API_KEY is set) — no env needed. Dev/eval use only
 # synthetic BRF data, so no data-residency constraint applies there.
 #
-# The self-hosted path below (local Ollama, or an EU GPU host in production) is the
-# PILOT/production swap, forced only by `backend-pilot` (BRF_MODE=pilot). The `*-selfhosted`
-# eval targets run through it with a network audit to prove zero external egress.
-BRF_LLM_BASE_URL ?= http://127.0.0.1:11434/v1
-BRF_LLM_MODEL ?= gemma4:e4b
+# Pilot/production generation is the Gemma 4 12B service on `agenntserver`
+# (Ubuntu + RTX 4070). The Mac must never silently fall back to its local e4b model.
+# Supply BRF_LLM_BASE_URL explicitly: normally http://127.0.0.1:8000/v1 when the
+# backend runs on agenntserver or when port 8000 is SSH-forwarded from that server.
+BRF_LLM_BASE_URL ?=
+BRF_LLM_MODEL ?= gemma4:e12b
 SELFHOSTED_ENV = BRF_LLM=selfhosted BRF_LLM_BASE_URL=$(BRF_LLM_BASE_URL) BRF_LLM_MODEL=$(BRF_LLM_MODEL)
 
 backend:            ## API-server på :8787 (dev-läge)
 	cd backend && uv run uvicorn app.main:create_app --factory --port 8787
 
-backend-pilot:      ## API-server i pilot-läge (kräver självhostad LLM)
+require-pilot-llm:
+	@test -n "$(BRF_LLM_BASE_URL)" || (echo "BRF_LLM_BASE_URL måste peka på agenntserver Gemma 4 12B (oftast http://127.0.0.1:8000/v1 via tunnel)."; exit 1)
+
+backend-pilot: require-pilot-llm  ## API-server i pilotläge mot Gemma 4 12B på agenntserver
 	cd backend && BRF_MODE=pilot $(SELFHOSTED_ENV) uv run uvicorn app.main:create_app --factory --port 8787
 
-frontend:           ## Vite dev-server på :5173
+frontend:           ## Kanoniska UI:t i brfv2-mockup på :5173
+	@test -d brfv2-mockup || (echo "Kanoniska frontend-repot brfv2-mockup saknas i arbetsytan."; exit 1)
+	cd brfv2-mockup && npm run dev
+
+frontend-legacy:    ## Äldre backendkopplad prototyp i rotens src/
 	npm run dev
 
 test:               ## Backend-tester (offline, deterministiska)
@@ -34,10 +42,10 @@ eval:               ## Full eval, tenant A, standardleverantör (dev/eval-defaul
 eval-b:             ## Full eval, tenant B (Sjöutsikten 7), standardleverantör
 	cd backend && uv run python -m scripts.eval --golden eval/golden_b.json --workers 2
 
-eval-selfhosted:    ## Egress-bevis: eval tenant A via lokal Ollama + nätverksrevision
+eval-selfhosted: require-pilot-llm    ## Egress-bevis: eval tenant A via Gemma 4 12B på agenntserver
 	cd backend && $(SELFHOSTED_ENV) uv run python -m scripts.eval --workers 2 --network-audit
 
-eval-b-selfhosted:  ## Egress-bevis: eval tenant B via lokal Ollama + nätverksrevision
+eval-b-selfhosted: require-pilot-llm  ## Egress-bevis: eval tenant B via Gemma 4 12B på agenntserver
 	cd backend && $(SELFHOSTED_ENV) uv run python -m scripts.eval --golden eval/golden_b.json --workers 2 --network-audit
 
 eval-fast:          ## Retrieval-eval utan LLM
@@ -58,5 +66,9 @@ model-readiness-selftest:          ## Bevis: self-test med KORREKT scriptad Fake
 model-readiness-selftest-negative: ## Bevis: self-test med FABRICERAD scriptad FakeLLM -> NOT READY, exit 1
 	cd backend && uv run python -m scripts.model_readiness --selftest-negative
 
-build:              ## Produktionsbygge av frontend
+build:              ## Produktionsbygge av kanoniska brfv2-mockup
+	@test -d brfv2-mockup || (echo "Kanoniska frontend-repot brfv2-mockup saknas i arbetsytan."; exit 1)
+	cd brfv2-mockup && npm run build
+
+build-legacy:       ## Bygg den äldre rotfrontenden
 	npm run build
