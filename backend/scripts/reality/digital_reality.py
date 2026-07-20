@@ -19,8 +19,8 @@ import tempfile
 from pathlib import Path
 
 os.environ.setdefault("BRF_LLM", "selfhosted")
-os.environ.setdefault("BRF_LLM_BASE_URL", "http://127.0.0.1:11434/v1")
-os.environ.setdefault("BRF_LLM_MODEL", "gemma4:e4b")
+os.environ.setdefault("BRF_LLM_BASE_URL", "http://127.0.0.1:8000/v1")
+os.environ.setdefault("BRF_LLM_MODEL", "gemma4:e12b")
 os.environ.setdefault("HF_HUB_OFFLINE", "1")
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent.parent))

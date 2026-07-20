@@ -143,8 +143,8 @@ class OpenAICompatProvider:
     BRF_LLM_BASE_URL, which must point at infrastructure we control.
 
     Env contract:
-      BRF_LLM_BASE_URL   e.g. http://127.0.0.1:11434/v1  (required)
-      BRF_LLM_MODEL      e.g. gemma4:e4b — overrides settings.aiModel
+      BRF_LLM_BASE_URL   e.g. http://127.0.0.1:8000/v1 via agenntserver/tunnel (required)
+      BRF_LLM_MODEL      e.g. gemma4:e12b — overrides settings.aiModel
       BRF_LLM_API_KEY    bearer token if the server enforces one (vLLM --api-key)
       BRF_LLM_TIMEOUT_S  request timeout, default 300
     """

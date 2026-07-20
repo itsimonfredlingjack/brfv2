@@ -1,50 +1,83 @@
-# BRF Dokument-AI — grounded Q&A vertical slice
+# BRF Dokument-AI
 
-Swedish housing-co-op boards ask questions about their PDFs and get answers where
-**every claim cites a verbatim passage, every citation is verified against the source
-text, and the passage is highlighted at the exact position in the rendered PDF**.
-Unanswerable questions are refused — with an explanation — instead of guessed at.
+Grundad dokument-Q&A för bostadsrättsföreningar. Varje källa verifieras mot dokumenttexten och kan öppnas på rätt PDF-sida med markering. Frågor som inte kan besvaras ur dokumenten ska avvisas i stället för att gissas.
 
-- **Spec:** [SPEC.md](SPEC.md) · **Demo script:** [DEMO.md](DEMO.md) ·
-  **Plan:** [docs/superpowers/plans/2026-07-16-vertical-slice.md](docs/superpowers/plans/2026-07-16-vertical-slice.md)
-- **Evidence (real run):** [docs/evidence/](docs/evidence/)
+## Projektstruktur
 
-## Quick start
+Det här arbetsområdet består av två separata Git-repon:
 
-```bash
-make backend      # FastAPI on :8787 (uv manages Python 3.12 + deps)
-make frontend     # Vite/React on http://localhost:5173/brfv2/
-make demo-reset   # seed the fictional Brf Gjutformen 12 corpus + golden set
-```
+- `backend/` och backendkontrakten i detta repo — FastAPI, auth, tenant-isolering, ingestion, retrieval, generering och verifierade citat.
+- `brfv2-mockup/` — **den kanoniska och avsedda produktsidan**. Namnet är historiskt; den ska nu kopplas till backend och ersätta sin fiktiva datakälla successivt.
 
-LLM provider: Anthropic SDK when `ANTHROPIC_API_KEY` is set, otherwise the locally
-authenticated `claude` CLI. Tests never touch the network.
+Rotens äldre React-app i `src/` är en fungerande backendkopplad prototyp, men den är inte den beslutade visuella slutprodukten. Nya UI-integrationer ska göras i `brfv2-mockup/`, inte genom att porta dess design tillbaka till rotens `src/`.
 
-## Architecture (backend/)
+## MVP
 
-```
-PDF ─► extract.py (PyMuPDF words+boxes) ─► chunker.py (word-range provenance)
-    ─► indexer.py (BM25 ⊕ model2vec embeddings, Swedish compound-aware expansion)
-    ─► answer.py (retrieval gate → LLM (strict JSON) → LLM gate → grounding gate)
-    ─► citations.py (quote verification + per-line box resolution, SPEC §2)
-    ─► React UI (pdf.js viewer with highlight overlays)
-```
+Den första verkliga produktslingan är:
 
-## Quality
+> Logga in → se föreningens dokument → ställ en fråga → få ett verifierat svar → öppna källan på rätt PDF-sida med markering.
+
+För administratörer tillkommer uppladdning och radering av PDF-dokument.
+
+Granskning, bevakningar och andra mockup-flöden är inte verkliga förrän de har motsvarande backendkontrakt. De får inte visa fiktiva data som om de kom från systemet.
+
+## Start
+
+Seedning och backend:
 
 ```bash
-make test         # 110 offline tests incl. every SPEC §2 failure mode
-make eval         # full eval w/ real LLM against the golden set (gated)
-make eval-sweep   # proof the settings knobs change real behavior
+make demo-reset
+make backend
 ```
 
-Latest full eval (46 answerable + 10 unanswerable Swedish questions):
-recall@6 **1.000** · citation verification **1.000** · highlight correctness **≥ 0.97** ·
-false-answer rate **0.000**. See `backend/eval/` and `docs/evidence/`.
+Kanonisk frontend:
 
-## OCR spike rig (scanned PDFs)
+```bash
+make frontend
+```
 
-Most real BRF documents are scans. `backend/scripts/ocr_spike.py` measures OCR
-candidates (word-box overlays, coordinate drift vs digital ground truth, quote-match
-rate through the same normalization pipeline) — the go/no-go decision is deliberately
-left for when real scans and Simon are in the room. See SPEC §5.
+Det startar `brfv2-mockup` på `http://localhost:5173/brfv2/`.
+
+## Pilotmodell
+
+Pilot-/produktionsgenerationen körs inte på Macen. Den körs med `gemma4:e12b` på Ubuntu-servern `agenntserver` med RTX 4070.
+
+När backenden kör på Macen nås tjänsten normalt genom en SSH-tunnel:
+
+```bash
+ssh -N -L 8000:127.0.0.1:8000 agenntserver
+```
+
+Starta därefter pilotbackenden:
+
+```bash
+BRF_LLM_BASE_URL=http://127.0.0.1:8000/v1 \
+BRF_LLM_MODEL=gemma4:e12b \
+make backend-pilot
+```
+
+`127.0.0.1:8000` avser då den tunnlade tjänsten på Ubuntu-servern. Macens lokala `gemma4:e4b` används inte som fallback.
+
+Se [docs/DEPLOY-SELFHOSTED-LLM.md](docs/DEPLOY-SELFHOSTED-LLM.md) för det fullständiga driftkontraktet.
+
+## Backendarkitektur
+
+```text
+PDF → extract.py → chunker.py → indexer.py
+    → answer.py → citations.py → API-kontrakt → brfv2-mockup
+```
+
+- **Spec:** [SPEC.md](SPEC.md)
+- **Pilotkontrakt:** [SPEC-PILOT.md](SPEC-PILOT.md)
+- **Demo:** [DEMO.md](DEMO.md)
+- **Evidens:** [docs/evidence/](docs/evidence/)
+
+## Kvalitet
+
+```bash
+make test
+make test-isolation
+make eval-fast
+```
+
+Backendens tester är offline och deterministiska. Självhostade evalkörningar ska uttryckligen peka på `agenntserver`-tjänsten och använda nätverksrevisionen.
