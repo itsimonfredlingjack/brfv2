@@ -49,3 +49,6 @@ backend/eval/network_audit.json
 
 # Playwright MCP artifacts
 .playwright-mcp/
+
+# Standalone local visual prototype; the canonical app lives at the repo root
+/brfv2-mockup/

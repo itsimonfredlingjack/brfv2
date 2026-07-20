@@ -5,6 +5,7 @@ Swedish housing-co-op boards ask questions about their PDFs and get answers wher
 text, and the passage is highlighted at the exact position in the rendered PDF**.
 Unanswerable questions are refused — with an explanation — instead of guessed at.
 
+- **MVP status and canonical frontend:** [docs/MVP-STATUS.md](docs/MVP-STATUS.md)
 - **Spec:** [SPEC.md](SPEC.md) · **Demo script:** [DEMO.md](DEMO.md) ·
   **Plan:** [docs/superpowers/plans/2026-07-16-vertical-slice.md](docs/superpowers/plans/2026-07-16-vertical-slice.md)
 - **Evidence (real run):** [docs/evidence/](docs/evidence/)

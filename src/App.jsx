@@ -3,8 +3,8 @@ import {
   Search as SearchIcon, X, UploadCloud, FileText,
   Loader2, CheckCircle2,
   ArrowRight, AlertCircle, LayoutDashboard, Folders, CheckSquare, Clock,
-  Trash2, Edit3, ChevronUp, Settings, HelpCircle, LogOut,
-  Filter, ArrowDownUp, List, LayoutGrid, MessageSquare, Send
+  Trash2, ChevronUp, Settings, HelpCircle, LogOut,
+  MessageSquare, Send
 } from 'lucide-react';
 import SettingsView from './components/SettingsView';
 import PdfViewer from './components/PdfViewer';
@@ -42,6 +42,7 @@ function App() {
   const [showUserMenu, setShowUserMenu] = useState(false);
   // Real backend state
   const [documents, setDocuments] = useState([]);
+  const [documentQuery, setDocumentQuery] = useState('');
   const [uploadError, setUploadError] = useState(null);
   const [viewer, setViewer] = useState(null); // {url, title, page, rects, highlightPage, approximate}
   const [chatBusy, setChatBusy] = useState(false);
@@ -82,6 +83,7 @@ function App() {
     setShowUserMenu(false);
     setViewer(null);
     setDocuments([]);
+    setDocumentQuery('');
     setChatMessages([]);
     setActiveDocument(null);
     setCurrentTab('overview');
@@ -109,6 +111,7 @@ function App() {
     setViewer(null);
     setActiveDocument(null);
     setDocuments([]);
+    setDocumentQuery('');
     setCurrentTab('overview');
   };
 
@@ -446,85 +449,127 @@ function App() {
     </div>
   );
 
+  const normalizedDocumentQuery = documentQuery.trim().toLocaleLowerCase('sv');
+  const visibleDocuments = normalizedDocumentQuery
+    ? documents.filter((doc) => (doc.name || '').toLocaleLowerCase('sv').includes(normalizedDocumentQuery))
+    : documents;
+
   const renderDocuments = () => (
-    <div className="tab-content">
-      <h2 className="tab-title">Alla Dokument</h2>
+    <div className="tab-content documents-page">
+      <header className="documents-page-header">
+        <div>
+          <span className="documents-kicker">Dokumentbibliotek</span>
+          <h2 className="documents-page-title">Dokument</h2>
+          <p className="documents-page-subtitle">Verkliga, indexerade PDF:er för {activeBrfName}. Öppna en fil eller sök på dokumentnamn.</p>
+        </div>
+        {isAdmin && (
+          <button className="documents-upload-button" onClick={handleGlobalUpload}>
+            <UploadCloud size={17} /> Ladda upp dokument
+          </button>
+        )}
+      </header>
 
-      {/* Toolbar */}
-      <div className="documents-toolbar">
-        <div className="toolbar-left">
-          <div className="search-input-wrapper">
-            <SearchIcon size={14} />
-            <input type="text" placeholder="Sök dokumentnamn..." className="toolbar-search-input" />
-          </div>
-          <button className="toolbar-btn">
-            <Filter size={14} /> Filter
-          </button>
-          <button className="toolbar-btn">
-            <ArrowDownUp size={14} /> Sortera
-          </button>
-        </div>
-        <div className="toolbar-right">
-          <div className="view-toggle">
-            <button className="view-toggle-btn active"><List size={16} /></button>
-            <button className="view-toggle-btn"><LayoutGrid size={16} /></button>
-          </div>
-        </div>
+      <div className="documents-control-bar">
+        <label className="documents-search-field">
+          <SearchIcon size={17} aria-hidden="true" />
+          <input
+            type="search"
+            aria-label="Sök dokumentnamn"
+            placeholder="Sök dokumentnamn..."
+            value={documentQuery}
+            onChange={(e) => setDocumentQuery(e.target.value)}
+          />
+          {documentQuery && (
+            <button type="button" onClick={() => setDocumentQuery('')} aria-label="Rensa dokumentsökning">
+              <X size={15} />
+            </button>
+          )}
+        </label>
+        <span className="documents-result-count">{visibleDocuments.length} av {documents.length} dokument</span>
       </div>
 
-      <div className="glass-panel" style={{ padding: '0', overflow: 'hidden' }}>
-        <table className="documents-table">
-          <thead>
-            <tr>
-              <th>Dokument</th>
-              <th>Uppladdat</th>
-              <th>Status</th>
-              <th>Sidor</th>
-              <th>Chunks</th>
-              <th style={{textAlign: 'right'}}>Åtgärd</th>
-            </tr>
-          </thead>
-          <tbody>
-            {documents.length === 0 && (
-              <tr>
-                <td colSpan={6} style={{ textAlign: 'center', color: 'var(--text-secondary)', padding: '40px' }}>
-                  Inga dokument ännu — ladda upp en PDF för att komma igång.
-                </td>
-              </tr>
+      <section className="documents-shell" aria-live="polite">
+        {visibleDocuments.length === 0 ? (
+          <div className="documents-empty-state">
+            <FileText size={38} aria-hidden="true" />
+            <h3>{documents.length === 0 ? 'Inga dokument ännu' : 'Inga dokument matchar sökningen'}</h3>
+            <p>{documents.length === 0
+              ? (isAdmin ? 'Ladda upp den första PDF-filen för att bygga föreningens sökbara dokumentbas.' : 'En administratör behöver ladda upp föreningens första PDF.')
+              : 'Kontrollera stavningen eller rensa sökfältet.'}</p>
+            {documents.length === 0 && isAdmin && (
+              <button className="documents-empty-action" onClick={handleGlobalUpload}>
+                <UploadCloud size={16} /> Ladda upp PDF
+              </button>
             )}
-            {documents.map(doc => (
-              <tr key={doc.id} onClick={() => openDocViewer(doc)} style={{ cursor: 'pointer' }}>
-                <td style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                  <FileText size={18} color="var(--accent-search)" />
-                  <span style={{ fontWeight: 500 }}>{doc.name}</span>
-                </td>
-                <td style={{ color: 'var(--text-secondary)' }}>{(doc.uploaded_at || '').slice(0, 10)}</td>
-                <td>
-                  <span className="status-badge ready">Klar</span>
-                </td>
-                <td style={{ color: 'var(--text-secondary)' }}>{doc.pages}</td>
-                <td style={{ color: 'var(--text-secondary)' }}>{doc.chunks}</td>
-                <td style={{textAlign: 'right'}}>
-                  <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '4px' }}>
-                    {isAdmin && (
-                      <button
-                        className="icon-btn"
-                        title="Ta bort dokument"
-                        onClick={(e) => { e.stopPropagation(); handleDeleteDocument(doc); }}
-                      >
-                        <Trash2 size={16} />
+            {documents.length > 0 && documentQuery && (
+              <button className="documents-empty-action" onClick={() => setDocumentQuery('')}>Rensa sökning</button>
+            )}
+          </div>
+        ) : (
+          <>
+            <table className="documents-table documents-table-mvp">
+              <thead>
+                <tr>
+                  <th scope="col">Dokument</th>
+                  <th scope="col">Uppladdat</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Sidor</th>
+                  <th scope="col">Chunks</th>
+                  <th scope="col" className="documents-actions-heading">Åtgärder</th>
+                </tr>
+              </thead>
+              <tbody>
+                {visibleDocuments.map((doc) => (
+                  <tr key={doc.id}>
+                    <td>
+                      <button className="document-name-button" onClick={() => openDocViewer(doc)}>
+                        <span className="document-file-icon"><FileText size={17} /></span>
+                        <span>{doc.name}</span>
                       </button>
-                    )}
-                    <button className="icon-btn" onClick={(e) => { e.stopPropagation(); openDocViewer(doc); }}>
-                      <ArrowRight size={16} />
+                    </td>
+                    <td className="document-meta-cell">{(doc.uploaded_at || '').slice(0, 10) || '—'}</td>
+                    <td><span className="document-indexed-status"><CheckCircle2 size={13} /> Indexerad</span></td>
+                    <td className="document-meta-cell">{doc.pages}</td>
+                    <td className="document-meta-cell">{doc.chunks}</td>
+                    <td>
+                      <div className="document-row-actions">
+                        {isAdmin && (
+                          <button className="document-row-button danger" title="Ta bort dokument" onClick={() => handleDeleteDocument(doc)}>
+                            <Trash2 size={15} /> <span>Ta bort</span>
+                          </button>
+                        )}
+                        <button className="document-row-button primary" onClick={() => openDocViewer(doc)}>
+                          <span>Öppna</span> <ArrowRight size={15} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div className="documents-mobile-list">
+              {visibleDocuments.map((doc) => (
+                <article className="document-mobile-card" key={doc.id}>
+                  <button className="document-mobile-open" onClick={() => openDocViewer(doc)}>
+                    <span className="document-file-icon"><FileText size={17} /></span>
+                    <span className="document-mobile-main">
+                      <strong>{doc.name}</strong>
+                      <small>{doc.pages} sidor · {doc.chunks} chunks · {(doc.uploaded_at || '').slice(0, 10)}</small>
+                    </span>
+                    <ArrowRight size={16} />
+                  </button>
+                  {isAdmin && (
+                    <button className="document-mobile-delete" onClick={() => handleDeleteDocument(doc)}>
+                      <Trash2 size={14} /> Ta bort
                     </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+                  )}
+                </article>
+              ))}
+            </div>
+          </>
+        )}
+      </section>
     </div>
   );
 
