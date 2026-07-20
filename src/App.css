@@ -197,6 +197,41 @@
   margin: 4px 0;
 }
 
+/* Runtime readiness guard — prevents a fake/unconfigured provider from
+   masquerading as an MVP-ready system. */
+.system-status-banner {
+  position: sticky;
+  top: 0;
+  z-index: 180;
+  display: flex;
+  align-items: flex-start;
+  gap: 11px;
+  padding: 12px 22px;
+  border-bottom: 1px solid rgba(251, 191, 36, 0.28);
+  background: rgba(57, 38, 8, 0.96);
+  color: #fbbf24;
+  backdrop-filter: blur(16px);
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.22);
+}
+
+.system-status-banner > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.system-status-banner strong {
+  color: #fde68a;
+  font-size: 13px;
+}
+
+.system-status-banner span {
+  color: #e8c978;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
 /* Main Content */
 .main-content-scroll {
   flex: 1;

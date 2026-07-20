@@ -31,7 +31,7 @@ MVP kräver inte Granskning, Bevakningar, automatisk datumextraktion, OCR-produk
 - Verklig Home/Sök-yta, global AI-chatt och källpanel i huvudfrontenden.
 - Dev-only demo-ytor är spärrade från produktionsbygget.
 - Backend: **415 passed, 4 skipped**.
-- Frontend: **63 passed**.
+- Frontend: **68 passed**.
 - Lint: **0 errors**, fyra sedan tidigare kända varningar i dev-only demo-komponenter.
 - Produktionsbygge: grönt.
 - Pilotläge verifierat mot lokal, självhostad `gemma4:e4b`: `/api/health` rapporterade `mode: pilot` och `llm_provider: selfhosted`.
@@ -48,6 +48,7 @@ Dokumentvyn har konsoliderats till den visuella riktningen från mockupen men an
 - riktiga tomlägen för admin/member;
 - responsiv kortvy;
 - döda filter-, sorterings- och vyknappar har tagits bort i stället för att låtsas fungera.
+- appskalet hämtar backendens health-status och varnar innan användaren ställer en fråga om generationen är felkonfigurerad.
 
 ### Faktisk blockerare
 
@@ -63,7 +64,7 @@ Det som återstår är den synliga E2E-gaten: starta den kanoniska backendproces
 
 - [x] Dokumentbiblioteket portat till verklig API-data.
 - [ ] Harmoniera Hem/Sök och AI-chatten med samma visuella system utan att ändra deras datakontrakt.
-- [ ] Lägg in tydliga loading-, provider- och felstatusar i appskalet.
+- [x] Visa ett tydligt blockerande driftmeddelande när backend kör med `fake`, `none` eller fel provider i pilotläge.
 
 ### B. End-to-end generation — nästa hårda gate
 

@@ -16,6 +16,7 @@ import { api } from './api';
 import { runAskQuestion } from './askQuestion';
 import { latestCitations } from './chatResponseMapping';
 import { demoTabsEnabled } from './appModes';
+import { generationReadiness } from './providerReadiness';
 import './App.css';
 
 // Dev-gated demo scaffolding (cleanup/verified-ui Task 5): Granskning,
@@ -43,6 +44,7 @@ function App() {
   // Real backend state
   const [documents, setDocuments] = useState([]);
   const [documentQuery, setDocumentQuery] = useState('');
+  const [systemHealth, setSystemHealth] = useState(null);
   const [uploadError, setUploadError] = useState(null);
   const [viewer, setViewer] = useState(null); // {url, title, page, rects, highlightPage, approximate}
   const [chatBusy, setChatBusy] = useState(false);
@@ -56,6 +58,8 @@ function App() {
   const [user, setUser] = useState(null);
   const [memberships, setMemberships] = useState([]);
   const [activeBrfId, setActiveBrfId] = useState(null);
+
+  const generationStatus = generationReadiness(systemHealth);
 
   const activeMembership = memberships.find((m) => m.brf_id === activeBrfId) || null;
   const activeRole = activeMembership?.role || 'member';
@@ -131,6 +135,13 @@ function App() {
       .then(handleLoggedIn)
       .catch(() => setAuthState('loggedOut'));
     // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Public readiness probe: surface provider misconfiguration before the first failed question.
+  useEffect(() => {
+    api.health()
+      .then(setSystemHealth)
+      .catch(() => setSystemHealth({ status: 'unreachable', llm_provider: null }));
   }, []);
 
   // Tenant (re)load: documents + settings follow the active BRF.
@@ -688,6 +699,15 @@ function App() {
 
       {/* Main Content Area */}
       <main className="main-content-scroll">
+        {generationStatus.state === 'blocked' && (
+          <div className="system-status-banner" role="alert">
+            <AlertCircle size={18} aria-hidden="true" />
+            <div>
+              <strong>AI-generering är inte redo</strong>
+              <span>{generationStatus.message}</span>
+            </div>
+          </div>
+        )}
         {renderUploadModal()}
         {viewer && <PdfViewer {...viewer} onClose={() => setViewer(null)} />}
         {isProcessing && renderProcessingOverlay()}
