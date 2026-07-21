@@ -824,6 +824,20 @@ mark.search-highlight {
   background: var(--panel-hover);
 }
 
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: var(--panel-hover);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-primary);
+  font-weight: 600;
+  font-size: 14px;
+  flex-shrink: 0;
+}
+
 .user-info {
   display: flex;
   flex-direction: column;
