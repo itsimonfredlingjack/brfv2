@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { LayoutDashboard, MessageSquare, Folders, Settings, Search as SearchIcon, FileText, ArrowRight, Loader2, Sparkles, AlertCircle, Calendar, Upload, CheckCircle2, AlertTriangle, X, ChevronRight, CornerDownRight, ArrowLeft, ZoomIn, ZoomOut, Search, Check, ThumbsDown, MessageCircle, Info, Menu, ChevronUp, HelpCircle, LogOut } from 'lucide-react';
 import Login from './components/Login';
+import PdfPane from './components/PdfPane';
 import { api } from './api';
 import './App.css';
 
@@ -40,13 +41,6 @@ const MOCK_SEARCH_RESULTS = {
   ]
 };
 
-const MOCK_TEXT_EXTRACTION = {
-  d1: {
-    1: "AVTAL OM SNÖRÖJNING\n\nMellan Brf Gjutformen 12 och Vintertjänst AB.\n\n1. Omfattning\nEntreprenören åtar sig att utföra snöröjning och halkbekämpning av fastigheten Gjutformen 12.\n\n2. Tider\nJouren träder i kraft den 15 november och pågår till den 15 april varje år. Snöröjning ska påbörjas senast 2 timmar efter att snödjupet överstiger 5 cm.",
-    2: "3. Avgift\nFöreningen betalar en fast avgift om 15 000 kr per säsong exklusive moms.\n\n4. Uppsägning\nAvtalet löper på 1 år och förlängs automatiskt om det inte sägs upp senast 3 månader innan avtalsperiodens utgång.\n\nSignaturer:\n[Olsläslig kråka] [Olsläslig kråka]"
-  }
-};
-
 // --- CUSTOM HOOKS ---
 function useMediaQuery(query) {
   const [matches, setMatches] = React.useState(() => {
@@ -73,10 +67,10 @@ function App() {
   const [documentsError, setDocumentsError] = useState(null);
   const [bevakningar, setBevakningar] = useState(MOCK_BEVAKNINGAR);
 
-  // ---- Auth & active-BRF state (real backend; the document list below is
-  // now real too — everything past it (upload, PDF view, extraction, AI
-  // answers) is still MOCK_BEVAKNINGAR/MOCK_TEXT_EXTRACTION until the later
-  // integration steps land) ----
+  // ---- Auth & active-BRF state (real backend; document list, global AI
+  // answers/citations, and PDF viewing/citation navigation are now real too
+  // — upload, delete, document-bound chat, and QA are still
+  // MOCK_BEVAKNINGAR / mock until the later integration steps land) ----
   const [authState, setAuthState] = useState('loading'); // 'loading' | 'loggedOut' | 'loggedIn'
   const [user, setUser] = useState(null);
   const [memberships, setMemberships] = useState([]);
@@ -146,6 +140,8 @@ function App() {
   React.useEffect(() => {
     setDocuments([]);
     setSelectedDocument(null);
+    setPdfNumPages(null);
+    setPdfHighlight(null);
     setDocumentsError(null);
     if (!activeBrfId) return;
 
@@ -239,6 +235,11 @@ function App() {
   const [mobileQaSegment, setMobileQaSegment] = useState('pdf'); // 'pdf' or 'text'
   const [pdfPage, setPdfPage] = useState(1);
   const [pdfZoom, setPdfZoom] = useState(100);
+  const [pdfNumPages, setPdfNumPages] = useState(null); // ground truth from pdf.js, overrides list metadata
+  // Set only when the current document was opened via a citation click —
+  // { rects, approximate, page }. PdfPane only shows it while pdfPage ===
+  // page, so navigating away naturally clears the highlight.
+  const [pdfHighlight, setPdfHighlight] = useState(null);
   const [workspaceChatInput, setWorkspaceChatInput] = useState('');
   const [workspaceChatMessages, setWorkspaceChatMessages] = useState([]);
   const [workspaceChatBusy, setWorkspaceChatBusy] = useState(false);
@@ -297,14 +298,55 @@ function App() {
       setPdfPage(initialPage);
       setWorkspaceTab(initialTab);
       setPdfZoom(100);
+      setPdfNumPages(null);
+      setPdfHighlight(null);
       setWorkspaceChatMessages([]);
       setIsMobileMenuOpen(false);
     }
   };
 
+  // Citations only carry document_id/document_name (never inferred) — look
+  // up the richer list entry for display metadata when available, but the
+  // navigation itself is keyed on document_id alone, never on the name.
+  const openDocumentFromCitation = (citation) => {
+    const listed = documents.find(d => d.id === citation.document_id);
+    setSelectedDocument(listed || {
+      id: citation.document_id,
+      name: citation.document_name,
+      pages: null,
+      date: null,
+      status: 'Färdigbehandlad',
+    });
+    setWorkspaceTab('read');
+    setPdfZoom(100);
+    setPdfPage(citation.page);
+    setPdfNumPages(listed?.pages ?? null);
+    setPdfHighlight({ rects: citation.rects || [], approximate: !!citation.approximate, page: citation.page });
+    setWorkspaceChatMessages([]);
+    setIsMobileMenuOpen(false);
+  };
+
   const closeDocument = () => {
     setSelectedDocument(null);
+    setPdfNumPages(null);
+    setPdfHighlight(null);
   };
+
+  const pdfDocUrl = (activeBrfId && selectedDocument) ? api.pdfUrl(activeBrfId, selectedDocument.id) : null;
+  const pdfDisplayPages = pdfNumPages ?? selectedDocument?.pages ?? null;
+
+  const pdfSurface = (scale) => (
+    <div className="pdf-page-shell" style={{ transform: `scale(${scale})` }}>
+      <PdfPane
+        url={pdfDocUrl}
+        page={pdfPage}
+        onNumPages={setPdfNumPages}
+        rects={pdfHighlight?.rects || []}
+        highlightPage={pdfHighlight?.page ?? null}
+        approximate={!!pdfHighlight?.approximate}
+      />
+    </div>
+  );
 
   const handleApproveQa = () => {
     if (!window.confirm('Är du säker på att du vill godkänna detta dokument?')) return;
@@ -455,7 +497,7 @@ function App() {
       )}
       <div className="mock-banner-compact">
         <span className="mock-badge-inline">MOCKUP</span>
-        Inloggning, förening, dokumentlistan och AI-chatten är kopplade till den riktiga backenden. Uppladdning, PDF-vy, dokumentchatt och övriga dokumentfunktioner är fortfarande fiktiva.
+        Inloggning, förening, dokumentlistan, AI-chatten, PDF-visning och källhänvisningar är kopplade till den riktiga backenden. Uppladdning, borttagning, dokumentchatt och kvalitetskontroll är fortfarande fiktiva.
       </div>
 
       {/* MOBILE TOP NAVIGATION */}
@@ -560,7 +602,7 @@ function App() {
                       <span className="status-text muted"><Loader2 size={12} className="spin"/> Behandlas</span>
                     )}
                     <span className="meta-divider">·</span>
-                    <span className="status-text">{selectedDocument.pages} sidor</span>
+                    <span className="status-text">{pdfDisplayPages != null ? `${pdfDisplayPages} sidor` : '… sidor'}</span>
                   </div>
                 </div>
               </div>
@@ -570,11 +612,11 @@ function App() {
                   <FileText size={16}/> <span className="tab-label">Läs dokument</span>
                 </button>
                 <button className={`workspace-tab ${workspaceTab === 'review' ? 'active' : ''}`} onClick={() => setWorkspaceTab('review')}>
-                  <CheckCircle2 size={16}/> <span className="tab-label">Kvalitetskontroll</span>
+                  <CheckCircle2 size={16}/> <span className="tab-label">Kvalitetskontroll <span className="mock-tab-suffix">(mock)</span></span>
                   {selectedDocument.qa === 'Behöver granskas' && <span className="tab-badge warning" aria-label="Kräver granskning">!</span>}
                 </button>
                 <button className={`workspace-tab ${workspaceTab === 'chat' ? 'active' : ''}`} onClick={() => setWorkspaceTab('chat')}>
-                  <MessageCircle size={16}/> <span className="tab-label">Fråga dokumentet</span>
+                  <MessageCircle size={16}/> <span className="tab-label">Fråga dokumentet <span className="mock-tab-suffix">(mock)</span></span>
                 </button>
               </div>
 
@@ -589,9 +631,9 @@ function App() {
                   <div className="pdf-viewer-container">
                     <div className="pdf-toolbar">
                       <div className="pdf-nav">
-                         <button className="icon-action-btn" onClick={() => setPdfPage(Math.max(1, pdfPage - 1))} disabled={pdfPage === 1} aria-label="Föregående sida"><ArrowLeft size={16}/></button>
-                         <span>Sida {pdfPage} av {selectedDocument.pages}</span>
-                         <button className="icon-action-btn" onClick={() => setPdfPage(Math.min(selectedDocument.pages, pdfPage + 1))} disabled={pdfPage === selectedDocument.pages} aria-label="Nästa sida"><ArrowRight size={16}/></button>
+                         <button className="icon-action-btn" onClick={() => setPdfPage(p => Math.max(1, p - 1))} disabled={pdfPage === 1} aria-label="Föregående sida"><ArrowLeft size={16}/></button>
+                         <span>Sida {pdfPage} av {pdfDisplayPages ?? '…'}</span>
+                         <button className="icon-action-btn" onClick={() => setPdfPage(p => p + 1)} disabled={pdfDisplayPages != null && pdfPage >= pdfDisplayPages} aria-label="Nästa sida"><ArrowRight size={16}/></button>
                       </div>
                       <div className="pdf-actions">
                          <button className="icon-action-btn" onClick={() => setPdfZoom(z => Math.max(50, z - 10))} title="Zooma ut" aria-label="Zooma ut"><ZoomOut size={16}/></button>
@@ -602,20 +644,18 @@ function App() {
                       </div>
                     </div>
 
+                    {pdfHighlight && pdfHighlight.page === pdfPage && (
+                      pdfHighlight.rects.length > 0 ? (
+                        pdfHighlight.approximate && (
+                          <div className="pdf-approx-note"><AlertCircle size={13} /> Inskannat dokument — markeringen är ungefärlig.</div>
+                        )
+                      ) : (
+                        <div className="pdf-nohighlight-note"><Info size={13} /> Citatet är verifierat, men exakt markering kunde inte beräknas för denna källa.</div>
+                      )
+                    )}
+
                     <div className="pdf-canvas">
-                      <div className="mock-pdf-page" style={{ transform: `scale(${pdfZoom / 100})` }}>
-                        {selectedDocument.id === 'd1' && MOCK_TEXT_EXTRACTION.d1[pdfPage] ? (
-                          <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'serif', color: '#000', fontSize: '14px', lineHeight: 1.6 }}>
-                            {MOCK_TEXT_EXTRACTION.d1[pdfPage]}
-                          </div>
-                        ) : (
-                          <div className="mock-pdf-placeholder">
-                            <FileText size={48} color="#ccc" style={{ marginBottom: '16px' }}/>
-                            <div>Visar sida {pdfPage} av {selectedDocument.name}</div>
-                            <div style={{ fontSize: '12px', color: '#888', marginTop: '8px' }}>(Detta är en mockad PDF-visare)</div>
-                          </div>
-                        )}
-                      </div>
+                      {pdfSurface(pdfZoom / 100)}
                     </div>
                   </div>
 
@@ -687,41 +727,24 @@ function App() {
                     <div className="pdf-toolbar">
                        <span className="desktop-only" style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-secondary)' }}>Original (PDF)</span>
                        <div className="pdf-nav">
-                         <button className="icon-action-btn" onClick={() => setPdfPage(Math.max(1, pdfPage - 1))} disabled={pdfPage === 1} aria-label="Föregående sida"><ArrowLeft size={16}/></button>
-                         <span>Sid {pdfPage} / {selectedDocument.pages}</span>
-                         <button className="icon-action-btn" onClick={() => setPdfPage(Math.min(selectedDocument.pages, pdfPage + 1))} disabled={pdfPage === selectedDocument.pages} aria-label="Nästa sida"><ArrowRight size={16}/></button>
+                         <button className="icon-action-btn" onClick={() => setPdfPage(p => Math.max(1, p - 1))} disabled={pdfPage === 1} aria-label="Föregående sida"><ArrowLeft size={16}/></button>
+                         <span>Sid {pdfPage} / {pdfDisplayPages ?? '…'}</span>
+                         <button className="icon-action-btn" onClick={() => setPdfPage(p => p + 1)} disabled={pdfDisplayPages != null && pdfPage >= pdfDisplayPages} aria-label="Nästa sida"><ArrowRight size={16}/></button>
                       </div>
                     </div>
                     <div className="pdf-canvas">
-                      <div className="mock-pdf-page" style={{ transform: 'scale(0.8)', transformOrigin: 'top center' }}>
-                        {selectedDocument.id === 'd1' && MOCK_TEXT_EXTRACTION.d1[pdfPage] ? (
-                          <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'serif', color: '#000', fontSize: '14px', lineHeight: 1.6 }}>
-                            {MOCK_TEXT_EXTRACTION.d1[pdfPage]}
-                          </div>
-                        ) : (
-                          <div className="mock-pdf-placeholder">
-                            <FileText size={48} color="#ccc" style={{ marginBottom: '16px' }}/>
-                            <div>Visar sida {pdfPage}</div>
-                          </div>
-                        )}
-                      </div>
+                      {pdfSurface(0.8)}
                     </div>
                   </div>
 
                   <div className={`extraction-container half ${mobileQaSegment !== 'text' ? 'mobile-hidden' : ''}`}>
                     <div className="pdf-toolbar extraction-toolbar">
-                      <span className="desktop-only" style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-secondary)' }}>Extraherad text</span>
+                      <span className="desktop-only" style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-secondary)' }}>Extraherad text <span className="mock-tab-suffix">(mock)</span></span>
                     </div>
                     <div className="extraction-content">
-                      {selectedDocument.id === 'd1' && MOCK_TEXT_EXTRACTION.d1[pdfPage] ? (
-                        <div className="extracted-text-box">
-                          {MOCK_TEXT_EXTRACTION.d1[pdfPage]}
-                        </div>
-                      ) : (
-                        <div className="extracted-text-box empty">
-                           Text extraheras eller mockdata saknas för denna fil/sida.
-                        </div>
-                      )}
+                      <div className="extracted-text-box empty">
+                         Textextraktionsvyn är inte kopplad till den riktiga backenden än.
+                      </div>
                     </div>
 
                     <div className="extraction-actions">
@@ -753,18 +776,7 @@ function App() {
                        <span style={{ fontSize: '13px', fontWeight: '500', color: 'var(--text-secondary)' }}>Referensvy</span>
                     </div>
                     <div className="pdf-canvas">
-                      <div className="mock-pdf-page" style={{ transform: 'scale(0.8)', transformOrigin: 'top center' }}>
-                        {selectedDocument.id === 'd1' && MOCK_TEXT_EXTRACTION.d1[pdfPage] ? (
-                          <div style={{ whiteSpace: 'pre-wrap', fontFamily: 'serif', color: '#000', fontSize: '14px', lineHeight: 1.6 }}>
-                            {MOCK_TEXT_EXTRACTION.d1[pdfPage]}
-                          </div>
-                        ) : (
-                          <div className="mock-pdf-placeholder">
-                            <FileText size={48} color="#ccc" style={{ marginBottom: '16px' }}/>
-                            <div>Visar sida {pdfPage}</div>
-                          </div>
-                        )}
-                      </div>
+                      {pdfSurface(0.8)}
                     </div>
                   </div>
 
@@ -1153,7 +1165,15 @@ function App() {
                                 {msg.citations && msg.citations.length > 0 && (
                                   <div className="chat-citations">
                                     {msg.citations.map((c, i) => (
-                                      <div key={i} className="citation-pill" title="Källhänvisning (öppning av PDF-källan är inte kopplat än)">
+                                      <div
+                                        key={i}
+                                        className="citation-pill interactive"
+                                        onClick={() => openDocumentFromCitation(c)}
+                                        title={`Öppna ${c.document_name}, sida ${c.page}`}
+                                        tabIndex={0}
+                                        role="button"
+                                        onKeyDown={e => e.key === 'Enter' && openDocumentFromCitation(c)}
+                                      >
                                         <span className="citation-number">[{i + 1}]</span>
                                         <span className="citation-text">"{c.quote}"</span>
                                         <span className="citation-source">— {c.document_name} s.{c.page}</span>
