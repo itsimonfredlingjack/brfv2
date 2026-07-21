@@ -318,6 +318,11 @@ button {
 .primary-action-btn.ok:hover { background: #059669; }
 .primary-action-btn.warning { background: var(--status-warning); color: #000; }
 .primary-action-btn.warning:hover { background: #d97706; }
+.primary-action-btn.danger { background: var(--status-error); }
+.primary-action-btn.danger:hover { background: #dc2626; }
+.primary-action-btn:disabled, .secondary-action-btn:disabled, .icon-action-btn.danger:disabled {
+  opacity: 0.5; cursor: not-allowed;
+}
 .secondary-action-btn {
   background: rgba(255,255,255,0.1); color: #fff;
   border: 1px solid var(--panel-border); padding: 8px 16px; border-radius: 8px;
@@ -333,6 +338,7 @@ button {
 }
 .icon-action-btn:hover { color: var(--text-primary); background: rgba(255,255,255,0.1); }
 .icon-action-btn:disabled { opacity: 0.3; cursor: not-allowed; background: transparent; }
+.icon-action-btn.danger:hover { color: var(--status-error); background: var(--status-error-dim); }
 .icon-action-btn.clear-search { color: var(--text-muted); padding: 4px; }
 .icon-action-btn.clear-search:hover { color: #fff; background: rgba(255,255,255,0.1); }
 
@@ -479,18 +485,50 @@ mark.search-highlight {
 .docs-table .action-col { width: 40px; padding-left: 0; text-align: right; }
 .docs-table .chevron-icon { color: var(--text-secondary); }
 
+/* Upload status + new-document badge */
+.upload-status-banner {
+  display: flex; align-items: center; gap: 8px;
+  padding: 10px 16px; border-radius: 8px; margin-bottom: 16px;
+  background: var(--panel-bg); border: 1px solid var(--panel-border);
+  font-size: 13px; color: var(--text-secondary);
+}
+.upload-status-banner.error {
+  color: var(--status-error); border-color: rgba(239,68,68,0.3); background: var(--status-error-dim);
+}
+.new-doc-badge {
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;
+  padding: 2px 6px; border-radius: 4px;
+  background: var(--status-ok-dim); color: var(--status-ok);
+  flex-shrink: 0;
+}
+
+/* Delete confirmation dialog */
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+  display: flex; align-items: center; justify-content: center;
+  padding: 20px; z-index: 500;
+}
+.confirm-dialog { width: 100%; max-width: 420px; padding: 24px; }
+.confirm-dialog h3 { font-size: 16px; margin-bottom: 12px; }
+.confirm-dialog p { font-size: 14px; line-height: 1.6; color: var(--text-secondary); margin-bottom: 20px; }
+.confirm-dialog-actions { display: flex; justify-content: flex-end; gap: 12px; }
+
 /* Document Cards (Mobile) */
 .docs-mobile-list {
   display: flex; flex-direction: column;
 }
 .doc-mobile-card {
   background: transparent; border: none; border-bottom: 1px solid var(--panel-border);
-  padding: 16px; text-align: left; width: 100%; color: var(--text-primary);
-  cursor: pointer; position: relative;
-  display: flex; flex-direction: column; gap: 8px;
+  color: var(--text-primary); position: relative;
 }
 .doc-mobile-card:hover { background: rgba(255,255,255,0.03); }
 .doc-mobile-card:last-child { border-bottom: none; }
+.doc-mobile-card-open {
+  background: transparent; border: none; padding: 16px; text-align: left; width: 100%;
+  color: inherit; cursor: pointer; font-family: inherit; font-size: inherit;
+  display: flex; flex-direction: column; gap: 8px;
+}
+.doc-mobile-delete-btn { position: absolute; top: 10px; right: 10px; }
 .doc-card-header { display: flex; align-items: center; gap: 8px; padding-right: 24px; }
 .doc-card-header h4 { font-size: 15px; font-weight: 500; margin: 0; }
 .doc-card-meta { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--text-secondary); }

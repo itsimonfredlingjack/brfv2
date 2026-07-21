@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, MessageSquare, Folders, Settings, Search as SearchIcon, FileText, ArrowRight, Loader2, Sparkles, AlertCircle, Calendar, Upload, CheckCircle2, AlertTriangle, X, ChevronRight, CornerDownRight, ArrowLeft, ZoomIn, ZoomOut, Search, Check, ThumbsDown, MessageCircle, Info, Menu, ChevronUp, HelpCircle, LogOut } from 'lucide-react';
+import { LayoutDashboard, MessageSquare, Folders, Settings, Search as SearchIcon, FileText, ArrowRight, Loader2, Sparkles, AlertCircle, Calendar, Upload, CheckCircle2, AlertTriangle, X, ChevronRight, CornerDownRight, ArrowLeft, ZoomIn, ZoomOut, Search, Check, ThumbsDown, MessageCircle, Info, Menu, ChevronUp, HelpCircle, LogOut, Trash2 } from 'lucide-react';
 import Login from './components/Login';
 import PdfPane from './components/PdfPane';
 import { api } from './api';
@@ -79,6 +79,9 @@ function App() {
 
   const activeMembership = memberships.find((m) => m.brf_id === activeBrfId) || null;
   const activeBrfName = activeMembership?.name || '';
+  // Backend is the enforcing authority (require_admin on upload/delete) —
+  // this only drives whether the frontend offers the controls at all.
+  const isAdmin = activeMembership?.role === 'admin';
   const userInitials = (user?.name || '')
     .split(' ')
     .filter(Boolean)
@@ -134,38 +137,68 @@ function App() {
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // Upload/delete state — see the [activeBrfId] effect below for how these
+  // get invalidated on a tenant switch.
+  const uploadInputRef = React.useRef(null);
+  const uploadRequestIdRef = React.useRef(0);
+  const [uploadState, setUploadState] = useState(null); // { fileName } while an upload is in flight
+  const [uploadError, setUploadError] = useState(null); // { fileName, message }
+  const [highlightDocId, setHighlightDocId] = useState(null); // most-recently-uploaded doc, for the "Ny" badge
+  const [deleteConfirm, setDeleteConfirm] = useState(null); // { id, name }
+  const [deletingId, setDeletingId] = useState(null);
+
+  const mapDocument = (d) => ({
+    id: d.id,
+    name: d.name,
+    date: d.uploaded_at.slice(0, 10),
+    pages: d.pages,
+    status: 'Färdigbehandlad', // upload is synchronous server-side — every listed doc is done
+  });
+
+  // Shared by the tenant-change effect below and by post-upload/-delete
+  // refreshes. `cancelled` is a plain mutable ref-like object (not a React
+  // ref) so callers without a component-lifetime ref can still pass one.
+  const fetchAndSetDocuments = (brfId, cancelledBox = { current: false }) => {
+    setDocumentsLoading(true);
+    setDocumentsError(null);
+    return api.listDocuments(brfId)
+      .then((docs) => {
+        if (cancelledBox.current) return;
+        setDocuments(docs.map(mapDocument));
+      })
+      .catch((e) => {
+        if (cancelledBox.current) return;
+        if (!handleApiError(e)) setDocumentsError(e.message);
+      })
+      .finally(() => {
+        if (!cancelledBox.current) setDocumentsLoading(false);
+      });
+  };
+
   // Fetch the tenant-scoped document list whenever the active BRF changes.
   // Clears immediately so a slow request never leaves the previous BRF's
-  // documents on screen after switching tenants.
+  // documents on screen after switching tenants. Also invalidates any
+  // upload/delete presentation state tied to the BRF being left — an
+  // upload or delete already in flight can still complete, but its result
+  // can no longer touch what's on screen (see executeUpload/executeDelete).
   React.useEffect(() => {
     setDocuments([]);
     setSelectedDocument(null);
     setPdfNumPages(null);
     setPdfHighlight(null);
     setDocumentsError(null);
+    uploadRequestIdRef.current += 1;
+    setUploadState(null);
+    setUploadError(null);
+    setHighlightDocId(null);
+    setDeleteConfirm(null);
+    setDeletingId(null);
+    if (uploadInputRef.current) uploadInputRef.current.value = '';
     if (!activeBrfId) return;
 
-    let cancelled = false;
-    setDocumentsLoading(true);
-    api.listDocuments(activeBrfId)
-      .then((docs) => {
-        if (cancelled) return;
-        setDocuments(docs.map((d) => ({
-          id: d.id,
-          name: d.name,
-          date: d.uploaded_at.slice(0, 10),
-          pages: d.pages,
-          status: 'Färdigbehandlad', // upload is synchronous server-side — every listed doc is done
-        })));
-      })
-      .catch((e) => {
-        if (cancelled) return;
-        if (!handleApiError(e)) setDocumentsError(e.message);
-      })
-      .finally(() => {
-        if (!cancelled) setDocumentsLoading(false);
-      });
-    return () => { cancelled = true; };
+    const cancelledBox = { current: false };
+    fetchAndSetDocuments(activeBrfId, cancelledBox);
+    return () => { cancelledBox.current = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeBrfId]);
 
@@ -332,6 +365,111 @@ function App() {
     setPdfHighlight(null);
   };
 
+  const describeUploadError = (e) => {
+    if (!e?.status) return 'Kunde inte nå servern. Kontrollera anslutningen och försök igen.';
+    if (e.status === 403) return 'Du saknar behörighet att ladda upp dokument.';
+    if (e.status === 413) return 'Filen är större än 50 MB.';
+    if (e.status >= 500) return `Serverfel (${e.status}). Försök igen om en stund.`;
+    return e.message || `Något gick fel (${e.status}).`; // 400/422: backend detail is already Swedish
+  };
+
+  // Upload is single-shot from a hidden <input type="file">: selecting a
+  // file validates and immediately submits it (no separate confirm step —
+  // matches the existing one-button design). The captured brfId/requestId
+  // pair is the stale-result guard: activeBrfId itself may have moved on
+  // by the time this resolves, so neither is trusted from the closure.
+  const executeUpload = (file) => {
+    if (!file || uploadState || !activeBrfId) return;
+    const looksLikePdf = file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf');
+    if (!looksLikePdf) {
+      showToast('Endast PDF-filer stöds.', 'error');
+      if (uploadInputRef.current) uploadInputRef.current.value = '';
+      return;
+    }
+    if (file.size > 50 * 1024 * 1024) {
+      showToast('Filen är större än 50 MB.', 'error');
+      if (uploadInputRef.current) uploadInputRef.current.value = '';
+      return;
+    }
+
+    const brfId = activeBrfId;
+    const brfName = activeBrfName;
+    const requestId = ++uploadRequestIdRef.current;
+    setUploadError(null);
+    setUploadState({ fileName: file.name });
+
+    api.uploadDocument(brfId, file)
+      .then((meta) => {
+        if (uploadRequestIdRef.current !== requestId) {
+          // BRF changed mid-upload: the document was correctly added to
+          // brfId's corpus server-side, but that's not what's on screen
+          // any more — never claim it belongs to the newly active BRF.
+          showToast(`Uppladdningen av "${file.name}" till ${brfName} slutfördes, men du har bytt förening.`, 'info');
+          return;
+        }
+        setUploadState(null);
+        setHighlightDocId(meta.id);
+        if (uploadInputRef.current) uploadInputRef.current.value = '';
+        showToast(`"${meta.name}" laddades upp och indexerades.`, 'success');
+        fetchAndSetDocuments(brfId);
+      })
+      .catch((e) => {
+        if (uploadRequestIdRef.current !== requestId) return; // stale — stay quiet about a BRF we've left
+        if (handleApiError(e)) return;
+        const message = describeUploadError(e);
+        setUploadState(null);
+        setUploadError({ fileName: file.name, message });
+        showToast(message, 'error');
+      });
+  };
+
+  const describeDeleteError = (e, doc) => {
+    if (!e?.status) return 'Kunde inte nå servern. Kontrollera anslutningen och försök igen.';
+    if (e.status === 403) return 'Du saknar behörighet att ta bort dokument.';
+    if (e.status === 404) return `"${doc.name}" finns inte längre.`;
+    if (e.status === 409) return 'Dokumentet är upptaget och kunde inte tas bort just nu. Försök igen.';
+    if (e.status >= 500) return `Serverfel (${e.status}). Försök igen om en stund.`;
+    return e.message || `Något gick fel (${e.status}).`;
+  };
+
+  const requestDeleteDocument = (doc) => {
+    if (deletingId) return;
+    setDeleteConfirm({ id: doc.id, name: doc.name });
+  };
+
+  const executeDelete = (target) => {
+    if (deletingId || !activeBrfId) return;
+    const brfId = activeBrfId;
+    const docId = target.id;
+    setDeletingId(docId);
+
+    api.deleteDocument(brfId, docId)
+      .then(() => {
+        setDeletingId(null);
+        setDeleteConfirm(null);
+        if (brfId !== activeBrfId) return; // tenant switched mid-delete; that list isn't on screen any more
+        setDocuments((prev) => prev.filter((d) => d.id !== docId));
+        if (highlightDocId === docId) setHighlightDocId(null);
+        if (selectedDocument?.id === docId) closeDocument();
+        showToast(`"${target.name}" togs bort.`, 'success');
+      })
+      .catch((e) => {
+        setDeletingId(null);
+        if (brfId !== activeBrfId) return; // stale — say nothing about a BRF we've left
+        if (handleApiError(e)) return;
+        setDeleteConfirm(null);
+        showToast(describeDeleteError(e, target), 'error');
+        if (e.status === 404) setDocuments((prev) => prev.filter((d) => d.id !== docId)); // already gone server-side
+      });
+  };
+
+  React.useEffect(() => {
+    if (!deleteConfirm) return;
+    const onKey = (e) => { if (e.key === 'Escape' && !deletingId) setDeleteConfirm(null); };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [deleteConfirm, deletingId]);
+
   const pdfDocUrl = (activeBrfId && selectedDocument) ? api.pdfUrl(activeBrfId, selectedDocument.id) : null;
   const pdfDisplayPages = pdfNumPages ?? selectedDocument?.pages ?? null;
 
@@ -495,9 +633,33 @@ function App() {
           <span style={{ fontWeight: '500', fontSize: '14px' }}>{toastMessage.message}</span>
         </div>
       )}
+      {deleteConfirm && (
+        <div className="modal-backdrop" onClick={() => !deletingId && setDeleteConfirm(null)}>
+          <div
+            className="confirm-dialog glass-panel"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="delete-dialog-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 id="delete-dialog-title">Ta bort dokument?</h3>
+            <p>Är du säker på att du vill ta bort <strong>"{deleteConfirm.name}"</strong>? Dokumentet tas bort permanent och kan inte längre sökas eller citeras av AI-chatten.</p>
+            <div className="confirm-dialog-actions">
+              <button className="secondary-action-btn" onClick={() => setDeleteConfirm(null)} disabled={!!deletingId}>
+                Avbryt
+              </button>
+              <button className="primary-action-btn danger" onClick={() => executeDelete(deleteConfirm)} disabled={!!deletingId}>
+                {deletingId === deleteConfirm.id ? <Loader2 size={16} className="spin" /> : <Trash2 size={16} />}
+                {deletingId === deleteConfirm.id ? 'Tar bort…' : 'Ta bort'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="mock-banner-compact">
         <span className="mock-badge-inline">MOCKUP</span>
-        Inloggning, förening, dokumentlistan, AI-chatten, PDF-visning och källhänvisningar är kopplade till den riktiga backenden. Uppladdning, borttagning, dokumentchatt och kvalitetskontroll är fortfarande fiktiva.
+        Inloggning, förening, dokumentlistan, PDF-uppladdning, borttagning, AI-chatten, PDF-visning och källhänvisningar är kopplade till den riktiga backenden. Dokumentchatt och kvalitetskontroll är fortfarande fiktiva.
       </div>
 
       {/* MOBILE TOP NAVIGATION */}
@@ -946,10 +1108,40 @@ function App() {
                     <h2 style={{ fontSize: '24px', fontWeight: '600', margin: 0 }}>Dokument</h2>
                     <p style={{ color: 'var(--text-secondary)', fontSize: '14px', margin: '4px 0 0 0' }}>{activeBrfName ? `Dokument för ${activeBrfName}.` : 'Hantera dokument.'}</p>
                   </div>
-                  <button className="primary-action-btn desktop-only" onClick={() => showToast('Funktionen Ladda upp är inte tillgänglig i denna mockup.')} title="Mockup: Ladda upp är avstängt">
-                    <Upload size={16} /> Ladda upp dokument
-                  </button>
+                  {isAdmin && (
+                    <>
+                      <input
+                        ref={uploadInputRef}
+                        type="file"
+                        accept="application/pdf"
+                        style={{ display: 'none' }}
+                        onChange={(e) => executeUpload(e.target.files?.[0] || null)}
+                      />
+                      <button
+                        className="primary-action-btn desktop-only"
+                        onClick={() => uploadInputRef.current?.click()}
+                        disabled={!!uploadState}
+                        title="Ladda upp ett nytt PDF-dokument"
+                      >
+                        {uploadState ? <Loader2 size={16} className="spin" /> : <Upload size={16} />}
+                        {uploadState ? 'Laddar upp…' : 'Ladda upp dokument'}
+                      </button>
+                    </>
+                  )}
                 </header>
+
+                {uploadState && (
+                  <div className="upload-status-banner">
+                    <Loader2 size={16} className="spin" />
+                    <span>Laddar upp och bearbetar &quot;{uploadState.fileName}&quot;… Detta kan ta en stund.</span>
+                  </div>
+                )}
+                {uploadError && (
+                  <div className="upload-status-banner error">
+                    <AlertCircle size={16} />
+                    <span>Uppladdningen av &quot;{uploadError.fileName}&quot; misslyckades: {uploadError.message}</span>
+                  </div>
+                )}
 
                 <div className="docs-control-bar">
                   <div className="search-input-small responsive-search">
@@ -1005,6 +1197,7 @@ function App() {
                             <th scope="col">Dokumentnamn</th>
                             <th scope="col">Uppladdat</th>
                             <th scope="col">Status</th>
+                            {isAdmin && <th scope="col" className="action-col"><span className="visually-hidden">Åtgärder</span></th>}
                           </tr>
                         </thead>
                         <tbody>
@@ -1019,12 +1212,26 @@ function App() {
                                 <button className="doc-open-btn" onClick={() => openDocument(doc.id)} aria-label={`Öppna ${doc.name}`}>
                                   <FileText size={16} color="var(--text-secondary)" className="doc-icon" />
                                   <span className="truncate">{doc.name}</span>
+                                  {doc.id === highlightDocId && <span className="new-doc-badge">Ny</span>}
                                 </button>
                               </td>
                               <td className="meta-cell">{doc.date}</td>
                               <td>
                                 <span className="status-badge ok"><CheckCircle2 size={12}/> Färdigbehandlad</span>
                               </td>
+                              {isAdmin && (
+                                <td className="action-col" onClick={(e) => e.stopPropagation()}>
+                                  <button
+                                    className="icon-action-btn danger"
+                                    onClick={() => requestDeleteDocument(doc)}
+                                    disabled={!!deletingId}
+                                    aria-label={`Ta bort ${doc.name}`}
+                                    title="Ta bort dokument"
+                                  >
+                                    <Trash2 size={16} />
+                                  </button>
+                                </td>
+                              )}
                             </tr>
                           ))}
                         </tbody>
@@ -1033,23 +1240,35 @@ function App() {
                       {/* Mobile List View */}
                       <div className="docs-mobile-list mobile-only">
                         {filteredDocs.map(doc => (
-                          <button
-                            key={doc.id}
-                            className="doc-mobile-card"
-                            onClick={() => openDocument(doc.id)}
-                            aria-label={`Öppna ${doc.name}`}
-                          >
-                            <div className="doc-card-header">
-                              <FileText size={16} color="var(--text-secondary)" />
-                              <h4 className="truncate">{doc.name}</h4>
-                            </div>
-                            <div className="doc-card-meta">
-                               <span>{doc.date}</span>
-                               <span>·</span>
-                               <span className="status-text ok">Färdig</span>
-                            </div>
-                            <ChevronRight size={16} className="chevron-icon" />
-                          </button>
+                          <div key={doc.id} className="doc-mobile-card">
+                            <button
+                              className="doc-mobile-card-open"
+                              onClick={() => openDocument(doc.id)}
+                              aria-label={`Öppna ${doc.name}`}
+                            >
+                              <div className="doc-card-header">
+                                <FileText size={16} color="var(--text-secondary)" />
+                                <h4 className="truncate">{doc.name}</h4>
+                                {doc.id === highlightDocId && <span className="new-doc-badge">Ny</span>}
+                              </div>
+                              <div className="doc-card-meta">
+                                 <span>{doc.date}</span>
+                                 <span>·</span>
+                                 <span className="status-text ok">Färdig</span>
+                              </div>
+                              <ChevronRight size={16} className="chevron-icon" />
+                            </button>
+                            {isAdmin && (
+                              <button
+                                className="icon-action-btn danger doc-mobile-delete-btn"
+                                onClick={() => requestDeleteDocument(doc)}
+                                disabled={!!deletingId}
+                                aria-label={`Ta bort ${doc.name}`}
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            )}
+                          </div>
                         ))}
                       </div>
                     </>
