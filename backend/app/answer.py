@@ -7,6 +7,7 @@ requireSources is on.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 import logging
 
 from .citations import Rejected, Resolved, resolve_citation
@@ -93,7 +94,19 @@ def _refusal(reason: str, message: str, *, retrieval: list[RetrievalHit], provid
     )
 
 
-def ask(store: Store, question: str, provider: LLMProvider | None = None) -> AskResponse:
+def ask(
+    store: Store,
+    question: str,
+    provider: LLMProvider | None = None,
+    *,
+    trusted_names: Iterable[str] = (),
+) -> AskResponse:
+    """`trusted_names` (optional, keyword-only): server-trusted entity names
+    (e.g. the tenant's own registered name from auth.get_tenant()) whose
+    numeric-identifier digits (SPEC §2.10 follow-up) are exempt from the
+    numeric grounding gate — see app/numeric_grounding.py. Every existing
+    direct call site (`ask(store, question, provider=fake)`) keeps working
+    unchanged: the default is an empty tuple, i.e. no exemptions at all."""
     provider = provider or pick_provider()
     s = store.settings
     # A self-hosted deployment serves one fixed model (BRF_LLM_MODEL); report
@@ -317,6 +330,18 @@ def ask(store: Store, question: str, provider: LLMProvider | None = None) -> Ask
             model=model,
         )
 
+    def _trusted_spans(resp: AskResponse) -> list[str]:
+        """Numbers embedded in a verified entity name are not factual CLAIMS
+        (SPEC §2.10 follow-up — a real pilot false refusal on the tenant's own
+        name, e.g. "BRF GJUTFORMEN 12", motivated this). Two sources, both
+        server-trusted and never anything the model or question text
+        supplied: the caller-provided `trusted_names` (main.py passes the
+        tenant's registered name from auth.get_tenant()), and the exact
+        `document_name` of citations THIS response actually verified — never
+        a rejected citation, never an arbitrary tenant document, never a
+        filename the model merely claims to cite."""
+        return [*trusted_names, *(c.document_name for c in resp.citations)]
+
     # Numeric grounding gate (SPEC §2.10): citation verification proves a
     # QUOTE is verbatim-real; it says nothing about whether the model's own
     # free-text `answer` asserts a DIFFERENT number alongside a valid quote
@@ -334,7 +359,7 @@ def ask(store: Store, question: str, provider: LLMProvider | None = None) -> Ask
     if resp.refusal:
         return resp
     support_quotes = [q for c in resp.citations for q in c.quotes]
-    result = check_numeric_grounding(resp.answer, support_quotes)
+    result = check_numeric_grounding(resp.answer, support_quotes, trusted_names=_trusted_spans(resp))
     if result.ok:
         return resp
 
@@ -343,7 +368,9 @@ def ask(store: Store, question: str, provider: LLMProvider | None = None) -> Ask
     if repaired.refusal:
         return repaired
     repaired_support = [q for c in repaired.citations for q in c.quotes]
-    repaired_result = check_numeric_grounding(repaired.answer, repaired_support)
+    repaired_result = check_numeric_grounding(
+        repaired.answer, repaired_support, trusted_names=_trusted_spans(repaired)
+    )
     if repaired_result.ok:
         return repaired
 

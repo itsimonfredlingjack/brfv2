@@ -213,12 +213,20 @@ def create_app(
         return store.settings
 
     @app.post("/api/brf/{brf_id}/ask")
-    def api_ask(req: AskRequest, access: tuple[Store, str] = Depends(tenant_store)) -> AskResponse:
+    def api_ask(req: AskRequest, brf_id: str, access: tuple[Store, str] = Depends(tenant_store)) -> AskResponse:
         store, _ = access
         question = req.question.strip()
         if not question:
             raise HTTPException(status_code=400, detail="Tom fråga.")
-        return ask(store, question)
+        # Numeric grounding gate (SPEC §2.10 follow-up): the tenant's own
+        # registered name may legitimately contain a digit (e.g. "Brf
+        # Gjutformen 12") — that digit is an identifier, not a factual claim,
+        # and must not trigger a false numeric_grounding_failed refusal. The
+        # trusted tenant record — never anything client-supplied — is the
+        # only source for this.
+        tenant = auth.get_tenant(brf_id)
+        trusted_names = [tenant["name"]] if tenant else []
+        return ask(store, question, trusted_names=trusted_names)
 
     @app.delete("/api/brf/{brf_id}")
     def delete_tenant(brf_id: str, store: Store = Depends(require_admin)) -> dict:

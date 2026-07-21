@@ -767,3 +767,243 @@ class TestNumericGroundingGate:
         ask(numeric_store, "Vad är den totala utgiften?", provider=fake)
         system = fake.calls[0]["system"].lower()
         assert "siffr" in system or "tal" in system
+
+
+class TestNumericIdentifierExemption:
+    """SPEC 2.10 follow-up: a digit that is part of a verified ENTITY NAME
+    (the tenant's own registered name, an accepted citation's document
+    title) is not a factual claim and must not trigger numeric_grounding_failed.
+    Reproduces the real pilot false refusal ("BRF GJUTFORMEN 12" refused
+    solely because of the identifier 12 — see docs/evidence/numeric-grounding.md)
+    through the full ask() pipeline, with trusted_names passed exactly as
+    main.py's /ask route now passes it (sourced from auth.get_tenant())."""
+
+    TENANT = "Brf Gjutformen 12"
+
+    # ---- the regression itself: proves the false refusal, then the fix ----
+
+    def test_tenant_name_with_identifier_passes_when_all_other_claims_supported(self, numeric_store):
+        """The exact confirmed defect: an answer that repeats the tenant's
+        own registered name (containing the digit 12) alongside a genuinely
+        supported claim must NOT be refused. Before the fix (no trusted_names
+        parameter existed on ask()/check_numeric_grounding at all), this
+        scenario refused with numeric_grounding_failed solely because "12"
+        had no citation support — even though "12" was never a claim."""
+        cid = numeric_chunk_id(numeric_store)
+        fake = FakeLLM([{
+            "answer": "BRF GJUTFORMEN 12 har sitt säte i Göteborg och har 56 lägenheter.",
+            "citations": [{"chunk_id": cid, "quote": "Antal lägenheter: 56 lägenheter"}],
+            "insufficient_data": False,
+        }])
+        resp = ask(numeric_store, "Hur många lägenheter har föreningen?", provider=fake, trusted_names=[self.TENANT])
+        assert not resp.refusal, resp.refusal_reason
+        assert len(fake.calls) == 1  # no repair needed — nothing was ever unsupported
+
+    def test_without_trusted_names_the_same_answer_is_refused(self, numeric_store):
+        """Control case: omitting trusted_names (the pre-fix default for
+        every existing call site) reproduces the false refusal exactly —
+        proves the exemption is doing the work, not some unrelated change."""
+        cid = numeric_chunk_id(numeric_store)
+        bad = {
+            "answer": "BRF GJUTFORMEN 12 har sitt säte i Göteborg och har 56 lägenheter.",
+            "citations": [{"chunk_id": cid, "quote": "Antal lägenheter: 56 lägenheter"}],
+            "insufficient_data": False,
+        }
+        fake = FakeLLM([bad, bad])
+        resp = ask(numeric_store, "Hur många lägenheter har föreningen?", provider=fake)  # no trusted_names
+        assert resp.refusal and resp.refusal_reason == "numeric_grounding_failed"
+
+    def test_casefolded_tenant_name_passes(self, numeric_store):
+        cid = numeric_chunk_id(numeric_store)
+        fake = FakeLLM([{
+            "answer": "brf gjutformen 12 har 56 lägenheter.",
+            "citations": [{"chunk_id": cid, "quote": "Antal lägenheter: 56 lägenheter"}],
+            "insufficient_data": False,
+        }])
+        resp = ask(numeric_store, "Hur många lägenheter?", provider=fake, trusted_names=[self.TENANT])
+        assert not resp.refusal, resp.refusal_reason
+
+    def test_nbsp_and_narrow_nbsp_variants_in_tenant_mention_pass(self, numeric_store):
+        cid = numeric_chunk_id(numeric_store)
+        fake = FakeLLM([{
+            "answer": f"BRF{chr(0x00A0)}GJUTFORMEN{chr(0x202F)}12 har 56 lägenheter.",
+            "citations": [{"chunk_id": cid, "quote": "Antal lägenheter: 56 lägenheter"}],
+            "insufficient_data": False,
+        }])
+        resp = ask(numeric_store, "Hur många lägenheter?", provider=fake, trusted_names=[self.TENANT])
+        assert not resp.refusal, resp.refusal_reason
+
+    def test_punctuation_around_the_exact_name_passes(self, numeric_store):
+        cid = numeric_chunk_id(numeric_store)
+        fake = FakeLLM([{
+            "answer": "Föreningen (Brf Gjutformen 12) har 56 lägenheter.",
+            "citations": [{"chunk_id": cid, "quote": "Antal lägenheter: 56 lägenheter"}],
+            "insufficient_data": False,
+        }])
+        resp = ask(numeric_store, "Hur många lägenheter?", provider=fake, trusted_names=[self.TENANT])
+        assert not resp.refusal, resp.refusal_reason
+
+    def test_repeated_exact_name_mentions_pass(self, numeric_store):
+        cid = numeric_chunk_id(numeric_store)
+        fake = FakeLLM([{
+            "answer": "Brf Gjutformen 12 har 56 lägenheter. Brf Gjutformen 12 grundades för länge sedan.",
+            "citations": [{"chunk_id": cid, "quote": "Antal lägenheter: 56 lägenheter"}],
+            "insufficient_data": False,
+        }])
+        resp = ask(numeric_store, "Hur många lägenheter?", provider=fake, trusted_names=[self.TENANT])
+        assert not resp.refusal, resp.refusal_reason
+
+    # ---- must NOT be exempted ----
+
+    def test_partial_tenant_name_match_does_not_exempt_the_number(self, numeric_store):
+        cid = numeric_chunk_id(numeric_store)
+        bad = {
+            "answer": "Gjutformen 12 har 56 lägenheter.",  # missing "Brf" — not the exact span
+            "citations": [{"chunk_id": cid, "quote": "Antal lägenheter: 56 lägenheter"}],
+            "insufficient_data": False,
+        }
+        fake = FakeLLM([bad, bad])
+        resp = ask(numeric_store, "Hur många lägenheter?", provider=fake, trusted_names=[self.TENANT])
+        assert resp.refusal and resp.refusal_reason == "numeric_grounding_failed"
+
+    def test_fabricated_tenant_name_does_not_exempt_the_number(self, numeric_store):
+        cid = numeric_chunk_id(numeric_store)
+        bad = {
+            "answer": "Falska Föreningen 99 har 56 lägenheter.",
+            "citations": [{"chunk_id": cid, "quote": "Antal lägenheter: 56 lägenheter"}],
+            "insufficient_data": False,
+        }
+        fake = FakeLLM([bad, bad])
+        resp = ask(numeric_store, "Hur många lägenheter?", provider=fake, trusted_names=[self.TENANT])
+        assert resp.refusal and resp.refusal_reason == "numeric_grounding_failed"
+
+    def test_wrong_number_in_tenant_name_does_not_pass(self, numeric_store):
+        cid = numeric_chunk_id(numeric_store)
+        bad = {
+            "answer": "Brf Gjutformen 13 har 56 lägenheter.",  # 13, not the real 12
+            "citations": [{"chunk_id": cid, "quote": "Antal lägenheter: 56 lägenheter"}],
+            "insufficient_data": False,
+        }
+        fake = FakeLLM([bad, bad])
+        resp = ask(numeric_store, "Hur många lägenheter?", provider=fake, trusted_names=[self.TENANT])
+        assert resp.refusal and resp.refusal_reason == "numeric_grounding_failed"
+
+    def test_same_number_outside_the_exact_span_remains_unsupported(self, numeric_store):
+        """"12" legitimately appears inside the trusted tenant name AND,
+        separately, as an unrelated bare claim later in the sentence — the
+        second occurrence is a distinct claim and must still be refused."""
+        cid = numeric_chunk_id(numeric_store)
+        bad = {
+            "answer": "Brf Gjutformen 12 har haft 12 stämmor de senaste åren.",
+            "citations": [{"chunk_id": cid, "quote": "Antal lägenheter: 56 lägenheter"}],
+            "insufficient_data": False,
+        }
+        fake = FakeLLM([bad, bad])
+        resp = ask(numeric_store, "Hur många stämmor har hållits?", provider=fake, trusted_names=[self.TENANT])
+        assert resp.refusal and resp.refusal_reason == "numeric_grounding_failed"
+
+    def test_tenant_name_plus_a_separate_unsupported_quantity_still_fails(self, numeric_store):
+        cid = numeric_chunk_id(numeric_store)
+        bad = {
+            "answer": "Brf Gjutformen 12 har 65 lägenheter.",  # wrong count: 65, not 56
+            "citations": [{"chunk_id": cid, "quote": "Antal lägenheter: 56 lägenheter"}],
+            "insufficient_data": False,
+        }
+        fake = FakeLLM([bad, bad])
+        resp = ask(numeric_store, "Hur många lägenheter?", provider=fake, trusted_names=[self.TENANT])
+        assert resp.refusal and resp.refusal_reason == "numeric_grounding_failed"
+
+    def test_tenant_name_plus_a_supported_quantity_passes(self, numeric_store):
+        cid = numeric_chunk_id(numeric_store)
+        fake = FakeLLM([{
+            "answer": "Brf Gjutformen 12 har 56 lägenheter.",
+            "citations": [{"chunk_id": cid, "quote": "Antal lägenheter: 56 lägenheter"}],
+            "insufficient_data": False,
+        }])
+        resp = ask(numeric_store, "Hur många lägenheter?", provider=fake, trusted_names=[self.TENANT])
+        assert not resp.refusal, resp.refusal_reason
+
+    def test_arbitrary_numbers_from_the_question_are_never_trusted(self, numeric_store):
+        """The question text itself must never become a trusted span — only
+        auth.get_tenant()'s registered name and accepted citation titles
+        may. Asking a question containing a number close to the fabricated
+        claim must not launder it into "support"."""
+        cid = numeric_chunk_id(numeric_store)
+        bad = {
+            "answer": "Föreningen har 999 lägenheter.",
+            "citations": [{"chunk_id": cid, "quote": "Antal lägenheter: 56 lägenheter"}],
+            "insufficient_data": False,
+        }
+        fake = FakeLLM([bad, bad])
+        resp = ask(
+            numeric_store, "Har föreningen 999 lägenheter?", provider=fake, trusted_names=[self.TENANT]
+        )
+        assert resp.refusal and resp.refusal_reason == "numeric_grounding_failed"
+
+    def test_rejected_citation_never_contributes_a_trusted_title(self, numeric_store):
+        """RejectedCitation (schemas.py) carries no document_name at all — a
+        rejected citation structurally cannot ever seed a trusted span. Two
+        citations here: one genuinely verifies (supports "56"), the other's
+        quote text is not present in the chunk and is rejected; "77" is
+        asserted only near the rejected citation and must stay unsupported."""
+        cid = numeric_chunk_id(numeric_store)
+        bad = {
+            "answer": "Föreningen har 56 lägenheter och kostar 77 kr per kvadratmeter.",
+            "citations": [
+                {"chunk_id": cid, "quote": "Antal lägenheter: 56 lägenheter"},
+                {"chunk_id": cid, "quote": "Det här citatet finns inte alls i dokumentet någonstans"},
+            ],
+            "insufficient_data": False,
+        }
+        fake = FakeLLM([bad, bad])
+        resp = ask(numeric_store, "Vad kostar det per kvm?", provider=fake, trusted_names=[self.TENANT])
+        assert resp.refusal and resp.refusal_reason == "numeric_grounding_failed"
+
+
+TITLED_LINES = [
+    ("Underhållsplanen beskriver kommande åtgärder.", 72, 100),
+    ("Total utgift 15 659 566 kr", 72, 114),
+]
+
+
+@pytest.fixture()
+def titled_store(tmp_path) -> Store:
+    st = Store(data_dir=tmp_path)
+    st.add_document("Underhallsplan-2026-2036.pdf", build_pdf([TITLED_LINES]))
+    st.update_settings(Settings(minRelevance=0.0, topK=3))
+    return st
+
+
+class TestAcceptedCitationTitleAsTrustedSpan:
+    """Optional narrower half of the identifier fix: an ACCEPTED citation's
+    exact full document title may itself be mentioned in the answer without
+    its embedded numbers (e.g. a year in the filename) being treated as
+    unsupported claims. Conservative by construction: only the citation's
+    OWN document_name counts, and only when that citation actually verified."""
+
+    def test_exact_title_mention_with_embedded_year_passes(self, titled_store):
+        cid = next(iter(titled_store.chunks))
+        fake = FakeLLM([{
+            "answer": "Enligt Underhallsplan-2026-2036.pdf är den totala utgiften 15 659 566 kr.",
+            "citations": [{"chunk_id": cid, "quote": "Total utgift 15 659 566 kr"}],
+            "insufficient_data": False,
+        }])
+        resp = ask(titled_store, "Vad är den totala utgiften?", provider=fake)
+        assert not resp.refusal, resp.refusal_reason
+
+    def test_year_outside_the_exact_title_span_still_requires_quote_support(self, titled_store):
+        """The SAME year (2026) restated as an independent claim outside the
+        title string is a distinct assertion and must still be refused when
+        unsupported — title-exemption must not blanket-exempt the value."""
+        cid = next(iter(titled_store.chunks))
+        bad = {
+            "answer": (
+                "Enligt Underhallsplan-2026-2036.pdf är den totala utgiften 15 659 566 kr. "
+                "Planen antogs av styrelsen år 2026."
+            ),
+            "citations": [{"chunk_id": cid, "quote": "Total utgift 15 659 566 kr"}],
+            "insufficient_data": False,
+        }
+        fake = FakeLLM([bad, bad])
+        resp = ask(titled_store, "Vad är den totala utgiften?", provider=fake)
+        assert resp.refusal and resp.refusal_reason == "numeric_grounding_failed"

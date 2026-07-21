@@ -146,6 +146,74 @@ class TestAsk:
         assert r.status_code == 200 and r.json()["refusal"] is True
 
 
+class TestAskTenantNamePropagation:
+    """Proves the registered tenant name actually reaches the numeric
+    grounding gate THROUGH THE REAL ROUTE (main.py's api_ask calling
+    auth.get_tenant(brf_id) and forwarding it into ask()'s trusted_names
+    kwarg) — not just through the ask() function's optional argument
+    exercised directly in test_answer.py. A pure-function or direct-ask()
+    test alone would miss a route left disconnected from the fix."""
+
+    def _tenant_with_digit_name(self, env):
+        brf_id = env.registry.create("Brf Gjutformen 12", "synthetic", "brf-g12")
+        admin = env.auth.create_user("admin-g12@g12.se", "lösenord-g12-admin", "Admin G12")
+        env.auth.add_membership(admin, brf_id, "admin")
+        headers = env.auth_headers("admin-g12@g12.se", "lösenord-g12-admin")
+        pdf = build_pdf([[("Antal lägenheter: 56 lägenheter enligt stadgarna.", 72, 100)]])
+        r = env.client.post(
+            f"/api/brf/{brf_id}/documents", files={"file": ("Info.pdf", pdf, "application/pdf")}, headers=headers
+        )
+        assert r.status_code == 200, r.text
+        return brf_id, headers
+
+    def test_tenant_name_digit_does_not_trigger_refusal_via_the_real_route(self, env, monkeypatch):
+        from app.llm import FakeLLM
+
+        brf_id, headers = self._tenant_with_digit_name(env)
+        chunk_id = next(iter(env.registry.get(brf_id).chunks))
+        fake = FakeLLM([{
+            "answer": "BRF GJUTFORMEN 12 har 56 lägenheter.",
+            "citations": [{"chunk_id": chunk_id, "quote": "Antal lägenheter: 56 lägenheter"}],
+            "insufficient_data": False,
+        }])
+        # The route itself must resolve auth.get_tenant(brf_id) and forward
+        # the name — nothing in this test constructs trusted_names by hand.
+        monkeypatch.setattr("app.answer.pick_provider", lambda: fake)
+
+        r = env.client.post(
+            f"/api/brf/{brf_id}/ask", json={"question": "Hur många lägenheter har föreningen?"}, headers=headers
+        )
+
+        assert r.status_code == 200
+        body = r.json()
+        assert body["refusal"] is False, body
+
+    def test_separate_unsupported_quantity_still_refused_via_the_real_route(self, env, monkeypatch):
+        """Control: the same tenant-name mention must not become a blanket
+        exemption — an unrelated wrong number in the same answer still
+        refuses, proving the route's propagation isn't over-broad either."""
+        from app.llm import FakeLLM
+
+        brf_id, headers = self._tenant_with_digit_name(env)
+        chunk_id = next(iter(env.registry.get(brf_id).chunks))
+        bad = {
+            "answer": "BRF GJUTFORMEN 12 har 65 lägenheter.",  # wrong count: 65, not 56
+            "citations": [{"chunk_id": chunk_id, "quote": "Antal lägenheter: 56 lägenheter"}],
+            "insufficient_data": False,
+        }
+        fake = FakeLLM([bad, bad])
+        monkeypatch.setattr("app.answer.pick_provider", lambda: fake)
+
+        r = env.client.post(
+            f"/api/brf/{brf_id}/ask", json={"question": "Hur många lägenheter har föreningen?"}, headers=headers
+        )
+
+        assert r.status_code == 200
+        body = r.json()
+        assert body["refusal"] is True
+        assert body["refusal_reason"] == "numeric_grounding_failed"
+
+
 class TestDevReset:
     def test_reset_forbidden_outside_dev(self, tmp_path, monkeypatch):
         monkeypatch.setenv("BRF_MODE", "staging")
