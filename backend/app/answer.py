@@ -107,6 +107,10 @@ def ask(
     numeric grounding gate — see app/numeric_grounding.py. Every existing
     direct call site (`ask(store, question, provider=fake)`) keeps working
     unchanged: the default is an empty tuple, i.e. no exemptions at all."""
+    # trusted_names is consulted twice below (initial response, then a
+    # possible repair) — materializing it once up front means a generator
+    # passed by the caller isn't silently exhausted after the first use.
+    trusted_names = tuple(trusted_names)
     provider = provider or pick_provider()
     s = store.settings
     # A self-hosted deployment serves one fixed model (BRF_LLM_MODEL); report

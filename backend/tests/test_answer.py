@@ -959,6 +959,31 @@ class TestNumericIdentifierExemption:
         resp = ask(numeric_store, "Vad kostar det per kvm?", provider=fake, trusted_names=[self.TENANT])
         assert resp.refusal and resp.refusal_reason == "numeric_grounding_failed"
 
+    def test_generator_trusted_names_is_not_exhausted_before_the_repair_check(self, numeric_store):
+        """trusted_names is consulted twice — once for the initial response,
+        once for a possible repair — so a one-shot generator must not be
+        silently exhausted after the first use. Without materializing it
+        once up front, the repair's own numeric check would see an empty
+        trusted-names set and wrongly flag the tenant name's "12" as
+        unsupported even though it was correctly exempt on the first pass."""
+        cid = numeric_chunk_id(numeric_store)
+        bad = {
+            "answer": "Brf Gjutformen 12 har 65 lägenheter.",  # wrong count -> triggers repair
+            "citations": [{"chunk_id": cid, "quote": "Antal lägenheter: 56 lägenheter"}],
+            "insufficient_data": False,
+        }
+        good = {
+            "answer": "Brf Gjutformen 12 har 56 lägenheter.",  # corrected, tenant name repeated
+            "citations": [{"chunk_id": cid, "quote": "Antal lägenheter: 56 lägenheter"}],
+            "insufficient_data": False,
+        }
+        fake = FakeLLM([bad, good])
+        trusted_names_generator = (n for n in [self.TENANT])
+        resp = ask(numeric_store, "Hur många lägenheter?", provider=fake, trusted_names=trusted_names_generator)
+        assert not resp.refusal, resp.refusal_reason
+        assert "56" in resp.answer
+        assert len(fake.calls) == 2  # repair happened, and the tenant name was still exempt on it
+
 
 TITLED_LINES = [
     ("Underhållsplanen beskriver kommande åtgärder.", 72, 100),
