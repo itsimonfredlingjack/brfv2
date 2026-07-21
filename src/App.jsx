@@ -1,18 +1,10 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, MessageSquare, Folders, Settings, Search as SearchIcon, FileText, ArrowRight, Loader2, Sparkles, AlertCircle, Calendar, Upload, CheckCircle2, Clock, AlertTriangle, ArrowUpRight, X, ChevronRight, CornerDownRight, ArrowLeft, ZoomIn, ZoomOut, Search, Check, ThumbsDown, MessageCircle, Info, Menu, ChevronUp, HelpCircle, LogOut } from 'lucide-react';
+import { LayoutDashboard, MessageSquare, Folders, Settings, Search as SearchIcon, FileText, ArrowRight, Loader2, Sparkles, AlertCircle, Calendar, Upload, CheckCircle2, AlertTriangle, X, ChevronRight, CornerDownRight, ArrowLeft, ZoomIn, ZoomOut, Search, Check, ThumbsDown, MessageCircle, Info, Menu, ChevronUp, HelpCircle, LogOut } from 'lucide-react';
 import Login from './components/Login';
 import { api } from './api';
 import './App.css';
 
 // --- MOCK DATA ---
-const MOCK_DOCUMENTS = [
-  { id: 'd1', name: 'Snöröjningsavtal 2026 MOCK.pdf', date: '2026-07-16', pages: 2, status: 'Färdigbehandlad', qa: 'Granskad', bevakningar: 1 },
-  { id: 'd2', name: 'Stadgar Brf Gjutformen 12 MOCK.pdf', date: '2026-07-15', pages: 18, status: 'Färdigbehandlad', qa: 'Behöver granskas', bevakningar: 0 },
-  { id: 'd3', name: 'Styrelseprotokoll 2026-03-12 MOCK.pdf', date: '2026-03-14', pages: 4, status: 'Färdigbehandlad', qa: 'Granskad', bevakningar: 2 },
-  { id: 'd4', name: 'Årsredovisning 2025 MOCK.pdf', date: '2026-02-10', pages: 32, status: 'Behandlas', qa: 'Behöver granskas', bevakningar: 0 },
-  { id: 'd5', name: 'Underhållsplan 2026-2036 MOCK.pdf', date: '2026-01-05', pages: 14, status: 'Färdigbehandlad', qa: 'Granskad', bevakningar: 3 },
-];
-
 const MOCK_BEVAKNINGAR = [
   { id: 'b1', docId: 'd1', title: 'Start snöröjningsjour', date: '15 Nov 2026', desc: 'Jouren träder i kraft och pågår till 15 april.', page: 1, done: false },
   { id: 'b2', docId: 'd3', title: 'Städdag', date: '24 Apr 2026', desc: 'Vårstädning av innegården.', page: 3, done: true },
@@ -76,11 +68,14 @@ function useMediaQuery(query) {
 
 function App() {
   const isMobile = useMediaQuery('(max-width: 768px)');
-  const [documents, setDocuments] = useState(MOCK_DOCUMENTS);
+  const [documents, setDocuments] = useState([]);
+  const [documentsLoading, setDocumentsLoading] = useState(false);
+  const [documentsError, setDocumentsError] = useState(null);
   const [bevakningar, setBevakningar] = useState(MOCK_BEVAKNINGAR);
 
-  // ---- Auth & active-BRF state (real backend; everything else on this
-  // page is still MOCK_DOCUMENTS/MOCK_BEVAKNINGAR until the documents/ask
+  // ---- Auth & active-BRF state (real backend; the document list below is
+  // now real too — everything past it (upload, PDF view, extraction, AI
+  // answers) is still MOCK_BEVAKNINGAR/MOCK_TEXT_EXTRACTION until the later
   // integration steps land) ----
   const [authState, setAuthState] = useState('loading'); // 'loading' | 'loggedOut' | 'loggedIn'
   const [user, setUser] = useState(null);
@@ -145,6 +140,39 @@ function App() {
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+  // Fetch the tenant-scoped document list whenever the active BRF changes.
+  // Clears immediately so a slow request never leaves the previous BRF's
+  // documents on screen after switching tenants.
+  React.useEffect(() => {
+    setDocuments([]);
+    setSelectedDocument(null);
+    setDocumentsError(null);
+    if (!activeBrfId) return;
+
+    let cancelled = false;
+    setDocumentsLoading(true);
+    api.listDocuments(activeBrfId)
+      .then((docs) => {
+        if (cancelled) return;
+        setDocuments(docs.map((d) => ({
+          id: d.id,
+          name: d.name,
+          date: d.uploaded_at.slice(0, 10),
+          pages: d.pages,
+          status: 'Färdigbehandlad', // upload is synchronous server-side — every listed doc is done
+        })));
+      })
+      .catch((e) => {
+        if (cancelled) return;
+        if (!handleApiError(e)) setDocumentsError(e.message);
+      })
+      .finally(() => {
+        if (!cancelled) setDocumentsLoading(false);
+      });
+    return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeBrfId]);
+
   const mobileMenuBtnRef = React.useRef(null);
   const sidebarRef = React.useRef(null);
 
@@ -204,7 +232,6 @@ function App() {
   const [searchResults, setSearchResults] = useState(null);
 
   // Doc State
-  const [docFilter, setDocFilter] = useState('alla');
   const [docsSearchQuery, setDocsSearchQuery] = useState('');
 
   // Workspace State
@@ -379,32 +406,9 @@ function App() {
     );
   };
 
-  // Base counts derived directly from MOCK_DOCUMENTS, independent of text search
-  const filterCounts = {
-    alla: documents.length,
-    granskas: documents.filter(d => d.qa === 'Behöver granskas').length,
-    bevakningar: documents.filter(d => d.bevakningar > 0).length,
-    behandlas: documents.filter(d => d.status === 'Behandlas').length,
-    klara: documents.filter(d => d.status === 'Färdigbehandlad' && d.qa === 'Granskad').length
-  };
-
-  const filteredDocs = documents.filter(doc => {
-    const searchMatch = docsSearchQuery === '' || doc.name.toLowerCase().includes(docsSearchQuery.toLowerCase());
-
-    let filterMatch = true;
-    if (docFilter === 'granskas') filterMatch = doc.qa === 'Behöver granskas';
-    else if (docFilter === 'bevakningar') filterMatch = doc.bevakningar > 0;
-    else if (docFilter === 'behandlas') filterMatch = doc.status === 'Behandlas';
-    else if (docFilter === 'klara') filterMatch = (doc.status === 'Färdigbehandlad' && doc.qa === 'Granskad');
-
-    return searchMatch && filterMatch;
-  });
-
-  const getBevakningLabel = (count) => {
-    if (count === 0) return "Inga bevakningar";
-    if (count === 1) return "1 bevakning";
-    return `${count} bevakningar`;
-  };
+  const filteredDocs = documents.filter(doc =>
+    docsSearchQuery === '' || doc.name.toLowerCase().includes(docsSearchQuery.toLowerCase())
+  );
 
   if (authState === 'loading') {
     return (
@@ -429,7 +433,7 @@ function App() {
       )}
       <div className="mock-banner-compact">
         <span className="mock-badge-inline">MOCKUP</span>
-        Inloggning och förening är kopplade till den riktiga backenden. Dokument, uppladdning och AI-svar nedan är fortfarande fiktiva.
+        Inloggning, förening och dokumentlistan är kopplade till den riktiga backenden. Uppladdning, dokumentvy och AI-svar nedan är fortfarande fiktiva.
       </div>
 
       {/* MOBILE TOP NAVIGATION */}
@@ -464,7 +468,7 @@ function App() {
               <button className={`nav-item ${currentTab === 'home' ? 'active' : ''}`} onClick={() => { setCurrentTab('home'); setIsMobileMenuOpen(false); }}>
                 <LayoutDashboard size={20} /> Hem
               </button>
-              <button className={`nav-item ${currentTab === 'docs' ? 'active' : ''}`} onClick={() => { setCurrentTab('docs'); setDocFilter('alla'); setDocsSearchQuery(''); setIsMobileMenuOpen(false); }}>
+              <button className={`nav-item ${currentTab === 'docs' ? 'active' : ''}`} onClick={() => { setCurrentTab('docs'); setDocsSearchQuery(''); setIsMobileMenuOpen(false); }}>
                 <Folders size={20} /> Dokument
               </button>
               <button className={`nav-item ${currentTab === 'chat' ? 'active' : ''}`} onClick={() => { setCurrentTab('chat'); setIsMobileMenuOpen(false); }}>
@@ -868,52 +872,32 @@ function App() {
                   </div>
                 </div>
 
-                <div style={{ marginBottom: '32px' }}>
-                  <h3 className="attention-heading">
-                    <AlertTriangle size={18} /> Kräver din uppmärksamhet
-                  </h3>
-                  <div className="dashboard-grid">
-                    <button className="interactive-card" onClick={() => { setCurrentTab('docs'); setDocFilter('granskas'); setDocsSearchQuery(''); }}>
-                      <div className="card-top-row">
-                        <div className="status-badge warning">{filterCounts.granskas} Dokument</div>
-                        <ArrowUpRight size={16} color="var(--text-secondary)" />
-                      </div>
-                      <div className="card-title">Väntar på kvalitetskontroll</div>
-                      <div className="card-desc">Maskinell extraktion är klar, men mänsklig verifiering saknas.</div>
-                    </button>
-                    <button className="interactive-card" onClick={() => { setCurrentTab('docs'); setDocFilter('bevakningar'); setDocsSearchQuery(''); }}>
-                      <div className="card-top-row">
-                        <div className="status-badge warning">{filterCounts.bevakningar} Dokument</div>
-                        <ArrowUpRight size={16} color="var(--text-secondary)" />
-                      </div>
-                      <div className="card-title">Innehåller aktiva bevakningar</div>
-                      <div className="card-desc">Håll koll på datum och tidsfrister.</div>
-                    </button>
-                  </div>
-                </div>
-
                 <div className="dashboard-grid split">
                   <div className="glass-panel" style={{ padding: '24px' }}>
                     <h3 className="recent-docs-heading">
                       <Folders size={18} /> Senaste Dokument
                     </h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                      {documents.slice(0, 3).map(doc => (
+                      {documents.length === 0 ? (
+                        <p style={{ fontSize: '14px', color: 'var(--text-secondary)' }}>
+                          {documentsLoading ? 'Hämtar dokument…' : 'Inga dokument ännu.'}
+                        </p>
+                      ) : documents.slice(0, 3).map(doc => (
                         <button key={doc.id} className="interactive-row text-left" onClick={() => openDocument(doc.id)} aria-label={`Öppna ${doc.name}`}>
                           <FileText size={16} color="var(--text-secondary)" style={{ flexShrink: 0 }} />
                           <span style={{ fontSize: '14px', flex: 1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{doc.name}</span>
-                          <span className={`status-text ${doc.qa === 'Granskad' ? 'ok' : 'warning'}`}>{doc.qa}</span>
+                          <span className="status-text">{doc.pages} sidor</span>
                         </button>
                       ))}
                     </div>
-                    <button className="link-button" onClick={() => { setCurrentTab('docs'); setDocFilter('alla'); setDocsSearchQuery(''); }} style={{ marginTop: '16px' }}>Visa alla dokument →</button>
+                    <button className="link-button" onClick={() => { setCurrentTab('docs'); setDocsSearchQuery(''); }} style={{ marginTop: '16px' }}>Visa alla dokument →</button>
                   </div>
 
                   <div className="glass-panel stat-card">
                      <div className="stat-number">{documents.reduce((sum, d) => sum + d.pages, 0)}</div>
                      <div className="stat-label">Sökbara sidor</div>
                      <div className="stat-divider">
-                       <div className="stat-number">{filterCounts.alla}</div>
+                       <div className="stat-number">{documents.length}</div>
                        <div className="stat-label">Dokument</div>
                      </div>
                   </div>
@@ -926,7 +910,7 @@ function App() {
                 <header className="page-header">
                   <div className="page-header-text">
                     <h2 style={{ fontSize: '24px', fontWeight: '600', margin: 0 }}>Dokument</h2>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px', margin: '4px 0 0 0' }}>Hantera systembearbetning, kvalitetskontroll och aktiva bevakningar.</p>
+                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px', margin: '4px 0 0 0' }}>{activeBrfName ? `Dokument för ${activeBrfName}.` : 'Hantera dokument.'}</p>
                   </div>
                   <button className="primary-action-btn desktop-only" onClick={() => showToast('Funktionen Ladda upp är inte tillgänglig i denna mockup.')} title="Mockup: Ladda upp är avstängt">
                     <Upload size={16} /> Ladda upp dokument
@@ -949,27 +933,34 @@ function App() {
                       </button>
                     )}
                   </div>
-
-                  <div className="filter-pill-container">
-                    <button className={`filter-pill ${docFilter === 'alla' ? 'active' : ''}`} onClick={() => setDocFilter('alla')}>Alla ({filterCounts.alla})</button>
-                    <button className={`filter-pill warning ${docFilter === 'granskas' ? 'active' : ''}`} onClick={() => setDocFilter('granskas')}>Behöver granskas ({filterCounts.granskas})</button>
-                    <button className={`filter-pill warning ${docFilter === 'bevakningar' ? 'active' : ''}`} onClick={() => setDocFilter('bevakningar')}>Har bevakningar ({filterCounts.bevakningar})</button>
-                    <button className={`filter-pill ${docFilter === 'behandlas' ? 'active' : ''}`} onClick={() => setDocFilter('behandlas')}>Behandlas ({filterCounts.behandlas})</button>
-                    <button className={`filter-pill ok ${docFilter === 'klara' ? 'active' : ''}`} onClick={() => setDocFilter('klara')}>Granskade ({filterCounts.klara})</button>
-                  </div>
                 </div>
 
                 <div className="docs-collection-container">
-                  {filteredDocs.length === 0 ? (
+                  {documentsLoading ? (
+                    <div className="docs-empty-state">
+                      <Loader2 size={32} className="spin" style={{ marginBottom: '16px' }} />
+                      <h3>Hämtar dokument…</h3>
+                    </div>
+                  ) : documentsError ? (
+                    <div className="docs-empty-state">
+                      <AlertCircle size={48} color="var(--panel-border)" style={{ marginBottom: '16px' }} />
+                      <h3>Kunde inte hämta dokument</h3>
+                      <p>{documentsError}</p>
+                    </div>
+                  ) : documents.length === 0 ? (
+                    <div className="docs-empty-state">
+                      <FileText size={48} color="var(--panel-border)" style={{ marginBottom: '16px' }} />
+                      <h3>Inga dokument ännu</h3>
+                      <p>Det finns inga dokument för {activeBrfName || 'den här föreningen'} än.</p>
+                    </div>
+                  ) : filteredDocs.length === 0 ? (
                     <div className="docs-empty-state">
                       <FileText size={48} color="var(--panel-border)" style={{ marginBottom: '16px' }} />
                       <h3>Inga dokument matchar din sökning</h3>
-                      <p>Prova att ändra sökordet eller ditt filter.</p>
-                      {(docsSearchQuery || docFilter !== 'alla') && (
-                        <button className="secondary-action-btn" onClick={() => { setDocsSearchQuery(''); setDocFilter('alla'); }}>
-                          Rensa sökning och filter
-                        </button>
-                      )}
+                      <p>Prova att ändra sökordet.</p>
+                      <button className="secondary-action-btn" onClick={() => setDocsSearchQuery('')}>
+                        Rensa sökning
+                      </button>
                     </div>
                   ) : (
                     <>
@@ -980,8 +971,6 @@ function App() {
                             <th scope="col">Dokumentnamn</th>
                             <th scope="col">Uppladdat</th>
                             <th scope="col">Status</th>
-                            <th scope="col">Granskning</th>
-                            <th scope="col">Bevakningar</th>
                           </tr>
                         </thead>
                         <tbody>
@@ -1000,25 +989,7 @@ function App() {
                               </td>
                               <td className="meta-cell">{doc.date}</td>
                               <td>
-                                {doc.status === 'Färdigbehandlad' ? (
-                                  <span className="status-badge ok"><CheckCircle2 size={12}/> Färdigbehandlad</span>
-                                ) : (
-                                  <span className="status-badge processing"><Loader2 size={12} className="spin"/> Behandlas</span>
-                                )}
-                              </td>
-                              <td>
-                                {doc.qa === 'Granskad' ? (
-                                  <span className="status-text ok"><CheckCircle2 size={14}/> {doc.qa}</span>
-                                ) : doc.qa === 'Behöver granskas' ? (
-                                  <span className="status-text warning"><AlertTriangle size={14}/> {doc.qa}</span>
-                                ) : (
-                                  <span className="status-text muted"><Clock size={14}/> {doc.qa}</span>
-                                )}
-                              </td>
-                              <td>
-                                 {doc.bevakningar > 0 ? (
-                                   <span className="status-badge warning outline">{getBevakningLabel(doc.bevakningar)}</span>
-                                 ) : <span className="text-muted">{getBevakningLabel(0)}</span>}
+                                <span className="status-badge ok"><CheckCircle2 size={12}/> Färdigbehandlad</span>
                               </td>
                             </tr>
                           ))}
@@ -1041,21 +1012,7 @@ function App() {
                             <div className="doc-card-meta">
                                <span>{doc.date}</span>
                                <span>·</span>
-                               {doc.status === 'Färdigbehandlad' ? (
-                                  <span className="status-text ok">Färdig</span>
-                                ) : (
-                                  <span className="status-text muted">Laddar</span>
-                                )}
-                            </div>
-                            <div className="doc-card-statuses">
-                               {doc.qa === 'Granskad' ? (
-                                  <span className="status-badge ok"><CheckCircle2 size={10}/> Granskad</span>
-                                ) : (
-                                  <span className="status-badge warning"><AlertTriangle size={10}/> Granska</span>
-                                )}
-                                {doc.bevakningar > 0 && (
-                                  <span className="status-badge warning outline">{getBevakningLabel(doc.bevakningar)}</span>
-                                )}
+                               <span className="status-text ok">Färdig</span>
                             </div>
                             <ChevronRight size={16} className="chevron-icon" />
                           </button>
