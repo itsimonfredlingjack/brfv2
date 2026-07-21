@@ -257,10 +257,24 @@ function App() {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [reportMenuOpen]);
 
-  // General Chat State
+  // General Chat State — wired to the real POST /api/brf/{brfId}/ask
   const [chatInput, setChatInput] = useState('');
   const [chatMessages, setChatMessages] = useState([]);
   const [chatBusy, setChatBusy] = useState(false);
+  const [chatError, setChatError] = useState(null);
+  // Bumped on every new request and on every activeBrfId change — a
+  // response is only ever applied if this still matches the id it was
+  // issued under, so a late response from a BRF the user has since left
+  // can never be shown under the wrong (or no) tenant.
+  const chatRequestIdRef = React.useRef(0);
+
+  React.useEffect(() => {
+    chatRequestIdRef.current += 1;
+    setChatMessages([]);
+    setChatInput('');
+    setChatBusy(false);
+    setChatError(null);
+  }, [activeBrfId]);
 
   const executeSearch = (query) => {
     if (!query.trim()) return;
@@ -353,42 +367,50 @@ function App() {
     }, 1200);
   };
 
+  const describeAskError = (e) => {
+    if (!e?.status) return 'Kunde inte nå servern. Kontrollera anslutningen och försök igen.';
+    if (e.status === 403) return 'Åtkomst nekad för den här föreningen.';
+    if (e.status >= 500) return `Serverfel (${e.status}). Försök igen om en stund.`;
+    return e.message || `Något gick fel (${e.status}).`;
+  };
+
   const executeGeneralChat = (query) => {
-    if (!query.trim() || chatBusy) return;
+    const question = query.trim();
+    if (!question || chatBusy || !activeBrfId) return;
+
+    const brfId = activeBrfId;
+    const requestId = ++chatRequestIdRef.current;
+
     setCurrentTab('chat');
     setChatInput('');
     setSelectedDocument(null);
     setIsMobileMenuOpen(false);
+    setChatError(null);
 
-    const newUserMsg = { role: 'user', content: query };
-    const pendingAiMsg = { role: 'ai', pending: true, content: 'Söker och analyserar (MOCK)...' };
-
-    setChatMessages(prev => [...prev, newUserMsg, pendingAiMsg]);
+    setChatMessages(prev => [...prev, { role: 'user', content: question }, { role: 'ai', pending: true, content: 'Genererar svar…' }]);
     setChatBusy(true);
 
-    setTimeout(() => {
-      setChatMessages(prev => {
-        const withoutPending = prev.slice(0, -1);
-        const q = query.toLowerCase();
-
-        if (q.includes('katter') || q.includes('hundar')) {
-           return [...withoutPending, {
-             role: 'ai',
-             content: 'Jag hittar ingen information i de indexerade dokumenten som behandlar husdjur eller katter.',
-             refusal: true
-           }];
-        }
-
-        return [...withoutPending, {
+    api.ask(brfId, question)
+      .then((res) => {
+        // Stale if the BRF changed (or another request superseded this
+        // one) while the request was in flight — never surface it.
+        if (chatRequestIdRef.current !== requestId) return;
+        setChatMessages(prev => [...prev.slice(0, -1), {
           role: 'ai',
-          content: 'Enligt stadgarna krävs alltid styrelsens samtycke för att få hyra ut i andra hand.',
-          citations: [
-            { quote: 'styrelsen ger sitt samtycke', document_name: 'Stadgar Brf Gjutformen 12 MOCK.pdf', page: 12 }
-          ]
-        }];
+          content: res.answer,
+          refusal: !!res.refusal,
+          warning: res.warning || null,
+          citations: res.citations || [],
+        }]);
+        setChatBusy(false);
+      })
+      .catch((e) => {
+        if (chatRequestIdRef.current !== requestId) return;
+        if (handleApiError(e)) return; // 401 → back to login
+        setChatMessages(prev => prev.slice(0, -1)); // drop the pending bubble
+        setChatBusy(false);
+        setChatError({ question, message: describeAskError(e) });
       });
-      setChatBusy(false);
-    }, 1000);
   };
 
   const highlightText = (text, queryWords) => {
@@ -433,7 +455,7 @@ function App() {
       )}
       <div className="mock-banner-compact">
         <span className="mock-badge-inline">MOCKUP</span>
-        Inloggning, förening och dokumentlistan är kopplade till den riktiga backenden. Uppladdning, dokumentvy och AI-svar nedan är fortfarande fiktiva.
+        Inloggning, förening, dokumentlistan och AI-chatten är kopplade till den riktiga backenden. Uppladdning, PDF-vy, dokumentchatt och övriga dokumentfunktioner är fortfarande fiktiva.
       </div>
 
       {/* MOBILE TOP NAVIGATION */}
@@ -1107,50 +1129,60 @@ function App() {
                          <Sparkles size={40} color="var(--ai-accent)" style={{ marginBottom: '16px', opacity: 0.5 }} />
                          <h3 style={{ marginBottom: '24px' }}>Vad vill du ha hjälp med?</h3>
                          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', maxWidth: '400px' }}>
-                           <button className="example-prompt-btn" onClick={() => executeGeneralChat('Vad säger stadgarna om andrahandsuthyrning?')}>
+                           <button className="example-prompt-btn" onClick={() => executeGeneralChat('Vad säger stadgarna om andrahandsuthyrning?')} disabled={chatBusy}>
                              Vad säger stadgarna om andrahandsuthyrning?
                            </button>
-                           <button className="example-prompt-btn" onClick={() => executeGeneralChat('Vilka datum gäller för snöröjningsjouren?')}>
+                           <button className="example-prompt-btn" onClick={() => executeGeneralChat('Vilka datum gäller för snöröjningsjouren?')} disabled={chatBusy}>
                              Vilka datum gäller för snöröjningsjouren?
                            </button>
                          </div>
                       </div>
                     ) : (
-                      chatMessages.map((msg, idx) => (
-                        <div key={idx} className={`chat-message ${msg.role}`}>
-                          <div className="chat-avatar">
-                            {msg.role === 'ai' ? (msg.pending ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />) : 'DU'}
-                          </div>
-                          <div style={{ flex: 1 }}>
-                            <div className="chat-content" style={{ borderColor: msg.refusal ? 'var(--status-error-dim)' : '' }}>
-                              {msg.refusal && <div className="chat-refusal-header"><AlertCircle size={14} /> Otillräckligt underlag</div>}
-                              {msg.content}
-
-                              {msg.citations && (
-                                <div className="chat-citations">
-                                  {msg.citations.map((c, i) => (
-                                    <div key={i} className="citation-pill interactive" onClick={() => openDocument('d2', c.page, 'read')} title="Öppna källdokumentet" tabIndex={0} role="button" onKeyDown={e => e.key === 'Enter' && openDocument('d2', c.page, 'read')}>
-                                      <span className="citation-number">[{i + 1}]</span>
-                                      <span className="citation-text">"{c.quote}"</span>
-                                      <span className="citation-source">— {c.document_name} s.{c.page}</span>
-                                    </div>
-                                  ))}
-                                </div>
-                              )}
+                      <>
+                        {chatMessages.map((msg, idx) => (
+                          <div key={idx} className={`chat-message ${msg.role}`}>
+                            <div className="chat-avatar">
+                              {msg.role === 'ai' ? (msg.pending ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />) : 'DU'}
                             </div>
+                            <div style={{ flex: 1 }}>
+                              <div className="chat-content" style={{ borderColor: msg.refusal ? 'var(--status-error-dim)' : '' }}>
+                                {msg.refusal && <div className="chat-refusal-header"><AlertCircle size={14} /> Otillräckligt underlag</div>}
+                                {msg.warning && <div className="chat-refusal-header warning"><Info size={14} /> {msg.warning}</div>}
+                                {msg.content}
 
-                            {msg.followUps && !msg.pending && (
-                              <div className="chat-followups">
-                                {msg.followUps.map((fu, fidx) => (
-                                  <button key={fidx} className="followup-btn" onClick={() => executeGeneralChat(fu)}>
-                                    <CornerDownRight size={14}/> {fu}
-                                  </button>
-                                ))}
+                                {msg.citations && msg.citations.length > 0 && (
+                                  <div className="chat-citations">
+                                    {msg.citations.map((c, i) => (
+                                      <div key={i} className="citation-pill" title="Källhänvisning (öppning av PDF-källan är inte kopplat än)">
+                                        <span className="citation-number">[{i + 1}]</span>
+                                        <span className="citation-text">"{c.quote}"</span>
+                                        <span className="citation-source">— {c.document_name} s.{c.page}</span>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
-                            )}
+                            </div>
                           </div>
-                        </div>
-                      ))
+                        ))}
+
+                        {chatError && (
+                          <div className="chat-message ai">
+                            <div className="chat-avatar"><AlertTriangle size={16} /></div>
+                            <div style={{ flex: 1 }}>
+                              <div className="chat-content" style={{ borderColor: 'var(--status-error-dim)' }}>
+                                <div className="chat-refusal-header"><AlertTriangle size={14} /> Kunde inte hämta svar</div>
+                                {chatError.message}
+                              </div>
+                              <div className="chat-followups">
+                                <button className="followup-btn" onClick={() => executeGeneralChat(chatError.question)} disabled={chatBusy}>
+                                  <CornerDownRight size={14}/> Försök igen
+                                </button>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </>
                     )}
                   </div>
 
