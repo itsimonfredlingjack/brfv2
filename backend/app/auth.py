@@ -148,6 +148,12 @@ class AuthStore:
             row = conn.execute("SELECT id, email, name FROM users WHERE id = ?", (user_id,)).fetchone()
         return dict(row) if row else None
 
+    def get_user_by_email(self, email: str) -> dict | None:
+        email = email.strip().lower()
+        with self._conn() as conn:
+            row = conn.execute("SELECT id, email, name FROM users WHERE email = ?", (email,)).fetchone()
+        return dict(row) if row else None
+
     # ---------- tenants & memberships ----------
 
     def create_tenant(self, name: str, brf_id: str | None = None) -> str:

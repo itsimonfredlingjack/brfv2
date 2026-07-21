@@ -112,7 +112,14 @@ def seed_demo(registry, auth) -> dict:
             uid = auth.create_user(email, password, name)
             users += 1
         except AuthError:
-            continue  # already present
+            existing = auth.get_user_by_email(email)
+            if existing is None:
+                raise  # AuthError for a reason other than "already present" — don't swallow it
+            uid = existing["id"]
+        # Reconcile memberships every run, not just on first creation — a
+        # `--reset` wipes tenants (memberships cascade) but never auth.db,
+        # so demo users that already exist would otherwise be left with
+        # zero memberships after a reset+reseed.
         for brf_id, role in mems:
             if auth.get_tenant(brf_id) is not None:
                 auth.add_membership(uid, brf_id, role)

@@ -1,6 +1,8 @@
+from app.auth import AuthStore
 from app.normalize import find_spans
+from app.registry import TenantRegistry
 from app.store import Store
-from scripts.seed import build_golden, render_pdf, seed_store
+from scripts.seed import DEMO_USERS, build_golden, render_pdf, seed_demo, seed_store
 from scripts.seed_content import DOCUMENTS, GOLDEN_ANSWERABLE
 
 
@@ -54,3 +56,28 @@ def test_hyphenation_split_present_in_corpus(tmp_path):
     all_words = [w.text for p in store.pages[doc_id] for w in p.words]
     assert "för-" in all_words
     assert "valtningen" in all_words
+
+
+def test_seed_demo_reset_preserves_memberships(tmp_path):
+    """`--reset` wipes tenants (memberships cascade via FK) but auth.db's
+    users table survives across resets. Regression: seed_demo() used to
+    `continue` past its membership-reconciliation loop whenever a demo
+    user's create_user() raised AuthError (i.e. every second-and-later
+    run), leaving every demo account with zero memberships after a
+    reset+reseed even though the run reported success."""
+    auth = AuthStore(tmp_path / "auth.db")
+    registry = TenantRegistry(tmp_path, auth)
+
+    seed_demo(registry, auth)
+    # Simulate `python -m scripts.seed --reset`'s tenant wipe: users persist.
+    for t in registry.list():
+        registry.delete(t["brf_id"])
+    seed_demo(registry, auth)
+
+    for email, password, _name, expected_mems in DEMO_USERS:
+        user = auth.get_user_by_email(email)
+        assert user is not None, email
+        mems = auth.memberships_for(user["id"])
+        assert len(mems) == len(expected_mems), (email, mems)  # no duplicates
+        assert {m["brf_id"]: m["role"] for m in mems} == dict(expected_mems), email
+        assert auth.verify_login(email, password) == user["id"], email
