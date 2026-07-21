@@ -541,3 +541,229 @@ class TestEnvelopeTruncation:
 
         resp = ask(envelope_store, "Vad gäller ersättningen och organisationsnumret?", provider=provider)
         assert resp.refusal and resp.refusal_reason == "provider_error"
+
+
+NUMERIC_LINES = [
+    ("Ekonomisk analys för underhållsplanen.", 72, 100),
+    ("Total utgift 15 659 566 kr", 72, 114),
+    ("Investering 8 773 000 kr", 72, 128),
+    ("Avgift per m² 151 kr per m² och år", 72, 142),
+    ("Antal lägenheter: 56 lägenheter", 72, 156),
+    ("Rekommenderad avsättning 8,5 %", 72, 170),
+    ("Planen gäller år 2032", 72, 184),
+]
+
+
+@pytest.fixture()
+def numeric_store(tmp_path) -> Store:
+    st = Store(data_dir=tmp_path)
+    st.add_document("Underhallsplan.pdf", build_pdf([NUMERIC_LINES]))
+    st.update_settings(Settings(minRelevance=0.0, topK=3))
+    return st
+
+
+def numeric_chunk_id(store: Store) -> str:
+    return next(iter(store.chunks))
+
+
+class TestNumericGroundingGate:
+    """Production-defect regression (SPEC §2.10): a citation quote can verify
+    verbatim — proving that text really is in the document — while the
+    model's own free-text `answer` asserts a DIFFERENT number alongside it.
+    app/citations.py has no visibility into `answer` at all, so this was
+    previously invisible to every existing gate. app/numeric_grounding.py
+    closes exactly that hole; these tests exercise it through the full ask()
+    pipeline (see tests/test_numeric_grounding.py for the pure-function unit
+    tests of the gate itself)."""
+
+    # ---- must fail or refuse ----
+
+    def test_transposed_digits_refused_not_silently_accepted(self, numeric_store):
+        """The exact reported production defect: verified quote says
+        '15 659 566 kr', model answer says '1 565 956 kr'. The repair
+        attempt (scripted here to repeat the same mistake) also fails —
+        final result must be a safe refusal, never the unsupported number."""
+        cid = numeric_chunk_id(numeric_store)
+        bad = {
+            "answer": "Den totala utgiften är 1 565 956 kr.",
+            "citations": [{"chunk_id": cid, "quote": "Total utgift 15 659 566 kr"}],
+            "insufficient_data": False,
+        }
+        fake = FakeLLM([bad, bad])
+        resp = ask(numeric_store, "Vad är den totala utgiften?", provider=fake)
+        assert resp.refusal and resp.refusal_reason == "numeric_grounding_failed"
+        assert "1 565 956" not in resp.answer
+        assert len(fake.calls) == 2  # exactly one repair attempt — not unbounded
+
+    def test_wrong_investment_figure_refused(self, numeric_store):
+        cid = numeric_chunk_id(numeric_store)
+        bad = {
+            "answer": "Investeringen är 8 737 000 kr.",
+            "citations": [{"chunk_id": cid, "quote": "Investering 8 773 000 kr"}],
+            "insufficient_data": False,
+        }
+        fake = FakeLLM([bad, bad])
+        resp = ask(numeric_store, "Vad är investeringen?", provider=fake)
+        assert resp.refusal and resp.refusal_reason == "numeric_grounding_failed"
+
+    def test_wrong_per_sqm_fee_refused(self, numeric_store):
+        cid = numeric_chunk_id(numeric_store)
+        bad = {
+            "answer": "Avgiften är 115 kr per m² och år.",
+            "citations": [{"chunk_id": cid, "quote": "Avgift per m² 151 kr per m² och år"}],
+            "insufficient_data": False,
+        }
+        fake = FakeLLM([bad, bad])
+        resp = ask(numeric_store, "Vad är avgiften per kvadratmeter?", provider=fake)
+        assert resp.refusal and resp.refusal_reason == "numeric_grounding_failed"
+
+    def test_wrong_apartment_count_refused(self, numeric_store):
+        cid = numeric_chunk_id(numeric_store)
+        bad = {
+            "answer": "Föreningen har 65 lägenheter.",
+            "citations": [{"chunk_id": cid, "quote": "Antal lägenheter: 56 lägenheter"}],
+            "insufficient_data": False,
+        }
+        fake = FakeLLM([bad, bad])
+        resp = ask(numeric_store, "Hur många lägenheter finns det?", provider=fake)
+        assert resp.refusal and resp.refusal_reason == "numeric_grounding_failed"
+
+    def test_number_present_only_outside_verified_quote_refused(self, numeric_store):
+        """A number must not be treated as supported merely because it
+        appears somewhere near the citation (filename, page metadata, a
+        neighboring sentence) — support comes ONLY from the accepted
+        citation's own verified quote text. Here the claimed number (42)
+        appears nowhere in the corpus at all — including not in the quote —
+        which is the cleanest proof that quote text is the only source of
+        support the gate consults."""
+        cid = numeric_chunk_id(numeric_store)
+        bad = {
+            "answer": "Kostnaden uppgår till 42 kr.",
+            "citations": [{"chunk_id": cid, "quote": "Ekonomisk analys för underhållsplanen"}],
+            "insufficient_data": False,
+        }
+        fake = FakeLLM([bad, bad])
+        resp = ask(numeric_store, "Vad kostar det?", provider=fake)
+        assert resp.refusal and resp.refusal_reason == "numeric_grounding_failed"
+
+    # ---- must pass ----
+
+    def test_exact_value_passes(self, numeric_store):
+        cid = numeric_chunk_id(numeric_store)
+        fake = FakeLLM([{
+            "answer": "Den totala utgiften är 15 659 566 kr.",
+            "citations": [{"chunk_id": cid, "quote": "Total utgift 15 659 566 kr"}],
+            "insufficient_data": False,
+        }])
+        resp = ask(numeric_store, "Vad är den totala utgiften?", provider=fake)
+        assert not resp.refusal
+        assert len(fake.calls) == 1  # no repair needed
+
+    def test_equivalent_whitespace_separators_pass(self, numeric_store):
+        cid = numeric_chunk_id(numeric_store)
+        fake = FakeLLM([{
+            # NBSP-grouped in the answer vs regular-space in the quote.
+            "answer": "Den totala utgiften är 15 659 566 kr.",
+            "citations": [{"chunk_id": cid, "quote": "Total utgift 15 659 566 kr"}],
+            "insufficient_data": False,
+        }])
+        resp = ask(numeric_store, "Vad är den totala utgiften?", provider=fake)
+        assert not resp.refusal
+
+    def test_exact_percentage_passes(self, numeric_store):
+        cid = numeric_chunk_id(numeric_store)
+        fake = FakeLLM([{
+            "answer": "Den rekommenderade avsättningen är 8,5 %.",
+            "citations": [{"chunk_id": cid, "quote": "Rekommenderad avsättning 8,5 %"}],
+            "insufficient_data": False,
+        }])
+        resp = ask(numeric_store, "Hur stor är avsättningen?", provider=fake)
+        assert not resp.refusal
+
+    def test_exact_year_passes(self, numeric_store):
+        cid = numeric_chunk_id(numeric_store)
+        fake = FakeLLM([{
+            "answer": "Planen gäller år 2032.",
+            "citations": [{"chunk_id": cid, "quote": "Planen gäller år 2032"}],
+            "insufficient_data": False,
+        }])
+        resp = ask(numeric_store, "Vilket år gäller planen?", provider=fake)
+        assert not resp.refusal
+
+    def test_multiple_claims_each_supported_by_a_different_citation_pass(self, numeric_store):
+        cid = numeric_chunk_id(numeric_store)
+        fake = FakeLLM([{
+            "answer": "Föreningen har 56 lägenheter och betalar 151 kr per m² och år.",
+            "citations": [
+                {"chunk_id": cid, "quote": "Antal lägenheter: 56 lägenheter"},
+                {"chunk_id": cid, "quote": "Avgift per m² 151 kr per m² och år"},
+            ],
+            "insufficient_data": False,
+        }])
+        resp = ask(numeric_store, "Hur många lägenheter och vad kostar det per kvm?", provider=fake)
+        assert not resp.refusal
+        assert len(resp.citations) == 2
+
+    def test_ordinary_non_numeric_answer_passes(self, numeric_store):
+        cid = numeric_chunk_id(numeric_store)
+        fake = FakeLLM([{
+            "answer": "Dokumentet beskriver föreningens ekonomiska analys.",
+            "citations": [{"chunk_id": cid, "quote": "Ekonomisk analys för underhållsplanen"}],
+            "insufficient_data": False,
+        }])
+        resp = ask(numeric_store, "Vad handlar dokumentet om?", provider=fake)
+        assert not resp.refusal
+        assert len(fake.calls) == 1
+
+    def test_safe_refusal_with_no_asserted_claims_untouched_by_gate(self, numeric_store):
+        fake = FakeLLM([{"answer": "Uppgift saknas.", "citations": [], "insufficient_data": True}])
+        resp = ask(numeric_store, "Vad kostar det icke-existerande garaget?", provider=fake)
+        assert resp.refusal and resp.refusal_reason == "insufficient_data"
+        assert len(fake.calls) == 1  # refusal never enters the numeric-repair loop
+
+    # ---- repair behavior ----
+
+    def test_repair_attempt_with_corrected_number_succeeds(self, numeric_store):
+        cid = numeric_chunk_id(numeric_store)
+        bad = {
+            "answer": "Den totala utgiften är 1 565 956 kr.",
+            "citations": [{"chunk_id": cid, "quote": "Total utgift 15 659 566 kr"}],
+            "insufficient_data": False,
+        }
+        good = {
+            "answer": "Den totala utgiften är 15 659 566 kr.",
+            "citations": [{"chunk_id": cid, "quote": "Total utgift 15 659 566 kr"}],
+            "insufficient_data": False,
+        }
+        fake = FakeLLM([bad, good])
+        resp = ask(numeric_store, "Vad är den totala utgiften?", provider=fake)
+        assert not resp.refusal
+        assert "15 659 566" in resp.answer
+        assert len(fake.calls) == 2
+        # The repair prompt must describe the specific mismatch, not just
+        # generically ask the model to try again.
+        assert "1 565 956" in fake.calls[1]["system"]
+
+    def test_both_attempts_fail_yields_safe_refusal_not_unsupported_answer(self, numeric_store):
+        cid = numeric_chunk_id(numeric_store)
+        first = {
+            "answer": "Den totala utgiften är 1 565 956 kr.",
+            "citations": [{"chunk_id": cid, "quote": "Total utgift 15 659 566 kr"}],
+            "insufficient_data": False,
+        }
+        second = {
+            "answer": "Den totala utgiften är 15 995 656 kr.",  # a different wrong number
+            "citations": [{"chunk_id": cid, "quote": "Total utgift 15 659 566 kr"}],
+            "insufficient_data": False,
+        }
+        fake = FakeLLM([first, second])
+        resp = ask(numeric_store, "Vad är den totala utgiften?", provider=fake)
+        assert resp.refusal and resp.refusal_reason == "numeric_grounding_failed"
+        assert "1 565 956" not in resp.answer and "15 995 656" not in resp.answer
+        assert len(fake.calls) == 2  # bounded — no third attempt
+
+    def test_base_prompt_instructs_copying_numbers_exactly(self, numeric_store):
+        fake = FakeLLM([{"answer": "x", "citations": [], "insufficient_data": True}])
+        ask(numeric_store, "Vad är den totala utgiften?", provider=fake)
+        system = fake.calls[0]["system"].lower()
+        assert "siffr" in system or "tal" in system

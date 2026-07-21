@@ -129,6 +129,11 @@ RefusalReason = Literal[
     "insufficient_data",
     "grounding_failed",
     "provider_error",
+    # A citation quote verified verbatim, but the model's own free-text
+    # answer asserted a different number alongside it (SPEC §2.10) — distinct
+    # from grounding_failed (no citation verified at all) because here the
+    # citation itself is real; only the prose claim is unsupported.
+    "numeric_grounding_failed",
 ]
 
 

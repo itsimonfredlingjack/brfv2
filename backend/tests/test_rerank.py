@@ -171,7 +171,16 @@ class TestAskWithRerank:
         fake = FakeLLM(
             [
                 {
-                    "answer": "Soliditeten är 45,2 procent.",
+                    # Generic, non-numeric filler — this test's assertions
+                    # are about alias/rerank-order wiring (chunk_id,
+                    # rerank_score), not answer content, and `expected_top`
+                    # is whichever of the 3 fixture docs the baseline hybrid
+                    # search ranks last (see above) — not necessarily the one
+                    # doc with an actual number, so a hardcoded numeric claim
+                    # here would be incidentally ungrounded and fail
+                    # app/numeric_grounding.py for reasons unrelated to what
+                    # this test exercises.
+                    "answer": "Se citerat utdrag.",
                     "citations": [{"chunk_id": "K1", "quote": expected_top.text}],
                     "insufficient_data": False,
                 }

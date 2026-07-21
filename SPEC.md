@@ -55,6 +55,7 @@ unanswerable question — captured as evidence (screenshots + API transcripts).
 | 2.7 | **Out-of-bounds boxes** — resolved rect falls outside the page rect | Rect is invalid → citation rejected with `bbox_out_of_bounds` (defense-in-depth; should be unreachable via 2.1–2.6 checks). |
 | 2.8 | **Unicode drift** — NBSP vs space, soft hyphens, typographic quotes/dashes, ligatures (ﬁ), case | Canonical normalization (NFKC + explicit table) applied identically to source words and quotes before matching. |
 | 2.9 | **Unanswerable question** | With `insufficientDataBehavior=refuse`: no fabricated answer. Two gates: (a) retrieval gate — top hybrid score < `minRelevance` short-circuits before the LLM; (b) LLM gate — model returns `insufficient_data=true`. Eval measures false-answer rate on an unanswerable golden set; target 0. |
+| 2.10 | **Numeric fabrication alongside a valid citation** — the citation quote verifies verbatim (2.1–2.8 all pass), but the model's own free-text `answer` asserts a *different* number than the quote it cites (paraphrase/transposition during generation) | `app/numeric_grounding.py`: every material number in `answer` must equal a number found in the ACCEPTED citations' verified quotes (normalized: NBSP/thin/narrow-NBSP space variants, decimal comma/point, thousands grouping, percent). One repair regeneration is attempted with the specific mismatch named; if still unsupported, refusal `numeric_grounding_failed` — never the unsupported answer. |
 
 ## §3. Architecture
 
