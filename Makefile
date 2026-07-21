@@ -1,5 +1,5 @@
 .PHONY: backend backend-pilot require-pilot-llm frontend frontend-legacy test test-isolation eval eval-b eval-fast eval-sweep \
-        eval-selfhosted eval-b-selfhosted demo-reset build build-legacy model-readiness model-readiness-selftest \
+        eval-selfhosted eval-b-selfhosted demo demo-stop demo-status demo-reset build build-legacy model-readiness model-readiness-selftest \
         model-readiness-selftest-negative
 
 # Generation default for dev + eval is the standard hosted provider (logged-in `claude`
@@ -54,7 +54,16 @@ eval-fast:          ## Retrieval-eval utan LLM
 eval-sweep:         ## Bevis: inställningsrattarna ändrar siffrorna
 	cd backend && uv run python -m scripts.eval --sweep
 
-demo-reset:         ## Nollställ och seeda om de två demoföreningarna + golden set
+demo:                ## Starta HELA demon: verifierar SSH-tunneln + Gemma 4 12B, startar backend (pilot, :8787) + kanoniska frontend (:5173)
+	@ops/demo.sh start
+
+demo-stop:           ## Stoppa bara de processer som `make demo` startade (PID-spårat, dödar inget annat)
+	@ops/demo.sh stop
+
+demo-status:         ## Visa om demo-backend/frontend körs
+	@ops/demo.sh status
+
+demo-reset:          ## DESTRUKTIVT: nollställ och seeda om de två demoföreningarna + golden set + konton
 	cd backend && uv run python -m scripts.seed --reset
 
 model-readiness:               ## Modell-redo-kontroll mot verkliga dokument, standardleverantör (ambient env)
