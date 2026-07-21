@@ -1,5 +1,7 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, MessageSquare, Folders, Settings, Search as SearchIcon, FileText, ArrowRight, Loader2, Sparkles, AlertCircle, Calendar, Upload, CheckCircle2, Clock, AlertTriangle, ArrowUpRight, X, ChevronRight, CornerDownRight, ArrowLeft, ZoomIn, ZoomOut, Search, Check, ThumbsDown, MessageCircle, Info, Menu } from 'lucide-react';
+import { LayoutDashboard, MessageSquare, Folders, Settings, Search as SearchIcon, FileText, ArrowRight, Loader2, Sparkles, AlertCircle, Calendar, Upload, CheckCircle2, Clock, AlertTriangle, ArrowUpRight, X, ChevronRight, CornerDownRight, ArrowLeft, ZoomIn, ZoomOut, Search, Check, ThumbsDown, MessageCircle, Info, Menu, ChevronUp, HelpCircle, LogOut } from 'lucide-react';
+import Login from './components/Login';
+import { api } from './api';
 import './App.css';
 
 // --- MOCK DATA ---
@@ -77,6 +79,68 @@ function App() {
   const [documents, setDocuments] = useState(MOCK_DOCUMENTS);
   const [bevakningar, setBevakningar] = useState(MOCK_BEVAKNINGAR);
 
+  // ---- Auth & active-BRF state (real backend; everything else on this
+  // page is still MOCK_DOCUMENTS/MOCK_BEVAKNINGAR until the documents/ask
+  // integration steps land) ----
+  const [authState, setAuthState] = useState('loading'); // 'loading' | 'loggedOut' | 'loggedIn'
+  const [user, setUser] = useState(null);
+  const [memberships, setMemberships] = useState([]);
+  const [activeBrfId, setActiveBrfId] = useState(null);
+  const [showUserMenu, setShowUserMenu] = useState(false);
+
+  const activeMembership = memberships.find((m) => m.brf_id === activeBrfId) || null;
+  const activeBrfName = activeMembership?.name || '';
+  const userInitials = (user?.name || '')
+    .split(' ')
+    .filter(Boolean)
+    .map((w) => w[0].toUpperCase())
+    .slice(0, 2)
+    .join('') || '?';
+
+  const handleLoggedIn = (result) => {
+    setUser(result.user);
+    setMemberships(result.memberships || []);
+    setActiveBrfId(result.memberships?.[0]?.brf_id ?? null);
+    setAuthState('loggedIn');
+  };
+
+  const resetToLogin = () => {
+    setUser(null);
+    setMemberships([]);
+    setActiveBrfId(null);
+    setAuthState('loggedOut');
+    setShowUserMenu(false);
+  };
+
+  // Central 401 handling: an expired session drops straight back to login.
+  const handleApiError = (e) => {
+    if (e?.status === 401) {
+      resetToLogin();
+      return true;
+    }
+    return false;
+  };
+
+  const handleLogout = async () => {
+    try { await api.logout(); } catch { /* clear locally regardless */ }
+    resetToLogin();
+  };
+
+  const switchTenant = (value) => {
+    // <option> values are strings — resolve back to the membership to keep the original id type.
+    const m = memberships.find((mm) => String(mm.brf_id) === String(value));
+    if (!m || m.brf_id === activeBrfId) return;
+    setActiveBrfId(m.brf_id);
+  };
+
+  // Session bootstrap: restore an existing session cookie, else show login.
+  React.useEffect(() => {
+    api.me()
+      .then(handleLoggedIn)
+      .catch(() => setAuthState('loggedOut'));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const [currentTab, setCurrentTab] = useState('docs');
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -131,7 +195,7 @@ function App() {
   const [toastMessage, setToastMessage] = useState(null);
   const showToast = (message, type = 'info') => {
     setToastMessage({ message, type });
-    setTimeout(() => setToastMessage(null), 3000);
+    setTimeout(() => setToastMessage(null), 4500);
   };
 
   // Search State
@@ -153,6 +217,18 @@ function App() {
   const [workspaceChatBusy, setWorkspaceChatBusy] = useState(false);
   const [demoState, setDemoState] = useState('standard'); // 'standard', 'no-answer', 'conflict'
   const [reportMenuOpen, setReportMenuOpen] = useState(false);
+  const reportMenuRef = React.useRef(null);
+
+  React.useEffect(() => {
+    if (!reportMenuOpen) return;
+    const handleClickOutside = (e) => {
+      if (reportMenuRef.current && !reportMenuRef.current.contains(e.target)) {
+        setReportMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, [reportMenuOpen]);
 
   // General Chat State
   const [chatInput, setChatInput] = useState('');
@@ -190,6 +266,7 @@ function App() {
   };
 
   const handleApproveQa = () => {
+    if (!window.confirm('Är du säker på att du vill godkänna detta dokument?')) return;
     setDocuments(prev => prev.map(d => d.id === selectedDocument.id ? { ...d, qa: 'Granskad' } : d));
     setSelectedDocument(prev => ({ ...prev, qa: 'Granskad' }));
     showToast('Dokumentet har godkänts och sparats.', 'success');
@@ -329,6 +406,19 @@ function App() {
     return `${count} bevakningar`;
   };
 
+  if (authState === 'loading') {
+    return (
+      <div className="auth-loading-screen">
+        <Loader2 size={28} className="spin" />
+        <span>Laddar…</span>
+      </div>
+    );
+  }
+
+  if (authState !== 'loggedIn') {
+    return <Login onLoggedIn={handleLoggedIn} />;
+  }
+
   return (
     <div className="app-shell">
       {toastMessage && (
@@ -339,7 +429,7 @@ function App() {
       )}
       <div className="mock-banner-compact">
         <span className="mock-badge-inline">MOCKUP</span>
-        All data, filnamn och svar är fiktiva och ej kopplade till en server.
+        Inloggning och förening är kopplade till den riktiga backenden. Dokument, uppladdning och AI-svar nedan är fortfarande fiktiva.
       </div>
 
       {/* MOBILE TOP NAVIGATION */}
@@ -354,13 +444,17 @@ function App() {
 
       <div className="main-layout">
 
+        {isMobile && isMobileMenuOpen && (
+          <div className="sidebar-backdrop" onClick={() => setIsMobileMenuOpen(false)} aria-hidden="true" />
+        )}
+
         {/* SIDEBAR - Responsive */}
         {!selectedDocument && (
           <nav
             ref={sidebarRef}
             className={`sidebar ${isMobileMenuOpen ? 'open' : ''}`}
-            aria-hidden={!isMobileMenuOpen && isMobile ? "true" : "false"}
-            inert={!isMobileMenuOpen && isMobile ? true : undefined}
+            aria-hidden={isMobile && !isMobileMenuOpen ? "true" : undefined}
+            inert={isMobile && !isMobileMenuOpen ? true : undefined}
           >
             <div className="sidebar-brand desktop-only">
               <div className="logo">Simons <span>RAG</span></div>
@@ -377,7 +471,7 @@ function App() {
                 <MessageSquare size={20} /> AI-chatt
               </button>
 
-              <div style={{ marginTop: '40px', padding: '0 16px', color: 'var(--text-muted)', fontSize: '12px', fontWeight: '600' }}>
+              <div className="sidebar-section-label">
                 ADMINISTRATION
               </div>
               <button className={`nav-item ${currentTab === 'settings' ? 'active' : ''}`} onClick={() => { setCurrentTab('settings'); setIsMobileMenuOpen(false); }}>
@@ -385,13 +479,39 @@ function App() {
               </button>
             </div>
 
-            <div style={{ marginTop: 'auto', padding: '16px', borderTop: '1px solid var(--panel-border)' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                <div className="chat-avatar" style={{ background: 'rgba(92, 107, 156, 0.3)' }}>AA</div>
-                <div>
-                  <div style={{ fontSize: '14px', fontWeight: '500' }}>Anna Andersson</div>
-                  <div style={{ fontSize: '12px', color: 'var(--text-muted)' }}>anna@gjutformen12.se</div>
+            <div className="sidebar-footer">
+              {memberships.length > 1 ? (
+                <div className="tenant-switcher">
+                  <label htmlFor="tenant-select">Förening</label>
+                  <select
+                    id="tenant-select"
+                    value={String(activeBrfId ?? '')}
+                    onChange={(e) => switchTenant(e.target.value)}
+                  >
+                    {memberships.map((m) => (
+                      <option key={m.brf_id} value={String(m.brf_id)}>{m.name}</option>
+                    ))}
+                  </select>
                 </div>
+              ) : (
+                activeBrfName && <div className="tenant-label" title={activeBrfName}>{activeBrfName}</div>
+              )}
+
+              {showUserMenu && (
+                <div className="user-menu-popover glass-panel">
+                  <div className="user-menu-item"><HelpCircle size={16} /> Hjälp & Support</div>
+                  <div className="user-menu-divider"></div>
+                  <div className="user-menu-item text-danger" onClick={handleLogout}><LogOut size={16} /> Logga ut</div>
+                </div>
+              )}
+
+              <div className="user-profile" onClick={() => setShowUserMenu(!showUserMenu)}>
+                <div className="user-avatar">{userInitials}</div>
+                <div className="user-info">
+                  <span className="user-name">{user?.name || user?.email}</span>
+                  <span className="user-email">{user?.email}</span>
+                </div>
+                <ChevronUp size={16} color="var(--text-secondary)" style={{ marginLeft: 'auto', transform: showUserMenu ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
               </div>
             </div>
           </nav>
@@ -500,7 +620,7 @@ function App() {
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
                         <h3>Bevakningar i dokumentet</h3>
                         {bevakningar.filter(b => b.docId === selectedDocument.id).length > 0 && (
-                          <span className="status-badge warning" style={{ background: 'transparent', border: '1px solid var(--status-warning)', color: 'var(--status-warning)' }}>
+                          <span className="status-badge warning outline">
                             {bevakningar.filter(b => b.docId === selectedDocument.id).length}
                           </span>
                         )}
@@ -582,7 +702,7 @@ function App() {
                        <button className="primary-action-btn ok" onClick={handleApproveQa}>
                          <CheckCircle2 size={16}/> <span className="action-label">Godkänn dokument</span>
                        </button>
-                       <div style={{ position: 'relative' }}>
+                       <div ref={reportMenuRef} style={{ position: 'relative' }}>
                          <button className="primary-action-btn warning" onClick={() => setReportMenuOpen(!reportMenuOpen)} aria-haspopup="true" aria-expanded={reportMenuOpen}>
                            <ThumbsDown size={16}/> <span className="action-label">Rapportera problem</span>
                          </button>
@@ -629,24 +749,32 @@ function App() {
                          <span style={{ fontWeight: '500' }}>AI-chatt för detta dokument</span>
                        </div>
 
-                       <div className="demo-state-selector">
-                          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }} className="desktop-only">MOCK-STATE:</span>
-                          <select value={demoState} onChange={e => setDemoState(e.target.value)} title="Ändra vilket svar AI:n tvingas ge i mockupen." aria-label="Välj AI svarstillstånd">
-                            <option value="standard">Svar med citat</option>
-                            <option value="no-answer">Otillräckligt underlag</option>
-                            <option value="conflict">Motstridiga källor</option>
-                          </select>
+                       <div className="demo-state-fence">
+                         <span className="demo-state-fence-label">Dev</span>
+                         <select value={demoState} onChange={e => setDemoState(e.target.value)} title="Ändra vilket svar AI:n tvingas ge i mockupen." aria-label="Välj AI svarstillstånd">
+                           <option value="standard">Svar med citat</option>
+                           <option value="no-answer">Otillräckligt underlag</option>
+                           <option value="conflict">Motstridiga källor</option>
+                         </select>
                        </div>
                     </div>
 
                     <div className="chat-messages-area" style={{ flex: 1, padding: '20px' }}>
                       {workspaceChatMessages.length === 0 ? (
                         <div className="chat-empty-state">
-                           <Info size={32} color="var(--text-muted)" style={{ marginBottom: '16px', opacity: 0.5 }} />
-                           <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '24px' }}>
-                             Ställ frågor specifikt om innehållet i <strong>{selectedDocument.name}</strong>.
-                           </p>
-                           <button className="example-prompt-btn" onClick={() => setWorkspaceChatInput('När startar jouren?')}>När startar jouren?</button>
+                          <Info size={32} color="var(--text-muted)" style={{ marginBottom: '16px', opacity: 0.5 }} />
+                          <p style={{ color: 'var(--text-secondary)', fontSize: '14px', marginBottom: '24px' }}>
+                            Ställ frågor specifikt om innehållet i <strong>{selectedDocument.name}</strong>.
+                          </p>
+                          <button className="example-prompt-btn" onClick={() => setWorkspaceChatInput(
+                            selectedDocument.id === 'd1' ? 'När startar jouren?' :
+                            selectedDocument.id === 'd2' ? 'Vad gäller för andrahandsuthyrning?' :
+                            'Sammanfatta dokumentet'
+                          )}>
+                            {selectedDocument.id === 'd1' ? 'När startar jouren?' :
+                             selectedDocument.id === 'd2' ? 'Vad gäller för andrahandsuthyrning?' :
+                             'Sammanfatta dokumentet'}
+                          </button>
                         </div>
                       ) : (
                         workspaceChatMessages.map((msg, idx) => (
@@ -717,8 +845,8 @@ function App() {
             {/* Omitted Home/Search/Chat logic from earlier mockup to keep code cleaner, but I should keep them intact if the user wants to navigate back */}
             {currentTab === 'home' && (
               <div className="tab-content" style={{ maxWidth: '900px' }}>
-                <div className="hero-section" style={{ textAlign: 'center', margin: '20px 0 40px 0' }}>
-                  <h1 style={{ fontSize: '32px', marginBottom: '16px', fontWeight: '600' }}>Sök i dina dokument</h1>
+                <div className="hero-section">
+                  <h1 className="hero-title">Sök i dina dokument</h1>
 
                   <div className="search-input-large-wrapper" style={{ maxWidth: '640px', margin: '0 auto', padding: '8px 8px 8px 20px' }}>
                     <SearchIcon size={20} color="var(--text-secondary)" />
@@ -735,38 +863,38 @@ function App() {
                     </button>
                   </div>
 
-                  <div style={{ marginTop: '16px', fontSize: '14px', color: 'var(--text-secondary)' }}>
-                    Har du en mer komplex fråga? <button onClick={() => executeGeneralChat(searchQuery || 'Vad gäller för...')} className="link-button ai" style={{ fontWeight: '500', textDecoration: 'underline' }}>Ställ den i AI-chatten istället</button>
+                  <div className="hero-subtitle">
+                    Har du en mer komplex fråga? <button onClick={() => { if (searchQuery.trim()) executeGeneralChat(searchQuery); else { setCurrentTab('chat'); setIsMobileMenuOpen(false); } }} className="link-button ai" style={{ fontWeight: '500', textDecoration: 'underline' }}>Ställ den i AI-chatten istället</button>
                   </div>
                 </div>
 
                 <div style={{ marginBottom: '32px' }}>
-                  <h3 style={{ fontSize: '16px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--status-warning)' }}>
+                  <h3 className="attention-heading">
                     <AlertTriangle size={18} /> Kräver din uppmärksamhet
                   </h3>
                   <div className="dashboard-grid">
                     <button className="interactive-card" onClick={() => { setCurrentTab('docs'); setDocFilter('granskas'); setDocsSearchQuery(''); }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div className="card-top-row">
                         <div className="status-badge warning">{filterCounts.granskas} Dokument</div>
                         <ArrowUpRight size={16} color="var(--text-secondary)" />
                       </div>
-                      <div style={{ marginTop: '12px', fontSize: '16px', fontWeight: '500', textAlign: 'left' }}>Väntar på kvalitetskontroll</div>
-                      <div style={{ marginTop: '4px', fontSize: '13px', color: 'var(--text-secondary)', textAlign: 'left' }}>Maskinell extraktion är klar, men mänsklig verifiering saknas.</div>
+                      <div className="card-title">Väntar på kvalitetskontroll</div>
+                      <div className="card-desc">Maskinell extraktion är klar, men mänsklig verifiering saknas.</div>
                     </button>
                     <button className="interactive-card" onClick={() => { setCurrentTab('docs'); setDocFilter('bevakningar'); setDocsSearchQuery(''); }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div className="card-top-row">
                         <div className="status-badge warning">{filterCounts.bevakningar} Dokument</div>
                         <ArrowUpRight size={16} color="var(--text-secondary)" />
                       </div>
-                      <div style={{ marginTop: '12px', fontSize: '16px', fontWeight: '500', textAlign: 'left' }}>Innehåller aktiva bevakningar</div>
-                      <div style={{ marginTop: '4px', fontSize: '13px', color: 'var(--text-secondary)', textAlign: 'left' }}>Håll koll på datum och tidsfrister.</div>
+                      <div className="card-title">Innehåller aktiva bevakningar</div>
+                      <div className="card-desc">Håll koll på datum och tidsfrister.</div>
                     </button>
                   </div>
                 </div>
 
                 <div className="dashboard-grid split">
                   <div className="glass-panel" style={{ padding: '24px' }}>
-                    <h3 style={{ fontSize: '16px', marginBottom: '16px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <h3 className="recent-docs-heading">
                       <Folders size={18} /> Senaste Dokument
                     </h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
@@ -781,12 +909,12 @@ function App() {
                     <button className="link-button" onClick={() => { setCurrentTab('docs'); setDocFilter('alla'); setDocsSearchQuery(''); }} style={{ marginTop: '16px' }}>Visa alla dokument →</button>
                   </div>
 
-                  <div className="glass-panel" style={{ padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'center', textAlign: 'center' }}>
-                     <div style={{ fontSize: '32px', fontWeight: '600', color: 'var(--text-primary)' }}>74</div>
-                     <div style={{ fontSize: '13px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Sökbara sidor</div>
-                     <div style={{ marginTop: '16px', paddingTop: '16px', borderTop: '1px solid var(--panel-border)' }}>
-                       <div style={{ fontSize: '20px', fontWeight: '600', color: 'var(--text-primary)' }}>{filterCounts.alla}</div>
-                       <div style={{ fontSize: '13px', color: 'var(--text-secondary)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Dokument</div>
+                  <div className="glass-panel stat-card">
+                     <div className="stat-number">{documents.reduce((sum, d) => sum + d.pages, 0)}</div>
+                     <div className="stat-label">Sökbara sidor</div>
+                     <div className="stat-divider">
+                       <div className="stat-number">{filterCounts.alla}</div>
+                       <div className="stat-label">Dokument</div>
                      </div>
                   </div>
                 </div>
@@ -861,6 +989,8 @@ function App() {
                             <tr
                               key={doc.id}
                               className="interactive-table-row"
+                              onClick={() => openDocument(doc.id)}
+                              role="row"
                             >
                               <td className="doc-name-cell">
                                 <button className="doc-open-btn" onClick={() => openDocument(doc.id)} aria-label={`Öppna ${doc.name}`}>
@@ -1002,13 +1132,13 @@ function App() {
                 <div className="chat-container">
                   <div className="chat-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                      <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Sparkles color="var(--ai-accent)" size={24}/> Global AI-assistent (MOCK)</h2>
+                      <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Sparkles color="var(--ai-accent)" size={24}/> Global AI-assistent</h2>
                       <p style={{ color: 'var(--text-secondary)', fontSize: '14px', margin: '4px 0 0 0' }}>Få svar baserade på alla föreningens indexerade dokument.</p>
                     </div>
 
                     <div className="chat-scope-selector desktop-only">
                        <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Söker i:</span>
-                       <button className="scope-btn" title="Klicka för att välja vilka dokument som ska sökas">
+                       <button className="scope-btn" onClick={() => showToast('Dokumentfiltrering är inte tillgängligt i denna mockup.')} title="Klicka för att välja vilka dokument som ska sökas">
                          Alla dokument · {documents.length} dokument <ChevronRight size={14}/>
                        </button>
                     </div>
