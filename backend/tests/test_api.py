@@ -239,6 +239,31 @@ class TestAsk:
         r = env.client.post("/api/brf/brf-a/ask", json={"question": "Vad står i stadgarna?"}, headers=env.admin_a_headers)
         assert r.status_code == 200 and r.json()["refusal"] is True
 
+    def test_fake_provider_never_claims_the_configured_tenant_model(self, env, monkeypatch):
+        from app.llm import FakeLLM
+
+        store = env.registry.get("brf-a")
+        chunk_id = next(iter(store.chunks))
+        fake = FakeLLM([{
+            "answer": "Föreningen Alfa har en hemlig kod ALFA-XYZZY-111 i sina stadgar.",
+            "citations": [{
+                "chunk_id": chunk_id,
+                "quote": "Föreningen Alfa har en hemlig kod ALFA-XYZZY-111 i sina stadgar.",
+            }],
+            "insufficient_data": False,
+        }])
+        monkeypatch.setattr("app.answer.pick_provider", lambda: fake)
+
+        r = env.client.post(
+            "/api/brf/brf-a/ask",
+            json={"question": "Vad är Alfadata?"},
+            headers=env.admin_a_headers,
+        )
+
+        assert r.status_code == 200
+        assert r.json()["provider"] == "fake"
+        assert r.json()["model"] == ""
+
 
 class TestAskTenantNamePropagation:
     """Proves the registered tenant name actually reaches the numeric

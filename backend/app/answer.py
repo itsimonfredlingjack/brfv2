@@ -114,8 +114,12 @@ def ask(
     provider = provider or pick_provider()
     s = store.settings
     # A self-hosted deployment serves one fixed model (BRF_LLM_MODEL); report
-    # the model actually used, not just the settings value.
-    model = getattr(provider, "model", "") or s.aiModel
+    # the model actually used, not just the settings value. Test/no-provider
+    # paths do not execute the configured tenant model at all and must never
+    # inherit aiModel as fabricated answer provenance.
+    provider_model = getattr(provider, "model", "") or ""
+    generation_model = provider_model or s.aiModel
+    model = "" if provider.name in ("fake", "none") else generation_model
     # One consistent view per request — rebuilds swap references, so an
     # in-flight ask never sees a half-built index or a renamed chunk map.
     index, chunks, pages, documents = store.snapshot()
@@ -202,7 +206,7 @@ def ask(
                     sys_prompt if attempt == 0 else sys_prompt + _RETRY_NUDGE,
                     user,
                     max_tokens=envelope_budget,
-                    model=model,
+                    model=generation_model,
                 )
                 parsed = parse_llm_json(raw)
                 break

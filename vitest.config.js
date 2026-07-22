@@ -10,5 +10,6 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true, // required so @testing-library/jest-dom's side-effect import finds `expect`
     setupFiles: ['./src/test-setup.js'],
+    include: ['src/**/*.test.{js,jsx}'],
   },
 });
