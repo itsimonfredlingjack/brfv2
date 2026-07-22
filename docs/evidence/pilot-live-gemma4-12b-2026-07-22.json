@@ -1,0 +1,134 @@
+{
+  "schema_version": 1,
+  "run_date": "2026-07-22",
+  "verdict": "not_ready",
+  "blocking_reason": "The live Gemma 4 12B readiness gate reproducibly refused q03 (cell_value) despite the source-bearing chunks appearing at retrieval ranks 1, 2, 4, and 6.",
+  "runtime": {
+    "mode": "pilot",
+    "provider": "selfhosted",
+    "model": "gemma4:e12b",
+    "runtime_label": "agenntserver",
+    "health_ready": true,
+    "warning": null
+  },
+  "tunnel": {
+    "listener_process_is_ssh": true,
+    "expected_local_forward": true,
+    "uses_intended_host_alias": true,
+    "advertised_model_count": 1,
+    "advertised_model_matches_gemma_4_12b": true
+  },
+  "corpus": {
+    "pdf_count": 9,
+    "born_digital_count": 2,
+    "scanned_count": 7,
+    "total_bytes": 19914078,
+    "aggregate_digest_sha256": "2764b79feed939bbdcd23e8d07acec6912ea047a6e74760ef7251fd67e6ae7d4",
+    "filenames_or_content_in_packet": false
+  },
+  "real_corpus_readiness": {
+    "production_parity_embedder": "model2vec",
+    "ready": false,
+    "digital_docs_ingested": 2,
+    "scan_docs_ingested": 7,
+    "scan_pages": 63,
+    "scan_words": 9572,
+    "scan_chunks": 74,
+    "questions": {
+      "q09_org_number": {"answered": true, "verified_citations": 1},
+      "q08_party_name": {"answered": true, "verified_citations": 1},
+      "q03_cell_value": {"answered": false, "refusal_reason": "insufficient_data", "verified_citations": 0},
+      "q01_prose": {"answered": false, "refusal_reason": "grounding_failed", "verified_citations": 0, "rejected_reason": "quote_not_found"},
+      "q02_prose": {"answered": true, "verified_citations": 1},
+      "q11_unanswerable": {"refused": true, "refusal_reason": "insufficient_data", "verified_citations": 0}
+    },
+    "network_connections": 1,
+    "external_connections": 0
+  },
+  "diagnostics": {
+    "harness_selftest_ready": true,
+    "harness_selftest_network_connections": 0,
+    "q03_target_retrieval_ranks": [1, 2, 4, 6],
+    "q03_top_k_1_refused": true,
+    "q03_top_k_3_refused": true,
+    "q03_top_k_6_refused": true,
+    "generic_fragment_prompt_clarification_changed_result": false,
+    "code_or_retrieval_defect_demonstrated": false,
+    "live_model_compliance_limitation_demonstrated": true
+  },
+  "synthetic_golden_live_provider": {
+    "answerable": 46,
+    "unanswerable": 10,
+    "recall_at_6": 1.0,
+    "answer_rate": 1.0,
+    "citation_verification_rate": 1.0,
+    "highlight_correctness": 0.9782608695652174,
+    "citation_document_accuracy": 1.0,
+    "false_answer_rate": 0.0,
+    "highlight_misses": ["g14"],
+    "elapsed_seconds": 255.6,
+    "network_connections": 3,
+    "external_connections": 0,
+    "distinct_endpoint_class": ["loopback_ssh_tunnel"]
+  },
+  "live_browser_smoke": {
+    "browser": "Chromium via Playwright CLI",
+    "temporary_tenant_store": true,
+    "private_bytes_persisted_after_cleanup": false,
+    "uploads": [
+      {"status": 200, "generic_filename": true, "pages": 13, "words_positive": true, "chunks_positive": true},
+      {"status": 200, "generic_filename": true, "pages": 36, "words_positive": true, "chunks_positive": true}
+    ],
+    "answerable": {
+      "status": 200,
+      "refusal": false,
+      "provider": "selfhosted",
+      "model": "gemma4:e12b",
+      "verified_citations": 1,
+      "rejected_citations": 0,
+      "citation_document_resolvable": true,
+      "citation_page": 3,
+      "citation_rectangles": 2
+    },
+    "citation_navigation": {
+      "correct_generic_document": true,
+      "correct_page": true,
+      "highlight_count": 2,
+      "highlight_visible": true,
+      "highlight_positive_geometry": true
+    },
+    "unsupported": {
+      "status": 200,
+      "refusal": true,
+      "refusal_reason": "insufficient_data",
+      "verified_citations": 0,
+      "safe_ui_message_visible": true
+    },
+    "association_switch": {
+      "target_association_selected": true,
+      "previous_corpus_documents_visible": 0,
+      "previous_citations_visible": 0,
+      "pending_responses_visible": 0
+    }
+  },
+  "tenant_isolation_tests": {
+    "passed": 48,
+    "warnings": 6,
+    "failed": 0
+  },
+  "network_audit": {
+    "provider": "selfhosted",
+    "allowed_transport": "loopback SSH tunnel",
+    "total_connections": 3,
+    "external_connections": 0,
+    "silent_fallback_observed": false,
+    "ambient_local_4b_endpoint_observed": false
+  },
+  "raw_local_artifacts": [
+    "backend/out/pilot-live-2026-07-22/model_readiness.json",
+    "backend/out/pilot-live-2026-07-22/model2vec-live/model_readiness.json",
+    "backend/out/pilot-live-2026-07-22/harness-selftest/model_readiness.json",
+    "backend/eval/last_run.json",
+    "backend/eval/network_audit.json"
+  ]
+}
