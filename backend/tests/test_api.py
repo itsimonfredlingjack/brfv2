@@ -24,6 +24,15 @@ class TestHealth:
         assert body["embedding_provider"] == "hashed-char-ngram"
         assert body["tenants"] == 2
 
+    def test_health_preserves_pre_existing_top_level_fields(self, env):
+        # The `llm` object is additive — every field a client already reads
+        # directly off the top-level response (mode, llm_provider, the
+        # embedding/tenant fields above) must keep working unchanged.
+        body = env.client.get("/api/health").json()
+        assert set(body) >= {"status", "mode", "llm_provider", "embedding_provider", "tenants", "llm"}
+        assert body["mode"] == "dev"
+        assert body["llm_provider"] == body["llm"]["provider"]
+
     def test_llm_metadata_present_and_not_ready_for_fake_provider(self, env):
         # conftest forces BRF_LLM=fake for the whole test session — the
         # header status must never claim a model is active for it.
