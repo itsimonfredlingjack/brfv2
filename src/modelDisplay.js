@@ -12,7 +12,7 @@ const KNOWN_MODEL_DISPLAY_NAMES = {
 
 const PROVIDER_LABELS = {
   selfhosted: 'Self-hosted',
-  'anthropic-api': 'Anthropic API',
+  'anthropic-api': 'Anthropic',
   'claude-cli': 'Claude CLI',
   fake: 'Testläge',
   none: 'Ingen modell',

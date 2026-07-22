@@ -177,3 +177,148 @@ describe('keyboard accessibility', () => {
     expect(select).toHaveFocus();
   });
 });
+
+describe('model status indicator', () => {
+  it('shows a loading state until /api/health resolves, then the real configured model', async () => {
+    api.me.mockResolvedValue({ user: MAX_USER, memberships: MAX_MEMBERSHIPS });
+    let resolveHealth;
+    api.health.mockImplementation(() => new Promise((resolve) => { resolveHealth = resolve; }));
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'AI-chatt' }));
+    expect(await screen.findByText('Kontrollerar modell…')).toBeInTheDocument();
+
+    resolveHealth({
+      llm: { provider: 'selfhosted', model: 'gemma4:e12b', display_name: 'Gemma 4 12B', runtime_label: 'agenntserver', ready: true },
+    });
+
+    await screen.findByText('Gemma 4 12B');
+    expect(screen.queryByText('Kontrollerar modell…')).not.toBeInTheDocument();
+  });
+
+  it('ready state shows the configured model, provider and runtime label with accessible markup', async () => {
+    api.me.mockResolvedValue({ user: MAX_USER, memberships: MAX_MEMBERSHIPS });
+    api.health.mockResolvedValue({
+      llm: { provider: 'selfhosted', model: 'gemma4:e12b', display_name: 'Gemma 4 12B', runtime_label: 'agenntserver', ready: true },
+    });
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'AI-chatt' }));
+    await screen.findByText('Gemma 4 12B');
+    expect(screen.getByText('Self-hosted · agenntserver')).toBeInTheDocument();
+
+    // Accessible name/description: a screen reader gets the full status
+    // even though the secondary line is visually hidden on narrow screens.
+    expect(screen.getByLabelText('Modellstatus: Gemma 4 12B, Self-hosted · agenntserver')).toBeInTheDocument();
+    expect(screen.getByTitle('Modellen som just nu används för att generera AI-chattens svar.')).toBeInTheDocument();
+  });
+
+  it('shows "Modellstatus okänd" when /api/health fails outright', async () => {
+    api.me.mockResolvedValue({ user: MAX_USER, memberships: MAX_MEMBERSHIPS });
+    api.health.mockRejectedValue(new Error('network down'));
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'AI-chatt' }));
+    expect(await screen.findByText('Modellstatus okänd')).toBeInTheDocument();
+  });
+
+  it('shows a warning, not a false ready claim, when the configured provider has no active model', async () => {
+    api.me.mockResolvedValue({ user: MAX_USER, memberships: MAX_MEMBERSHIPS });
+    api.health.mockResolvedValue({
+      llm: { provider: 'fake', model: '', display_name: '', runtime_label: '', ready: false },
+    });
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'AI-chatt' }));
+    expect(await screen.findByText('Ingen modell aktiv')).toBeInTheDocument();
+    expect(screen.queryByText('Modellstatus okänd')).not.toBeInTheDocument();
+  });
+
+  it('never fabricates a Gemma/agenntserver claim for a different provider or model', async () => {
+    api.me.mockResolvedValue({ user: MAX_USER, memberships: MAX_MEMBERSHIPS });
+    api.health.mockResolvedValue({
+      llm: { provider: 'anthropic-api', model: 'claude-sonnet-5', display_name: '', runtime_label: '', ready: true },
+    });
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'AI-chatt' }));
+    // No display_name from the backend and an unrecognized model id — the
+    // shared normalizer must fall back to the raw identifier, never Gemma.
+    await screen.findByText('claude-sonnet-5');
+    expect(screen.getByText('Anthropic')).toBeInTheDocument();
+    expect(screen.queryByText(/Gemma/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/agenntserver/)).not.toBeInTheDocument();
+  });
+});
+
+describe('answer-level provenance', () => {
+  it('renders provider/model from the specific /ask response, and never on the user bubble or while pending', async () => {
+    api.me.mockResolvedValue({ user: MAX_USER, memberships: MAX_MEMBERSHIPS });
+    let resolveAsk;
+    api.ask.mockImplementation(() => new Promise((resolve) => { resolveAsk = resolve; }));
+    const { container } = render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'AI-chatt' }));
+    const input = await screen.findByPlaceholderText('Ställ en generell fråga till AI:n...');
+    fireEvent.change(input, { target: { value: 'Vilket regelverk gäller?' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Skicka fråga' }));
+
+    // Mid-flight: user bubble + pending AI bubble on screen, no provenance
+    // anywhere yet — not on the user message, not on the pending one.
+    expect(screen.getByText('Vilket regelverk gäller?')).toBeInTheDocument();
+    expect(container.querySelectorAll('.chat-model-provenance')).toHaveLength(0);
+
+    resolveAsk({
+      answer: 'Bostadsrättslagen gäller.',
+      citations: [],
+      provider: 'selfhosted',
+      model: 'gemma4:e12b',
+    });
+
+    await screen.findByText('Bostadsrättslagen gäller.');
+    expect(screen.getByText('Gemma 4 12B · Self-hosted')).toBeInTheDocument();
+    expect(container.querySelectorAll('.chat-model-provenance')).toHaveLength(1);
+  });
+
+  it('shows no provenance for a refusal where no model was ever invoked', async () => {
+    api.me.mockResolvedValue({ user: MAX_USER, memberships: MAX_MEMBERSHIPS });
+    api.ask.mockResolvedValue({
+      answer: 'Det finns inga dokument uppladdade ännu.',
+      refusal: true,
+      refusal_reason: 'no_documents',
+      citations: [],
+      provider: 'selfhosted',
+      model: 'gemma4:e12b',
+    });
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'AI-chatt' }));
+    const input = await screen.findByPlaceholderText('Ställ en generell fråga till AI:n...');
+    fireEvent.change(input, { target: { value: 'Finns det dokument?' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Skicka fråga' }));
+
+    await screen.findByText('Det finns inga dokument uppladdade ännu.');
+    expect(screen.queryByText('Gemma 4 12B · Self-hosted')).not.toBeInTheDocument();
+  });
+
+  it('shows provenance for a refusal where the model WAS invoked (e.g. grounding_failed)', async () => {
+    api.me.mockResolvedValue({ user: MAX_USER, memberships: MAX_MEMBERSHIPS });
+    api.ask.mockResolvedValue({
+      answer: 'Jag kunde inte verifiera källhänvisningarna.',
+      refusal: true,
+      refusal_reason: 'grounding_failed',
+      citations: [],
+      provider: 'selfhosted',
+      model: 'gemma4:e12b',
+    });
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'AI-chatt' }));
+    const input = await screen.findByPlaceholderText('Ställ en generell fråga till AI:n...');
+    fireEvent.change(input, { target: { value: 'Något komplext?' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Skicka fråga' }));
+
+    await screen.findByText('Jag kunde inte verifiera källhänvisningarna.');
+    expect(screen.getByText('Gemma 4 12B · Self-hosted')).toBeInTheDocument();
+  });
+});
