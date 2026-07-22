@@ -3,7 +3,42 @@ import { LayoutDashboard, MessageSquare, Folders, Settings, Search as SearchIcon
 import Login from './components/Login';
 import PdfPane from './components/PdfPane';
 import { api } from './api';
+import { displayNameForModel, displayNameForProvider } from './modelDisplay';
 import './App.css';
+
+// Refusal reasons where the LLM was never invoked (gated on retrieval, not
+// generation) — no model actually produced these responses, so provenance
+// must not be shown alongside them even though AskResponse still carries
+// provider/model for logging purposes.
+const NO_MODEL_REFUSAL_REASONS = ['no_documents', 'low_relevance'];
+
+function ModelStatusBadge({ status }) {
+  const primary =
+    status.kind === 'loading' ? 'Kontrollerar modell…'
+    : status.kind === 'unknown' ? 'Modellstatus okänd'
+    : status.kind === 'warning' ? 'Ingen modell aktiv'
+    : status.displayName || status.model || 'Okänd modell';
+
+  const secondary =
+    status.kind === 'ready'
+      ? [displayNameForProvider(status.provider), status.runtimeLabel].filter(Boolean).join(' · ')
+      : status.kind === 'warning'
+        ? displayNameForProvider(status.provider)
+        : null;
+
+  const title = 'Modellen som just nu används för att generera AI-chattens svar.';
+  const ariaLabel = `Modellstatus: ${primary}${secondary ? ', ' + secondary : ''}`;
+
+  return (
+    <div className={`model-status-badge ${status.kind}`} title={title} aria-label={ariaLabel}>
+      <span className={`model-status-dot ${status.kind}`} aria-hidden="true" />
+      <span className="model-status-text">
+        <span className="model-status-primary">{primary}</span>
+        {secondary && <span className="model-status-secondary desktop-only">{secondary}</span>}
+      </span>
+    </div>
+  );
+}
 
 // --- MOCK DATA ---
 const MOCK_BEVAKNINGAR = [
@@ -290,6 +325,31 @@ function App() {
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [reportMenuOpen]);
+
+  // Model identity status for the chat header — from GET /api/health's
+  // `llm` object, not a hardcoded label, so it never drifts from what the
+  // backend is actually configured to generate with.
+  const [llmStatus, setLlmStatus] = useState({ kind: 'loading' });
+
+  React.useEffect(() => {
+    let cancelled = false;
+    api.health()
+      .then((body) => {
+        if (cancelled) return;
+        const llm = body.llm || {};
+        setLlmStatus({
+          kind: llm.ready ? 'ready' : 'warning',
+          provider: llm.provider || '',
+          model: llm.model || '',
+          displayName: llm.display_name || displayNameForModel(llm.model || ''),
+          runtimeLabel: llm.runtime_label || '',
+        });
+      })
+      .catch(() => {
+        if (!cancelled) setLlmStatus({ kind: 'unknown' });
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   // General Chat State — wired to the real POST /api/brf/{brfId}/ask
   const [chatInput, setChatInput] = useState('');
@@ -579,8 +639,11 @@ function App() {
           role: 'ai',
           content: res.answer,
           refusal: !!res.refusal,
+          refusalReason: res.refusal_reason || null,
           warning: res.warning || null,
           citations: res.citations || [],
+          provider: res.provider || null,
+          model: res.model || null,
         }]);
         setChatBusy(false);
       })
@@ -1344,6 +1407,7 @@ function App() {
                     <div>
                       <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Sparkles color="var(--ai-accent)" size={24}/> Global AI-assistent</h2>
                       <p style={{ color: 'var(--text-secondary)', fontSize: '14px', margin: '4px 0 0 0' }}>Få svar baserade på alla föreningens indexerade dokument.</p>
+                      <ModelStatusBadge status={llmStatus} />
                     </div>
 
                     <div className="chat-scope-selector desktop-only">
@@ -1401,6 +1465,11 @@ function App() {
                                   </div>
                                 )}
                               </div>
+                              {msg.role === 'ai' && msg.model && !NO_MODEL_REFUSAL_REASONS.includes(msg.refusalReason) && (
+                                <div className="chat-model-provenance" title="Modellen som genererade detta svar.">
+                                  {displayNameForModel(msg.model)} · {displayNameForProvider(msg.provider)}
+                                </div>
+                              )}
                             </div>
                           </div>
                         ))}

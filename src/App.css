@@ -586,6 +586,26 @@ mark.search-highlight {
 .chat-refusal-header { color: var(--status-error); display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
 .chat-refusal-header.warning { color: var(--status-warning); }
 
+.chat-model-provenance { margin-top: 6px; padding-left: 4px; font-size: 11px; color: var(--text-muted); letter-spacing: 0.2px; }
+
+.model-status-badge { display: inline-flex; align-items: center; gap: 8px; margin-top: 10px; padding: 5px 10px; border-radius: 8px; background: var(--panel-bg); border: 1px solid var(--panel-border); width: fit-content; cursor: default; }
+.model-status-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; background: var(--text-muted); }
+.model-status-dot.ready { background: var(--status-ok); box-shadow: 0 0 6px var(--status-ok-dim); }
+.model-status-dot.warning { background: var(--status-warning); }
+.model-status-dot.unknown { background: var(--status-error); }
+.model-status-dot.loading { background: var(--text-muted); animation: model-status-pulse 1.4s ease-in-out infinite; }
+.model-status-text { display: flex; flex-direction: column; line-height: 1.25; }
+.model-status-primary { font-size: 12px; font-weight: 600; color: var(--text-secondary); }
+.model-status-badge.ready .model-status-primary { color: var(--text-primary); }
+.model-status-badge.warning .model-status-primary { color: var(--status-warning); }
+.model-status-badge.unknown .model-status-primary { color: var(--status-error); }
+.model-status-secondary { font-size: 10px; color: var(--text-muted); }
+
+@keyframes model-status-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+
 .chat-citations { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--panel-border); padding-top: 16px; }
 .citation-pill { font-size: 13px; display: flex; gap: 8px; align-items: baseline; }
 .citation-pill.interactive { cursor: pointer; padding: 4px 8px; border-radius: 6px; transition: 0.2s; outline: none; margin-left: -8px; }
