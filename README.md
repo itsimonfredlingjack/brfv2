@@ -77,10 +77,12 @@ Headern ska då visa `Gemma 4 12B` och `Self-hosted · agenntserver` från
 backendens `/api/health`. Svar visar provider/modell från just `/ask`-svaret;
 inga hårdkodade frontendetiketter får överstyra detta.
 
-Den senaste skyddade realkorpusgaten är `NOT READY` på en obligatorisk
-fragmentfråga. En fungerande livebrowserresa är dokumenterad, men frontenden
-eller demon får inte beskriva hela livepiloten som godkänd innan backendens
-readinesskommando ger `VERDICT: READY`.
+Den senaste oförändrade skyddade realkorpusgaten gav `VERDICT: READY`: den
+tidigare blockerande fragmentfrågan fick två verifierade citat och den
+obesvarbara kontrollen vägrades fortfarande säkert. Frontenden ändrades inte
+för fixen; den fortsätter att rendera backendens verkliga svar och citat.
 
 Se `/Users/coffeedev/Projects/brfv2/docs/MVP-STATUS.md` och
 `/Users/coffeedev/Projects/brfv2/docs/evidence/pilot-live-gemma4-12b-2026-07-22.md`.
+XS-32-fixens evidens finns i
+`/Users/coffeedev/Projects/brfv2/docs/evidence/xs32-q03-linked-context-2026-07-22.md`.
