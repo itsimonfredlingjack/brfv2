@@ -213,13 +213,13 @@ describe('model status indicator', () => {
     expect(screen.getByTitle('Modellen som just nu används för att generera AI-chattens svar.')).toBeInTheDocument();
   });
 
-  it('shows "Modellstatus okänd" when /api/health fails outright', async () => {
+  it('shows "Modellstatus ej tillgänglig" when /api/health fails outright', async () => {
     api.me.mockResolvedValue({ user: MAX_USER, memberships: MAX_MEMBERSHIPS });
     api.health.mockRejectedValue(new Error('network down'));
     render(<App />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'AI-chatt' }));
-    expect(await screen.findByText('Modellstatus okänd')).toBeInTheDocument();
+    expect(await screen.findByText('Modellstatus ej tillgänglig')).toBeInTheDocument();
   });
 
   it('shows a warning, not a false ready claim, when the configured provider has no active model', async () => {
@@ -230,8 +230,8 @@ describe('model status indicator', () => {
     render(<App />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'AI-chatt' }));
-    expect(await screen.findByText('Ingen modell aktiv')).toBeInTheDocument();
-    expect(screen.queryByText('Modellstatus okänd')).not.toBeInTheDocument();
+    expect(await screen.findByText('Testleverantör – inte redo')).toBeInTheDocument();
+    expect(screen.queryByText('Modellstatus ej tillgänglig')).not.toBeInTheDocument();
   });
 
   it('never fabricates a Gemma/agenntserver claim for a different provider or model', async () => {

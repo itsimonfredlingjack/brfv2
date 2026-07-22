@@ -3,7 +3,7 @@ import { Loader2, AlertCircle, Sparkles } from 'lucide-react';
 import { api } from '../api';
 import './Login.css';
 
-function Login({ onLoggedIn }) {
+function Login({ onLoggedIn, modelStatus = null }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
@@ -32,6 +32,7 @@ function Login({ onLoggedIn }) {
         <div className="login-mark"><Sparkles size={22} /></div>
         <h1 className="login-title">Logga in</h1>
         <p className="login-subtitle">Fortsätt till din förenings dokumentarbetsyta.</p>
+        {modelStatus && <div className="login-model-status">{modelStatus}</div>}
 
         <form className="login-form" onSubmit={handleSubmit}>
           <label className="login-field">

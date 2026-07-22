@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, MessageSquare, Folders, Settings, Search as SearchIcon, FileText, ArrowRight, Loader2, Sparkles, AlertCircle, Calendar, Upload, CheckCircle2, AlertTriangle, X, ChevronRight, ChevronDown, CornerDownRight, ArrowLeft, ZoomIn, ZoomOut, Search, Check, ThumbsDown, MessageCircle, Info, Menu, ChevronUp, HelpCircle, LogOut, Trash2 } from 'lucide-react';
+import { MessageSquare, Folders, Search as SearchIcon, FileText, ArrowRight, Loader2, Sparkles, AlertCircle, Upload, CheckCircle2, AlertTriangle, X, ChevronRight, ChevronDown, CornerDownRight, ArrowLeft, ZoomIn, ZoomOut, ThumbsDown, MessageCircle, Info, Menu, ChevronUp, LogOut, Trash2 } from 'lucide-react';
 import Login from './components/Login';
 import PdfPane from './components/PdfPane';
 import { api } from './api';
@@ -17,8 +17,10 @@ const NO_MODEL_REFUSAL_REASONS = ['no_documents', 'low_relevance'];
 function ModelStatusBadge({ status }) {
   const primary =
     status.kind === 'loading' ? 'Kontrollerar modell…'
-    : status.kind === 'unknown' ? 'Modellstatus okänd'
-    : status.kind === 'warning' ? 'Ingen modell aktiv'
+    : status.kind === 'unknown' ? 'Modellstatus ej tillgänglig'
+    : status.kind === 'warning' && status.provider === 'fake' ? 'Testleverantör – inte redo'
+    : status.kind === 'warning' && status.provider === 'none' ? 'Ingen modell konfigurerad'
+    : status.kind === 'warning' ? 'Modell inte redo'
     : status.displayName || status.model || 'Okänd modell';
 
   const secondary =
@@ -41,13 +43,6 @@ function ModelStatusBadge({ status }) {
     </div>
   );
 }
-
-// --- MOCK DATA ---
-const MOCK_BEVAKNINGAR = [
-  { id: 'b1', docId: 'd1', title: 'Start snöröjningsjour', date: '15 Nov 2026', desc: 'Jouren träder i kraft och pågår till 15 april.', page: 1, done: false },
-  { id: 'b2', docId: 'd3', title: 'Städdag', date: '24 Apr 2026', desc: 'Vårstädning av innegården.', page: 3, done: true },
-  { id: 'b3', docId: 'd3', title: 'Filterbyte', date: '10 Okt 2026', desc: 'Byte av ventilationsfilter i alla lägenheter.', page: 4, done: false },
-];
 
 const MOCK_SEARCH_RESULTS = {
   query: 'andrahandsuthyrning',
@@ -102,7 +97,6 @@ function App() {
   const [documents, setDocuments] = useState([]);
   const [documentsLoading, setDocumentsLoading] = useState(false);
   const [documentsError, setDocumentsError] = useState(null);
-  const [bevakningar, setBevakningar] = useState(MOCK_BEVAKNINGAR);
 
   // ---- Auth & active-BRF state (real backend; document list, global AI
   // answers/citations, and PDF viewing/citation navigation are now real too
@@ -555,11 +549,6 @@ function App() {
     showToast('Dokumentet har godkänts och sparats.', 'success');
   };
 
-  const handleMarkBevakningDone = (bevakningId) => {
-    setBevakningar(prev => prev.map(b => b.id === bevakningId ? { ...b, done: true } : b));
-    showToast('Bevakningen markerades som klar.', 'success');
-  };
-
   const executeWorkspaceChat = () => {
     if (!workspaceChatInput.trim() || workspaceChatBusy) return;
     const query = workspaceChatInput;
@@ -687,7 +676,7 @@ function App() {
   }
 
   if (authState !== 'loggedIn') {
-    return <Login onLoggedIn={handleLoggedIn} />;
+    return <Login onLoggedIn={handleLoggedIn} modelStatus={<ModelStatusBadge status={llmStatus} />} />;
   }
 
   return (
@@ -723,8 +712,8 @@ function App() {
       )}
 
       <div className="mock-banner-compact">
-        <span className="mock-badge-inline">MOCKUP</span>
-        Inloggning, förening, dokumentlistan, PDF-uppladdning, borttagning, AI-chatten, PDF-visning och källhänvisningar är kopplade till den riktiga backenden. Dokumentchatt och kvalitetskontroll är fortfarande fiktiva.
+        <span className="mock-badge-inline">PILOT</span>
+        Verifierad pilotslinga: förening, dokument, uppladdning, AI-svar, källor och PDF-markering använder den riktiga backenden. Sök, dokumentchatt, kvalitetskontroll, bevakningar och inställningar ingår inte i piloten.
       </div>
 
       {/* MOBILE TOP NAVIGATION */}
@@ -756,9 +745,6 @@ function App() {
             </div>
 
             <div className="sidebar-menu">
-              <button className={`nav-item ${currentTab === 'home' ? 'active' : ''}`} onClick={() => { setCurrentTab('home'); setIsMobileMenuOpen(false); }}>
-                <LayoutDashboard size={20} /> Hem
-              </button>
               <button className={`nav-item ${currentTab === 'docs' ? 'active' : ''}`} onClick={() => { setCurrentTab('docs'); setDocsSearchQuery(''); setIsMobileMenuOpen(false); }}>
                 <Folders size={20} /> Dokument
               </button>
@@ -766,12 +752,6 @@ function App() {
                 <MessageSquare size={20} /> AI-chatt
               </button>
 
-              <div className="sidebar-section-label">
-                ADMINISTRATION
-              </div>
-              <button className={`nav-item ${currentTab === 'settings' ? 'active' : ''}`} onClick={() => { setCurrentTab('settings'); setIsMobileMenuOpen(false); }}>
-                <Settings size={20} /> Inställningar
-              </button>
             </div>
 
             <div className="sidebar-footer">
@@ -807,8 +787,6 @@ function App() {
 
               {showUserMenu && (
                 <div className="user-menu-popover glass-panel">
-                  <div className="user-menu-item"><HelpCircle size={16} /> Hjälp & Support</div>
-                  <div className="user-menu-divider"></div>
                   <div className="user-menu-item text-danger" onClick={handleLogout}><LogOut size={16} /> Logga ut</div>
                 </div>
               )}
@@ -851,18 +829,15 @@ function App() {
                 <button className={`workspace-tab ${workspaceTab === 'read' ? 'active' : ''}`} onClick={() => setWorkspaceTab('read')}>
                   <FileText size={16}/> <span className="tab-label">Läs dokument</span>
                 </button>
-                <button className={`workspace-tab ${workspaceTab === 'review' ? 'active' : ''}`} onClick={() => setWorkspaceTab('review')}>
-                  <CheckCircle2 size={16}/> <span className="tab-label">Kvalitetskontroll <span className="mock-tab-suffix">(mock)</span></span>
-                  {selectedDocument.qa === 'Behöver granskas' && <span className="tab-badge warning" aria-label="Kräver granskning">!</span>}
+                <button className="workspace-tab" disabled title="Kvalitetskontroll ingår inte i pilotens verifierade funktioner.">
+                  <CheckCircle2 size={16}/> <span className="tab-label">Kvalitetskontroll <span className="mock-tab-suffix">(ej i piloten)</span></span>
                 </button>
-                <button className={`workspace-tab ${workspaceTab === 'chat' ? 'active' : ''}`} onClick={() => setWorkspaceTab('chat')}>
-                  <MessageCircle size={16}/> <span className="tab-label">Fråga dokumentet <span className="mock-tab-suffix">(mock)</span></span>
+                <button className="workspace-tab" disabled title="Dokumentchatt ingår inte i pilotens verifierade funktioner.">
+                  <MessageCircle size={16}/> <span className="tab-label">Fråga dokumentet <span className="mock-tab-suffix">(ej i piloten)</span></span>
                 </button>
               </div>
 
-              <div className="workspace-header-right desktop-only">
-                 <span style={{ fontSize: '12px', color: 'var(--text-muted)' }}>Dokument 1 av 1</span>
-              </div>
+              <div className="workspace-header-right desktop-only" />
             </header>
 
             <div className="workspace-content">
@@ -872,15 +847,13 @@ function App() {
                     <div className="pdf-toolbar">
                       <div className="pdf-nav">
                          <button className="icon-action-btn" onClick={() => setPdfPage(p => Math.max(1, p - 1))} disabled={pdfPage === 1} aria-label="Föregående sida"><ArrowLeft size={16}/></button>
-                         <span>Sida {pdfPage} av {pdfDisplayPages ?? '…'}</span>
+                         <span data-testid="pdf-page-indicator">Sida {pdfPage} av {pdfDisplayPages ?? '…'}</span>
                          <button className="icon-action-btn" onClick={() => setPdfPage(p => p + 1)} disabled={pdfDisplayPages != null && pdfPage >= pdfDisplayPages} aria-label="Nästa sida"><ArrowRight size={16}/></button>
                       </div>
                       <div className="pdf-actions">
                          <button className="icon-action-btn" onClick={() => setPdfZoom(z => Math.max(50, z - 10))} title="Zooma ut" aria-label="Zooma ut"><ZoomOut size={16}/></button>
                          <span style={{ fontSize: '12px', width: '40px', textAlign: 'center' }}>{pdfZoom}%</span>
                          <button className="icon-action-btn" onClick={() => setPdfZoom(z => Math.min(200, z + 10))} title="Zooma in" aria-label="Zooma in"><ZoomIn size={16}/></button>
-                         <div className="divider"></div>
-                         <button className="icon-action-btn" title="Sök i dokument" aria-label="Sök"><Search size={16}/></button>
                       </div>
                     </div>
 
@@ -913,45 +886,12 @@ function App() {
                             {selectedDocument.status === 'Färdigbehandlad' ? <span className="status-text ok">Färdigbehandlad</span> : <span className="status-text muted">Behandlas</span>}
                           </span>
                         </div>
-                        <div className="info-item">
-                          <span className="info-label">Kvalitetskontroll</span>
-                          <span className="info-value">
-                            {selectedDocument.qa === 'Granskad' ? <span className="status-text ok">Granskad</span> : <span className="status-text warning">Behöver granskas</span>}
-                          </span>
-                        </div>
                       </div>
                     </div>
 
-                    <div className="panel-section">
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-                        <h3>Bevakningar i dokumentet</h3>
-                        {bevakningar.filter(b => b.docId === selectedDocument.id).length > 0 && (
-                          <span className="status-badge warning outline">
-                            {bevakningar.filter(b => b.docId === selectedDocument.id).length}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="bevakning-list">
-                        {bevakningar.filter(b => b.docId === selectedDocument.id).length === 0 ? (
-                          <div style={{ color: 'var(--text-muted)', fontSize: '13px' }}>Inga bevakningar funna.</div>
-                        ) : (
-                          bevakningar.filter(b => b.docId === selectedDocument.id).map(b => (
-                            <div key={b.id} className={`bevakning-card ${b.done ? 'done' : ''}`}>
-                              <div className="bevakning-header">
-                                <div className="bevakning-date"><Calendar size={14}/> {b.date}</div>
-                                {b.done && <span className="status-badge ok" style={{ padding: '2px 6px', fontSize: '10px' }}>Klar</span>}
-                              </div>
-                              <div className="bevakning-title">{b.title}</div>
-                              <div className="bevakning-desc">{b.desc}</div>
-                              <div className="bevakning-actions">
-                                <button className="small-action-btn" onClick={() => setPdfPage(b.page)}>Sida {b.page}</button>
-                                {!b.done && <button className="small-action-btn ok" onClick={() => handleMarkBevakningDone(b.id)}><Check size={14}/> Markera klar</button>}
-                              </div>
-                            </div>
-                          ))
-                        )}
-                      </div>
+                    <div className="panel-section pilot-unavailable-note">
+                      <h3>Utanför pilotens omfattning</h3>
+                      <p>Kvalitetskontroll och bevakningar är inte tillgängliga i den verifierade pilotvyn.</p>
                     </div>
                   </div>
                 </div>
@@ -1427,9 +1367,9 @@ function App() {
 
                     <div className="chat-scope-selector desktop-only">
                        <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Söker i:</span>
-                       <button className="scope-btn" onClick={() => showToast('Dokumentfiltrering är inte tillgängligt i denna mockup.')} title="Klicka för att välja vilka dokument som ska sökas">
-                         Alla dokument · {documents.length} dokument <ChevronRight size={14}/>
-                       </button>
+                       <span className="scope-btn static" aria-label={`Söker i alla ${documents.length} dokument`}>
+                         Alla dokument · {documents.length} dokument
+                       </span>
                     </div>
                   </div>
 

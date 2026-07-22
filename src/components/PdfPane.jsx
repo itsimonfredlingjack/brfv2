@@ -127,6 +127,8 @@ function PdfPane({ url, page, onNumPages, rects = [], highlightPage = null, appr
         <div
           key={i}
           className={approximate ? 'pdf-highlight approximate' : 'pdf-highlight'}
+          data-testid="citation-highlight"
+          aria-label="Markerat källcitat"
           style={{ left: b.left, top: b.top, width: b.width, height: b.height }}
         />
       ))}
