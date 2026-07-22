@@ -8,11 +8,11 @@ MVP-implementationen och den deterministiska lokala acceptansen är klara.
 Den kanoniska frontenden och verkliga backenden har en automatiserad
 Playwright-svit för hela den definierade produktslingan.
 
-Den avsedda livepiloten med självhostad Gemma 4 12B är däremot **inte
-godkänd**. Livekörningen bevisade runtimeidentitet, nätverksgräns och den
-kritiska browserresan, men den obligatoriska realkorpusgaten slutade
-`VERDICT: NOT READY` när modellen avvisade `q03` trots relevanta chunkar på
-rank 1, 2, 4 och 6.
+Den avsedda livepiloten med självhostad Gemma 4 12B är nu **READY enligt den
+oförändrade realkorpusgaten**. En instrumenterad diagnos visade att q03:s
+kodade uppgiftsrad nådde prompten men att kodförklaringen på en annan sida i
+samma dokument saknades. Efter en strikt samma-dokument-koppling besvaras q03
+med två verifierade citat samtidigt som q11 fortsätter att vägras säkert.
 
 ## Produkt och repogräns
 
@@ -51,7 +51,7 @@ Senast körda sammanhållna lokala resultat:
 
 | Kontroll | Resultat |
 |---|---:|
-| Backend `pytest -q` | 526 passed, 1 skipped |
+| Backend `pytest -q` | 532 passed, 1 skipped |
 | Auth/isolation/livscykel | 48 passed |
 | Kanonisk frontend Vitest | 14 passed |
 | Kanonisk frontend lint | exit 0 |
@@ -84,21 +84,28 @@ BRF-materialet och nätverksrevision.
 - Nätverksrevisionen registrerade endast loopbacktrafik till SSH-forwarden och
   0 externa anslutningar.
 
-### Underkänd livegate
+### Ursprunglig underkänd livegate och verifierad korrigering
 
-- `q03` (`cell_value`) avvisades som `insufficient_data` trots att
-  källbärande chunkar låg på rank 1, 2, 4 och 6.
+- Baslinjen avvisade `q03` som `insufficient_data`. Instrumenteringen visade
+  att uppgiftsraderna låg på rank 1 och 4 medan samma dokuments
+  ansvarsförklaring låg på diagnostisk rank 8, utanför `topK=6`.
 - `q01` gav ett icke-ordagrant citat som verifieraren korrekt underkände som
   `quote_not_found`.
-- Samma korpus passerade den scriptade readiness-selftesten. `q03` fortsatte
-  att avvisas med `topK` 1, 3 och 6 och efter en begränsad promptdiagnos.
+- Backenden kompletterar nu endast en hämtad kodad tabellrad med dess
+  strukturellt identifierade ansvarsförklaring från samma dokument. Inga
+  retrievalvikter, trösklar, verifierare eller vägransregler ändrades.
+- Den oförändrade livegaten gav därefter `VERDICT: READY`: q09 och q08 fick
+  vardera ett verifierat citat, q03 fick två, q02 fick ett och q11 vägrades
+  utan citat. Nätverksrevisionen visade en loopbackanslutning och 0 externa.
 
-Detta är uppmätt modell-/serverbeteende, inte bevis för att retrieval behöver
-byggas om. Citatverifiering eller vägranströsklar får inte försvagas för att
-göra gaten grön.
+q01:s icke-ordagranna citat underkänns fortfarande korrekt som
+`quote_not_found`; det är en känd icke-gatande begränsning, inte en fabricerad
+framgång.
 
 Fullt, icke-känsligt underlag:
 [evidence/pilot-live-gemma4-12b-2026-07-22.md](evidence/pilot-live-gemma4-12b-2026-07-22.md).
+Korrigering och omkörning:
+[evidence/xs32-q03-linked-context-2026-07-22.md](evidence/xs32-q03-linked-context-2026-07-22.md).
 
 ## Bevisnivåer
 
@@ -107,14 +114,13 @@ Fullt, icke-känsligt underlag:
 | Automatiserad lokal acceptans | Verkliga frontend-/backendkontrakt med deterministisk generation | Godkänd |
 | Live manuell browser smoke | Kritisk UI-resa mot avsedd 12B-tjänst | Godkänd för den körda resan |
 | Live syntetisk eval | Golden retrieval, grounding, citat och nätverksgräns | Godkänd |
-| Live skyddad korpusgate | Modellens obligatoriska realkorpusfrågor och vägran | **Inte godkänd** |
+| Live skyddad korpusgate | Modellens obligatoriska realkorpusfrågor och vägran | **READY** |
 | Extern drift | SSH, tjänst, modellvikter och GPU utanför repot | Krävs vid varje livekörning |
 
 ## Återstående blockerare och begränsningar
 
-1. Undersök Gemma-serverns chat template/strukturerade svarsformat så att
-   `q03` besvaras med verifierat citat samtidigt som `q11` fortsätter att
-   vägras. Kör därefter readinessgaten oförändrad.
+1. q01:s prose-control kan fortfarande ge ett icke-ordagrant citat; dagens
+   verifierare blockerar det korrekt och frågan ingår inte i readinessgaten.
 2. `ready=true` i `/api/health` betyder att en verklig provider är
    konfigurerad; endpointens faktiska nåbarhet bevisas först av tunnelkontroll
    och generation/eval.
@@ -140,5 +146,6 @@ uv run python -m scripts.model_readiness \
   --out out/pilot-live-rerun
 ```
 
-Piloten får beskrivas som livegodkänd först när kommandot avslutas med exitkod
-0 och `VERDICT: READY` utan förbjudna nätverksanslutningar eller providerbyte.
+Den senaste körningen uppfyllde detta: exitkod 0, `VERDICT: READY`, provider
+`selfhosted` och 0 externa nätverksanslutningar. Kravet gäller på nytt efter
+varje modell-, prompt-, retrieval- eller driftändring.

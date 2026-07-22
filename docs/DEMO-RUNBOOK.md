@@ -14,8 +14,10 @@ Tre kontroller ska hållas isär:
 3. `scripts.model_readiness --network-audit` är den formella livegaten för
    den lokalt tillgängliga BRF-korpusen.
 
-Senaste livegaten den 22 juli 2026 är **NOT READY** på `q03`. En livebrowserresa
-och det syntetiska golden setet passerade, men de övertrumfar inte realkorpusgaten.
+Senaste livegaten den 22 juli 2026 är **READY**. q03 besvarades med två
+verifierade citat, q11 vägrades säkert och nätverksrevisionen registrerade 0
+externa anslutningar. Se den nya XS-32-evidensen; den ursprungliga
+NOT READY-rapporten behålls som historisk baslinje.
 
 ## Förkrav
 

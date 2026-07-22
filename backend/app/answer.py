@@ -12,6 +12,7 @@ import logging
 
 from .citations import Rejected, Resolved, resolve_citation
 from .llm import LLMError, LLMFormatError, LLMProvider, parse_llm_json, pick_provider
+from .linked_context import append_linked_table_legends
 from .numeric_grounding import NumericGroundingResult, check_numeric_grounding, describe_mismatch
 from .rerank import rerank_chunks, reranker_available
 from .schemas import AskResponse, CitationOut, RejectedCitation, RetrievalHit
@@ -183,6 +184,14 @@ def ask(
             provider=provider.name,
             model=model,
         )
+
+    # Some structured task tables encode the answer as a short row code and
+    # define that code in a same-document legend on another page. The legend
+    # has little query-term overlap and must not be recovered by globally
+    # widening topK. Add it only when a retrieved coded leaf row proves the
+    # dependency. Ranking, relevance scores and the refusal threshold above
+    # remain exactly those of the original retrieval survivors.
+    hits = append_linked_table_legends(hits, chunks, documents)
 
     system = (s.systemPrompt.strip() + "\n\n" if s.systemPrompt.strip() else "") + GROUNDING_CONTRACT
     excerpts, alias_map = _render_excerpts(hits)

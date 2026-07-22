@@ -11,8 +11,10 @@ bevisgränser, se [DEMO-RUNBOOK.md](DEMO-RUNBOOK.md).
 > bevakningar och inställningar. De är dolda eller spärrade, inte mockade som
 > färdiga systemresultat.
 
-Den senaste realkorpusgaten är **NOT READY**. Demon kan visa den bevisade
-browserresan, men får inte presenteras som att hela BRF-korpusen är godkänd.
+Den senaste oförändrade realkorpusgaten är **READY**: q03 besvarades med två
+verifierade citat, q11 vägrades säkert och nätverksrevisionen hade 0 externa
+anslutningar. En demo ska fortfarande verifiera det aktuella modellutfallet i
+stället för att anta att ett tidigare pass garanterar nästa körning.
 
 ## Förbered demodata en gång
 

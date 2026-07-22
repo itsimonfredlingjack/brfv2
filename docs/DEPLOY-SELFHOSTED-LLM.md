@@ -107,17 +107,18 @@ Nätverksauditorn tillåter loopback-forwarden och den uttryckligt valda
 selfhosted-endpointen och ska stoppa annan TCP-trafik. En tunnel syns därför
 som loopback i auditfilen även om inferensen sker på serverns GPU.
 
-## Aktuell livebegränsning
+## Aktuell liveverifiering
 
 Körningen den 22 juli 2026 bekräftade rätt tunnel, provider, modell,
-runtimeetikett, svarprovenance och 0 externa anslutningar. Den skyddade
-realkorpusgaten gav ändå exitkod 1 och `VERDICT: NOT READY`: `q03` vägrades
-trots att relevanta chunkar fanns i retrievalresultatet. En annan kontroll
-gav ett icke-ordagrant citat som verifieraren korrekt avvisade.
+runtimeetikett, svarprovenance och 0 externa anslutningar. Efter XS-32-fixen
+gav den oförändrade skyddade realkorpusgaten exitkod 0 och `VERDICT: READY`:
+q03 besvarades med två verifierade citat och q11 vägrades säkert.
 
-Konfigurationen är alltså bevisad, men livepiloten är inte godkänd. Ändra inte
-grounding- eller citatkrav för att få en grön signal. Efter en server-/modellfix
-ska samma readinesskommando köras om och måste ge exitkod 0.
+q01:s icke-ordagranna citat avvisas fortfarande korrekt. Ändra inte grounding-
+eller citatkrav för att maskera den begränsningen. Samma readinesskommando ska
+köras om efter varje modell-, prompt-, retrieval- eller driftändring.
 
 Icke-känslig evidens:
 [evidence/pilot-live-gemma4-12b-2026-07-22.md](evidence/pilot-live-gemma4-12b-2026-07-22.md).
+Fix och omkörning:
+[evidence/xs32-q03-linked-context-2026-07-22.md](evidence/xs32-q03-linked-context-2026-07-22.md).

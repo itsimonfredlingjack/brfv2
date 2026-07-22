@@ -1,0 +1,88 @@
+{
+  "date": "2026-07-22",
+  "issue": "XS-32",
+  "verdict": "READY",
+  "privacy": {
+    "contains_private_document_content": false,
+    "contains_private_filenames": false,
+    "contains_private_addresses": false,
+    "private_trace_root": "backend/out/xs32/"
+  },
+  "runtime": {
+    "mode": "pilot",
+    "provider": "selfhosted",
+    "model": "gemma4:e12b",
+    "runtime_label": "agenntserver",
+    "endpoint_class": "loopback_ssh_tunnel",
+    "advertised_model_matches_gemma_4_12b": true,
+    "chat_template_sha256": "36e3a42e5cf14cd0020e72d92e1fdd9970f59b82170e421f0cbe1bb42bead3f0",
+    "context_tokens": 8192
+  },
+  "baseline": {
+    "production_top_k": 6,
+    "target_row_ranks": [1, 4],
+    "legend_diagnostic_rank": 8,
+    "prompt_contains_target_row": true,
+    "prompt_contains_responsibility_legend": false,
+    "structured_parse_ok": true,
+    "model_insufficient_data": true,
+    "model_citation_count": 1,
+    "final_refusal_reason": "insufficient_data",
+    "first_failing_stage": "context_assembly_missing_same_document_responsibility_legend",
+    "network_connections": 2,
+    "external_connections": 0
+  },
+  "change": {
+    "type": "same_document_structural_context_closure",
+    "retrieval_scores_changed": false,
+    "top_k_changed": false,
+    "min_relevance_changed": false,
+    "grounding_changed": false,
+    "citation_validation_changed": false,
+    "refusal_behavior_changed": false,
+    "tenant_boundary": "same_snapshot_same_document_only"
+  },
+  "q03_after": {
+    "prompt_contains_target_row": true,
+    "prompt_contains_responsibility_legend": true,
+    "structured_parse_ok": true,
+    "model_insufficient_data": false,
+    "model_citation_count": 2,
+    "verified_citations": 2,
+    "rejected_citations": 0,
+    "distinct_source_pages": 2,
+    "highlight_rectangles": 5,
+    "numeric_grounding_passed": true,
+    "provider": "selfhosted",
+    "model": "gemma4:e12b",
+    "network_connections": 2,
+    "external_connections": 0
+  },
+  "unchanged_readiness_gate": {
+    "exit_code": 0,
+    "verdict": "READY",
+    "provider": "selfhosted",
+    "questions": {
+      "q09": {"answered": true, "verified_citations": 1},
+      "q08": {"answered": true, "verified_citations": 1},
+      "q03": {"answered": true, "verified_citations": 2},
+      "q01": {"answered": false, "refusal_reason": "grounding_failed", "rejected_reason": "quote_not_found"},
+      "q02": {"answered": true, "verified_citations": 1},
+      "q11": {"answered": false, "refusal_reason": "insufficient_data", "verified_citations": 0}
+    },
+    "network_connections": 1,
+    "external_connections": 0
+  },
+  "verification": {
+    "focused_backend": "135 passed, 1 skipped",
+    "full_backend": "532 passed, 1 skipped",
+    "isolation_auth_lifecycle": "48 passed",
+    "retrieval_recall_at_6": "46/46",
+    "frontend_vitest": "14 passed",
+    "frontend_lint_exit": 0,
+    "frontend_build_exit": 0,
+    "playwright": "11 passed",
+    "readiness_selftest": "READY",
+    "readiness_negative_selftest": "expected NOT READY, exit 1"
+  }
+}

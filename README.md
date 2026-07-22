@@ -85,13 +85,15 @@ frontend. Det finns ingen tyst fallback.
 
 Den senaste livekörningen bevisade rätt runtimeidentitet, noll externa
 nätverksanslutningar, en komplett browserresa och grönt syntetiskt golden set.
-Den verkliga korpusgaten blev ändå **NOT READY**: den obligatoriska frågan
-`q03` avvisades trots att rätt källchunkar hade hämtats. Livepiloten får därför
-inte beskrivas som godkänd förrän den dokumenterade readiness-kommandot ger
-exitkod 0 och `VERDICT: READY`.
+Efter en instrumenterad q03-diagnos länkar backenden nu en kodad tabellrad
+deterministiskt till dess ansvarsförklaring i samma dokument. Den oförändrade
+realkorpusgaten avslutades därefter med exitkod 0 och **`VERDICT: READY`**:
+q03 fick två verifierade citat och q11 fortsatte att vägras säkert.
 
 Se den icke-känsliga rapporten
 [docs/evidence/pilot-live-gemma4-12b-2026-07-22.md](docs/evidence/pilot-live-gemma4-12b-2026-07-22.md).
+Fix och omkörning:
+[docs/evidence/xs32-q03-linked-context-2026-07-22.md](docs/evidence/xs32-q03-linked-context-2026-07-22.md).
 
 ## Arkitektur
 
