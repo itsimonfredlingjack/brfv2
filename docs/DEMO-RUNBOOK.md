@@ -94,10 +94,17 @@ verbatim-match highlighted text in the PDF viewer.
 7. **Ask**: `Vad är den totala utgiften enligt underhållsplanens ekonomiska analys?`
 8. **Show the exact figure and citation** — answer and citation both read
    *15 659 566 kr*, citation points at the newly uploaded document, page 33.
-9. **Switch tenant** — log in as max@demo.se (or use the BRF switcher in the
-   header if already logged in as Max) and flip between Brf Gjutformen 12 and
-   Brf Sjöutsikten 7. Document counts and AI-chatt answers change with the
-   switch; nothing from one tenant is visible in the other.
+9. **Switch tenant** — since step 1 logged in as Anna, who has only one
+   membership, **log out first** (user menu → Logga ut), then log back in as
+   max@demo.se. The sidebar now shows an "Aktiv förening" panel with a real
+   dropdown (Anna's showed a static, non-interactive display — that's
+   correct for a one-membership account, not a broken switcher). Flip
+   between Brf Gjutformen 12 and Brf Sjöutsikten 7. Document counts and
+   AI-chatt answers change with the switch; nothing from one tenant is
+   visible in the other. The browser session persists for 14 days — if a
+   later run of this demo looks "stuck" on one förening with no switcher,
+   check the sidebar footer for which account is actually logged in before
+   assuming the control is broken.
 10. **Show a member can't upload or delete** — while on a tenant where the
     logged-in user is `member` (e.g. Max on Sjöutsikten 7, or Bo on
     Gjutformen 12), the Dokument page has no "Ladda upp dokument" button and
