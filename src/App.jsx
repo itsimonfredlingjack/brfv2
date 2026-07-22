@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { LayoutDashboard, MessageSquare, Folders, Settings, Search as SearchIcon, FileText, ArrowRight, Loader2, Sparkles, AlertCircle, Calendar, Upload, CheckCircle2, AlertTriangle, X, ChevronRight, CornerDownRight, ArrowLeft, ZoomIn, ZoomOut, Search, Check, ThumbsDown, MessageCircle, Info, Menu, ChevronUp, HelpCircle, LogOut, Trash2 } from 'lucide-react';
+import { LayoutDashboard, MessageSquare, Folders, Settings, Search as SearchIcon, FileText, ArrowRight, Loader2, Sparkles, AlertCircle, Calendar, Upload, CheckCircle2, AlertTriangle, X, ChevronRight, ChevronDown, CornerDownRight, ArrowLeft, ZoomIn, ZoomOut, Search, Check, ThumbsDown, MessageCircle, Info, Menu, ChevronUp, HelpCircle, LogOut, Trash2 } from 'lucide-react';
 import Login from './components/Login';
 import PdfPane from './components/PdfPane';
 import { api } from './api';
 import { displayNameForModel, displayNameForProvider } from './modelDisplay';
 import './App.css';
+
+const roleLabel = (role) => (role === 'admin' ? 'Admin' : 'Medlem');
 
 // Refusal reasons where the LLM was never invoked (gated on retrieval, not
 // generation) — no model actually produced these responses, so provenance
@@ -773,21 +775,34 @@ function App() {
             </div>
 
             <div className="sidebar-footer">
-              {memberships.length > 1 ? (
-                <div className="tenant-switcher">
-                  <label htmlFor="tenant-select">Förening</label>
-                  <select
-                    id="tenant-select"
-                    value={String(activeBrfId ?? '')}
-                    onChange={(e) => switchTenant(e.target.value)}
-                  >
-                    {memberships.map((m) => (
-                      <option key={m.brf_id} value={String(m.brf_id)}>{m.name}</option>
-                    ))}
-                  </select>
+              {activeMembership && (
+                <div className={`active-brf-panel ${memberships.length > 1 ? 'switchable' : 'static'}`}>
+                  <div className="active-brf-eyebrow">Aktiv förening</div>
+                  <div className="active-brf-row">
+                    {memberships.length > 1 ? (
+                      <div className="active-brf-select-wrap">
+                        <select
+                          id="tenant-select"
+                          className="active-brf-select"
+                          value={String(activeBrfId ?? '')}
+                          onChange={(e) => switchTenant(e.target.value)}
+                          aria-label="Byt aktiv förening"
+                          title="Byt aktiv förening"
+                        >
+                          {memberships.map((m) => (
+                            <option key={m.brf_id} value={String(m.brf_id)}>{m.name}</option>
+                          ))}
+                        </select>
+                        <ChevronDown size={14} className="active-brf-select-chevron" aria-hidden="true" />
+                      </div>
+                    ) : (
+                      <span className="active-brf-name-static" title={activeBrfName}>{activeBrfName}</span>
+                    )}
+                    <span className={`active-brf-role-badge ${activeMembership.role}`}>
+                      {roleLabel(activeMembership.role)}
+                    </span>
+                  </div>
                 </div>
-              ) : (
-                activeBrfName && <div className="tenant-label" title={activeBrfName}>{activeBrfName}</div>
               )}
 
               {showUserMenu && (
