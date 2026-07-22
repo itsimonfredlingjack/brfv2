@@ -116,6 +116,7 @@ cmd_start() {
         cd "$ROOT/backend"
         exec env BRF_MODE=pilot BRF_LLM=selfhosted \
           BRF_LLM_BASE_URL="$TUNNEL_URL" BRF_LLM_MODEL="$REQUIRED_MODEL" \
+          BRF_LLM_RUNTIME_LABEL="agenntserver" \
           uv run uvicorn app.main:create_app --factory --port 8787
       ) >"$BACKEND_LOG" 2>&1 &
       echo $! > "$BACKEND_PID_FILE"
