@@ -1,156 +1,163 @@
-# Demo Runbook — BRF Dokument-AI (pilot, Gemma 4 12B)
+# Operatörsrunbook — BRF Dokument-AI, Gemma 4 12B
 
-Operator guide for running the local desktop demo end to end: start, demonstrate,
-stop, restart — without manual debugging. Scope: login, active-BRF switching,
-real tenant-scoped documents, PDF upload/delete, real PDF rendering, global
-AI chat on self-hosted Gemma 4 12B, verified citations, citation→PDF
-navigation/highlight, numeric grounding. Document-bound chat and
-Kvalitetskontroll are still mocked in this build — not part of the demo.
+Runbook för den lokala pilotstacken: verklig FastAPI-backend, kanonisk
+`brfv2-mockup`-frontend och självhostad Gemma 4 12B via SSH-forward.
 
-## Startup
+## Bevisgräns
 
-### 1. Start (or verify) the SSH tunnel to agenntserver
+Tre kontroller ska hållas isär:
 
-The pilot's only generation service is Gemma 4 12B on `agenntserver`
-(Ubuntu, RTX 4070), exposed on its port 8000. From the Mac, forward it:
+1. `npm run test:e2e` är den reproducerbara automatiska acceptansen. Den
+   använder verkliga frontend-/backendkontrakt men scriptad generation.
+2. `make demo` är en operatörsstart mot den externa 12B-tjänsten. En lyckad
+   start bevisar runtimekonfiguration, inte korpusberedskap.
+3. `scripts.model_readiness --network-audit` är den formella livegaten för
+   den lokalt tillgängliga BRF-korpusen.
+
+Senaste livegaten den 22 juli 2026 är **NOT READY** på `q03`. En livebrowserresa
+och det syntetiska golden setet passerade, men de övertrumfar inte realkorpusgaten.
+
+## Förkrav
+
+- demodata seedad med `make demo-reset` vid första körningen;
+- SSH-åtkomst till den avsedda värden;
+- OpenAI-kompatibel Gemma 4 12B-tjänst på värdens loopbackport 8000;
+- installerade backend- och frontendberoenden.
+
+## Start
+
+### 1. Öppna SSH-forwarden
 
 ```bash
 ssh -N -L 8000:127.0.0.1:8000 agenntserver
 ```
 
-Leave that running in its own terminal. `make demo` checks this itself and
-refuses to start the backend if it isn't reachable — see Recovery below.
+Låt processen köra i en egen terminal.
 
-### 2. Start the complete demo
+### 2. Starta hela pilotstacken
 
 ```bash
 cd /Users/coffeedev/Projects/brfv2
 make demo
 ```
 
-This:
-- verifies port 8000 answers as an OpenAI-compatible endpoint serving a
-  Gemma 4 12B model (fails loudly, with the exact `ssh -N -L ...` command, if not);
-- never falls back to the Mac's local Ollama/`gemma4:e4b` — there is no
-  fallback path in the pilot LLM provider;
-- starts the backend in pilot mode on **:8787** with `BRF_MODE=pilot`,
-  `BRF_LLM_BASE_URL=http://127.0.0.1:8000/v1`, `BRF_LLM_MODEL=gemma4:e12b`,
-  and waits for `/api/health` to report `mode: pilot`, `llm_provider: selfhosted`;
-- starts the canonical frontend (`brfv2-mockup`) on **:5173**;
-- if either port already hosts a healthy instance it didn't start (e.g. left
-  running from a previous session), it **adopts** that instance instead of
-  killing or duplicating it, and says so;
-- prints the URL, demo credentials, and log file paths.
+Startskriptet:
 
-Logs persist at `.demo/backend.log` and `.demo/frontend.log` (gitignored)
-for the life of the demo process.
+- kräver att `/v1/models` annonserar modellfamiljen Gemma 4 12B;
+- startar backend med `BRF_MODE=pilot`, `BRF_LLM=selfhosted`,
+  `BRF_LLM_MODEL=gemma4:e12b` och runtimeetiketten `agenntserver`;
+- har ingen fallback till Macens lokala `gemma4:e4b`;
+- väntar på backendens health-endpoint;
+- startar kanonisk frontend på port 5173;
+- återanvänder endast en redan frisk pilot/selfhosted-backend;
+- dödar aldrig en okänd process som äger en port.
 
-### URL
+URL: **http://127.0.0.1:5173/brfv2/**
 
-http://127.0.0.1:5173/brfv2/
+Loggar: `.demo/backend.log` och `.demo/frontend.log` (gitignorerade).
 
-### Demo credentials
-
-| Email | Password | Role |
-|---|---|---|
-| anna@gjutformen12.se | gjutformen-demo-2026 | admin, Brf Gjutformen 12 |
-| bo@gjutformen12.se | gjutformen-medlem-2026 | member, Brf Gjutformen 12 — no upload/delete |
-| stina@sjoutsikten7.se | sjoutsikten-demo-2026 | admin, Brf Sjöutsikten 7 |
-| max@demo.se | max-demo-2026 | two memberships — shows the BRF switcher |
-
-### Confirm the backend is on self-hosted Gemma 4 12B
+## Kontrollera runtimeidentiteten
 
 ```bash
-curl -s http://127.0.0.1:8787/api/health | jq .
+curl -s http://127.0.0.1:8787/api/health | jq '{status,mode,llm_provider,llm}'
 ```
 
-Expect:
+Förväntad konfigurationsidentitet:
 
 ```json
-{"status":"ok","mode":"pilot","llm_provider":"selfhosted", ...}
+{
+  "status": "ok",
+  "mode": "pilot",
+  "llm_provider": "selfhosted",
+  "llm": {
+    "provider": "selfhosted",
+    "model": "gemma4:e12b",
+    "display_name": "Gemma 4 12B",
+    "runtime_label": "agenntserver",
+    "ready": true
+  }
+}
 ```
 
-`llm_provider` must read `selfhosted`, never `fake`, `none`, or `api`. Ask any
-grounded question in the UI and open its citation chip — the cited quote must
-verbatim-match highlighted text in the PDF viewer.
+`ready=true` betyder att en verklig provider är konfigurerad. Det är inte en
+reachabilityprobe. `ops/demo.sh check-tunnel`, en faktisk fråga och den formella
+readinesskörningen verifierar nåbarhet och beteende. `fake`, `none`, 4B eller
+en annan modell är alltid fel för pilotkörningen.
 
-## Five-minute demo flow
+## Kritisk browser smoke
 
-1. **Login as Anna** — anna@gjutformen12.se / gjutformen-demo-2026.
-2. **Show the tenant identity** — sidebar shows "Brf Gjutformen 12" and
-   Anna Andersson; Anna has one membership, so no BRF switcher shows for her
-   (that's expected — switch to Max later to show it).
-3. **Open an existing document** — click any row in Dokument, e.g.
-   *Snöröjningsavtal 2026.pdf*. Confirm it renders as a real PDF with page
-   controls (not a placeholder).
-4. **Ask a grounded question** — go to AI-chatt, use the suggestion chip
-   *"Vilka datum gäller för snöröjningsjouren?"* (or type it). Answer:
-   *"Jourperioden löper från den 15 november till den 15 april."*
-5. **Click the citation** and show the PDF opens to the right page with the
-   exact quoted passage highlighted.
-6. **Upload the BRF Eken maintenance plan** — Ladda upp dokument →
-   `DONT_PUSH_brf_stuff/[2026-07-17 13_28_33] Underhallsplan 30 ar.pdf`
-   (not committed to the repo; keep it local).
-7. **Ask**: `Vad är den totala utgiften enligt underhållsplanens ekonomiska analys?`
-8. **Show the exact figure and citation** — answer and citation both read
-   *15 659 566 kr*, citation points at the newly uploaded document, page 33.
-9. **Switch tenant** — since step 1 logged in as Anna, who has only one
-   membership, **log out first** (user menu → Logga ut), then log back in as
-   max@demo.se. The sidebar now shows an "Aktiv förening" panel with a real
-   dropdown (Anna's showed a static, non-interactive display — that's
-   correct for a one-membership account, not a broken switcher). Flip
-   between Brf Gjutformen 12 and Brf Sjöutsikten 7. Document counts and
-   AI-chatt answers change with the switch; nothing from one tenant is
-   visible in the other. The browser session persists for 14 days — if a
-   later run of this demo looks "stuck" on one förening with no switcher,
-   check the sidebar footer for which account is actually logged in before
-   assuming the control is broken.
-10. **Show a member can't upload or delete** — while on a tenant where the
-    logged-in user is `member` (e.g. Max on Sjöutsikten 7, or Bo on
-    Gjutformen 12), the Dokument page has no "Ladda upp dokument" button and
-    no "Åtgärder" column at all.
-11. **Delete the uploaded test document** (as an admin on Gjutformen 12) —
-    click "Ta bort" on its row, confirm in the dialog. It disappears from the
-    list immediately and is no longer citable by the AI chat.
+Använd `max@demo.se` / `max-demo-2026`:
 
-## Recovery
+1. verifiera aktiv **Brf Gjutformen 12** och adminroll;
+2. öppna ett seedat dokument och kontrollera riktig PDF-rendering;
+3. ställ en svarbar fråga i AI-chatten;
+4. kontrollera att svaret har ett citat och att svarets provenance är
+   `Gemma 4 12B · Self-hosted`;
+5. klicka citatet och kontrollera rätt dokument, sida och highlight;
+6. ställ en ostödd fråga och kontrollera vägran utan citat;
+7. byt till **Brf Sjöutsikten 7** och kontrollera att dokument, pågående svar
+   och citat från föregående förening är borta;
+8. kontrollera att medlemmen saknar upload och radering.
 
-**Missing SSH tunnel** — `make demo` prints:
-```
-SSH-tunneln till agenntserver saknas eller port 8000 svarar inte.
-```
-Start it: `ssh -N -L 8000:127.0.0.1:8000 agenntserver`, then re-run `make demo`.
+För upload används endast en uttryckligen säker lokal fixture. Den
+versionshanterade testfixturen finns på
+`brfv2-mockup/e2e/fixtures/pilot-upload.pdf`. En lyckad livekontroll kräver
+upload → positiva ingestionstal → fråga → citat till fixturen → sida 1 →
+synlig markering. Radera fixturen ur demotenant efteråt.
 
-**Port 8787 already occupied** — if it's a healthy pilot/selfhosted backend,
-`make demo` adopts it automatically and tells you so. If it's occupied by
-something else, it fails loudly rather than killing an unknown process; run
-`make demo-status` to see what's actually listening, then either
-`make demo-stop` (only touches processes `make demo` itself started) or
-investigate/stop the foreign process manually.
+Dokumentchatt, kvalitetskontroll, bevakningar och global sök ska inte visas som
+färdiga funktioner; de är spärrade eller dolda i pilotvyn.
 
-**Port 5173 already occupied** — same pattern as above, for the frontend.
+## Formell livegate
 
-**Expired login session** — the app redirects to the login screen; log back
-in with any demo account above.
+Använd ett skyddat lokalt korpusargument utan att skriva ut privata filnamn:
 
-**Broken or unwanted demo data** — reset it:
 ```bash
-make demo-reset
+cd /Users/coffeedev/Projects/brfv2/backend
+BRF_MODE=pilot \
+BRF_LLM=selfhosted \
+BRF_LLM_BASE_URL=http://127.0.0.1:8000/v1 \
+BRF_LLM_MODEL=gemma4:e12b \
+BRF_LLM_RUNTIME_LABEL=agenntserver \
+BRF_EMBEDDER=model2vec \
+uv run python -m scripts.model_readiness \
+  --network-audit \
+  --out out/pilot-live-rerun
 ```
-This is destructive: it wipes and reseeds both demo tenants, their documents,
-and the golden eval sets. It never runs automatically as part of `make demo`.
 
-**Remote model endpoint unavailable** — `make demo` fails at the tunnel/model
-check before starting anything. Verify the model service on `agenntserver`
-itself is up, then re-check with:
+Piloten är inte livegodkänd om kommandot ger annan exitkod än 0, annan provider,
+`VERDICT: NOT READY`, otillåtna nätverksanslutningar, osäker vägran eller ett
+oresolverbart citat. Se
+[evidence/pilot-live-gemma4-12b-2026-07-22.md](evidence/pilot-live-gemma4-12b-2026-07-22.md)
+för senaste utfall och exakt korpusscope utan privat innehåll.
+
+## Deterministisk acceptans
+
+Kräver inte tunnel eller externa dokument:
+
 ```bash
+cd /Users/coffeedev/Projects/brfv2/brfv2-mockup
+npm run test:e2e
+```
+
+Sviten startar isolerade backend- och frontendprocesser på testportar, seedar
+temporära tenants och verifierar 11 browserfall inklusive upload, fråga,
+citat, PDF/highlight, vägran, behörighet, tenantbyte och fyra readinesslägen.
+
+## Recovery och stopp
+
+```bash
+cd /Users/coffeedev/Projects/brfv2
 ops/demo.sh check-tunnel
+make demo-status
+make demo-stop
 ```
 
-## Other commands
-
-```bash
-make demo-status   # is the backend/frontend running, and did make demo start it?
-make demo-stop     # stop only what make demo started — never touches unrelated processes
-make demo-reset    # DESTRUCTIVE — wipe + reseed both demo tenants
-```
+- Saknad tunnel: starta SSH-forwarden och kör `ops/demo.sh check-tunnel` igen.
+- Fel process på 8787/5173: undersök och stoppa den uttryckligen; runbooken
+  dödar den inte.
+- Utgången session: logga in igen.
+- Avsiktlig återställning: `make demo-stop && make demo-reset`; kommandot
+  raderar och seedar om båda syntetiska demoföreningarna.
+- Extern tjänst nere: återställ modellservern och tunneln. Rapportera inte
+  livepass förrän readinessgaten därefter är grön.
