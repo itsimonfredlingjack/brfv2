@@ -144,6 +144,11 @@ icke-ordagranna citat fortfarande korrekt underkänt. Nätverksrevisionen visade
 loopbackanslutning och 0 externa. Fullt underlag:
 [evidence/pilot-live-gemma4-12b-2026-07-27.md](evidence/pilot-live-gemma4-12b-2026-07-27.md).
 
+Gaten kördes om igen på XS-36:s hygiencommit `710cf1c` med samma resultat och samma
+sex frågeutfall. Den körningen är den första där artefakten själv bär commit-SHA,
+modell, runtimeetikett och UTC-tidsstämpel i stället för att pinnas via kringtext:
+[evidence/pilot-live-gemma4-12b-2026-07-27-xs36.md](evidence/pilot-live-gemma4-12b-2026-07-27-xs36.md).
+
 ## Bevisnivåer
 
 | Nivå | Vad den bevisar | Status |

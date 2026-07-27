@@ -61,11 +61,25 @@ loosened to reach this outcome.
 ## Ingestion
 
 - 2 born-digital documents ingested into the temporary Q&A tenant.
-- 7 scanned documents skipped for the ingestion-smoke check with reason
-  `ocr_skip_reason: tesseract-binären saknas` — this Fedora host has no `tesseract`
-  installed, consistent with the documented, intentional OCR skip in
+- 7 scanned documents skipped for the ingestion-smoke check. The preserved artifact
+  records this reason verbatim:
+
+  ```text
+  tesseract-binärendon saknas (brew install tesseract tesseract-lang)
+  ```
+
+  This Fedora host has no `tesseract` installed, consistent with the documented,
+  intentional OCR skip in
   [fedora-clean-checkout-2026-07-27.md](fedora-clean-checkout-2026-07-27.md) and
   [MVP-STATUS.md](../MVP-STATUS.md). OCR is not part of the pilot loop.
+
+  The message itself was defective — a malformed word and macOS-only `brew`
+  guidance on a Fedora host. XS-35 flagged it, and an earlier revision of this
+  document quoted it in cleaned-up form, which is not how preserved evidence
+  should be cited. The string above is exactly what the artifact contains. The
+  product message was corrected in `710cf1c` (XS-36) and the gate re-run against
+  the corrected code is recorded in
+  [pilot-live-gemma4-12b-2026-07-27-xs36.md](pilot-live-gemma4-12b-2026-07-27-xs36.md).
 
 ## Network audit
 
