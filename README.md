@@ -96,11 +96,12 @@ npm run lint
 npm run build
 ```
 
-Senast sammanhållna verifiering, på Fedora 44 från ren checkout: backend
-**528 passed, 5 skipped**, isolerings/auth/livscykel **48 passed**, kanonisk
-frontend **14 passed**, Playwright **11 passed**, lint och produktionsbygge
-gröna. Exakta körningar och bevisgränser finns i
-[MVP-statusen](docs/MVP-STATUS.md).
+Senast sammanhållna verifiering, på Fedora 44 från ren checkout efter enbart
+`make setup`: backend **530 passed, 6 skipped**, isolerings/auth/livscykel
+**48 passed**, kanonisk frontend **14 passed**, Playwright **11 passed**, lint
+och produktionsbygge gröna. Alla skip är miljöberoende och avsiktliga; de
+räknas upp i [MVP-statusen](docs/MVP-STATUS.md) tillsammans med exakta
+körningar och bevisgränser.
 
 ## Pilot med Gemma 4 12B
 

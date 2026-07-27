@@ -52,20 +52,24 @@ efter enbart `make setup`:
 
 | Kontroll | Resultat |
 |---|---:|
-| Backend `pytest -q` | 528 passed, 5 skipped |
+| Backend `pytest -q` | 530 passed, 6 skipped |
 | Auth/isolation/livscykel | 48 passed |
 | Kanonisk frontend Vitest | 14 passed |
 | Kanonisk frontend lint | exit 0 |
 | Kanonisk frontend produktionsbygge | exit 0 |
 | Playwright acceptance | 11 passed |
 
-De fem skippen är alla avsiktliga och miljöberoende, inga fel:
+Skippen är alla avsiktliga och miljöberoende, inga fel:
 
 | Skip | Villkor |
 |---|---|
 | `test_llm.py` (1) | kör bara med `RUN_LLM_TESTS=1` — anropar en verklig LLM |
 | `test_ocr_ingestion.py`, `test_ocr_spike.py` (3) | kräver tesseract med svenskt språkpaket |
 | `test_rerank.py` (1) | kräver den valfria `rerank`-extran och nedladdade vikter |
+| `test_corpus_tripwire.py` (1) | kräver seedad data; kör efter `make demo-reset` |
+
+Efter `make demo-reset` finns dataroten och tripwiren kör, vilket ger
+**531 passed, 5 skipped**.
 
 OCR behövs bara för skannade PDF:er och ingår inte i pilotslingan. Installera
 det på Fedora med `sudo dnf install tesseract tesseract-langpack-swe` om du
