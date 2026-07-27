@@ -131,6 +131,46 @@ class TestGrounding:
         resp = ask(store, "När löper jourperioden?", provider=fake)
         assert not resp.refusal
 
+    def test_coded_table_row_gets_same_document_legend_as_citable_support(self, tmp_path):
+        legend = [
+            (
+                'Kolumnen "utföres av" har markerats med ett "A" för Leverantören '
+                'och med ett "B" för Beställaren.',
+                72,
+                100,
+            ),
+        ]
+        row = [("A2.31.01 Upprättande av årsredovisning A JA", 72, 100)]
+        st = Store(data_dir=tmp_path)
+        st.add_document("Ansvarsbilaga.pdf", build_pdf([legend, row]))
+        st.update_settings(Settings(minRelevance=0.0, topK=1))
+        fake = FakeLLM(
+            [
+                {
+                    "answer": "Leverantören ansvarar för att upprätta årsredovisningen.",
+                    "citations": [
+                        {"chunk_id": "K1", "quote": "A2.31.01 Upprättande av årsredovisning A JA"},
+                        {
+                            "chunk_id": "K2",
+                            "quote": 'Kolumnen "utföres av" har markerats med ett "A" för Leverantören',
+                        },
+                    ],
+                    "insufficient_data": False,
+                }
+            ]
+        )
+
+        resp = ask(st, "Vem ansvarar för att upprätta årsredovisningen?", provider=fake)
+
+        assert not resp.refusal, resp.refusal_reason
+        assert len(resp.retrieval) == 2
+        assert resp.retrieval[0].page == 2
+        assert resp.retrieval[1].page == 1
+        assert resp.retrieval[1].score == 0.0
+        assert len(resp.citations) == 2
+        assert {citation.page for citation in resp.citations} == {1, 2}
+        assert '[K2]' in fake.calls[0]["user"]
+
 
 def _line_words(texts: list[str], *, y0: float = 100.0, block: int = 1, line: int = 1) -> list[Word]:
     """A single visual line of words, left to right, non-overlapping

@@ -12,6 +12,7 @@ import logging
 
 from .citations import Rejected, Resolved, resolve_citation
 from .llm import LLMError, LLMFormatError, LLMProvider, parse_llm_json, pick_provider
+from .linked_context import append_linked_table_legends
 from .numeric_grounding import NumericGroundingResult, check_numeric_grounding, describe_mismatch
 from .rerank import rerank_chunks, reranker_available
 from .schemas import AskResponse, CitationOut, RejectedCitation, RetrievalHit
@@ -114,8 +115,12 @@ def ask(
     provider = provider or pick_provider()
     s = store.settings
     # A self-hosted deployment serves one fixed model (BRF_LLM_MODEL); report
-    # the model actually used, not just the settings value.
-    model = getattr(provider, "model", "") or s.aiModel
+    # the model actually used, not just the settings value. Test/no-provider
+    # paths do not execute the configured tenant model at all and must never
+    # inherit aiModel as fabricated answer provenance.
+    provider_model = getattr(provider, "model", "") or ""
+    generation_model = provider_model or s.aiModel
+    model = "" if provider.name in ("fake", "none") else generation_model
     # One consistent view per request — rebuilds swap references, so an
     # in-flight ask never sees a half-built index or a renamed chunk map.
     index, chunks, pages, documents = store.snapshot()
@@ -180,6 +185,14 @@ def ask(
             model=model,
         )
 
+    # Some structured task tables encode the answer as a short row code and
+    # define that code in a same-document legend on another page. The legend
+    # has little query-term overlap and must not be recovered by globally
+    # widening topK. Add it only when a retrieved coded leaf row proves the
+    # dependency. Ranking, relevance scores and the refusal threshold above
+    # remain exactly those of the original retrieval survivors.
+    hits = append_linked_table_legends(hits, chunks, documents)
+
     system = (s.systemPrompt.strip() + "\n\n" if s.systemPrompt.strip() else "") + GROUNDING_CONTRACT
     excerpts, alias_map = _render_excerpts(hits)
     user = f"FRÅGA: {question}\n\nUTDRAG:\n{excerpts}"
@@ -202,7 +215,7 @@ def ask(
                     sys_prompt if attempt == 0 else sys_prompt + _RETRY_NUDGE,
                     user,
                     max_tokens=envelope_budget,
-                    model=model,
+                    model=generation_model,
                 )
                 parsed = parse_llm_json(raw)
                 break

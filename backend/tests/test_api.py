@@ -24,6 +24,100 @@ class TestHealth:
         assert body["embedding_provider"] == "hashed-char-ngram"
         assert body["tenants"] == 2
 
+    def test_health_preserves_pre_existing_top_level_fields(self, env):
+        # The `llm` object is additive — every field a client already reads
+        # directly off the top-level response (mode, llm_provider, the
+        # embedding/tenant fields above) must keep working unchanged.
+        body = env.client.get("/api/health").json()
+        assert set(body) >= {"status", "mode", "llm_provider", "embedding_provider", "tenants", "llm"}
+        assert body["mode"] == "dev"
+        assert body["llm_provider"] == body["llm"]["provider"]
+
+    def test_llm_metadata_present_and_not_ready_for_fake_provider(self, env):
+        # conftest forces BRF_LLM=fake for the whole test session — the
+        # header status must never claim a model is active for it.
+        llm = env.client.get("/api/health").json()["llm"]
+        assert llm["provider"] == "fake"
+        assert llm["ready"] is False
+        assert llm["model"] == ""
+        assert llm["display_name"] == ""
+
+    def test_llm_metadata_ready_and_named_for_selfhosted_provider(self, env, monkeypatch):
+        import app.llm as llm_mod
+
+        monkeypatch.setenv("BRF_LLM", "selfhosted")
+        monkeypatch.setenv("BRF_LLM_BASE_URL", "http://127.0.0.1:8000/v1")
+        monkeypatch.setenv("BRF_LLM_MODEL", "gemma4:e12b")
+        monkeypatch.setenv("BRF_LLM_RUNTIME_LABEL", "agenntserver")
+        monkeypatch.setattr(llm_mod, "_provider", None)
+        try:
+            llm = env.client.get("/api/health").json()["llm"]
+            assert llm["provider"] == "selfhosted"
+            assert llm["model"] == "gemma4:e12b"
+            assert llm["display_name"] == "Gemma 4 12B"
+            assert llm["runtime_label"] == "agenntserver"
+            assert llm["ready"] is True
+        finally:
+            # The provider cache is process-global — leaving a stray
+            # selfhosted instance behind would bleed into later tests that
+            # expect the session's forced BRF_LLM=fake.
+            monkeypatch.setattr(llm_mod, "_provider", None)
+
+    def test_llm_metadata_none_provider_reads_not_ready_unnamed(self, env, monkeypatch):
+        import app.llm as llm_mod
+
+        monkeypatch.setenv("BRF_LLM", "none-does-not-exist-so-falls-through")
+        monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
+        monkeypatch.setattr("app.llm.shutil.which", lambda _: None)
+        monkeypatch.setattr(llm_mod, "_provider", None)
+        try:
+            llm = env.client.get("/api/health").json()["llm"]
+            assert llm["provider"] == "none"
+            assert llm["ready"] is False
+            assert llm["model"] == ""
+            assert llm["display_name"] == ""
+        finally:
+            monkeypatch.setattr(llm_mod, "_provider", None)
+
+    def test_llm_metadata_never_leaks_endpoint_or_credentials(self, env, monkeypatch):
+        import app.llm as llm_mod
+
+        monkeypatch.setenv("BRF_LLM", "selfhosted")
+        monkeypatch.setenv("BRF_LLM_BASE_URL", "http://internal-secret-host:8000/v1")
+        monkeypatch.setenv("BRF_LLM_MODEL", "gemma4:e12b")
+        monkeypatch.setenv("BRF_LLM_API_KEY", "sk-super-secret-token")
+        monkeypatch.setattr(llm_mod, "_provider", None)
+        try:
+            raw = env.client.get("/api/health").content.decode("utf-8")
+            assert "sk-super-secret-token" not in raw
+            assert "internal-secret-host" not in raw
+            assert "/v1" not in raw
+            assert ".gguf" not in raw
+        finally:
+            monkeypatch.setattr(llm_mod, "_provider", None)
+
+    def test_llm_model_field_matches_the_model_answer_py_actually_used(self, env, monkeypatch):
+        """The health metadata and a real /ask response must report the same
+        model string for the same cached provider — the header must never
+        drift from what actually generated the answer."""
+
+        class StubSelfhosted:
+            name = "selfhosted"
+            model = "gemma4:e12b"
+
+            def complete(self, *a, **kw):
+                raise Exception("stub never actually generates in this test")
+
+        stub = StubSelfhosted()
+        monkeypatch.setattr("app.llm.pick_provider", lambda: stub)
+        monkeypatch.setattr("app.answer.pick_provider", lambda: stub)
+
+        health_model = env.client.get("/api/health").json()["llm"]["model"]
+        ask_body = env.client.post(
+            "/api/brf/brf-a/ask", json={"question": "Vad gäller?"}, headers=env.admin_a_headers
+        ).json()
+        assert ask_body["model"] == health_model == "gemma4:e12b"
+
 
 class TestAuthFlow:
     def test_login_sets_cookie_and_returns_memberships(self, env):
@@ -144,6 +238,31 @@ class TestAsk:
         # refusal rather than crashing.
         r = env.client.post("/api/brf/brf-a/ask", json={"question": "Vad står i stadgarna?"}, headers=env.admin_a_headers)
         assert r.status_code == 200 and r.json()["refusal"] is True
+
+    def test_fake_provider_never_claims_the_configured_tenant_model(self, env, monkeypatch):
+        from app.llm import FakeLLM
+
+        store = env.registry.get("brf-a")
+        chunk_id = next(iter(store.chunks))
+        fake = FakeLLM([{
+            "answer": "Föreningen Alfa har en hemlig kod ALFA-XYZZY-111 i sina stadgar.",
+            "citations": [{
+                "chunk_id": chunk_id,
+                "quote": "Föreningen Alfa har en hemlig kod ALFA-XYZZY-111 i sina stadgar.",
+            }],
+            "insufficient_data": False,
+        }])
+        monkeypatch.setattr("app.answer.pick_provider", lambda: fake)
+
+        r = env.client.post(
+            "/api/brf/brf-a/ask",
+            json={"question": "Vad är Alfadata?"},
+            headers=env.admin_a_headers,
+        )
+
+        assert r.status_code == 200
+        assert r.json()["provider"] == "fake"
+        assert r.json()["model"] == ""
 
 
 class TestAskTenantNamePropagation:

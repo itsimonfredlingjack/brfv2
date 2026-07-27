@@ -1,4 +1,4 @@
-.PHONY: backend backend-pilot require-pilot-llm frontend frontend-legacy test test-isolation eval eval-b eval-fast eval-sweep \
+.PHONY: setup backend backend-pilot require-pilot-llm frontend frontend-legacy test test-isolation eval eval-b eval-fast eval-sweep \
         eval-selfhosted eval-b-selfhosted demo demo-stop demo-status demo-reset build build-legacy model-readiness model-readiness-selftest \
         model-readiness-selftest-negative
 
@@ -7,12 +7,16 @@
 # synthetic BRF data, so no data-residency constraint applies there.
 #
 # Pilot/production generation is the Gemma 4 12B service on `agenntserver`
-# (Ubuntu + RTX 4070). The Mac must never silently fall back to its local e4b model.
-# Supply BRF_LLM_BASE_URL explicitly: normally http://127.0.0.1:8000/v1 when the
-# backend runs on agenntserver or when port 8000 is SSH-forwarded from that server.
+# (Ubuntu + RTX 4070). The client must never silently fall back to a smaller
+# local model. Supply BRF_LLM_BASE_URL explicitly: normally
+# http://127.0.0.1:8000/v1 when the backend runs on agenntserver or when port
+# 8000 is SSH-forwarded from that server.
 BRF_LLM_BASE_URL ?=
 BRF_LLM_MODEL ?= gemma4:e12b
 SELFHOSTED_ENV = BRF_LLM=selfhosted BRF_LLM_BASE_URL=$(BRF_LLM_BASE_URL) BRF_LLM_MODEL=$(BRF_LLM_MODEL)
+
+setup:              ## Engångsuppsättning från ren checkout (uv, venv, node_modules, vikter, browser)
+	@ops/setup.sh
 
 backend:            ## API-server på :8787 (dev-läge)
 	cd backend && uv run uvicorn app.main:create_app --factory --port 8787
@@ -24,7 +28,7 @@ backend-pilot: require-pilot-llm  ## API-server i pilotläge mot Gemma 4 12B på
 	cd backend && BRF_MODE=pilot $(SELFHOSTED_ENV) uv run uvicorn app.main:create_app --factory --port 8787
 
 frontend:           ## Kanoniska UI:t i brfv2-mockup på :5173
-	@test -d brfv2-mockup || (echo "Kanoniska frontend-repot brfv2-mockup saknas i arbetsytan."; exit 1)
+	@test -d brfv2-mockup/node_modules || (echo "brfv2-mockup/node_modules saknas — kör 'make setup' först."; exit 1)
 	cd brfv2-mockup && npm run dev
 
 frontend-legacy:    ## Äldre backendkopplad prototyp i rotens src/
@@ -76,7 +80,7 @@ model-readiness-selftest-negative: ## Bevis: self-test med FABRICERAD scriptad F
 	cd backend && uv run python -m scripts.model_readiness --selftest-negative
 
 build:              ## Produktionsbygge av kanoniska brfv2-mockup
-	@test -d brfv2-mockup || (echo "Kanoniska frontend-repot brfv2-mockup saknas i arbetsytan."; exit 1)
+	@test -d brfv2-mockup/node_modules || (echo "brfv2-mockup/node_modules saknas — kör 'make setup' först."; exit 1)
 	cd brfv2-mockup && npm run build
 
 build-legacy:       ## Bygg den äldre rotfrontenden

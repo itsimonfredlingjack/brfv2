@@ -116,12 +116,18 @@ cmd_start() {
         cd "$ROOT/backend"
         exec env BRF_MODE=pilot BRF_LLM=selfhosted \
           BRF_LLM_BASE_URL="$TUNNEL_URL" BRF_LLM_MODEL="$REQUIRED_MODEL" \
+          BRF_LLM_RUNTIME_LABEL="agenntserver" \
           uv run uvicorn app.main:create_app --factory --port 8787
       ) >"$BACKEND_LOG" 2>&1 &
       echo $! > "$BACKEND_PID_FILE"
 
-      if ! wait_for_http "$BACKEND_URL/api/health" 60; then
+      # 120 s, not 30: on a cold cache the first start also downloads the
+      # model2vec embedder weights before it can serve /api/health. `make
+      # setup` prefetches them, but a checkout that skipped setup should get
+      # a slow start rather than a spurious failure.
+      if ! wait_for_http "$BACKEND_URL/api/health" 240; then
         red "Backend svarade inte på $BACKEND_URL/api/health inom tidsgränsen."
+        yellow "Om detta är en ny checkout: kör 'make setup' först — den hämtar embedder-vikterna i förväg."
         tail -n 40 "$BACKEND_LOG" || true
         cmd_stop
         exit 1

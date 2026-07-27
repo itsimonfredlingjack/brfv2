@@ -8,7 +8,13 @@ the pure function the brief calls out for fixed-input unit coverage.
 
 from __future__ import annotations
 
-from scripts.model_readiness import compute_verdict
+import json
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+from scripts.model_readiness import build_run_metadata, compute_verdict
+
+REPO_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
 def _row(
@@ -43,6 +49,60 @@ def _prose(qid: str, **kw) -> dict:
 
 def _unanswerable(qid: str, **kw) -> dict:
     return _row(qid, "unanswerable", **kw)
+
+
+class TestRunMetadata:
+    """XS-36: a preserved model_readiness.json must self-attest which model,
+    runtime and commit produced it — XS-35 could only tie the artifact to its
+    commit via surrounding prose and the file's mtime.
+    """
+
+    ENV = {
+        "BRF_LLM": "selfhosted",
+        "BRF_LLM_MODEL": "gemma4:e12b",
+        "BRF_LLM_RUNTIME_LABEL": "agenntserver",
+        "BRF_EMBEDDER": "model2vec",
+        "BRF_LLM_BASE_URL": "http://127.0.0.1:8000/v1",
+    }
+
+    def test_records_configured_identity_and_commit(self):
+        meta = build_run_metadata(self.ENV, REPO_ROOT, datetime.now())
+        assert meta["configured_model"] == "gemma4:e12b"
+        assert meta["configured_runtime_label"] == "agenntserver"
+        assert meta["configured_llm"] == "selfhosted"
+        assert meta["embedder"] == "model2vec"
+        # Real repo: a 40-char SHA and an explicit clean/dirty flag.
+        assert isinstance(meta["commit"], str) and len(meta["commit"]) == 40
+        assert meta["dirty"] in (True, False)
+
+    def test_omits_base_url_so_the_artifact_carries_no_endpoint_topology(self):
+        meta = build_run_metadata(self.ENV, REPO_ROOT, datetime.now())
+        assert "http" not in json.dumps(meta)
+        assert not any("base_url" in k for k in meta)
+
+    def test_timestamp_is_utc_and_current(self):
+        meta = build_run_metadata(self.ENV, REPO_ROOT, datetime.now())
+        stamped = datetime.strptime(meta["timestamp_utc"], "%Y-%m-%dT%H:%M:%SZ")
+        stamped = stamped.replace(tzinfo=timezone.utc)
+        assert abs(datetime.now(timezone.utc) - stamped) < timedelta(minutes=5)
+
+    def test_naive_and_aware_inputs_stamp_the_same_instant(self):
+        # datetime.now() is naive; the run must still record true UTC rather
+        # than silently labelling local wall-clock time as Zulu.
+        now = datetime.now()
+        naive = build_run_metadata(self.ENV, REPO_ROOT, now)["timestamp_utc"]
+        aware = build_run_metadata(self.ENV, REPO_ROOT, now.astimezone())["timestamp_utc"]
+        assert naive == aware
+
+    def test_missing_env_degrades_to_empty_strings_not_crash(self):
+        meta = build_run_metadata({}, REPO_ROOT, datetime.now())
+        assert meta["configured_model"] == ""
+        assert meta["configured_runtime_label"] == ""
+
+    def test_non_repo_path_reports_unknown_commit_rather_than_failing(self, tmp_path):
+        meta = build_run_metadata(self.ENV, tmp_path, datetime.now())
+        assert meta["commit"] is None
+        assert meta["dirty"] is None
 
 
 class TestComputeVerdictReady:

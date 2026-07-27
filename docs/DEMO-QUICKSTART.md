@@ -1,177 +1,128 @@
 # Demoguide — BRF Dokument-AI
 
-Kort körschema för demon på Simons Mac. Full recovery och teknisk bakgrund:
-[`DEMO-RUNBOOK.md`](./DEMO-RUNBOOK.md).
+Kort körschema för kanonisk frontend och live Gemma 4 12B. För recovery och
+bevisgränser, se [DEMO-RUNBOOK.md](DEMO-RUNBOOK.md).
 
-> **Verkligt i denna demo:** login, föreningsbyte, roller, dokument, PDF,
-> upload/delete, global AI-chatt och verifierade källor.
+> **Verifierat i pilotvyn:** login, aktiv förening, roller, tenant-scopade
+> dokument, upload/delete, global AI-chatt, verifierade citat och
+> citat→PDF-sida→markering.
 >
-> **Visa inte som färdigt:** dokumentchatten och Kvalitetskontroll är mockade.
+> **Utanför piloten:** global sök, dokumentchatt, kvalitetskontroll,
+> bevakningar och inställningar. De är dolda eller spärrade, inte mockade som
+> färdiga systemresultat.
+
+Den senaste oförändrade realkorpusgaten är **READY**: q03 besvarades med två
+verifierade citat, q11 vägrades säkert och nätverksrevisionen hade 0 externa
+anslutningar. En demo ska fortfarande verifiera det aktuella modellutfallet i
+stället för att anta att ett tidigare pass garanterar nästa körning.
+
+## Förbered demodata en gång
+
+Detta är destruktivt för de två lokala syntetiska demoföreningarna. Kör det
+bara vid ny miljö eller när demodatan avsiktligt ska återställas:
+
+```bash
+make demo-stop
+make demo-reset
+```
 
 ## Start — två terminalfönster
 
-### Terminalfönster 1 — SSH-tunnel till modellen
-
-Kan köras från valfri mapp. Kopiera hela raden:
+### 1. SSH-tunnel
 
 ```bash
 ssh -N -L 8000:127.0.0.1:8000 agenntserver
 ```
 
-Lämna fönstret öppet under demon. Efter eventuell Tailscale-inloggning ska
-fönstret normalt vara tyst — **tystnad betyder att tunneln är öppen**.
+Lämna fönstret öppet. Det är normalt tyst när tunneln fungerar.
 
-### Terminalfönster 2 — starta appen
-
-Öppna ett nytt fönster med **Cmd + N**. Kopiera hela raden:
+### 2. Hela appen
 
 ```bash
-cd /Users/coffeedev/Projects/brfv2 && make demo
+make demo
 ```
 
-Fortsätt när du ser:
+Fortsätt först när `Demo igång:` visas. `make demo` kontrollerar att porten
+annonserar Gemma 4 12B, startar backend i pilotläge och startar den kanoniska
+`brfv2-mockup`-frontenden.
 
-```text
-Demo igång:
-```
+Öppna: **http://127.0.0.1:5173/brfv2/**
 
-Gul text om att en frisk process återanvänds är okej. Rött `FEL:` måste lösas
-innan demon fortsätter.
-
-### Webbläsaren
-
-Öppna denna adress i Chrome/Safari — inte i Terminal:
-
-**http://127.0.0.1:5173/brfv2/**
-
-## Login — använd Max genom hela demon
+## Login
 
 ```text
 E-post:   max@demo.se
 Lösenord: max-demo-2026
 ```
 
-Max är **admin i Brf Gjutformen 12** och **medlem i Brf Sjöutsikten 7**. Samma
-konto visar därför både föreningsisolering och olika behörigheter utan utloggning.
+Max är admin i Brf Gjutformen 12 och medlem i Brf Sjöutsikten 7. Kontot visar
+därför både föreningsisolering och rollskillnad utan utloggning.
 
 ## Demo — 5–7 minuter
 
-### 1. Riktigt dokument
+1. Bekräfta att headern visar **Gemma 4 12B** och
+   **Self-hosted · agenntserver**. Avbryt om den visar testleverantör, ingen
+   modell eller otillgänglig status.
+2. I **Brf Gjutformen 12**, öppna **Dokument** och ett seedat dokument. Visa
+   att den riktiga PDF:en renderas med sidkontroller.
+3. Gå till **AI-chatt** och fråga:
 
-- Börja i **Brf Gjutformen 12**.
-- Öppna **Dokument** → **Snöröjningsavtal 2026.pdf**.
-- Visa att det är en riktig PDF med sidor och text, inte en förberedd bild.
+   ```text
+   Vilka datum gäller för snöröjningsjouren?
+   ```
 
-### 2. Grundat svar med verifierbar källa
+4. Acceptera bara resultatet om svaret har ett citat. Klicka citatet och
+   verifiera rätt dokument, sida och synlig markering. Den senaste syntetiska
+   liveevalen klarade denna kedja; modellresultat ska ändå kontrolleras i den
+   aktuella körningen.
+5. Fråga en uppenbart ostödd fråga, till exempel:
 
-Gå till **AI-chatt** och fråga:
+   ```text
+   Hur fungerar kvantdatorer?
+   ```
 
-```text
-Vilka datum gäller för snöröjningsjouren?
-```
+   Förväntat säkert beteende är **Otillräckligt underlag** utan citat.
+6. Byt till **Brf Sjöutsikten 7**. Dokument, tidigare svar, väntande svar och
+   citat från Gjutformen får inte finnas kvar. Upload- och
+   raderingskontroller ska saknas eftersom Max är medlem där.
+7. Byt tillbaka och visa att adminkontrollerna återkommer.
 
-- Förväntat svar: **15 november–15 april**.
-- Klicka på källhänvisningen.
-- Visa att rätt PDF öppnas och att den citerade passagen markeras.
+### Valfri säker uploadkontroll
 
-**Budskap:** svaret går att kontrollera direkt i originalhandlingen.
-
-### 3. Nytt dokument in → nytt verifierbart svar ut
-
-Gå till **Dokument** → **Ladda upp dokument**.
-
-I Macens filväljare:
-
-1. Tryck **Cmd + Shift + G**.
-2. Klistra in hela sökvägen:
-
-```text
-/Users/coffeedev/Projects/brfv2/DONT_PUSH_brf_stuff/[2026-07-17 13_28_33] Underhallsplan 30 ar.pdf
-```
-
-3. Tryck Enter och välj filen.
-4. Vänta tills uppladdningen är klar.
-
-Gå till **AI-chatt** och fråga:
+Använd endast den versionshanterade syntetiska fixturen:
 
 ```text
-Vad är den totala utgiften enligt underhållsplanens ekonomiska analys?
+./brfv2-mockup/e2e/fixtures/pilot-upload.pdf
 ```
 
-- Svar och källa ska båda visa **15 659 566 kr**.
-- Klicka källan: förväntad träff är på **sida 33** i den uppladdade PDF:en.
+Fråga sedan:
 
-**Budskap:** systemet kan ta in ett nytt dokument; svaret är inte hårdkodat.
+```text
+Vilken färgkod använder pilotens kontrollprotokoll?
+```
 
-### 4. Föreningsisolering och roller
-
-- Byt förening längst ned i sidofältet till **Brf Sjöutsikten 7**.
-- Visa att dokumenten byts helt.
-- Visa att **Ladda upp dokument** och raderingskontroller saknas eftersom Max
-  bara är medlem där.
-- Byt tillbaka till **Brf Gjutformen 12** och visa att adminkontrollerna återkommer.
-
-**Budskap:** både data och rättigheter följer den aktiva föreningen.
-
-### 5. Städa
-
-I **Brf Gjutformen 12**, ta bort den uppladdade filen
-`[2026-07-17 13_28_33] Underhallsplan 30 ar.pdf`.
+Ett godkänt resultat måste citera `pilot-upload.pdf`, sida 1, och visa en
+markering. Denna fixturekedja är automatiskt bevisad med den deterministiska
+providern; ett avvikande liveutfall ska rapporteras som livebegränsning, inte
+maskeras. Radera filen efter demon.
 
 ## Stoppa
 
-### Terminalfönster 2
-
 ```bash
-cd /Users/coffeedev/Projects/brfv2 && make demo-stop
+make demo-stop
 ```
 
-### Terminalfönster 1
-
-Tryck **Ctrl + C** för att stänga SSH-tunneln.
+Tryck därefter `Ctrl+C` i tunnelfönstret.
 
 ## Snabb recovery
 
-### Tunneln saknas eller modellen går inte att nå
-
-Kör tunnelkommandot i Terminalfönster 1 igen. Kontrollera därefter från
-Terminalfönster 2:
-
 ```bash
-cd /Users/coffeedev/Projects/brfv2 && ops/demo.sh check-tunnel
+ops/demo.sh check-tunnel   # måste hitta Gemma 4 12B
+make demo-status           # visar backend/frontend och ägarskap
 ```
 
-Kontrollen ska hitta **Gemma 4 12B**. Appen faller inte tillbaka till Macens
-lokala modell.
-
-### Sidan laddar inte eller en port är upptagen
-
-```bash
-cd /Users/coffeedev/Projects/brfv2 && make demo-status
-```
-
-- Om backend/frontend är stoppad: kör `make demo` igen.
-- En frisk befintlig process återanvänds automatiskt.
-- Vid rött `FEL: Port ... upptagen av en okänd process`: stäng den gamla
-  utvecklingsprocessen. `make demo-stop` dödar aldrig okända processer.
-
-### Demodatan är fel eller testfilen ligger kvar
-
-Kör endast mellan demonstrationer — detta raderar och seedar om båda
-föreningarna:
-
-```bash
-cd /Users/coffeedev/Projects/brfv2
-make demo-stop
-make demo-reset
-make demo
-```
-
-SSH-tunneln i Terminalfönster 1 ska fortfarande vara öppen.
-
-### Utloggad
-
-Logga bara in igen med Max-kontot.
+`make demo-stop` stoppar bara processer som `make demo` själv startade. Det
+dödar inte okända processer på port 8787 eller 5173.
 
 ## Reservkonton
 

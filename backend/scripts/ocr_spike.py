@@ -56,10 +56,16 @@ class TesseractAdapter:
 
     def availability(self) -> str | None:
         if shutil.which("tesseract") is None:
-            return "tesseract-binärendon saknas (brew install tesseract tesseract-lang)"
+            return (
+                "tesseract-binären saknas "
+                "(Fedora: sudo dnf install tesseract tesseract-langpack-swe)"
+            )
         langs = subprocess.run(["tesseract", "--list-langs"], capture_output=True, text=True).stdout
         if self.lang not in langs.split():
-            return f"språkpaketet '{self.lang}' saknas (brew install tesseract-lang)"
+            return (
+                f"språkpaketet '{self.lang}' saknas "
+                f"(Fedora: sudo dnf install tesseract-langpack-{self.lang})"
+            )
         return None
 
     def ocr_page(self, png_path: Path, dpi: int) -> list[OCRWord]:

@@ -5,7 +5,15 @@ import httpx
 import pytest
 
 import app.llm as llm_mod
-from app.llm import ANSWER_SCHEMA, FakeLLM, LLMError, LLMFormatError, OpenAICompatProvider, parse_llm_json
+from app.llm import (
+    ANSWER_SCHEMA,
+    DeterministicTestLLM,
+    FakeLLM,
+    LLMError,
+    LLMFormatError,
+    OpenAICompatProvider,
+    parse_llm_json,
+)
 
 
 class TestParseLLMJson:
@@ -297,6 +305,46 @@ class TestPickProviderSelfhosted:
         monkeypatch.setenv("BRF_LLM", "selfhosted")
         monkeypatch.delenv("BRF_LLM_BASE_URL", raising=False)
         assert llm_mod.pick_provider().name == "none"
+
+    def test_scripted_provider_is_explicitly_fake_and_unidentified(self, monkeypatch):
+        monkeypatch.setenv("BRF_LLM", "scripted")
+        provider = llm_mod.pick_provider()
+        assert isinstance(provider, DeterministicTestLLM)
+        assert provider.name == "fake"
+        assert provider.model == ""
+
+
+class TestDeterministicTestLLM:
+    def test_cites_the_best_matching_real_excerpt_sentence(self):
+        provider = DeterministicTestLLM()
+        raw = provider.complete(
+            "system",
+            "FRÅGA: Var har styrelsen sitt säte?\n\nUTDRAG:\n"
+            "[K1] (Stadgar.pdf, sida 1)\nStyrelsen har sitt säte i Göteborgs kommun.\n"
+            "---\n[K2] (Avtal.pdf, sida 1)\nJourperioden löper under vintern.",
+            max_tokens=100,
+            model="ignored",
+        )
+        parsed = parse_llm_json(raw)
+        assert parsed["insufficient_data"] is False
+        assert parsed["answer"] == "Styrelsen har sitt säte i Göteborgs kommun."
+        assert parsed["citations"] == [{
+            "chunk_id": "K1",
+            "quotes": ["Styrelsen har sitt säte i Göteborgs kommun."],
+        }]
+
+    def test_weak_overlap_refuses_instead_of_fabricating(self):
+        provider = DeterministicTestLLM()
+        raw = provider.complete(
+            "system",
+            "FRÅGA: Vilka regler gäller för bastun?\n\nUTDRAG:\n"
+            "[K1] (Stadgar.pdf, sida 1)\nStyrelsen har sitt säte i Göteborgs kommun.",
+            max_tokens=100,
+            model="ignored",
+        )
+        parsed = parse_llm_json(raw)
+        assert parsed["insufficient_data"] is True
+        assert parsed["citations"] == []
 
 
 @pytest.mark.llm

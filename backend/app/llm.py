@@ -12,8 +12,10 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 import shutil
 import subprocess
+import time
 from typing import Protocol
 
 logger = logging.getLogger("brf.llm")
@@ -309,6 +311,83 @@ class FakeLLM:
         return r if isinstance(r, str) else json.dumps(r, ensure_ascii=False)
 
 
+class DeterministicTestLLM:
+    """Deterministic local acceptance provider.
+
+    This provider is deliberately reported as ``fake`` and has no model
+    identity. It is only selected explicitly with ``BRF_LLM=scripted``. The
+    implementation reads the real retrieval excerpts rendered by answer.py,
+    picks the sentence with the strongest question-term overlap, and cites
+    that sentence through the normal alias contract. It therefore makes
+    generation repeatable without bypassing retrieval, citation resolution,
+    persistence, tenant scoping, or any of the answer safety gates.
+    """
+
+    name = "fake"
+    model = ""
+
+    _STOPWORDS = {
+        "att", "det", "den", "detta", "en", "ett", "finns", "för", "från",
+        "har", "hur", "i", "med", "och", "om", "på", "ska", "som", "till",
+        "vad", "var", "vilka", "vilken", "är",
+    }
+
+    @classmethod
+    def _terms(cls, text: str) -> set[str]:
+        return {
+            token
+            for token in re.findall(r"[0-9A-Za-zÅÄÖåäö-]+", text.lower())
+            if len(token) > 2 and token not in cls._STOPWORDS
+        }
+
+    def complete(self, system: str, user: str, *, max_tokens: int, model: str) -> str:
+        delay_ms = int(os.environ.get("BRF_SCRIPTED_LLM_DELAY_MS", "0") or 0)
+        if delay_ms > 0:
+            time.sleep(delay_ms / 1000)
+
+        question_match = re.search(r"^FRÅGA:\s*(.*?)\n\nUTDRAG:", user, re.DOTALL)
+        question = question_match.group(1).strip() if question_match else ""
+        question_terms = self._terms(question)
+        excerpts = re.findall(
+            r"\[(K\d+)\] \([^\n]*\)\n(.*?)(?=\n---\n|\Z)",
+            user,
+            re.DOTALL,
+        )
+
+        best: tuple[int, str, str] | None = None
+        for alias, excerpt in excerpts:
+            for sentence in re.split(r"(?<=[.!?])\s+|\n+", excerpt.strip()):
+                sentence = sentence.strip()
+                if not sentence:
+                    continue
+                score = len(question_terms & self._terms(sentence))
+                candidate = (score, alias, sentence)
+                if best is None or candidate[0] > best[0]:
+                    best = candidate
+
+        if best is None or best[0] < 2:
+            return json.dumps(
+                {
+                    "answer": "Dokumenten innehåller inte tillräcklig information för att besvara frågan.",
+                    "citations": [],
+                    "insufficient_data": True,
+                },
+                ensure_ascii=False,
+            )
+
+        _, alias, sentence = best
+        words = sentence.split()
+        quote = sentence if len(words) <= 40 else " ".join(words[:40])
+        return json.dumps(
+            {
+                "answer": quote,
+                "citations": [{"chunk_id": alias, "quote": quote}],
+                "insufficient_data": False,
+            },
+            ensure_ascii=False,
+        )
+
+
 class NoLLMProvider:
     name = "none"
 
@@ -324,7 +403,9 @@ def pick_provider() -> LLMProvider:
     if _provider is not None:
         return _provider
     forced = os.environ.get("BRF_LLM", "auto")
-    if forced == "fake":
+    if forced == "scripted":
+        _provider = DeterministicTestLLM()
+    elif forced == "fake":
         _provider = FakeLLM([])
     elif forced == "selfhosted" or (forced == "auto" and os.environ.get("BRF_LLM_BASE_URL")):
         try:

@@ -9,8 +9,8 @@ svara utifrån dokumenten, säger det det — i stället för att gissa.
 - `uv` (Python-miljön sköts automatiskt), Node 22+
 - LLM: dev/eval kör mot **standardleverantören** (inloggat `claude` CLI, eller
   `ANTHROPIC_API_KEY`) — inget att sätta upp. Självhostad Gemma 4 12B (`gemma4:e12b`) på Ubuntu-servern `agenntserver`
-  (RTX 4070) är pilot-/produktionsvägen, se `docs/DEPLOY-SELFHOSTED-LLM.md`. Macens
-  lokala e4b-modell används inte av appen.
+  (RTX 4070) är pilot-/produktionsvägen, se `docs/DEPLOY-SELFHOSTED-LLM.md`. Någon mindre
+  lokal e4b-modell används inte av appen.
 - Första starten laddar ner embeddingmodellen (~1 min, cachas)
 
 ## Starta (två terminaler)

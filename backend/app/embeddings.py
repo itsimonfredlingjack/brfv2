@@ -13,6 +13,7 @@ import logging
 import math
 import os
 import zlib
+from functools import lru_cache
 from typing import Protocol
 
 from .normalize import normalize_text
@@ -72,8 +73,8 @@ class Model2VecEmbedder:
         return (vecs / norms).tolist()
 
 
-def get_embedder() -> Embedder:
-    choice = os.environ.get("BRF_EMBEDDER", "auto")
+@lru_cache(maxsize=None)
+def _build_embedder(choice: str) -> Embedder:
     if choice == "hashed":
         return HashedNgramEmbedder()
     if choice in ("auto", "model2vec"):
@@ -86,3 +87,19 @@ def get_embedder() -> Embedder:
                 raise
             logger.warning("model2vec unavailable (%s); falling back to hashed n-grams", exc)
     return HashedNgramEmbedder()
+
+
+def get_embedder() -> Embedder:
+    """Shared, cached provider instance.
+
+    Caching is not an optimisation here, it is a correctness requirement:
+    Model2VecEmbedder loads ~1.5 GB of weights per instance, and this function
+    is called per Store (so once per tenant) AND inside the /api/health
+    handler. Uncached, every health check allocated another 1.5 GB — enough
+    for readiness polling alone to OOM the process. The models are read-only
+    and stateless, so one instance is safely shared.
+
+    Keyed on the env value rather than a bare maxsize=1 so that flipping
+    BRF_EMBEDDER between providers still takes effect.
+    """
+    return _build_embedder(os.environ.get("BRF_EMBEDDER", "auto"))

@@ -115,13 +115,33 @@ def create_app(
     def health() -> dict:
         from .embeddings import get_embedder
         from .llm import pick_provider
+        from .model_display import display_name_for
 
+        provider = pick_provider()
+        # The same attribute answer.py reads to report per-response
+        # provenance (getattr(provider, "model", "")) — never the
+        # aiModel setting fallback, since that's a per-tenant default the
+        # self-hosted provider ignores at generation time.
+        raw_model = getattr(provider, "model", "") or ""
         return {
             "status": "ok",
             "mode": mode,
-            "llm_provider": pick_provider().name,
+            "llm_provider": provider.name,
             "embedding_provider": get_embedder().name,
             "tenants": len(auth.list_tenants()),
+            "llm": {
+                "provider": provider.name,
+                "model": raw_model,
+                "display_name": display_name_for(raw_model),
+                "runtime_label": os.environ.get("BRF_LLM_RUNTIME_LABEL", ""),
+                # A configured, real generation path — never claims a model
+                # is active for the "none"/"fake" providers. This reflects
+                # configuration, not live reachability: a self-hosted
+                # endpoint whose tunnel just dropped still reads ready=true
+                # here (the actual generation call is what surfaces that
+                # failure, per-request).
+                "ready": provider.name not in ("none", "fake"),
+            },
         }
 
     @app.post("/api/auth/login")
