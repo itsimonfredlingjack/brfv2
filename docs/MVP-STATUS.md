@@ -18,8 +18,11 @@ med två verifierade citat samtidigt som q11 fortsätter att vägras säkert.
 
 ## Produkt och repogräns
 
-- `brfv2-mockup/` är ett separat Git-repo och den **kanoniska
-  produktfrontenden**. Den verifierade pilotvyn använder riktiga backenddata.
+- `brfv2-mockup/` är den **kanoniska produktfrontenden** och ligger som
+  vanliga spårade filer i det här repot — ingen nästlad utcheckning och ingen
+  submodul. Den verifierade pilotvyn använder riktiga backenddata. Fram till
+  juli 2026 låg katalogen i ett separat, gitignorerat repo; den historiken
+  finns kvar på `migration/brfv2-mockup/*`-grenarna.
 - Rotens `src/` är en äldre backendkopplad prototyp. Den underhålls inte som
   den visuella produkten och ska inte få nya integrationer.
 - FastAPI-backend, driftverktyg och evidens ligger i huvudrepot.
@@ -150,6 +153,21 @@ loopbackanslutning och 0 externa. Fullt underlag:
 | Live syntetisk eval | Golden retrieval, grounding, citat och nätverksgräns | Godkänd |
 | Live skyddad korpusgate | Modellens obligatoriska realkorpusfrågor och vägran | **READY** |
 | Extern drift | SSH, tjänst, modellvikter och GPU utanför repot | Krävs vid varje livekörning |
+
+### Reproducerbarhetsgräns för realkorpusgaten
+
+Den skyddade realkorpusgaten och `model-readiness-selftest*` kan **inte** köras
+från en ren checkout. De läser föreningens verkliga PDF:er från den
+gitignorerade katalogen `DONT_PUSH_brf_stuff/` och kräver dessutom en nåbar
+`gemma4:e12b`-runtime på `agenntserver`. Det är en accepterad och avsiktlig
+gräns, inte dolt lokalt tillstånd: materialet är kundens dokument med möjliga
+personuppgifter och ska inte ligga i repot.
+
+Följden är att den här gaten bara kan verifieras om av någon med både
+korpusåtkomst och runtimeåtkomst. Allt annat i
+[Lokal verifiering](../README.md#lokal-verifiering) — backendtester,
+isolering, frontendtester, lint, bygge och Playwright-acceptansen — körs helt
+från en ren checkout efter enbart `make setup`.
 
 ## Återstående blockerare och begränsningar
 

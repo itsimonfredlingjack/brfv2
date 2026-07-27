@@ -60,13 +60,62 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import subprocess
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from scripts.reality import common  # noqa: E402
 from scripts.ocr_spike import TesseractAdapter  # noqa: E402
+
+
+def _git_commit(repo_root: Path) -> dict:
+    """The exact tested commit, so a preserved artifact self-attests its
+    provenance instead of relying on the surrounding evidence prose.
+
+    `dirty` matters as much as the SHA: a run against a modified worktree is
+    not pinned to that commit, and a reader must be able to see that.
+    """
+    def _git(*args: str) -> str | None:
+        try:
+            out = subprocess.run(
+                ["git", "-C", str(repo_root), *args],
+                capture_output=True, text=True, timeout=10,
+            )
+        except (OSError, subprocess.SubprocessError):
+            return None
+        return out.stdout.strip() if out.returncode == 0 else None
+
+    sha = _git("rev-parse", "HEAD")
+    status = _git("status", "--porcelain")
+    return {
+        "commit": sha,
+        "dirty": None if status is None else bool(status),
+        "branch": _git("rev-parse", "--abbrev-ref", "HEAD"),
+    }
+
+
+def build_run_metadata(env: dict, repo_root: Path, now: datetime) -> dict:
+    """Self-description for the preserved artifact.
+
+    Deliberately records the *configured* model id and runtime label, not an
+    attested one — the server is never asked to prove its identity (that is
+    XS-37, post-pilot). Naming them `configured_*` keeps the artifact honest
+    about which is which.
+
+    `BRF_LLM_BASE_URL` is intentionally omitted: it can carry host or tunnel
+    topology, and the network audit already records the endpoints reached.
+    """
+    return {
+        "configured_model": env.get("BRF_LLM_MODEL", "") or "",
+        "configured_runtime_label": env.get("BRF_LLM_RUNTIME_LABEL", "") or "",
+        "configured_llm": env.get("BRF_LLM", "") or "",
+        "embedder": env.get("BRF_EMBEDDER", "") or "",
+        "timestamp_utc": now.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
+        **_git_commit(repo_root),
+    }
 
 
 def _import_reused():
@@ -422,6 +471,9 @@ def main() -> None:
 
     result = {
         "provider": provider_name,
+        "run": build_run_metadata(
+            dict(os.environ), Path(__file__).resolve().parent.parent.parent, datetime.now()
+        ),
         "ingest": ingest_report,
         "questions": rows,
         "ready": ready,
