@@ -1,6 +1,8 @@
 # MVP-status — BRF Dokument-AI
 
-**Senast avstämd mot kod och körd evidens:** 2026-07-22
+**Senast avstämd mot kod och körd evidens:** 2026-07-27 (realkorpusgaten omkörd på
+commit `a1960b7` efter XS-33:s embedder-livscykeländring; se
+[evidence/pilot-live-gemma4-12b-2026-07-27.md](evidence/pilot-live-gemma4-12b-2026-07-27.md)).
 
 ## Sammanfattning
 
@@ -128,6 +130,16 @@ Fullt, icke-känsligt underlag:
 [evidence/pilot-live-gemma4-12b-2026-07-22.md](evidence/pilot-live-gemma4-12b-2026-07-22.md).
 Korrigering och omkörning:
 [evidence/xs32-q03-linked-context-2026-07-22.md](evidence/xs32-q03-linked-context-2026-07-22.md).
+
+## Omkörning efter XS-33 (2026-07-27)
+
+Den oförändrade realkorpusgaten kördes på nytt på commit `a1960b7`, efter XS-33:s
+delade embedder-instans (`b939d50`), för att bekräfta att gaten inte tystnat på grund
+av livscykeländringen. Samma kommando, samma frågor, ingen ändrad tröskel: `VERDICT:
+READY`, q09/q08/q03 vardera med verifierade citat, q11 säkert vägrad, q01:s kända
+icke-ordagranna citat fortfarande korrekt underkänt. Nätverksrevisionen visade 1
+loopbackanslutning och 0 externa. Fullt underlag:
+[evidence/pilot-live-gemma4-12b-2026-07-27.md](evidence/pilot-live-gemma4-12b-2026-07-27.md).
 
 ## Bevisnivåer
 
