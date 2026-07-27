@@ -149,4 +149,5 @@ PDF → extract.py → chunker.py → indexer.py
 
 - [Specifikation](SPEC.md)
 - [Pilotkontrakt](SPEC-PILOT.md)
-- [Evidens](docs/evidence/)
+- [Evidens](docs/evidence/) — senast
+  [ren checkout på Fedora](docs/evidence/fedora-clean-checkout-2026-07-27.md)
