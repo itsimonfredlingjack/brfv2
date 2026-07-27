@@ -79,12 +79,19 @@ class TestRerankChunks:
 
 
 class TestRerankerAvailable:
-    def test_returns_bool_without_loading_the_model(self):
-        # Must be cheap: a cache/import probe only. Environment for this
-        # branch has the weights pre-cached (see task brief), so this is
-        # expected True here — the point of the assertion is that the call
-        # completes fast and doesn't itself construct a CrossEncoder.
-        assert reranker_available() is True
+    def test_returns_bool_without_loading_the_model(self, monkeypatch):
+        # Must be cheap: an import/cache probe only. The result depends on
+        # whether the optional `rerank` extra and the weights happen to be
+        # present, so asserting a specific value would bind the suite to one
+        # machine's cache — the whole point is that it answers either way.
+        # What must hold everywhere: it returns a real bool and never
+        # constructs a CrossEncoder.
+        def _explode(*args, **kwargs):  # pragma: no cover - must never run
+            raise AssertionError("reranker_available() must not load the model")
+
+        monkeypatch.setattr("app.rerank._load_model", _explode)
+
+        assert isinstance(reranker_available(), bool)
 
 
 DOC_LINES = [
@@ -157,6 +164,13 @@ class TestAskWithRerank:
             min_confidence=0.0,
         )
         assert len(baseline) >= 2, "need at least 2 hits for reordering to be observable"
+
+        # This test is about alias/rerank-order wiring, not about model
+        # provisioning: the scorer below is fake, so the real weights are
+        # never needed. Open ask()'s availability gate explicitly — without
+        # this the test would pass only on machines that happen to have the
+        # optional `rerank` extra installed and the weights cached.
+        monkeypatch.setattr("app.answer.reranker_available", lambda: True)
 
         # Fake scorer reverses the baseline order deterministically: pairs
         # arrive in the same order rerank_chunks was handed the hits, which

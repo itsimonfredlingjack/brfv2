@@ -22,7 +22,6 @@ Detta är destruktivt för de två lokala syntetiska demoföreningarna. Kör det
 bara vid ny miljö eller när demodatan avsiktligt ska återställas:
 
 ```bash
-cd /Users/coffeedev/Projects/brfv2
 make demo-stop
 make demo-reset
 ```
@@ -40,7 +39,6 @@ Lämna fönstret öppet. Det är normalt tyst när tunneln fungerar.
 ### 2. Hela appen
 
 ```bash
-cd /Users/coffeedev/Projects/brfv2
 make demo
 ```
 
@@ -94,7 +92,7 @@ därför både föreningsisolering och rollskillnad utan utloggning.
 Använd endast den versionshanterade syntetiska fixturen:
 
 ```text
-/Users/coffeedev/Projects/brfv2/brfv2-mockup/e2e/fixtures/pilot-upload.pdf
+./brfv2-mockup/e2e/fixtures/pilot-upload.pdf
 ```
 
 Fråga sedan:
@@ -111,7 +109,6 @@ maskeras. Radera filen efter demon.
 ## Stoppa
 
 ```bash
-cd /Users/coffeedev/Projects/brfv2
 make demo-stop
 ```
 
@@ -120,7 +117,6 @@ Tryck därefter `Ctrl+C` i tunnelfönstret.
 ## Snabb recovery
 
 ```bash
-cd /Users/coffeedev/Projects/brfv2
 ops/demo.sh check-tunnel   # måste hitta Gemma 4 12B
 make demo-status           # visar backend/frontend och ägarskap
 ```

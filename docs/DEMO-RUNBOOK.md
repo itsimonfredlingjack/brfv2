@@ -39,7 +39,6 @@ Låt processen köra i en egen terminal.
 ### 2. Starta hela pilotstacken
 
 ```bash
-cd /Users/coffeedev/Projects/brfv2
 make demo
 ```
 
@@ -48,7 +47,7 @@ Startskriptet:
 - kräver att `/v1/models` annonserar modellfamiljen Gemma 4 12B;
 - startar backend med `BRF_MODE=pilot`, `BRF_LLM=selfhosted`,
   `BRF_LLM_MODEL=gemma4:e12b` och runtimeetiketten `agenntserver`;
-- har ingen fallback till Macens lokala `gemma4:e4b`;
+- har ingen fallback till någon mindre lokal modell (t.ex. `gemma4:e4b`);
 - väntar på backendens health-endpoint;
 - startar kanonisk frontend på port 5173;
 - återanvänder endast en redan frisk pilot/selfhosted-backend;
@@ -115,7 +114,7 @@ färdiga funktioner; de är spärrade eller dolda i pilotvyn.
 Använd ett skyddat lokalt korpusargument utan att skriva ut privata filnamn:
 
 ```bash
-cd /Users/coffeedev/Projects/brfv2/backend
+cd backend
 BRF_MODE=pilot \
 BRF_LLM=selfhosted \
 BRF_LLM_BASE_URL=http://127.0.0.1:8000/v1 \
@@ -138,7 +137,7 @@ för senaste utfall och exakt korpusscope utan privat innehåll.
 Kräver inte tunnel eller externa dokument:
 
 ```bash
-cd /Users/coffeedev/Projects/brfv2/brfv2-mockup
+cd brfv2-mockup
 npm run test:e2e
 ```
 
@@ -149,7 +148,6 @@ citat, PDF/highlight, vägran, behörighet, tenantbyte och fyra readinesslägen.
 ## Recovery och stopp
 
 ```bash
-cd /Users/coffeedev/Projects/brfv2
 ops/demo.sh check-tunnel
 make demo-status
 make demo-stop

@@ -63,7 +63,7 @@ The live readiness harness ingested:
 Production-parity command:
 
 ```bash
-cd /Users/coffeedev/Projects/brfv2/backend
+cd backend
 BRF_MODE=pilot \
 BRF_LLM=selfhosted \
 BRF_LLM_BASE_URL=http://127.0.0.1:8000/v1 \
@@ -96,7 +96,7 @@ as a remedy.
 The committed deterministic harness was rerun on the same current corpus:
 
 ```bash
-cd /Users/coffeedev/Projects/brfv2/backend
+cd backend
 uv run python -m scripts.model_readiness \
   --selftest \
   --out out/pilot-live-2026-07-22/harness-selftest
@@ -116,7 +116,6 @@ No application code or assertion was changed in response.
 ## Full live-provider golden evaluation
 
 ```bash
-cd /Users/coffeedev/Projects/brfv2
 BRF_MODE=pilot \
 BRF_EMBEDDER=model2vec \
 BRF_LLM_BASE_URL=http://127.0.0.1:8000/v1 \
@@ -172,7 +171,6 @@ No source text, answer text, real filename, cookie, or private address was copie
 ## Tenant isolation regression check
 
 ```bash
-cd /Users/coffeedev/Projects/brfv2
 make test-isolation
 ```
 
@@ -205,7 +203,7 @@ citation while preserving the safe refusal on `q11`.
 After changing or reconfiguring the model service, rerun exactly:
 
 ```bash
-cd /Users/coffeedev/Projects/brfv2/backend
+cd backend
 BRF_MODE=pilot \
 BRF_LLM=selfhosted \
 BRF_LLM_BASE_URL=http://127.0.0.1:8000/v1 \

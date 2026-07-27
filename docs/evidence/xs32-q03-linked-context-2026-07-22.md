@@ -17,7 +17,7 @@ Exact prompts and model output remain only in gitignored
 Command:
 
 ```bash
-cd /Users/coffeedev/Projects/brfv2/backend
+cd backend
 BRF_MODE=pilot \
 BRF_LLM=selfhosted \
 BRF_LLM_BASE_URL=http://127.0.0.1:8000/v1 \
@@ -99,7 +99,7 @@ The same trace command, writing to `out/xs32/q03-linked-context`, produced:
 ## Unchanged live readiness gate
 
 ```bash
-cd /Users/coffeedev/Projects/brfv2/backend
+cd backend
 BRF_MODE=pilot \
 BRF_LLM=selfhosted \
 BRF_LLM_BASE_URL=http://127.0.0.1:8000/v1 \

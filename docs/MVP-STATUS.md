@@ -47,16 +47,34 @@ Följande är täckt och grönt:
 - pilotvyn exponerar inga fiktiva sökresultat eller framtida
   administrationsåtgärder.
 
-Senast körda sammanhållna lokala resultat:
+Senast körda sammanhållna lokala resultat, från ren checkout på Fedora 44
+efter enbart `make setup`:
 
 | Kontroll | Resultat |
 |---|---:|
-| Backend `pytest -q` | 532 passed, 1 skipped |
+| Backend `pytest -q` | 528 passed, 5 skipped |
 | Auth/isolation/livscykel | 48 passed |
 | Kanonisk frontend Vitest | 14 passed |
 | Kanonisk frontend lint | exit 0 |
 | Kanonisk frontend produktionsbygge | exit 0 |
 | Playwright acceptance | 11 passed |
+
+De fem skippen är alla avsiktliga och miljöberoende, inga fel:
+
+| Skip | Villkor |
+|---|---|
+| `test_llm.py` (1) | kör bara med `RUN_LLM_TESTS=1` — anropar en verklig LLM |
+| `test_ocr_ingestion.py`, `test_ocr_spike.py` (3) | kräver tesseract med svenskt språkpaket |
+| `test_rerank.py` (1) | kräver den valfria `rerank`-extran och nedladdade vikter |
+
+OCR behövs bara för skannade PDF:er och ingår inte i pilotslingan. Installera
+det på Fedora med `sudo dnf install tesseract tesseract-langpack-swe` om du
+vill köra de testerna.
+
+Tidigare status angav 532 passed, 1 skipped. Den siffran mättes på den gamla
+macOS-maskinen, där tesseract och reranker-vikterna råkade finnas installerade.
+Antalet testfall är oförändrat; skillnaden är vilka valfria beroenden som fanns
+på maskinen.
 
 Deterministisk acceptans bevisar lokal reproducerbarhet. Den bevisar inte i
 sig att en extern modellserver är nåbar eller att en viss modell klarar den
@@ -134,7 +152,7 @@ Korrigering och omkörning:
 ## Omtag av livegaten
 
 ```bash
-cd /Users/coffeedev/Projects/brfv2/backend
+cd backend
 BRF_MODE=pilot \
 BRF_LLM=selfhosted \
 BRF_LLM_BASE_URL=http://127.0.0.1:8000/v1 \
