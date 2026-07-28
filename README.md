@@ -8,6 +8,8 @@ föreningens dokument ska avvisas i stället för att gissas.
 - [Demo quickstart](docs/DEMO-QUICKSTART.md)
 - [Operatörsrunbook](docs/DEMO-RUNBOOK.md)
 - [Pilotdrift med Gemma 4 12B](docs/DEPLOY-SELFHOSTED-LLM.md)
+- [Drift- och förvaltningsplan](docs/DRIFT-FORVALTNINGSPLAN.md)
+- [Erfarenhetsåterföring](docs/ERFARENHETSATERFORING.md)
 
 ## Ett repo, en produkt
 
