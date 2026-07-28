@@ -24,6 +24,8 @@ docs-external/
 backend/data/
 backend/.venv/
 backend/out/
+src-tauri/target/
+src-tauri/gen/
 __pycache__/
 *.pyc
 .pytest_cache/

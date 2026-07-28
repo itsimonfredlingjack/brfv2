@@ -1,4 +1,4 @@
-.PHONY: setup backend backend-pilot require-pilot-llm frontend frontend-legacy test test-isolation eval eval-b eval-fast eval-sweep \
+.PHONY: setup backend backend-pilot require-pilot-llm frontend frontend-legacy desktop-build desktop-run desktop-check desktop-acceptance test test-isolation eval eval-b eval-fast eval-sweep \
         eval-selfhosted eval-b-selfhosted demo demo-stop demo-status demo-reset build build-legacy model-readiness model-readiness-selftest \
         model-readiness-selftest-negative
 
@@ -33,6 +33,22 @@ frontend:           ## Kanoniska UI:t i brfv2-mockup på :5173
 
 frontend-legacy:    ## Äldre backendkopplad prototyp i rotens src/
 	npm run dev
+
+desktop-build:      ## Bygg kanoniskt UI + release-Tauri (ingen bundle/installatör)
+	@test -x backend/.venv/bin/python || (echo "backend/.venv saknas — kör 'make setup' först."; exit 1)
+	@test -d brfv2-mockup/node_modules || (echo "brfv2-mockup/node_modules saknas — kör 'make setup' först."; exit 1)
+	cd brfv2-mockup && npm run build
+	cargo build --release --locked --manifest-path src-tauri/Cargo.toml
+
+desktop-run: desktop-build  ## Kör release-webviewen på Fedora (Ctrl+C eller stäng fönstret)
+	./src-tauri/target/release/brfv2-desktop-spike
+
+desktop-check:      ## Rust-enhetstester för startup/origin-kontraktet
+	cargo test --locked --manifest-path src-tauri/Cargo.toml
+	backend/.venv/bin/pytest -q backend/tests/test_desktop.py
+
+desktop-acceptance: desktop-build  ## Kör riktig Tauri/WebKitGTK-acceptans via tauri-driver
+	backend/.venv/bin/python backend/scripts/desktop_acceptance.py
 
 test:               ## Backend-tester (offline, deterministiska)
 	cd backend && uv run pytest -q

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "BRF Dokument-AI Desktop Spike",
+  "version": "0.1.0",
+  "identifier": "se.brfdokumentai.desktop.spike",
+  "build": {
+    "frontendDist": "../brfv2-mockup/dist"
+  },
+  "app": {
+    "withGlobalTauri": false,
+    "windows": [],
+    "security": {
+      "capabilities": [],
+      "csp": null,
+      "freezePrototype": true
+    }
+  },
+  "bundle": {
+    "active": false,
+    "icon": [
+      "icons/icon.png"
+    ]
+  }
+}
