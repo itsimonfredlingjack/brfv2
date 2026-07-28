@@ -57,3 +57,26 @@ export const api = {
     jsonBody('PUT', settings),
   ),
 };
+
+// Routes that only the installed desktop application serves. On the web these
+// 404, which is exactly how the UI detects which delivery it is running in —
+// there is no build flag and no second bundle.
+export const desktopApi = {
+  state: () => request('/api/desktop/state'),
+  setup: (payload) => request('/api/desktop/setup', jsonBody('POST', payload)),
+  createBrf: (name) => request('/api/desktop/brf', jsonBody('POST', { name })),
+  getModelRuntime: () => request('/api/desktop/model-runtime'),
+  putModelRuntime: (config) => request('/api/desktop/model-runtime', jsonBody('PUT', config)),
+  testModelRuntime: () => request('/api/desktop/model-runtime/test', { method: 'POST' }),
+  listBackups: () => request('/api/desktop/backups'),
+  createBackup: () => request('/api/desktop/backups', { method: 'POST' }),
+  deleteBackup: (name) => request(
+    `/api/desktop/backups/${encodeURIComponent(name)}`,
+    { method: 'DELETE' },
+  ),
+  restoreBackup: (name) => request(
+    `/api/desktop/backups/${encodeURIComponent(name)}/restore`,
+    { method: 'POST' },
+  ),
+  restart: () => request('/api/desktop/restart', { method: 'POST' }),
+};

@@ -58,3 +58,12 @@ backend/eval/network_audit.json
 # Playwright run artifacts from the canonical frontend's acceptance suite
 test-results/
 playwright-report/
+
+# Desktop delivery build output. None of this is committed: it is reproducible
+# from the tracked sources by `make desktop-package`.
+#   src-tauri/runtime/  staged Python runtime + embedder weights (~776 MB)
+#   /dist/              the built RPM (~548 MB) — already covered by the `dist`
+#                       rule above, listed explicitly so its size is not a
+#                       surprise to anyone reading this file
+src-tauri/runtime/
+/dist/

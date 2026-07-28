@@ -398,6 +398,18 @@ class NoLLMProvider:
 _provider: LLMProvider | None = None
 
 
+def reset_provider_cache() -> None:
+    """Drop the memoized provider so the next pick re-reads the environment.
+
+    Only the desktop application needs this: its model runtime is configured
+    in-app at runtime rather than through the environment the process started
+    with, so the cache has to be invalidated when that configuration changes.
+    """
+
+    global _provider
+    _provider = None
+
+
 def pick_provider() -> LLMProvider:
     global _provider
     if _provider is not None:

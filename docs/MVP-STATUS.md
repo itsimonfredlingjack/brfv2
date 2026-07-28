@@ -30,6 +30,30 @@ med två verifierade citat samtidigt som q11 fortsätter att vägras säkert.
   inställningsflöden ligger utanför MVP. I pilotvyn är de dolda, spärrade eller
   uttryckligen märkta som otillgängliga; de visar inte fiktiva backendresultat.
 
+## Skrivbordsleverans (XS-47, 2026-07-28)
+
+Samma produkt finns nu som en installerbar Fedora-applikation. Skalet i
+`src-tauri/` startar en paketerad Python-körmiljö som serverar det byggda
+React-gränssnittet och `/api/*` från samma slumpmässiga loopback-origin; ingen
+produktlogik dupliceras i skalet.
+
+- Artefakt: `dist/brf-dokument-ai-0.2.0-1.fc44.x86_64.rpm` (547 MiB, sha256 `b0b1a90a…`), byggd med
+  Fedoras `rpmbuild`, med `webkit2gtk4.1`, `gtk3`, `tesseract` och
+  `tesseract-langpack-swe` som enda beroenden.
+- Hela resan — förstagångskonfiguration, uppladdning, ingestion, grundat svar
+  från riktig Gemma 4 12B, citation, PDF-markering, vägran, omstart, bevarat
+  tillstånd, säkerhetskopiering och återställning — är körd mot det
+  **installerade** paketet, inte mot en checkout.
+- Produkten levereras utan konton: `--seed-demo` och `backend/scripts/` finns
+  inte i bundlen, och `max@demo.se` fungerar inte.
+- Generering kan bara ske mot den självhostade modelltjänst användaren anger.
+  `BRF_LLM` är fastnaglat till `selfhosted` och `anthropic` är borttaget ur
+  bundlen.
+
+Evidens: [evidence/xs47-desktop-delivery.md](evidence/xs47-desktop-delivery.md),
+[maskinläsbar acceptans](evidence/xs47-desktop-acceptance-installed.json).
+Byggbeslut: [adr/0001-desktop-python-runtime.md](adr/0001-desktop-python-runtime.md).
+
 ## Verifierat MVP-kontrakt
 
 Den automatiserade browser-acceptansen använder Chromium, kanonisk frontend

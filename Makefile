@@ -1,5 +1,5 @@
-.PHONY: setup backend backend-pilot require-pilot-llm frontend frontend-legacy desktop-build desktop-run desktop-check desktop-acceptance test test-isolation eval eval-b eval-fast eval-sweep \
-        eval-selfhosted eval-b-selfhosted demo demo-stop demo-status demo-reset build build-legacy model-readiness model-readiness-selftest \
+.PHONY: setup backend backend-pilot require-pilot-llm frontend frontend-legacy desktop-runtime desktop-build desktop-run desktop-check desktop-package desktop-install desktop-uninstall desktop-acceptance test test-isolation eval eval-b eval-fast eval-sweep \
+        eval-selfhosted eval-b-selfhosted desktop-acceptance-installed demo demo-stop demo-status demo-reset build build-legacy model-readiness model-readiness-selftest \
         model-readiness-selftest-negative
 
 # Generation default for dev + eval is the standard hosted provider (logged-in `claude`
@@ -34,21 +34,39 @@ frontend:           ## Kanoniska UI:t i brfv2-mockup på :5173
 frontend-legacy:    ## Äldre backendkopplad prototyp i rotens src/
 	npm run dev
 
-desktop-build:      ## Bygg kanoniskt UI + release-Tauri (ingen bundle/installatör)
+desktop-runtime:    ## Stega den paketerade Python-körmiljön (src-tauri/runtime, ~776 MB)
+	@ops/build-runtime.sh
+
+desktop-build:      ## Bygg kanoniskt UI + release-skalet (ingen installatör)
 	@test -x backend/.venv/bin/python || (echo "backend/.venv saknas — kör 'make setup' först."; exit 1)
 	@test -d brfv2-mockup/node_modules || (echo "brfv2-mockup/node_modules saknas — kör 'make setup' först."; exit 1)
 	cd brfv2-mockup && npm run build
 	cargo build --release --locked --manifest-path src-tauri/Cargo.toml
 
-desktop-run: desktop-build  ## Kör release-webviewen på Fedora (Ctrl+C eller stäng fönstret)
-	./src-tauri/target/release/brfv2-desktop-spike
+desktop-run: desktop-build  ## Kör release-skalet mot checkouten (Ctrl+C eller stäng fönstret)
+	./src-tauri/target/release/brfv2-desktop
 
-desktop-check:      ## Rust-enhetstester för startup/origin-kontraktet
+desktop-check:      ## Rust-enhetstester + desktopadapterns pytest
 	cargo test --locked --manifest-path src-tauri/Cargo.toml
 	backend/.venv/bin/pytest -q backend/tests/test_desktop.py
 
-desktop-acceptance: desktop-build  ## Kör riktig Tauri/WebKitGTK-acceptans via tauri-driver
-	backend/.venv/bin/python backend/scripts/desktop_acceptance.py
+desktop-package: desktop-runtime  ## Bygg distributionsartefakten (RPM) från ren checkout
+	@ops/package-desktop.sh
+
+desktop-install: desktop-runtime  ## Bygg och installera RPM:en (kräver sudo; dnf löser tesseract/webkit)
+	@ops/package-desktop.sh --install
+
+desktop-uninstall:  ## Avinstallera paketet (användardata under ~/.local/share lämnas kvar)
+	sudo dnf remove -y brf-dokument-ai
+
+desktop-acceptance: desktop-build  ## Full journey-acceptans mot riktig Tauri/WebKitGTK + självhostad modell
+	backend/.venv/bin/python backend/scripts/desktop_acceptance.py \
+	  --output docs/evidence/xs47-desktop-acceptance.json
+
+desktop-acceptance-installed:  ## Samma acceptans mot det INSTALLERADE paketet
+	backend/.venv/bin/python backend/scripts/desktop_acceptance.py \
+	  --application /usr/bin/brfv2-desktop \
+	  --output docs/evidence/xs47-desktop-acceptance-installed.json
 
 test:               ## Backend-tester (offline, deterministiska)
 	cd backend && uv run pytest -q

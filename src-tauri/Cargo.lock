@@ -143,8 +143,8 @@ dependencies = [
 ]
 
 [[package]]
-name = "brfv2-desktop-spike"
-version = "0.1.0"
+name = "brfv2-desktop"
+version = "0.2.0"
 dependencies = [
  "libc",
  "serde",

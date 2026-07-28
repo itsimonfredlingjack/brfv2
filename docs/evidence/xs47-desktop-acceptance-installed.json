@@ -1,0 +1,268 @@
+{
+  "application": "/usr/bin/brfv2-desktop",
+  "bundle": {
+    "commit": "57236762e5da33588a70562c28d9bf8c75b0dc38",
+    "dirty": true,
+    "embedder": {
+      "bundled": true,
+      "modelId": "minishlab/potion-multilingual-128M"
+    },
+    "excludedPackages": [
+      "anthropic",
+      "hf_xet",
+      "pip",
+      "setuptools"
+    ],
+    "python": {
+      "source": "cpython-3.12.13-linux-x86_64-gnu",
+      "version": "3.12.13"
+    },
+    "requirements": {
+      "sha256": "f0b3b31384ca27c35d38d1d88961469b65249fca8bb430dce4807185f3281f9f",
+      "source": "backend/uv.lock (uv export --frozen --no-dev)"
+    },
+    "schema": "brfv2-desktop-bundle/v1",
+    "sizes": {
+      "backendBytes": 442070,
+      "modelsBytes": 537343185,
+      "pythonBytes": 359021432
+    }
+  },
+  "durationSeconds": 71.5,
+  "failureSurfaces": {
+    "backendDied": {
+      "killedPid": 180512,
+      "logCaptured": true,
+      "logPath": "<isolated-xdg-home>/xdg-data/se.brfdokumentai.desktop/logs/backend.log",
+      "orphans": 0,
+      "portClosed": true,
+      "shellStayedUpToExplain": true
+    },
+    "startupFailure": {
+      "skipped": "an installation is present at /usr/lib/BRF Dokument-AI, so a detached copy of the binary still resolves a valid runtime; this surface is verified against the checkout build instead"
+    }
+  },
+  "isolatedXdgHome": "<isolated-xdg-home>",
+  "lifecycle": {
+    "abruptTermination": {
+      "closed": true,
+      "orphans": 0,
+      "port": 45759
+    },
+    "backupRestore": {
+      "afterRestore": [
+        "brf-gjutformen-12",
+        "brf-sjoutsikten-7"
+      ],
+      "backup": {
+        "bytes": 19018,
+        "files": 8,
+        "name": "brfv2-backup-20260728-133115-36ad.zip",
+        "tenants": [
+          {
+            "brf_id": "brf-gjutformen-12",
+            "documents": 1,
+            "name": "Brf Gjutformen 12"
+          },
+          {
+            "brf_id": "brf-sjoutsikten-7",
+            "documents": 0,
+            "name": "Brf Sjöutsikten 7"
+          }
+        ]
+      },
+      "beforeRestore": [
+        "brf-efter-kopian",
+        "brf-gjutformen-12",
+        "brf-sjoutsikten-7"
+      ],
+      "documents": [
+        "Stadgar Brf Gjutformen 12.pdf"
+      ],
+      "lastRestore": {
+        "appVersion": "0.2.0",
+        "at": "2026-07-28T13:31:17.823823+00:00",
+        "createdAt": "2026-07-28T13:31:15.802303+00:00",
+        "status": "restored"
+      },
+      "restartExitCode": 86,
+      "restartRespawnsUnderANewPid": true
+    },
+    "cleanShutdown": {
+      "closed": true,
+      "orphans": 0,
+      "port": 58927
+    },
+    "modelRuntimeUnavailable": {
+      "answer": "Tekniskt fel vid svarsgenerering — försök igen om en stund.",
+      "citations": 0,
+      "probe": {
+        "detail": "Kunde inte nå modelltjänsten: ConnectError: [Errno 111] Connection refused",
+        "latencyMs": 40,
+        "ok": false
+      },
+      "refusalReason": "provider_error"
+    },
+    "retainedState": {
+      "documents": [
+        "Stadgar Brf Gjutformen 12.pdf"
+      ],
+      "memberships": [
+        "brf-gjutformen-12",
+        "brf-sjoutsikten-7"
+      ],
+      "modelRuntime": {
+        "display_name": "Gemma 4 12B",
+        "model": "gemma4:e12b",
+        "provider": "selfhosted",
+        "ready": true,
+        "runtime_label": "agenntserver"
+      },
+      "provisioned": true
+    }
+  },
+  "modelService": {
+    "baseUrl": "http://127.0.0.1:8000/v1",
+    "served": [
+      "/root/.cache/huggingface/hub/models--unsloth--gemma-4-12b-it-GGUF/snapshots/d997c805aafe035a8024f961c6e1afd6b30d79a5/gemma-4-12b-it-UD-Q4_K_XL.gguf"
+    ]
+  },
+  "paths": {
+    "isolatedXdgHomePattern": "/tmp/brfv2-acceptance-*",
+    "note": "Run-local scratch locations are replaced by stable placeholders: the operator's home directory reads as ~ and the throwaway XDG home this run used reads as <isolated-xdg-home>. Nothing else is rewritten."
+  },
+  "schema": "brfv2-desktop-acceptance/v1",
+  "uiJourney": {
+    "associations": [
+      "brf-gjutformen-12",
+      "brf-sjoutsikten-7",
+      "brf-gjutformen-12"
+    ],
+    "backup": {
+      "count": 1,
+      "first": "28 juli 2026 15:31 18 kB · brfv2-backup-20260728-133111-10ea.zip Återställ  "
+    },
+    "cleanup": {
+      "closed": true,
+      "port": 60223
+    },
+    "compactWindow": {
+      "layout": {
+        "devicePixelRatio": 1,
+        "horizontalOverflow": false,
+        "innerHeight": 700,
+        "innerWidth": 1000,
+        "verticalScrollable": true
+      },
+      "rect": {
+        "height": 700,
+        "width": 1000,
+        "x": 26,
+        "y": 23
+      }
+    },
+    "firstRun": {
+      "association": "Brf Gjutformen 12",
+      "dataDir": "<isolated-xdg-home>/xdg-data/se.brfdokumentai.desktop/data",
+      "embedding": {
+        "provider": "model2vec:potion-multilingual-128M"
+      },
+      "ocr": {
+        "available": true,
+        "language": "swe"
+      },
+      "owner": "styrelsen@acceptans.example",
+      "singleAssociationRendersStaticName": "Brf Gjutformen 12"
+    },
+    "ingestion": {
+      "document": "Stadgar Brf Gjutformen 12.pdf",
+      "seconds": 0.3
+    },
+    "keyboard": {
+      "chatSubmit": "Enter",
+      "mode": "WebKit DOM events",
+      "nativeWaylandAutomation": "blocked by this KWin/WebKit automation environment",
+      "nativeWebDriverElementValue": "unsupported by WebKitWebDriver for WRY"
+    },
+    "modelRuntime": {
+      "baseUrl": "http://127.0.0.1:8000/v1",
+      "label": "agenntserver",
+      "model": "gemma4:e12b",
+      "provider": "selfhosted",
+      "ready": true
+    },
+    "origin": "http://127.0.0.1:60223",
+    "pdfZoom": {
+      "after": "110%",
+      "before": "100%"
+    },
+    "platform": {
+      "desktop": "KDE",
+      "devicePixelRatio": 1,
+      "sessionType": "wayland",
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/60.5 Safari/605.1.15"
+    },
+    "refusal": {
+      "citations": 0,
+      "question": "Vilka öppettider har föreningens planetarium?",
+      "text": "OTILLRÄCKLIGT UNDERLAG\nInformation om föreningens planetarium och dess öppettider saknas i de tillhandahållna utdragen."
+    },
+    "screenshots": [
+      "docs/evidence/xs47-desktop-setup.png",
+      "docs/evidence/xs47-desktop-documents.png",
+      "docs/evidence/xs47-desktop-answer-highlight.png",
+      "docs/evidence/xs47-desktop-refusal.png",
+      "docs/evidence/xs47-desktop-settings.png"
+    ],
+    "security": {
+      "cookie": {
+        "httpOnly": true,
+        "namePrefix": "brf_desktop_",
+        "path": "/api/",
+        "sameSite": "Lax",
+        "webdriverEnumerated": 0
+      },
+      "csp": "default-src 'none'; base-uri 'self'; connect-src 'self'; font-src 'self'; form-action 'self'; frame-ancestors 'none'; img-src 'self' data: blob:; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; worker-src 'self' blob:",
+      "exactHostStatus": 200,
+      "foreignHostStatus": 403,
+      "foreignOriginRequest": {
+        "reached": false,
+        "reason": "blocked",
+        "url": "http://127.0.0.1:8000/v1/models",
+        "violation": {
+          "blockedURI": "http://127.0.0.1:8000/v1/models",
+          "directive": "connect-src"
+        }
+      },
+      "globalTauri": {
+        "global": "undefined",
+        "internals": "object"
+      },
+      "remoteIpcSetTitle": {
+        "allowed": false,
+        "result": "Command plugin:window|set_title not allowed by ACL"
+      },
+      "runtimeErrors": []
+    },
+    "supportedAnswer": {
+      "answer": "Styrelsen har sitt säte i Göteborgs kommun.\n[1]\n\"Styrelsen har sitt säte i Göteborgs kommun.\"\n— Stadgar Brf Gjutformen 12.pdf s.1",
+      "citations": [
+        {
+          "quote": "\"Styrelsen har sitt säte i Göteborgs kommun.\"",
+          "source": "— Stadgar Brf Gjutformen 12.pdf s.1"
+        }
+      ],
+      "highlight": {
+        "page": "Sida 1 av 3",
+        "rect": {
+          "height": 13.734375,
+          "width": 101.140625,
+          "x": 600.046875,
+          "y": 313.34375
+        }
+      },
+      "provenance": "Gemma 4 12B · Self-hosted",
+      "question": "Var har styrelsen sitt säte?"
+    }
+  }
+}
