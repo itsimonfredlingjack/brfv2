@@ -10,6 +10,7 @@ föreningens dokument ska avvisas i stället för att gissas.
 - [Pilotdrift med Gemma 4 12B](docs/DEPLOY-SELFHOSTED-LLM.md)
 - [Drift- och förvaltningsplan](docs/DRIFT-FORVALTNINGSPLAN.md)
 - [Erfarenhetsåterföring](docs/ERFARENHETSATERFORING.md)
+- [Slutrapport](docs/SLUTRAPPORT.md)
 
 ## Ett repo, en produkt
 
