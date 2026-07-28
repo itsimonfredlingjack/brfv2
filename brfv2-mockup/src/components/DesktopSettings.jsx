@@ -134,6 +134,11 @@ function DesktopSettings({ state, onClose, onStateChanged, onMembershipsChanged 
   };
 
   const runtime = state?.modelRuntime || {};
+  // Changing the model service is an installation-level decision, so the form
+  // is read-only for everyone else. The address stays visible: it is the
+  // provenance shown next to every generated answer.
+  const isInstallationAdmin = state?.installationAdmin === true;
+  const modelLocked = savingModel || !isInstallationAdmin;
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
@@ -162,6 +167,22 @@ function DesktopSettings({ state, onClose, onStateChanged, onMembershipsChanged 
               adressen tom kan AI-chatten inte generera svar — inget annat
               försök görs mot någon extern leverantör.
             </p>
+            <p className="ds-hint">
+              Tillåtna adresser: <code>localhost</code> och <code>127.0.0.0/8</code>
+              {' '}(http eller https), eller en självhostad tjänst på eget nät —
+              {' '}<code>10.0.0.0/8</code>, <code>172.16.0.0/12</code>,
+              {' '}<code>192.168.0.0/16</code>, <code>fc00::/7</code> — och då bara
+              över https. Domännamn och publika adresser avvisas.
+            </p>
+            {!isInstallationAdmin && (
+              <div className="ds-banner warn" role="note">
+                <AlertCircle size={15} />
+                <span>
+                  Modelltjänsten ändras bara av installationsadministratören —
+                  kontot som konfigurerade den här datorn.
+                </span>
+              </div>
+            )}
             <div className="ds-grid">
               <label className="ds-field ds-span">
                 <span>Adress</span>
@@ -170,12 +191,12 @@ function DesktopSettings({ state, onClose, onStateChanged, onMembershipsChanged 
                   placeholder="http://127.0.0.1:8000/v1"
                   value={baseUrl}
                   onChange={(e) => setBaseUrl(e.target.value)}
-                  disabled={savingModel}
+                  disabled={modelLocked}
                 />
               </label>
               <label className="ds-field">
                 <span>Modell</span>
-                <input value={model} onChange={(e) => setModel(e.target.value)} disabled={savingModel} />
+                <input value={model} onChange={(e) => setModel(e.target.value)} disabled={modelLocked} />
               </label>
               <label className="ds-field">
                 <span>Etikett</span>
@@ -183,7 +204,7 @@ function DesktopSettings({ state, onClose, onStateChanged, onMembershipsChanged 
                   placeholder="agenntserver"
                   value={label}
                   onChange={(e) => setLabel(e.target.value)}
-                  disabled={savingModel}
+                  disabled={modelLocked}
                 />
               </label>
               <label className="ds-field ds-span">
@@ -193,7 +214,7 @@ function DesktopSettings({ state, onClose, onStateChanged, onMembershipsChanged 
                   placeholder={runtime.hasApiKey ? '•••••••• (sparad)' : 'Ingen token'}
                   value={apiKey}
                   onChange={(e) => { setApiKey(e.target.value); setApiKeyTouched(true); }}
-                  disabled={savingModel}
+                  disabled={modelLocked}
                 />
                 <small>Sparas bara på den här datorn och visas aldrig igen.</small>
               </label>
@@ -213,7 +234,7 @@ function DesktopSettings({ state, onClose, onStateChanged, onMembershipsChanged 
               <span className={`ds-state ${runtime.ready ? 'ok' : 'warn'}`}>
                 {runtime.ready ? 'Konfigurerad' : 'Ingen modelltjänst konfigurerad'}
               </span>
-              <button type="button" className="ds-primary" onClick={saveModelRuntime} disabled={savingModel}>
+              <button type="button" className="ds-primary" onClick={saveModelRuntime} disabled={modelLocked}>
                 {savingModel ? (<><Loader2 size={15} className="spin" /> Sparar…</>) : 'Spara och testa'}
               </button>
             </div>

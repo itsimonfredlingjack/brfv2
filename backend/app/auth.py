@@ -3,8 +3,13 @@
 Passwords: stdlib scrypt with a per-user salt, constant-time comparison.
 Sessions: opaque 256-bit tokens; only their SHA-256 lands in the database, so
 a DB leak leaks no usable tokens. Tokens travel as an HttpOnly cookie or an
-Authorization: Bearer header. Roles are exactly 'member' and 'admin' — no
-SSO, no org hierarchies, no permission matrices (SPEC-PILOT §3).
+Authorization: Bearer header. Membership roles are exactly 'member' and
+'admin' — no SSO, no org hierarchies, no permission matrices (SPEC-PILOT §3).
+
+Separate from membership, an account may hold *installation-administrator*
+authority. That is not a role inside a BRF: it governs settings that belong to
+the installed machine rather than to any one association, and the desktop
+adapter is what grants and requires it.
 
 Framework-free by design: FastAPI glue lives in main.py.
 """
@@ -84,6 +89,10 @@ class AuthStore:
                   created_at TEXT NOT NULL,
                   expires_at TEXT NOT NULL
                 );
+                CREATE TABLE IF NOT EXISTS installation_admins (
+                  user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+                  granted_at TEXT NOT NULL
+                );
                 """
             )
 
@@ -153,6 +162,68 @@ class AuthStore:
         with self._conn() as conn:
             row = conn.execute("SELECT id, email, name FROM users WHERE email = ?", (email,)).fetchone()
         return dict(row) if row else None
+
+    # ---------- installation administrators ----------
+    #
+    # A membership role answers "what may this account do inside one BRF".
+    # It deliberately does not answer "what may this account change about the
+    # installation itself" — the model service every association's documents
+    # are sent to is one setting for the whole machine, so it needs an
+    # authority that is not handed out with an ordinary account.  This is that
+    # authority: granted once, at first-run provisioning, to the account that
+    # set the installation up.
+
+    def grant_installation_admin(self, user_id: str) -> None:
+        if self.get_user(user_id) is None:
+            raise AuthError("Okänt konto.")
+        with self._conn() as conn:
+            conn.execute(
+                "INSERT OR IGNORE INTO installation_admins (user_id, granted_at) VALUES (?,?)",
+                (user_id, _now().isoformat()),
+            )
+
+    def revoke_installation_admin(self, user_id: str) -> bool:
+        with self._conn() as conn:
+            cur = conn.execute("DELETE FROM installation_admins WHERE user_id = ?", (user_id,))
+        return cur.rowcount > 0
+
+    def is_installation_admin(self, user_id: str) -> bool:
+        with self._conn() as conn:
+            row = conn.execute(
+                "SELECT 1 FROM installation_admins WHERE user_id = ?", (user_id,)
+            ).fetchone()
+        return row is not None
+
+    def list_installation_admins(self) -> list[str]:
+        with self._conn() as conn:
+            rows = conn.execute(
+                "SELECT user_id FROM installation_admins ORDER BY granted_at, user_id"
+            ).fetchall()
+        return [r["user_id"] for r in rows]
+
+    def backfill_installation_admin(self) -> str | None:
+        """Adopt an installation provisioned before this authority existed.
+
+        Without it, restoring a backup taken by an older build would leave a
+        machine where *nobody* can change the model service.  The account that
+        was created first is the one that ran first-run provisioning, so it is
+        the one that already held this authority in practice.  Returns the
+        adopted user id, or ``None`` when nothing had to be done.
+        """
+
+        with self._conn() as conn:
+            if conn.execute("SELECT 1 FROM installation_admins LIMIT 1").fetchone():
+                return None
+            row = conn.execute(
+                "SELECT id FROM users ORDER BY created_at, id LIMIT 1"
+            ).fetchone()
+            if row is None:
+                return None
+            conn.execute(
+                "INSERT INTO installation_admins (user_id, granted_at) VALUES (?,?)",
+                (row["id"], _now().isoformat()),
+            )
+        return row["id"]
 
     # ---------- tenants & memberships ----------
 

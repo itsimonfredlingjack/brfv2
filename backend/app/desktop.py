@@ -15,7 +15,9 @@ of it:
 * first-run provisioning (owner account + first BRF) so a normal user never
   needs a terminal, and no demo credentials ship with the product;
 * explicit, user-visible model-runtime configuration instead of ambient
-  environment variables;
+  environment variables — changeable only with installation-administrator
+  authority, and only to an endpoint the policy in :mod:`app.model_endpoint`
+  allows;
 * durable local backup/restore of the whole application data directory.
 
 Run from ``backend/`` with::
@@ -50,6 +52,12 @@ from pydantic import BaseModel, Field
 
 from .auth import BRF_ID_RE, AuthError, AuthStore
 from .main import create_app
+from .model_endpoint import (
+    EndpointRejected,
+    classify_endpoint,
+    policy_document,
+    require_allowed_endpoint,
+)
 from .registry import TenantRegistry
 
 logger = logging.getLogger("brf.desktop")
@@ -121,6 +129,11 @@ class ModelRuntimeConfig(BaseModel):
     Empty ``baseUrl`` is a first-class state: the app then runs with no
     generation provider at all and says so, rather than silently falling back
     to an ambient hosted API or a scripted stand-in.
+
+    A non-empty ``baseUrl`` must satisfy :mod:`app.model_endpoint`.  That check
+    lives in the type rather than in the route handler, so no path — the HTTP
+    API, a hand-edited configuration file, or a restored backup — can put an
+    address into effect that the policy would refuse.
     """
 
     baseUrl: str = ""
@@ -131,8 +144,8 @@ class ModelRuntimeConfig(BaseModel):
 
     def normalized(self) -> "ModelRuntimeConfig":
         base = self.baseUrl.strip().rstrip("/")
-        if base and not re.fullmatch(r"https?://[^\s/][^\s]*", base):
-            raise ValueError("Modelltjänstens adress måste vara en http- eller https-URL.")
+        if base:
+            require_allowed_endpoint(base)
         timeout = self.timeoutS if 1.0 <= self.timeoutS <= 3600.0 else 300.0
         return ModelRuntimeConfig(
             baseUrl=base,
@@ -142,9 +155,13 @@ class ModelRuntimeConfig(BaseModel):
             timeoutS=timeout,
         )
 
+    def endpoint_decision(self) -> dict:
+        return classify_endpoint(self.baseUrl).as_dict()
+
     def public(self) -> dict:
         """Everything the UI may see.  The bearer token never leaves the host
         process — the UI only learns whether one is stored."""
+        decision = classify_endpoint(self.baseUrl)
         return {
             "baseUrl": self.baseUrl,
             "model": self.model,
@@ -152,6 +169,7 @@ class ModelRuntimeConfig(BaseModel):
             "timeoutS": self.timeoutS,
             "hasApiKey": bool(self.apiKey),
             "configured": bool(self.baseUrl),
+            "deploymentClass": decision.deployment_class,
         }
 
 
@@ -176,10 +194,25 @@ def load_config(data_root: Path) -> DesktopConfig:
         logger.error("Kunde inte läsa %s (%s) — använder tom konfiguration.", path, exc)
         return DesktopConfig()
     try:
-        return DesktopConfig.model_validate(raw)
+        config = DesktopConfig.model_validate(raw)
     except Exception as exc:
         logger.error("Ogiltig desktopkonfiguration i %s (%s) — använder tom.", path, exc)
         return DesktopConfig()
+    # The file is writable by the OS user, so what it says is a proposal, not a
+    # decision.  An endpoint the policy refuses is dropped here rather than
+    # trusted because it was already on disk — the installation then starts
+    # with no generation provider and says so.
+    try:
+        config.llm.normalized()
+    except EndpointRejected as exc:
+        logger.error(
+            "Modelltjänstens adress i %s är inte tillåten (%s: %s) — startar utan modelltjänst.",
+            path,
+            exc.code,
+            exc.message,
+        )
+        return DesktopConfig(llm=ModelRuntimeConfig())
+    return config
 
 
 def save_config(data_root: Path, config: DesktopConfig) -> None:
@@ -204,9 +237,17 @@ def apply_model_runtime(config: ModelRuntimeConfig) -> None:
     the machine, provider auto-detection can never select them here.  Without a
     configured base URL the provider becomes ``none`` and every answer attempt
     fails visibly instead of silently reaching a third party.
+
+    The endpoint policy is re-checked here, at the last point before the
+    address becomes process state.  Everything upstream already checks it; this
+    is the check that makes "no disallowed destination is ever exported to the
+    HTTP client" true by construction rather than by review.
     """
 
     from . import llm
+
+    if config.baseUrl:
+        require_allowed_endpoint(config.baseUrl)
 
     os.environ["BRF_LLM"] = "selfhosted"
     os.environ["BRF_LLM_BASE_URL"] = config.baseUrl
@@ -568,6 +609,12 @@ def create_desktop_app(
     apply_model_runtime(config.llm)
 
     auth = AuthStore(root / "auth.db")
+    # Installations provisioned before this authority existed — including one
+    # that arrives through a restored backup — must not end up with nobody who
+    # can change the model service.
+    adopted = auth.backfill_installation_admin()
+    if adopted:
+        logger.info("Installationsadministratör adopterad för befintlig installation: %s", adopted)
     registry = TenantRegistry(root, auth)
     if seed_demo and not auth.list_tenants():
         # Test/acceptance-only bootstrap.  The shipped application never passes
@@ -612,6 +659,25 @@ def create_desktop_app(
         user = auth.resolve_session(token)
         if user is None:
             raise HTTPException(status_code=401, detail="Inloggning krävs.")
+        return user
+
+    def installation_admin(user: dict = Depends(current_user)) -> dict:
+        """Authority over settings that belong to the installation itself.
+
+        An ordinary application account — a member, or even an admin of every
+        association on the machine — cannot repoint the model service that all
+        of their documents are sent to.  That is a decision about the installed
+        machine, and it is held by whoever provisioned it.
+        """
+
+        if not auth.is_installation_admin(user["id"]):
+            raise HTTPException(
+                status_code=403,
+                detail=(
+                    "Ändringar av modelltjänsten kräver installationsadministratör — "
+                    "det kontot som konfigurerade den här installationen."
+                ),
+            )
         return user
 
     def _issue_session(user_id: str, response: Response) -> dict:
@@ -661,7 +727,8 @@ def create_desktop_app(
         # address; everyone else only learns whether generation is available at
         # all, so an unauthenticated caller never reads a private network
         # address out of the installation.
-        signed_in = auth.resolve_session(request.cookies.get(cookie_name, "")) is not None
+        session_user = auth.resolve_session(request.cookies.get(cookie_name, ""))
+        signed_in = session_user is not None
         runtime = app.state.desktop_config.llm
         return {
             "schema": STATE_SCHEMA,
@@ -680,6 +747,12 @@ def create_desktop_app(
                 "provider": provider.name,
                 "ready": provider.name not in ("none", "fake"),
             },
+            # What the UI must know to tell the truth about who may change the
+            # model service, and which addresses would be accepted if they did.
+            "installationAdmin": bool(
+                session_user and auth.is_installation_admin(session_user["id"])
+            ),
+            "modelEndpointPolicy": policy_document(),
             "lastRestore": read_last_restore(staging),
             "restartSupported": request_restart is not None,
         }
@@ -705,6 +778,11 @@ def create_desktop_app(
             user_id = auth.create_user(email, req.password, req.name.strip() or email.split("@")[0])
             brf_id = _create_tenant(registry, brf_name)
             auth.add_membership(user_id, brf_id, "admin")
+            # The account that provisions the machine is the installation
+            # administrator.  There is no other way to obtain that authority in
+            # the shipped product, and this route is permanently shut once any
+            # association exists.
+            auth.grant_installation_admin(user_id)
         except (AuthError, ValueError) as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         logger.info("Installation konfigurerad: förening %s", brf_id)
@@ -724,10 +802,19 @@ def create_desktop_app(
 
     @app.get("/api/desktop/model-runtime", include_in_schema=False)
     def get_model_runtime(user: dict = Depends(current_user)) -> dict:
+        # Readable by any signed-in account: the configured runtime is the
+        # provenance shown next to every generated answer.  Changing it is the
+        # privileged operation, not seeing it.
         return app.state.desktop_config.llm.public()
 
+    @app.get("/api/desktop/model-endpoint-policy", include_in_schema=False)
+    def get_model_endpoint_policy() -> dict:
+        return policy_document()
+
     @app.put("/api/desktop/model-runtime", include_in_schema=False)
-    def put_model_runtime(req: RuntimeConfigRequest, user: dict = Depends(current_user)) -> dict:
+    def put_model_runtime(
+        req: RuntimeConfigRequest, user: dict = Depends(installation_admin)
+    ) -> dict:
         current = app.state.desktop_config.llm
         try:
             updated = ModelRuntimeConfig(
@@ -738,16 +825,31 @@ def create_desktop_app(
                 label=req.label,
                 timeoutS=req.timeoutS,
             ).normalized()
+        except EndpointRejected as exc:
+            raise HTTPException(
+                status_code=422,
+                detail=exc.message,
+                headers={"X-Model-Endpoint-Rejection": exc.code},
+            ) from exc
         except ValueError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         config = DesktopConfig(llm=updated)
         save_config(root, config)
         app.state.desktop_config = config
         apply_model_runtime(updated)
+        logger.info(
+            "Modelltjänsten ändrad av installationsadministratör %s till %s (%s).",
+            user["id"],
+            updated.baseUrl or "(ingen)",
+            updated.endpoint_decision()["deploymentClass"] or "unconfigured",
+        )
         return updated.public()
 
     @app.post("/api/desktop/model-runtime/test", include_in_schema=False)
-    def test_model_runtime(user: dict = Depends(current_user)) -> dict:
+    def test_model_runtime(user: dict = Depends(installation_admin)) -> dict:
+        # A probe is an outbound connection made on request.  It goes only to
+        # the already-approved address, and only for the account that is
+        # allowed to choose that address in the first place.
         return probe_model_runtime(app.state.desktop_config.llm)
 
     @app.get("/api/desktop/backups", include_in_schema=False)

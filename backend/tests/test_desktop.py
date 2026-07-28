@@ -10,6 +10,8 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app import llm as llm_mod
+from app.auth import AuthStore
+from app.model_endpoint import EndpointRejected, policy_document
 from app.desktop import (
     BACKUP_MANIFEST,
     BACKUP_SCHEMA,
@@ -372,6 +374,169 @@ def test_model_runtime_rejects_a_non_http_address(tmp_path):
 
 
 # ---------------------------------------------------------------------------
+# The self-hosted boundary: who may repoint the model service, and where to
+# ---------------------------------------------------------------------------
+
+
+def _ordinary_user(tmp_path: Path, client: TestClient) -> str:
+    """A second, non-privileged account on the same installation.
+
+    Admin of the association — the strongest authority an ordinary account can
+    hold — so a rejection below is about installation authority and not about
+    membership.  Created directly in the store because the shipped product has
+    no route that mints a second installation administrator, which is the
+    point.
+    """
+
+    store = AuthStore(tmp_path / "data" / "auth.db")
+    user_id = store.create_user("kassor@brf.example", "ett-annat-lösenord", "Karin Kassör")
+    for membership in store.list_tenants():
+        store.add_membership(user_id, membership["brf_id"], "admin")
+    response = client.post(
+        "/api/auth/login",
+        json={"email": "kassor@brf.example", "password": "ett-annat-lösenord"},
+    )
+    assert response.status_code == 200, response.text
+    return user_id
+
+
+def test_the_setup_owner_is_the_installation_administrator(tmp_path):
+    with _provisioned(tmp_path) as client:
+        owner_state = client.get("/api/desktop/state").json()
+        store = AuthStore(tmp_path / "data" / "auth.db")
+        owner = store.get_user_by_email(OWNER["email"])
+        ordinary = _ordinary_user(tmp_path, client)
+        ordinary_state = client.get("/api/desktop/state").json()
+
+    assert owner_state["installationAdmin"] is True
+    assert ordinary_state["installationAdmin"] is False
+    assert store.list_installation_admins() == [owner["id"]]
+    assert store.is_installation_admin(ordinary) is False
+    # Association admin, and still not an installation administrator.
+    assert {m["role"] for m in store.memberships_for(ordinary)} == {"admin"}
+
+
+def test_changing_the_model_service_requires_installation_authority(tmp_path):
+    """An ordinary account cannot repoint where the documents are sent."""
+
+    with _provisioned(tmp_path) as client:
+        client.put(
+            "/api/desktop/model-runtime",
+            json={"baseUrl": "http://127.0.0.1:8000/v1", "model": "gemma4:e12b"},
+        )
+        _ordinary_user(tmp_path, client)
+        readable = client.get("/api/desktop/model-runtime")
+        repoint = client.put(
+            "/api/desktop/model-runtime",
+            json={"baseUrl": "https://192.168.13.13:8000/v1", "model": "gemma4:e12b"},
+        )
+        probe = client.post("/api/desktop/model-runtime/test")
+        after = client.get("/api/desktop/state").json()
+
+    # Provenance stays readable — every answer is labelled with it.
+    assert readable.status_code == 200
+    assert repoint.status_code == 403
+    assert "installationsadministratör" in repoint.json()["detail"]
+    assert probe.status_code == 403
+    # Neither the process nor the file on disk moved.
+    assert after["modelRuntime"]["baseUrl"] == "http://127.0.0.1:8000/v1"
+    assert os.environ["BRF_LLM_BASE_URL"] == "http://127.0.0.1:8000/v1"
+    on_disk = json.loads((tmp_path / "data" / "desktop-config.json").read_text(encoding="utf-8"))
+    assert on_disk["llm"]["baseUrl"] == "http://127.0.0.1:8000/v1"
+
+
+@pytest.mark.parametrize(
+    "url,code",
+    [
+        ("https://api.openai.com/v1", "hostname_not_allowed"),
+        ("https://8.8.8.8/v1", "address_not_self_hosted"),
+        ("http://192.168.1.50:8000/v1", "plaintext_off_host"),
+        ("http://169.254.169.254/latest/meta-data", "link_local_address"),
+    ],
+)
+def test_the_installed_api_refuses_endpoints_outside_the_policy(tmp_path, url, code):
+    with _provisioned(tmp_path) as client:
+        response = client.put("/api/desktop/model-runtime", json={"baseUrl": url})
+        state = client.get("/api/desktop/state").json()
+
+    assert response.status_code == 422, response.text
+    assert response.headers["x-model-endpoint-rejection"] == code
+    assert state["modelRuntime"]["configured"] is False
+    assert state["modelRuntime"]["provider"] == "none"
+
+
+def test_the_policy_the_ui_is_served_is_the_policy_that_is_enforced(tmp_path):
+    with _provisioned(tmp_path) as client:
+        served = client.get("/api/desktop/model-endpoint-policy").json()
+        in_state = client.get("/api/desktop/state").json()["modelEndpointPolicy"]
+
+    assert served == in_state == policy_document()
+    assert served["authority"] == "installation-administrator"
+
+
+def test_a_hand_edited_config_file_cannot_smuggle_in_a_foreign_endpoint(tmp_path):
+    """The configuration file is writable by the OS user, so it is a proposal.
+
+    A process running as the same user could rewrite it; the installation must
+    then start with no generation provider rather than start sending documents
+    to whatever the file now names.
+    """
+
+    with _provisioned(tmp_path) as client:
+        client.put(
+            "/api/desktop/model-runtime",
+            json={"baseUrl": "http://127.0.0.1:8000/v1", "apiKey": "hemlig-token"},
+        )
+
+    config_path = tmp_path / "data" / "desktop-config.json"
+    tampered = json.loads(config_path.read_text(encoding="utf-8"))
+    tampered["llm"]["baseUrl"] = "https://api.openai.com/v1"
+    config_path.write_text(json.dumps(tampered), encoding="utf-8")
+
+    with _client(tmp_path) as client:
+        state = client.get("/api/desktop/state").json()
+
+    assert state["modelRuntime"]["configured"] is False
+    assert state["modelRuntime"]["provider"] == "none"
+    assert state["modelRuntime"]["ready"] is False
+    assert os.environ["BRF_LLM_BASE_URL"] == ""
+    # The rejected file's bearer token is not carried over either.
+    assert os.environ.get("BRF_LLM_API_KEY") is None
+
+
+def test_apply_model_runtime_refuses_a_disallowed_endpoint():
+    """The last gate before the address becomes process state."""
+
+    with pytest.raises(EndpointRejected) as raised:
+        apply_model_runtime(ModelRuntimeConfig(baseUrl="https://api.openai.com/v1"))
+    assert raised.value.code == "hostname_not_allowed"
+    assert os.environ.get("BRF_LLM_BASE_URL") in (None, "")
+
+
+def test_an_installation_from_before_this_authority_existed_is_adopted(tmp_path):
+    """A backup restored from an older build must not strand the machine."""
+
+    with _provisioned(tmp_path) as client:
+        owner = AuthStore(tmp_path / "data" / "auth.db").get_user_by_email(OWNER["email"])
+
+    store = AuthStore(tmp_path / "data" / "auth.db")
+    assert store.revoke_installation_admin(owner["id"]) is True
+    assert store.list_installation_admins() == []
+
+    with _client(tmp_path) as client:
+        client.post("/api/auth/login", json={"email": OWNER["email"], "password": OWNER["password"]})
+        state = client.get("/api/desktop/state").json()
+        allowed = client.put(
+            "/api/desktop/model-runtime",
+            json={"baseUrl": "http://127.0.0.1:8000/v1", "model": "gemma4:e12b"},
+        )
+
+    assert state["installationAdmin"] is True
+    assert allowed.status_code == 200, allowed.text
+    assert AuthStore(tmp_path / "data" / "auth.db").list_installation_admins() == [owner["id"]]
+
+
+# ---------------------------------------------------------------------------
 # Backup and restore
 # ---------------------------------------------------------------------------
 
@@ -485,24 +650,26 @@ def test_state_never_leaks_the_model_bearer_token(tmp_path):
 
 
 def test_unauthenticated_state_does_not_reveal_the_model_address(tmp_path):
-    # 192.0.2.0/24 is RFC 5737 TEST-NET-1: a non-loopback address that is
-    # unmistakably not a real host. The deployment contract forbids writing the
-    # model service's actual private address into tracked files.
+    # 192.168.255.254 is an allowed private-network literal that is
+    # unmistakably not the pilot's host. The deployment contract forbids
+    # writing the model service's actual private address into tracked files.
+    address = "https://192.168.255.254:8000/v1"
     with _provisioned(tmp_path) as client:
         client.put(
             "/api/desktop/model-runtime",
-            json={"baseUrl": "http://192.0.2.10:8000/v1", "model": "gemma4:e12b"},
+            json={"baseUrl": address, "model": "gemma4:e12b"},
         )
         signed_in = client.get("/api/desktop/state").json()
         client.cookies.clear()
         anonymous = client.get("/api/desktop/state").json()
 
-    assert signed_in["modelRuntime"]["baseUrl"] == "http://192.0.2.10:8000/v1"
+    assert signed_in["modelRuntime"]["baseUrl"] == address
+    assert signed_in["modelRuntime"]["deploymentClass"] == "private-network"
     # A caller without a session still learns whether answers can be generated,
     # but not which private host would generate them.
     assert "baseUrl" not in anonymous["modelRuntime"]
     assert anonymous["modelRuntime"] == {"configured": True, "provider": "selfhosted", "ready": True}
-    assert "192.0.2.10" not in json.dumps(anonymous)
+    assert "192.168.255.254" not in json.dumps(anonymous)
 
 
 def test_state_does_not_load_the_embedder_just_to_name_it(tmp_path, monkeypatch):

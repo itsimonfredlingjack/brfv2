@@ -67,6 +67,13 @@ const DESKTOP_STATE = {
     configured: true,
     provider: 'selfhosted',
     ready: true,
+    deploymentClass: 'loopback',
+  },
+  installationAdmin: true,
+  modelEndpointPolicy: {
+    policy: 'brfv2-model-endpoint-policy/v1',
+    default: 'deny',
+    authority: 'installation-administrator',
   },
   lastRestore: null,
   restartSupported: true,
@@ -472,6 +479,44 @@ describe('desktop delivery', () => {
     }));
     expect(await within(dialog).findByText(/Modelltjänsten svarar/)).toBeInTheDocument();
     await waitFor(() => expect(api.health).toHaveBeenCalled());
+  });
+
+  it('lets an ordinary account read the model service but never change it', async () => {
+    api.me.mockResolvedValue({ user: ANNA_USER, memberships: ANNA_MEMBERSHIPS });
+    desktopApi.state.mockResolvedValue({ ...DESKTOP_STATE, installationAdmin: false });
+    desktopApi.listBackups.mockResolvedValue({ backupDir: '/tmp/backups', backups: [] });
+    render(<App />);
+
+    await screen.findByText('Anna Andersson');
+    fireEvent.click(screen.getByText('Anna Andersson'));
+    fireEvent.click(screen.getByText('Appinställningar'));
+    const dialog = await screen.findByRole('dialog', { name: 'Appinställningar' });
+
+    // The address stays readable — it is the provenance behind every answer.
+    expect(within(dialog).getByDisplayValue('http://127.0.0.1:8000/v1')).toBeDisabled();
+    expect(within(dialog).getByRole('button', { name: 'Spara och testa' })).toBeDisabled();
+    expect(
+      within(dialog).getByText(/ändras bara av installationsadministratören/i),
+    ).toBeInTheDocument();
+    expect(desktopApi.putModelRuntime).not.toHaveBeenCalled();
+  });
+
+  it('states which endpoints the installation will accept at all', async () => {
+    api.me.mockResolvedValue({ user: ANNA_USER, memberships: ANNA_MEMBERSHIPS });
+    desktopApi.state.mockResolvedValue(DESKTOP_STATE);
+    desktopApi.listBackups.mockResolvedValue({ backupDir: '/tmp/backups', backups: [] });
+    render(<App />);
+
+    await screen.findByText('Anna Andersson');
+    fireEvent.click(screen.getByText('Anna Andersson'));
+    fireEvent.click(screen.getByText('Appinställningar'));
+    const dialog = await screen.findByRole('dialog', { name: 'Appinställningar' });
+
+    expect(within(dialog).getByText('127.0.0.0/8')).toBeInTheDocument();
+    expect(within(dialog).getByText('192.168.0.0/16')).toBeInTheDocument();
+    expect(
+      within(dialog).getByText(/Domännamn och publika adresser avvisas/i),
+    ).toBeInTheDocument();
   });
 
   it('stages a restore instead of swapping the data underneath a running backend', async () => {

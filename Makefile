@@ -1,5 +1,5 @@
 .PHONY: setup backend backend-pilot require-pilot-llm frontend frontend-legacy desktop-runtime desktop-build desktop-run desktop-check desktop-package desktop-install desktop-uninstall desktop-acceptance test test-isolation eval eval-b eval-fast eval-sweep \
-        eval-selfhosted eval-b-selfhosted desktop-acceptance-installed demo demo-stop demo-status demo-reset build build-legacy model-readiness model-readiness-selftest \
+        eval-selfhosted eval-b-selfhosted desktop-acceptance-installed desktop-verify-reproducible demo demo-stop demo-status demo-reset build build-legacy model-readiness model-readiness-selftest \
         model-readiness-selftest-negative
 
 # Generation default for dev + eval is the standard hosted provider (logged-in `claude`
@@ -61,12 +61,18 @@ desktop-uninstall:  ## Avinstallera paketet (användardata under ~/.local/share 
 
 desktop-acceptance: desktop-build  ## Full journey-acceptans mot riktig Tauri/WebKitGTK + självhostad modell
 	backend/.venv/bin/python backend/scripts/desktop_acceptance.py \
-	  --output docs/evidence/xs47-desktop-acceptance.json
+	  --output docs/evidence/xs49-desktop-acceptance.json
 
-desktop-acceptance-installed:  ## Samma acceptans mot det INSTALLERADE paketet
+desktop-acceptance-installed:  ## Samma acceptans mot det INSTALLERADE paketet (ange RPM=... för artefaktidentitet)
 	backend/.venv/bin/python backend/scripts/desktop_acceptance.py \
 	  --application /usr/bin/brfv2-desktop \
-	  --output docs/evidence/xs47-desktop-acceptance-installed.json
+	  $(if $(RPM),--artifact $(RPM),) \
+	  --output docs/evidence/xs49-desktop-acceptance-installed.json
+
+desktop-verify-reproducible:  ## Bygg RPM:en från två rena checkouter och jämför byte för byte
+	@ops/verify-reproducible.sh \
+	  $${REPRO_A:-/home/$$USER/brfv2-repro/a} \
+	  $${REPRO_B:-/home/$$USER/brfv2-repro/b-longer-checkout-path}
 
 test:               ## Backend-tester (offline, deterministiska)
 	cd backend && uv run pytest -q

@@ -1,0 +1,439 @@
+{
+  "application": "<checkout>/src-tauri/target/release/brfv2-desktop",
+  "applicationIdentity": {
+    "bytes": 3429248,
+    "path": "<checkout>/src-tauri/target/release/brfv2-desktop",
+    "sha256": "d3cb3c02ab82e201af88f8e4f8769bf2f8bb37d0d1a41076edc1e660eb529b08"
+  },
+  "bundle": {
+    "deliveryTree": "9c996ddfab4e0cb6d3ccb2bad01bc3739cd9e3dbd53f7b170bf559d6f78105ef",
+    "embedder": {
+      "bundled": true,
+      "modelId": "minishlab/potion-multilingual-128M",
+      "revision": "73908c3438cf03b6a01bcb9611d62b23d0726f08"
+    },
+    "excludedPackages": [
+      "anthropic",
+      "hf_xet",
+      "pip",
+      "setuptools"
+    ],
+    "pins": {
+      "embedder": {
+        "files": {
+          "config.json": {
+            "bytes": 271,
+            "sha256": "595e4cab2093732efd5dbe084fd5c1826b5eea693b73b4c1fd971672867d2e54"
+          },
+          "model.safetensors": {
+            "bytes": 512361560,
+            "sha256": "14b5eb39cb4ce5666da8ad1f3dc6be4346e9b2d601c073302fa0a31bf7943397"
+          },
+          "modules.json": {
+            "bytes": 278,
+            "sha256": "a68dcbed0429dcdd5bfdca92b0b03cc30d09122c0a3fcf4758787d4b244e45b2"
+          },
+          "special_tokens_map.json": {
+            "bytes": 167,
+            "sha256": "d05497f1da52c5e09554c0cd874037a083e1dc1b9cfd48034d1c717f1afc07a7"
+          },
+          "tokenizer.json": {
+            "bytes": 18616131,
+            "sha256": "19f1909063da3cfe3bd83a782381f040dccea475f4816de11116444a73e1b6a1"
+          },
+          "tokenizer_config.json": {
+            "bytes": 1898,
+            "sha256": "bd0e8c3a56aeac5078a6445e6b04425cd17b41bcc8d382ae925b5dbca287f8eb"
+          },
+          "vocab.txt": {
+            "bytes": 6355735,
+            "sha256": "090a91cb4ec3969e9dd3bf9f0fb4bd88006a857737f4144c64acc03ed13db53b"
+          }
+        },
+        "repoId": "minishlab/potion-multilingual-128M",
+        "revision": "73908c3438cf03b6a01bcb9611d62b23d0726f08",
+        "urlTemplate": "https://huggingface.co/{repoId}/resolve/{revision}/{file}",
+        "verifiedBy": "ops/fetch_pinned.py embedder (SHA-256 + storlek per fil)"
+      },
+      "python": {
+        "archive": "cpython-3.12.13+20260718-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz",
+        "build": "20260718",
+        "distribution": "astral-sh/python-build-standalone",
+        "implementation": "cpython",
+        "sha256": "5854aa6ec71cad00334d5065633c210b2e7feb40956767a59a91791cadcf0b79",
+        "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20260718/cpython-3.12.13%2B20260718-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz",
+        "verifiedBy": "ops/fetch_pinned.py python (SHA-256 före uppackning)",
+        "version": "3.12.13"
+      },
+      "schema": "brfv2-desktop-pins/v1",
+      "uv": {
+        "sha256": "aab924fd522efd06f1c5f3b93a243864fc453132c94b2dc49f1371b528a4b967",
+        "url": "https://github.com/astral-sh/uv/releases/download/0.11.32/uv-x86_64-unknown-linux-gnu.tar.gz",
+        "verifiedBy": "ops/fetch_pinned.py uv (SHA-256 + uv --version)",
+        "version": "0.11.32"
+      }
+    },
+    "python": {
+      "sha256": "5854aa6ec71cad00334d5065633c210b2e7feb40956767a59a91791cadcf0b79",
+      "source": "astral-sh/python-build-standalone@20260718",
+      "version": "3.12.13"
+    },
+    "requirements": {
+      "sha256": "f0b3b31384ca27c35d38d1d88961469b65249fca8bb430dce4807185f3281f9f",
+      "source": "backend/uv.lock (uv export --frozen --no-dev)",
+      "verifiedBy": "uv pip install --require-hashes"
+    },
+    "schema": "brfv2-desktop-bundle/v2",
+    "sizes": {
+      "backendBytes": 481617,
+      "modelsBytes": 537336040,
+      "pythonBytes": 362584228
+    },
+    "sourceDateEpoch": 1785196800
+  },
+  "durationSeconds": 122.0,
+  "failureSurfaces": {
+    "backendDied": {
+      "killedPid": 339281,
+      "logCaptured": true,
+      "logPath": "<isolated-xdg-home>/xdg-data/se.brfdokumentai.desktop/logs/backend.log",
+      "orphans": 0,
+      "portClosed": true,
+      "shellStayedUpToExplain": true
+    },
+    "startupFailure": {
+      "detail": "Hittade varken den installerade körmiljön eller en utvecklingscheckout. Installera om applikationen, eller kör den från en checkout där `make desktop-build` har körts.",
+      "detailState": "applied",
+      "headline": "BRF Dokument-AI kunde inte starta",
+      "screenshot": "docs/evidence/xs49-desktop-startup-failure.png",
+      "trigger": "shell without a resolvable runtime (broken installation)",
+      "windowUrl": "tauri://localhost"
+    }
+  },
+  "isolatedXdgHome": "<isolated-xdg-home>",
+  "lifecycle": {
+    "abruptTermination": {
+      "closed": true,
+      "orphans": 0,
+      "port": 48465
+    },
+    "backupRestore": {
+      "afterRestore": [
+        "brf-gjutformen-12",
+        "brf-sjoutsikten-7"
+      ],
+      "backup": {
+        "bytes": 19143,
+        "files": 8,
+        "name": "brfv2-backup-20260728-203351-c0aa.zip",
+        "tenants": [
+          {
+            "brf_id": "brf-gjutformen-12",
+            "documents": 1,
+            "name": "Brf Gjutformen 12"
+          },
+          {
+            "brf_id": "brf-sjoutsikten-7",
+            "documents": 0,
+            "name": "Brf Sjöutsikten 7"
+          }
+        ]
+      },
+      "beforeRestore": [
+        "brf-efter-kopian",
+        "brf-gjutformen-12",
+        "brf-sjoutsikten-7"
+      ],
+      "documents": [
+        "Stadgar Brf Gjutformen 12.pdf"
+      ],
+      "lastRestore": {
+        "appVersion": "0.2.0",
+        "at": "2026-07-28T20:33:52.441350+00:00",
+        "createdAt": "2026-07-28T20:33:51.033228+00:00",
+        "status": "restored"
+      },
+      "restartExitCode": 86,
+      "restartRespawnsUnderANewPid": true
+    },
+    "cleanShutdown": {
+      "closed": true,
+      "orphans": 0,
+      "port": 55015
+    },
+    "modelRuntimeUnavailable": {
+      "answer": "Tekniskt fel vid svarsgenerering — försök igen om en stund.",
+      "citations": 0,
+      "probe": {
+        "detail": "Kunde inte nå modelltjänsten: ConnectError: [Errno 111] Connection refused",
+        "latencyMs": 10,
+        "ok": false
+      },
+      "refusalReason": "provider_error"
+    },
+    "retainedState": {
+      "documents": [
+        "Stadgar Brf Gjutformen 12.pdf"
+      ],
+      "memberships": [
+        "brf-gjutformen-12",
+        "brf-sjoutsikten-7"
+      ],
+      "modelRuntime": {
+        "display_name": "Gemma 4 12B",
+        "model": "gemma4:e12b",
+        "provider": "selfhosted",
+        "ready": true,
+        "runtime_label": "agenntserver"
+      },
+      "provisioned": true
+    }
+  },
+  "modelService": {
+    "baseUrl": "http://127.0.0.1:8000/v1",
+    "served": [
+      "/root/.cache/huggingface/hub/models--unsloth--gemma-4-12b-it-GGUF/snapshots/d997c805aafe035a8024f961c6e1afd6b30d79a5/gemma-4-12b-it-UD-Q4_K_XL.gguf"
+    ]
+  },
+  "paths": {
+    "isolatedXdgHomePattern": "/tmp/brfv2-acceptance-*",
+    "note": "Machine-local locations are replaced by stable placeholders: this checkout reads as <checkout>, the throwaway XDG home this run used reads as <isolated-xdg-home>, and the operator's home directory reads as ~. Nothing else is rewritten."
+  },
+  "schema": "brfv2-desktop-acceptance/v2",
+  "securityBoundary": {
+    "approvedEndpoint": {
+      "deploymentClass": "loopback",
+      "probeOk": true,
+      "served": [
+        "/root/.cache/huggingface/hub/models--unsloth--gemma-4-12b-it-GGUF/snapshots/d997c805aafe035a8024f961c6e1afd6b30d79a5/gemma-4-12b-it-UD-Q4_K_XL.gguf"
+      ]
+    },
+    "ordinaryAccount": {
+      "associationRole": "admin",
+      "configurationUnchanged": true,
+      "email": "kassor@acceptans.example",
+      "installationAdmin": false,
+      "probeModelRuntime": 403,
+      "putDetail": "Ändringar av modelltjänsten kräver installationsadministratör — det kontot som konfigurerade den här installationen.",
+      "putModelRuntime": 403,
+      "readBaseUrl": "http://127.0.0.1:8000/v1",
+      "readModelRuntime": 200,
+      "userId": "979e1069b302"
+    },
+    "policy": {
+      "authority": "installation-administrator",
+      "default": "deny",
+      "deploymentClasses": [
+        {
+          "hosts": [
+            "localhost",
+            "127.0.0.0/8",
+            "::1/128"
+          ],
+          "name": "loopback",
+          "schemes": [
+            "http",
+            "https"
+          ],
+          "why": "Trafiken lämnar aldrig datorn; täcker pilotens SSH-forward."
+        },
+        {
+          "hosts": [
+            "10.0.0.0/8",
+            "172.16.0.0/12",
+            "192.168.0.0/16",
+            "fc00::/7"
+          ],
+          "name": "private-network",
+          "schemes": [
+            "https"
+          ],
+          "why": "Självhostad tjänst på eget nät; klartext får inte korsa ett nätsegment."
+        }
+      ],
+      "id": "brfv2-model-endpoint-policy/v1",
+      "servedMatchesState": true
+    },
+    "recoveredAfterTamper": {
+      "provider": "selfhosted",
+      "ready": true
+    },
+    "rejectedEndpoints": [
+      {
+        "code": "hostname_not_allowed",
+        "detail": "Endast localhost eller en IP-adress i det egna nätet är tillåten — ett domännamn pekar dit namnuppslagningen råkar peka.",
+        "status": 422,
+        "url": "https://api.openai.com/v1"
+      },
+      {
+        "code": "hostname_not_allowed",
+        "detail": "Endast localhost eller en IP-adress i det egna nätet är tillåten — ett domännamn pekar dit namnuppslagningen råkar peka.",
+        "status": 422,
+        "url": "https://api.anthropic.com/v1"
+      },
+      {
+        "code": "address_not_self_hosted",
+        "detail": "Adressen ligger utanför den här datorn och det egna privata nätet. Produkten får bara nå en självhostad modelltjänst.",
+        "status": 422,
+        "url": "https://8.8.8.8/v1"
+      },
+      {
+        "code": "plaintext_off_host",
+        "detail": "En modelltjänst utanför den här datorn kräver https — frågan och ordagranna utdrag ur föreningens dokument får inte gå i klartext över nätet.",
+        "status": 422,
+        "url": "http://192.168.13.13:8000/v1"
+      },
+      {
+        "code": "link_local_address",
+        "detail": "Länklokala adresser är inte tillåtna.",
+        "status": 422,
+        "url": "http://169.254.169.254/latest/meta-data"
+      },
+      {
+        "code": "scheme_not_allowed",
+        "detail": "Modelltjänstens adress måste börja med http:// eller https://.",
+        "status": 422,
+        "url": "file:///etc/passwd"
+      }
+    ],
+    "tamperedConfigFile": {
+      "configured": false,
+      "provider": "none",
+      "ready": false,
+      "wrote": "https://api.openai.com/v1"
+    }
+  },
+  "uiJourney": {
+    "associations": [
+      "brf-gjutformen-12",
+      "brf-sjoutsikten-7",
+      "brf-gjutformen-12"
+    ],
+    "backup": {
+      "count": 1,
+      "first": "28 juli 2026 22:33 19 kB · brfv2-backup-20260728-203347-09f4.zip Återställ  "
+    },
+    "cleanup": {
+      "closed": true,
+      "port": 35577
+    },
+    "compactWindow": {
+      "layout": {
+        "devicePixelRatio": 1,
+        "horizontalOverflow": false,
+        "innerHeight": 700,
+        "innerWidth": 1000,
+        "verticalScrollable": true
+      },
+      "rect": {
+        "height": 700,
+        "width": 1000,
+        "x": 26,
+        "y": 23
+      }
+    },
+    "firstRun": {
+      "association": "Brf Gjutformen 12",
+      "dataDir": "<isolated-xdg-home>/xdg-data/se.brfdokumentai.desktop/data",
+      "embedding": {
+        "provider": "model2vec:potion-multilingual-128M"
+      },
+      "ocr": {
+        "available": true,
+        "language": "swe"
+      },
+      "owner": "styrelsen@acceptans.example",
+      "singleAssociationRendersStaticName": "Brf Gjutformen 12"
+    },
+    "ingestion": {
+      "document": "Stadgar Brf Gjutformen 12.pdf",
+      "seconds": 0.3
+    },
+    "keyboard": {
+      "chatSubmit": "Enter",
+      "mode": "WebKit DOM events",
+      "nativeWaylandAutomation": "blocked by this KWin/WebKit automation environment",
+      "nativeWebDriverElementValue": "unsupported by WebKitWebDriver for WRY"
+    },
+    "modelRuntime": {
+      "baseUrl": "http://127.0.0.1:8000/v1",
+      "label": "agenntserver",
+      "model": "gemma4:e12b",
+      "provider": "selfhosted",
+      "ready": true
+    },
+    "origin": "http://127.0.0.1:35577",
+    "pdfZoom": {
+      "after": "110%",
+      "before": "100%"
+    },
+    "platform": {
+      "desktop": "KDE",
+      "devicePixelRatio": 1,
+      "sessionType": "wayland",
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/60.5 Safari/605.1.15"
+    },
+    "refusal": {
+      "citations": 0,
+      "question": "Vilka öppettider har föreningens planetarium?",
+      "text": "OTILLRÄCKLIGT UNDERLAG\nInformation om föreningens planetarium och dess öppettider saknas i de tillhandahållna utdragen."
+    },
+    "screenshots": [
+      "docs/evidence/xs49-desktop-setup.png",
+      "docs/evidence/xs49-desktop-documents.png",
+      "docs/evidence/xs49-desktop-answer-highlight.png",
+      "docs/evidence/xs49-desktop-refusal.png",
+      "docs/evidence/xs49-desktop-settings.png"
+    ],
+    "security": {
+      "cookie": {
+        "httpOnly": true,
+        "namePrefix": "brf_desktop_",
+        "path": "/api/",
+        "sameSite": "Lax",
+        "webdriverEnumerated": 0
+      },
+      "csp": "default-src 'none'; base-uri 'self'; connect-src 'self'; font-src 'self'; form-action 'self'; frame-ancestors 'none'; img-src 'self' data: blob:; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; worker-src 'self' blob:",
+      "exactHostStatus": 200,
+      "foreignHostStatus": 403,
+      "foreignOriginRequest": {
+        "reached": false,
+        "reason": "blocked",
+        "url": "http://127.0.0.1:8000/v1/models",
+        "violation": {
+          "blockedURI": "http://127.0.0.1:8000/v1/models",
+          "directive": "connect-src"
+        }
+      },
+      "globalTauri": {
+        "global": "undefined",
+        "internals": "object"
+      },
+      "remoteIpcSetTitle": {
+        "allowed": false,
+        "result": "Command plugin:window|set_title not allowed by ACL"
+      },
+      "runtimeErrors": []
+    },
+    "supportedAnswer": {
+      "answer": "Styrelsen har sitt säte i Göteborgs kommun.\n[1]\n\"Styrelsen har sitt säte i Göteborgs kommun.\"\n— Stadgar Brf Gjutformen 12.pdf s.1",
+      "citations": [
+        {
+          "quote": "\"Styrelsen har sitt säte i Göteborgs kommun.\"",
+          "source": "— Stadgar Brf Gjutformen 12.pdf s.1"
+        }
+      ],
+      "highlight": {
+        "page": "Sida 1 av 3",
+        "rect": {
+          "height": 13.734375,
+          "width": 101.140625,
+          "x": 600.046875,
+          "y": 313.34375
+        }
+      },
+      "provenance": "Gemma 4 12B · Self-hosted",
+      "question": "Var har styrelsen sitt säte?"
+    }
+  }
+}

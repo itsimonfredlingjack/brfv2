@@ -15,6 +15,10 @@ Two phases, both against the real product:
 * **Lifecycle** — launches the same binary directly and exercises what a
   WebDriver session cannot survive: clean shutdown, restart with retained
   state, restore-after-restart, and abrupt termination cleanup.
+* **Security boundary** — who may repoint the model service and where it may
+  be pointed: an ordinary account is refused, every destination outside the
+  self-hosted policy is refused with its stable reason, and a hand-edited
+  configuration file does not put a foreign endpoint into effect.
 
 Both phases run against an isolated ``XDG_DATA_HOME``/``XDG_CONFIG_HOME``, so
 acceptance never touches the operator's real installation, and every run starts
@@ -31,6 +35,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+import hashlib
 import json
 import os
 import shutil
@@ -479,7 +484,7 @@ def ui_journey(
             # development cache it is a download.
             timeout=240,
         )
-        driver.screenshot(evidence_dir / "xs47-desktop-setup.png")
+        driver.screenshot(evidence_dir / "xs49-desktop-setup.png")
 
         # -- model runtime -------------------------------------------------
         driver.type_labelled("Modelltjänstens adress", model_base_url)
@@ -619,7 +624,7 @@ def ui_journey(
             timeout=180,
         )
         ingestion_seconds = round(time.monotonic() - ingestion_started, 1)
-        driver.screenshot(evidence_dir / "xs47-desktop-documents.png")
+        driver.screenshot(evidence_dir / "xs49-desktop-documents.png")
 
         # -- supported question --------------------------------------------
         driver.click_text("AI-chatt")
@@ -674,7 +679,7 @@ def ui_journey(
             ),
             timeout=90,
         )
-        driver.screenshot(evidence_dir / "xs47-desktop-answer-highlight.png")
+        driver.screenshot(evidence_dir / "xs49-desktop-answer-highlight.png")
 
         zoom_before = driver.execute(
             "return [...document.querySelectorAll('.pdf-actions span')].map(e => e.textContent)"
@@ -715,7 +720,7 @@ def ui_journey(
         )
         if refusal["citations"] != 0:
             raise AcceptanceError(f"Refusal unexpectedly carried citations: {refusal!r}")
-        driver.screenshot(evidence_dir / "xs47-desktop-refusal.png")
+        driver.screenshot(evidence_dir / "xs49-desktop-refusal.png")
 
         # -- backup from the UI ----------------------------------------------
         driver.click(".user-profile")
@@ -736,7 +741,7 @@ def ui_journey(
             ),
             timeout=120,
         )
-        driver.screenshot(evidence_dir / "xs47-desktop-settings.png")
+        driver.screenshot(evidence_dir / "xs49-desktop-settings.png")
         driver.click_text("Stäng")
 
         # -- layout, security -------------------------------------------------
@@ -902,11 +907,11 @@ def ui_journey(
                 "nativeWaylandAutomation": "blocked by this KWin/WebKit automation environment",
             },
             "screenshots": [
-                "docs/evidence/xs47-desktop-setup.png",
-                "docs/evidence/xs47-desktop-documents.png",
-                "docs/evidence/xs47-desktop-answer-highlight.png",
-                "docs/evidence/xs47-desktop-refusal.png",
-                "docs/evidence/xs47-desktop-settings.png",
+                "docs/evidence/xs49-desktop-setup.png",
+                "docs/evidence/xs49-desktop-documents.png",
+                "docs/evidence/xs49-desktop-answer-highlight.png",
+                "docs/evidence/xs49-desktop-refusal.png",
+                "docs/evidence/xs49-desktop-settings.png",
             ],
         }
     finally:
@@ -1349,14 +1354,14 @@ def failure_surfaces(
         # captured image shows the injected cause rather than the static
         # placeholder the document ships with.
         time.sleep(1.5)
-        driver.screenshot(evidence_dir / "xs47-desktop-startup-failure.png")
+        driver.screenshot(evidence_dir / "xs49-desktop-startup-failure.png")
         results["startupFailure"] = {
             "trigger": "shell without a resolvable runtime (broken installation)",
             "headline": failure_page["headline"],
             "detail": failure_page["detail"],
             "detailState": failure_page["detailState"],
             "windowUrl": failure_page["href"],
-            "screenshot": "docs/evidence/xs47-desktop-startup-failure.png",
+            "screenshot": "docs/evidence/xs49-desktop-startup-failure.png",
         }
     finally:
         try:
@@ -1424,6 +1429,299 @@ def backend_death(application: Path, environment: dict[str, str]) -> dict:
 # ---------------------------------------------------------------------------
 
 
+# ---------------------------------------------------------------------------
+# Model-runtime security boundary, against the installed application
+# ---------------------------------------------------------------------------
+
+
+def _login(origin: str, email: str, password: str) -> str:
+    status, _, headers = http(
+        "POST", f"{origin}/api/auth/login", body={"email": email, "password": password}
+    )
+    if status != 200:
+        raise AcceptanceError(f"Login failed for {email}: HTTP {status}")
+    parsed = SimpleCookie()
+    parsed.load(headers.get("set-cookie", ""))
+    name = next(key for key in parsed if key.startswith("brf_desktop_"))
+    return f"{name}={parsed[name].value}"
+
+
+def runtime_python(application: Path) -> tuple[Path, Path]:
+    """The interpreter and backend package the *application under test* ships.
+
+    Used to create a second account with the product's own store code rather
+    than the checkout's, so what the boundary is tested against is the shipped
+    implementation.
+    """
+
+    resolved = application.resolve()
+    candidates = [
+        Path("/usr/lib/BRF Dokument-AI/runtime"),
+        resolved.parent.parent.parent / "runtime",
+    ]
+    for runtime in candidates:
+        interpreter = runtime / "python/bin/python3"
+        if interpreter.is_file():
+            return interpreter, runtime / "backend"
+    raise AcceptanceError(f"No packaged runtime found next to {application}")
+
+
+ORDINARY_EMAIL = "kassor@acceptans.example"
+ORDINARY_PASSWORD = "vanligt-losenord-2026"
+
+# Each of these is a destination the product must refuse, and the stable code
+# it must refuse it with. A hosted third-party API is the one that matters most
+# — it is what "self-hosted only" meant when it admitted every https URL.
+REJECTED_ENDPOINTS = [
+    ("https://api.openai.com/v1", "hostname_not_allowed"),
+    ("https://api.anthropic.com/v1", "hostname_not_allowed"),
+    ("https://8.8.8.8/v1", "address_not_self_hosted"),
+    ("http://192.168.13.13:8000/v1", "plaintext_off_host"),
+    ("http://169.254.169.254/latest/meta-data", "link_local_address"),
+    ("file:///etc/passwd", "scheme_not_allowed"),
+]
+
+
+def security_boundary(application: Path, environment: dict[str, str], model_base_url: str) -> dict:
+    """Who may repoint the model service, and where it may be pointed.
+
+    Runs against the installed application over its real loopback API, on the
+    installation phase A provisioned.
+    """
+
+    # app_data_dir() is the application directory; the store itself lives one
+    # level down, beside backups/ and restore-staging/.
+    data_root = app_data_dir(environment) / "data"
+    results: dict[str, Any] = {}
+
+    # A second, ordinary account, created with the shipped store code. The
+    # product has no route that mints a second installation administrator, so
+    # this is what any additional account on a real installation looks like —
+    # and it is deliberately admin of every association, the strongest
+    # authority an ordinary account can hold.
+    interpreter, backend_dir = runtime_python(application)
+    created = subprocess.run(
+        [
+            str(interpreter), "-E", "-s", "-B", "-c",
+            "import sys;"
+            "sys.path.insert(0, sys.argv[1]);"
+            "from app.auth import AuthStore;"
+            "s = AuthStore(sys.argv[2]);"
+            "u = s.get_user_by_email(sys.argv[3]) or {'id': s.create_user(sys.argv[3], sys.argv[4], 'Karin Kassör')};"
+            "[s.add_membership(u['id'], t['brf_id'], 'admin') for t in s.list_tenants()];"
+            "print(u['id'], s.is_installation_admin(u['id']))",
+            str(backend_dir), str(data_root / "auth.db"), ORDINARY_EMAIL, ORDINARY_PASSWORD,
+        ],
+        capture_output=True,
+        text=True,
+    )
+    if created.returncode != 0:
+        raise AcceptanceError(f"Could not create the ordinary account: {created.stderr.strip()}")
+    ordinary_id, ordinary_is_admin = created.stdout.split()
+    if ordinary_is_admin != "False":
+        raise AcceptanceError("A newly created ordinary account was already an installation admin.")
+
+    app = LaunchedApp(application, environment)
+    origin = app.start()
+    try:
+        owner = _login(origin, OWNER_EMAIL, OWNER_PASSWORD)
+        _, owner_state, _ = http("GET", f"{origin}/api/desktop/state", cookie=owner)
+        if owner_state.get("installationAdmin") is not True:
+            raise AcceptanceError(f"The provisioning owner is not an installation admin: {owner_state!r}")
+        configured = owner_state["modelRuntime"]["baseUrl"]
+        if configured != model_base_url:
+            raise AcceptanceError(
+                f"Phase A's model configuration is not in force: {configured!r} != {model_base_url!r}"
+            )
+        policy = owner_state["modelEndpointPolicy"]
+        _, served_policy, _ = http("GET", f"{origin}/api/desktop/model-endpoint-policy")
+
+        # -- an ordinary account may read the provenance, never change it ----
+        ordinary = _login(origin, ORDINARY_EMAIL, ORDINARY_PASSWORD)
+        _, ordinary_state, _ = http("GET", f"{origin}/api/desktop/state", cookie=ordinary)
+        read_status, read_body, _ = http(
+            "GET", f"{origin}/api/desktop/model-runtime", cookie=ordinary
+        )
+        repoint_status, repoint_body, _ = http(
+            "PUT",
+            f"{origin}/api/desktop/model-runtime",
+            body={"baseUrl": "http://127.0.0.1:9/v1", "model": "gemma4:e12b"},
+            cookie=ordinary,
+        )
+        probe_status, _, _ = http(
+            "POST", f"{origin}/api/desktop/model-runtime/test", body=None, cookie=ordinary
+        )
+        _, after_ordinary, _ = http("GET", f"{origin}/api/desktop/state", cookie=owner)
+
+        if repoint_status != 403 or probe_status != 403:
+            raise AcceptanceError(
+                f"An ordinary account could reach the global model configuration: "
+                f"PUT {repoint_status}, probe {probe_status}"
+            )
+        if after_ordinary["modelRuntime"]["baseUrl"] != model_base_url:
+            raise AcceptanceError("A rejected request still moved the model configuration.")
+
+        results["ordinaryAccount"] = {
+            "email": ORDINARY_EMAIL,
+            "userId": ordinary_id,
+            "associationRole": "admin",
+            "installationAdmin": ordinary_state.get("installationAdmin"),
+            "readModelRuntime": read_status,
+            "readBaseUrl": read_body.get("baseUrl") if isinstance(read_body, dict) else None,
+            "putModelRuntime": repoint_status,
+            "putDetail": repoint_body.get("detail") if isinstance(repoint_body, dict) else None,
+            "probeModelRuntime": probe_status,
+            "configurationUnchanged": True,
+        }
+
+        # -- the endpoint policy, exercised through the installed API --------
+        rejections = []
+        for url, expected in REJECTED_ENDPOINTS:
+            status, body, headers = http(
+                "PUT",
+                f"{origin}/api/desktop/model-runtime",
+                body={"baseUrl": url, "model": "gemma4:e12b"},
+                cookie=owner,
+            )
+            code = headers.get("x-model-endpoint-rejection")
+            if status != 422 or code != expected:
+                raise AcceptanceError(
+                    f"{url} was not refused as {expected}: HTTP {status}, code {code!r}"
+                )
+            rejections.append(
+                {
+                    "url": url,
+                    "status": status,
+                    "code": code,
+                    "detail": body.get("detail") if isinstance(body, dict) else None,
+                }
+            )
+        results["rejectedEndpoints"] = rejections
+
+        _, still, _ = http("GET", f"{origin}/api/desktop/state", cookie=owner)
+        if still["modelRuntime"]["baseUrl"] != model_base_url:
+            raise AcceptanceError("A refused endpoint still changed the configuration.")
+
+        # The installation administrator's own probe is a real outbound request
+        # to the real service — the boundary permits exactly this one.
+        _, probe, _ = http(
+            "POST", f"{origin}/api/desktop/model-runtime/test", body=None, cookie=owner, timeout=60
+        )
+        if not probe.get("ok"):
+            raise AcceptanceError(f"The approved endpoint stopped answering: {probe!r}")
+
+        results["policy"] = {
+            "servedMatchesState": served_policy == policy,
+            "id": policy["policy"],
+            "default": policy["default"],
+            "authority": policy["authority"],
+            "deploymentClasses": policy["deploymentClasses"],
+        }
+        results["approvedEndpoint"] = {
+            "deploymentClass": still["modelRuntime"]["deploymentClass"],
+            "probeOk": probe["ok"],
+            "served": probe.get("served", [])[:3],
+        }
+    finally:
+        app.stop()
+
+    # -- a hand-edited configuration file is a proposal, not a decision ------
+    config_path = data_root / "desktop-config.json"
+    original = config_path.read_text(encoding="utf-8")
+    tampered = json.loads(original)
+    tampered["llm"]["baseUrl"] = "https://api.openai.com/v1"
+    config_path.write_text(json.dumps(tampered), encoding="utf-8")
+
+    tampered_app = LaunchedApp(application, environment)
+    tampered_origin = tampered_app.start()
+    try:
+        _, tampered_state, _ = http("GET", f"{tampered_origin}/api/desktop/state")
+        _, tampered_health, _ = http("GET", f"{tampered_origin}/api/health")
+    finally:
+        tampered_app.stop()
+
+    if tampered_state["modelRuntime"].get("configured") is not False:
+        raise AcceptanceError(
+            f"A tampered configuration file was accepted: {tampered_state['modelRuntime']!r}"
+        )
+    results["tamperedConfigFile"] = {
+        "wrote": "https://api.openai.com/v1",
+        "configured": tampered_state["modelRuntime"]["configured"],
+        "provider": tampered_health["llm"]["provider"],
+        "ready": tampered_health["llm"]["ready"],
+    }
+
+    # Put the installation back the way the operator left it.
+    config_path.write_text(original, encoding="utf-8")
+    restored_app = LaunchedApp(application, environment)
+    restored_origin = restored_app.start()
+    try:
+        _, restored_health, _ = http("GET", f"{restored_origin}/api/health")
+    finally:
+        restored_app.stop()
+    if not restored_health["llm"]["ready"]:
+        raise AcceptanceError("The installation did not recover its approved model runtime.")
+    results["recoveredAfterTamper"] = {
+        "provider": restored_health["llm"]["provider"],
+        "ready": restored_health["llm"]["ready"],
+    }
+    return results
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as handle:
+        for block in iter(lambda: handle.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def application_identity(application: Path, artifact: Path | None) -> dict:
+    """Exactly which bytes were accepted.
+
+    A reviewer must be able to take this record, rebuild the RPM from the
+    delivery sources, and land on the same SHA-256 — otherwise "the installed
+    acceptance ran against the final artifact" is a claim rather than a fact.
+    """
+
+    identity: dict[str, Any] = {
+        "path": str(application),
+        "sha256": sha256_file(application),
+        "bytes": application.stat().st_size,
+    }
+
+    owner = subprocess.run(
+        ["rpm", "-qf", "--qf", "%{NAME}-%{VERSION}-%{RELEASE}.%{ARCH}", str(application)],
+        capture_output=True,
+        text=True,
+    )
+    if owner.returncode == 0 and owner.stdout.strip():
+        identity["installedPackage"] = owner.stdout.strip()
+        verify = subprocess.run(
+            ["rpm", "--verify", identity["installedPackage"]], capture_output=True, text=True
+        )
+        # `rpm --verify` prints a line per file that no longer matches what was
+        # packaged; silence means the installed tree is still the artifact.
+        identity["rpmVerify"] = {
+            "exitCode": verify.returncode,
+            "differences": [line for line in verify.stdout.splitlines() if line.strip()],
+        }
+
+    if artifact is not None:
+        if not artifact.is_file():
+            raise AcceptanceError(f"Artifact missing: {artifact}")
+        identity["artifact"] = {
+            "name": artifact.name,
+            "sha256": sha256_file(artifact),
+            "bytes": artifact.stat().st_size,
+        }
+        receipt = artifact.with_suffix(artifact.suffix + ".provenance.json")
+        if receipt.is_file():
+            identity["artifact"]["provenance"] = json.loads(receipt.read_text(encoding="utf-8"))
+
+    return identity
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -1440,8 +1738,15 @@ def main() -> None:
     parser.add_argument("--keep-data", action="store_true", help="Keep the isolated XDG home")
     parser.add_argument("--output", type=Path, default=None)
     parser.add_argument(
+        "--artifact",
+        type=Path,
+        default=None,
+        help="The RPM this application was installed from; its SHA-256 is recorded so the "
+        "evidence names the exact artifact that was accepted.",
+    )
+    parser.add_argument(
         "--phases",
-        default="ui,lifecycle,failure",
+        default="ui,lifecycle,security,failure",
         help="Comma-separated subset to run; the phases build on each other in this order.",
     )
     args = parser.parse_args()
@@ -1473,6 +1778,11 @@ def main() -> None:
             if "lifecycle" in phases
             else "skipped"
         )
+        boundary = (
+            security_boundary(args.application, environment, args.model_base_url)
+            if "security" in phases
+            else "skipped"
+        )
         failures = (
             failure_surfaces(args.application, environment, args.evidence_dir)
             if "failure" in phases
@@ -1495,8 +1805,9 @@ def main() -> None:
         None,
     )
     results = {
-        "schema": "brfv2-desktop-acceptance/v1",
+        "schema": "brfv2-desktop-acceptance/v2",
         "application": str(args.application),
+        "applicationIdentity": application_identity(args.application, args.artifact),
         "isolatedXdgHome": str(root),
         "durationSeconds": round(time.time() - started, 1),
         "modelService": {
@@ -1508,6 +1819,7 @@ def main() -> None:
         },
         "uiJourney": ui,
         "lifecycle": lifecycle,
+        "securityBoundary": boundary,
         "failureSurfaces": failures,
     }
     if bundle_manifest is not None:
@@ -1515,16 +1827,20 @@ def main() -> None:
 
     results["paths"] = {
         "note": (
-            "Run-local scratch locations are replaced by stable placeholders: the "
-            "operator's home directory reads as ~ and the throwaway XDG home this "
-            "run used reads as <isolated-xdg-home>. Nothing else is rewritten."
+            "Machine-local locations are replaced by stable placeholders: this "
+            "checkout reads as <checkout>, the throwaway XDG home this run used "
+            "reads as <isolated-xdg-home>, and the operator's home directory "
+            "reads as ~. Nothing else is rewritten."
         ),
         "isolatedXdgHomePattern": str(Path(tempfile.gettempdir()) / "brfv2-acceptance-*"),
     }
     rendered = json.dumps(results, ensure_ascii=False, indent=2, sort_keys=True)
     # The evidence is committed to a shared repository; a reviewer needs the
-    # shape of these paths, not the build machine's directory layout.
+    # shape of these paths, not the build machine's directory layout. Order
+    # matters: the checkout usually lives under the home directory, so it has to
+    # be redacted before the home directory collapses to `~`.
     rendered = rendered.replace(str(root), "<isolated-xdg-home>")
+    rendered = rendered.replace(str(REPO), "<checkout>")
     rendered = rendered.replace(str(Path.home()), "~")
     if args.output:
         args.output.write_text(rendered + "\n", encoding="utf-8")

@@ -148,13 +148,18 @@ fn find_repo_root() -> Option<PathBuf> {
 }
 
 fn checkout_layout(repo_root: &Path) -> RuntimeLayout {
+    // Prefer the staged bundle's weights when `make desktop-runtime` has run:
+    // they are the pinned revision, verified by SHA-256, and using them makes a
+    // checkout run resolve the embedder exactly the way the installed
+    // application does. Falling back to the developer's ordinary Hugging Face
+    // cache also means falling back to model2vec's hub resolution, which is not
+    // safe to enter from two request threads at once.
+    let staged = repo_root.join("src-tauri/runtime/models/potion-multilingual-128M");
     RuntimeLayout {
         python: repo_root.join("backend/.venv/bin/python"),
         backend_dir: repo_root.join("backend"),
         dist: repo_root.join("brfv2-mockup/dist"),
-        // The checkout uses the developer's ordinary Hugging Face cache; only
-        // the installed application carries its own copy of the weights.
-        model2vec: None,
+        model2vec: staged.is_dir().then_some(staged),
         packaged: false,
     }
 }
@@ -820,6 +825,25 @@ mod tests {
             layout.model2vec,
             Some(runtime.join("models/potion-multilingual-128M"))
         );
+
+        let _ = fs::remove_dir_all(&temp);
+    }
+
+    #[test]
+    fn checkout_layout_uses_the_staged_weights_when_they_exist() {
+        let temp = std::env::temp_dir().join(format!("brfv2-checkout-{}", std::process::id()));
+        let _ = fs::remove_dir_all(&temp);
+        fs::create_dir_all(&temp).unwrap();
+
+        // Before `make desktop-runtime`: nothing to point at, and the backend
+        // resolves the embedder the way a plain development run always has.
+        assert_eq!(checkout_layout(&temp).model2vec, None);
+
+        let staged = temp.join("src-tauri/runtime/models/potion-multilingual-128M");
+        fs::create_dir_all(&staged).unwrap();
+        let layout = checkout_layout(&temp);
+        assert!(!layout.packaged);
+        assert_eq!(layout.model2vec, Some(staged));
 
         let _ = fs::remove_dir_all(&temp);
     }

@@ -159,6 +159,12 @@
   color: #f87171;
 }
 
+.ds-banner.warn {
+  border: 1px solid rgba(245, 179, 66, 0.4);
+  background: rgba(245, 179, 66, 0.08);
+  color: #f5b342;
+}
+
 .ds-actions {
   display: flex;
   align-items: center;

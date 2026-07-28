@@ -103,7 +103,12 @@ function Setup({ state, onProvisioned }) {
                 onChange={(e) => setBaseUrl(e.target.value)}
                 disabled={busy}
               />
-              <small>OpenAI-kompatibel endpoint, till exempel via SSH-forward eller på ditt eget nät.</small>
+              <small>
+                OpenAI-kompatibel endpoint på den här datorn (<code>localhost</code>,
+                {' '}<code>127.0.0.0/8</code> — till exempel en SSH-forward) eller en
+                självhostad tjänst på ditt eget privata nät över https. Domännamn
+                och publika adresser avvisas.
+              </small>
             </label>
             <div className="setup-row">
               <label className="setup-field">

@@ -1,15 +1,40 @@
 # ADR 0001 — Så paketeras Python-körmiljön i Fedora-desktopleveransen
 
-Status: **antagen** (XS-47, 2026-07-28)
+Status: **antagen** (XS-47, 2026-07-28), **reviderad** (XS-49, 2026-07-28)
 Ersätter: hypotesen "PyInstaller `onedir` + Tauri `externalBin`" från XS-46.
 
 ## Beslut
 
-Den installerade applikationen levererar en **flyttad kopia av exakt samma
-uv-hanterade CPython som testsviten kör på**, med **exakt samma hash-låsta
-wheels** som `backend/uv.lock` löser ut. Trädet stegas av
-`ops/build-runtime.sh` till `src-tauri/runtime/` och följer med RPM:en som
-Tauri-**resurser** — inte som `externalBin`.
+Den installerade applikationen levererar **exakt det CPython-bygge som
+`ops/pins.json` pinnar** — samma python-build-standalone-utgåva som uv löser
+ut för tolken testsviten kör på — med **exakt samma hash-låsta wheels** som
+`backend/uv.lock` löser ut. Trädet stegas av `ops/build-runtime.sh` till
+`src-tauri/runtime/` och följer med RPM:en som Tauri-**resurser** — inte som
+`externalBin`.
+
+## Revidering i XS-49: pinnat arkiv i stället för byggmaskinens träd
+
+Första utkastet kopierade tolken **ur uv:s katalog på byggmaskinen**
+(`~/.local/share/uv/python/…`). Det gav rätt version men fel egenskaper:
+
+* **Identiteten var inte kontrollerbar.** "Den tolk uv råkar ha installerat" är
+  inte en identitet någon kan verifiera i efterhand. Det fanns ingen URL, ingen
+  förväntad SHA-256 och inget som skulle ha upptäckt om trädet ändrats.
+* **Trädet är föränderligt.** uv:s katalog samlar `__pycache__` från allt som
+  någonsin kört mot den tolken. Två byggmaskiner — eller samma maskin före och
+  efter ett annat projekt — stegade därför olika bytes.
+
+Nu hämtas i stället det pinnade arkivet av `ops/fetch_pinned.py`, som
+kontrollerar SHA-256 **innan** det packas upp. Cachen är en effektivitetsfråga:
+en cachad fil används bara om dess hash stämmer, annars kastas den och hämtas
+om. Bygget avbryter om den pinnade tolkens `sys.version` inte är identisk med
+`backend/.venv`s — det är det som gör "det som skickas är det som testades" till
+ett faktum i stället för en avsikt.
+
+Samma princip gäller `uv` självt (pinnat arkiv, verifierad hash, verifierad
+`--version`) och embeddervikterna (exakt revision, explicit fillista, SHA-256
+per fil). Se [0003-reproducerbar-rpm.md](0003-reproducerbar-rpm.md) för vad det
+gör med artefaktens bytes.
 
 ## Varför inte PyInstaller
 
@@ -66,6 +91,12 @@ Embeddervikterna (`minishlab/potion-multilingual-128M`, 513 MB) följer däremot
 *med* i stället för att hämtas vid första start. En tyst hämtning från
 huggingface.co vid första körningen vore precis den dolda utgående trafik
 produkten lovar att inte ha.
+
+Vikterna är pinnade till revision `73908c34…` med en explicit fillista och en
+förväntad SHA-256 per fil (`ops/pins.json`). Tidigare hämtades de med
+`snapshot_download()` mot den globala Hugging Face-cachen, vilket betyder "den
+revision som råkar ligga på byggmaskinen" — en identitet som varken kan
+granskas eller reproduceras.
 
 ## Konsekvenser
 

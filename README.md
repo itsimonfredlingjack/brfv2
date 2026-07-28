@@ -159,6 +159,8 @@ make desktop-acceptance # full journey mot riktig Tauri/WebKitGTK + självhostad
 
 - [Användar- och byggguide](docs/DESKTOP-FEDORA.md)
 - [Beslut om Python-körmiljön](docs/adr/0001-desktop-python-runtime.md)
+- [Modellgränsen: vem får peka om, och vart](docs/adr/0002-model-endpoint-boundary.md)
+- [Reproducerbar RPM](docs/adr/0003-reproducerbar-rpm.md)
 - [Arkitekturbeviset som föregick den](docs/evidence/xs46-tauri-fedora.md)
 
 ## Arkitektur

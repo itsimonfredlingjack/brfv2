@@ -1,5 +1,14 @@
 # XS-47 — Distribuerbar skrivbordsleverans för Fedora
 
+> **Ersatt av [XS-49](xs49-desktop-delivery.md).** BP2-granskningen returnerade
+> den här leveransen. Tre saker i dokumentet nedan håller inte: acceptansens
+> JSON-filer var genererade från en **annan commit och en smutsig checkout**
+> (de är därför borttagna, inte omdöpta), RPM:en gick **inte** att reproducera
+> — SHA-256 `b0b1a90a…` gäller ett bygge som inte kan återskapas — och
+> avsnittet "Säkerhetsgräns" beskrev en självhostad gräns som implementationen
+> inte upprätthöll. Texten står kvar som historik över vad XS-47 faktiskt
+> levererade; den gällande leveransen och dess evidens är XS-49.
+
 Datum: 2026-07-28
 Föregås av: [XS-46 — Tauri 2 på Fedora/KDE/Wayland](xs46-tauri-fedora.md) (arkitekturbevis)
 
