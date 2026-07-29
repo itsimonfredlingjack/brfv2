@@ -36,7 +36,9 @@ class TestDemoAccountMemberships:
 
         # /api/auth/me (session-restore path) must agree with the login
         # response — this is what the frontend's mount-time bootstrap calls.
-        me = client.get("/api/auth/me", headers={"Authorization": f"Bearer {body['token']}"})
+        # The login cookie is already in this client's jar — that IS the
+        # session the browser would carry.
+        me = client.get("/api/auth/me")
         assert me.status_code == 200
         assert {m["brf_id"]: m["role"] for m in me.json()["memberships"]} == by_brf
 
@@ -49,12 +51,10 @@ class TestDemoAccountMemberships:
 
     def test_max_admin_role_enforced_on_gjutformen_upload(self, tmp_path):
         client = _seeded_client(tmp_path)
-        body = _login(client, "max@demo.se", "max-demo-2026")
-        h = {"Authorization": f"Bearer {body['token']}"}
+        _login(client, "max@demo.se", "max-demo-2026")
         r = client.post(
             "/api/brf/gjutformen-12/documents",
             files={"file": ("x.pdf", b"%PDF-1.4 not-a-real-pdf", "application/pdf")},
-            headers=h,
         )
         # Admin is authorized (a malformed PDF body fails later in the
         # pipeline, not at the role gate) — 403 would mean the membership
@@ -63,11 +63,9 @@ class TestDemoAccountMemberships:
 
     def test_max_member_role_forbidden_from_sjoutsikten_upload(self, tmp_path):
         client = _seeded_client(tmp_path)
-        body = _login(client, "max@demo.se", "max-demo-2026")
-        h = {"Authorization": f"Bearer {body['token']}"}
+        _login(client, "max@demo.se", "max-demo-2026")
         r = client.post(
             "/api/brf/sjoutsikten-7/documents",
             files={"file": ("x.pdf", b"%PDF-1.4 not-a-real-pdf", "application/pdf")},
-            headers=h,
         )
         assert r.status_code == 403

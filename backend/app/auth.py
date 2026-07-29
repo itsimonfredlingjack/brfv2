@@ -2,8 +2,10 @@
 
 Passwords: stdlib scrypt with a per-user salt, constant-time comparison.
 Sessions: opaque 256-bit tokens; only their SHA-256 lands in the database, so
-a DB leak leaks no usable tokens. Tokens travel as an HttpOnly cookie or an
-Authorization: Bearer header. Roles are exactly 'member' and 'admin' — no
+a DB leak leaks no usable tokens. Tokens travel only as an HttpOnly cookie —
+login does not echo one, and no header is accepted as an alternative, so a
+session cannot be read or replayed by script on the page. Roles are exactly
+'member' and 'admin' — no
 SSO, no org hierarchies, no permission matrices (SPEC-PILOT §3).
 
 Framework-free by design: FastAPI glue lives in main.py.

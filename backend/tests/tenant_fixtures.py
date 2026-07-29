@@ -7,7 +7,7 @@ from __future__ import annotations
 from fastapi.testclient import TestClient
 
 from app.auth import AuthStore
-from app.main import create_app
+from app.main import SESSION_COOKIE, create_app
 from app.registry import TenantRegistry
 
 DEFAULT_PW = "hemligt-losen-123"
@@ -31,9 +31,16 @@ class Harness:
         return uid
 
     def login(self, email: str, password: str = DEFAULT_PW) -> str:
+        """Returns the session token from the Set-Cookie — auth is cookie-only,
+        so the login body no longer carries one."""
         r = self.client.post("/api/auth/login", json={"email": email, "password": password})
         assert r.status_code == 200, r.text
-        return r.json()["token"]
+        session = r.cookies.get(SESSION_COOKIE)
+        assert session, "inloggningen satte ingen sessionskaka"
+        self.client.cookies.clear()
+        return session
 
-    def bearer(self, token: str) -> dict:
-        return {"Authorization": f"Bearer {token}"}
+    def session(self, token: str) -> dict:
+        """Headers carrying one specific session, passed explicitly so that a
+        request without them is genuinely unauthenticated."""
+        return {"Cookie": f"{SESSION_COOKIE}={token}"}

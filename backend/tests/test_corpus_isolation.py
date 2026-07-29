@@ -106,14 +106,14 @@ class TestCustomerCannotReceiveScrapedOrigin:
             r = h.client.post(
                 "/api/brf/brf-cust-http/documents",
                 files={"file": (f"doc{i}.pdf", build_pdf([[("Text.", 72, 100)]]), "application/pdf")},
-                headers=h.bearer(token),
+                headers=h.session(token),
             )
             assert r.status_code == 200, r.text
             assert r.json()["corpus_origin"] == "customer"
 
         store = h.registry.get("brf-cust-http")
         assert {d.corpus_origin for d in store.documents.values()} == {"customer"}
-        listed = h.client.get("/api/brf/brf-cust-http/documents", headers=h.bearer(token)).json()
+        listed = h.client.get("/api/brf/brf-cust-http/documents", headers=h.session(token)).json()
         assert {d["corpus_origin"] for d in listed} == {"customer"}
 
     def test_http_upload_ignores_forged_origin_field(self, tmp_path):
@@ -131,7 +131,7 @@ class TestCustomerCannotReceiveScrapedOrigin:
             "/api/brf/brf-cust-forge/documents",
             files={"file": ("A.pdf", build_pdf([[("Text.", 72, 100)]]), "application/pdf")},
             data={"corpus_origin": "public_scraped"},
-            headers=h.bearer(token),
+            headers=h.session(token),
         )
         assert r.status_code == 200, r.text
         assert r.json()["corpus_origin"] == "customer"

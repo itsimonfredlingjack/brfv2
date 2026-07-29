@@ -97,9 +97,12 @@ def create_app(
     # ---------- auth glue ----------
 
     def _token_from(request: Request) -> str:
-        header = request.headers.get("authorization", "")
-        if header.lower().startswith("bearer "):
-            return header[7:].strip()
+        """The session token, from the httpOnly cookie and nowhere else.
+
+        There is deliberately no Authorization/Bearer path: /api/auth/login
+        does not hand out a token, so accepting one would only widen the auth
+        surface for a credential no legitimate client can obtain.
+        """
         return request.cookies.get(SESSION_COOKIE, "")
 
     def current_user(request: Request) -> dict:
@@ -176,11 +179,13 @@ def create_app(
             max_age=14 * 24 * 3600,
             path="/",
         )
-        return {
-            "user": user,
-            "memberships": auth.memberships_for(user_id),
-            "token": token,  # for programmatic clients (eval, tests); UI uses the cookie
-        }
+        # The session token is returned ONLY as the httpOnly cookie set above.
+        # It used to be echoed here as `token` for programmatic clients, which
+        # put a long-lived credential into a JSON body that any script on the
+        # page — or any logging proxy in between — could read, defeating the
+        # point of making the cookie httpOnly. Nothing outside the test
+        # fixtures consumed it.
+        return {"user": user, "memberships": auth.memberships_for(user_id)}
 
     @app.post("/api/auth/logout")
     def logout(request: Request, response: Response) -> dict:

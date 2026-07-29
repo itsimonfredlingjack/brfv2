@@ -25,7 +25,7 @@ def two_tenant_app(tmp_path):
     from fastapi.testclient import TestClient
 
     from app.auth import AuthStore
-    from app.main import create_app
+    from app.main import SESSION_COOKIE, create_app
     from app.registry import TenantRegistry
     from tests.pdf_fixtures import build_pdf
 
@@ -45,15 +45,22 @@ def two_tenant_app(tmp_path):
     auth.add_membership(admin_b, "brf-b", "admin")
 
     def token(email: str, password: str) -> str:
+        """The session token, read from the Set-Cookie the server issued.
+
+        Login no longer echoes the token in its JSON body (auth is
+        cookie-only), so it is taken from the cookie itself.
+        """
         r = client.post("/api/auth/login", json={"email": email, "password": password})
         assert r.status_code == 200, r.text
-        # Drop the Set-Cookie from the shared jar: tests authenticate via
-        # explicit Bearer headers, so "no header" must mean "no session".
+        session = r.cookies.get(SESSION_COOKIE)
+        assert session, "inloggningen satte ingen sessionskaka"
+        # Drop it from the shared jar: tests pass the session EXPLICITLY per
+        # request, so "no header" must keep meaning "no session".
         client.cookies.clear()
-        return r.json()["token"]
+        return session
 
     def auth_headers(email: str, password: str) -> dict:
-        return {"Authorization": f"Bearer {token(email, password)}"}
+        return {"Cookie": f"{SESSION_COOKIE}={token(email, password)}"}
 
     # Distinguishable content per tenant so leakage is detectable.
     doc_a = build_pdf([[("Föreningen Alfa har en hemlig kod ALFA-XYZZY-111 i sina stadgar.", 72, 100)]])
