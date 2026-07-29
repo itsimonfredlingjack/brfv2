@@ -23,6 +23,12 @@ SESSION_COOKIE = "brf_session"
 MAX_UPLOAD_BYTES = 50 * 1024 * 1024
 RETENTION_SWEEP_S = 24 * 3600
 
+# Rasterized page widths the mobile client may request. A CLOSED allowlist,
+# not a range: an open `w` is an unauthenticated-shaped rasterization DoS
+# (every distinct width is a fresh MuPDF render). These three cover 1x/2x/3x
+# of a phone viewport and nothing else needs to exist.
+PAGE_IMAGE_WIDTHS = (720, 1080, 1440)
+
 
 class LoginRequest(BaseModel):
     email: str
@@ -56,7 +62,15 @@ def create_app(
     app = FastAPI(title="BRF Dokument-AI")
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+        allow_origins=[
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+            # xs_mobilapp's dev server. In production it is served from /m by
+            # this same app, so it is same-origin and needs no entry here;
+            # this exists only so `npm run dev` works without the proxy.
+            "http://localhost:5174",
+            "http://127.0.0.1:5174",
+        ],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
@@ -208,6 +222,73 @@ def create_app(
             raise HTTPException(status_code=404, detail="Okänt dokument.")
         return RawResponse(content=pdf, media_type="application/pdf")
 
+    @app.get("/api/brf/{brf_id}/documents/{doc_id}/page/{page}")
+    def get_page_image(
+        doc_id: str,
+        page: int,
+        w: int = 1080,
+        access: tuple[Store, str] = Depends(tenant_store),
+    ) -> RawResponse:
+        """Rasterize one page for the mobile client.
+
+        The mobile app draws citation rects as plain boxes over this image
+        instead of running pdf.js: `scale = w / page_width_pt`, and the rects
+        are ALREADY top-left-origin PDF points, so there is no y-flip and no
+        viewport matrix on the client. `page.rect` and `get_text("words")`
+        (app/extract.py) share one coordinate space with `get_pixmap`, so a
+        rotated page stays aligned without client-side rotation handling.
+
+        Rendered on demand, never cached to disk: a render is ~5 ms, and a
+        raster cache would be a second place tenant content lives — one that
+        registry.delete()/delete_document() would have to remember to sweep.
+        The client keeps its own tenant-namespaced copy, which logout wipes.
+        """
+        store, _ = access
+        if w not in PAGE_IMAGE_WIDTHS:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Ogiltig bredd. Tillåtna: {', '.join(str(x) for x in PAGE_IMAGE_WIDTHS)}.",
+            )
+        pdf = store.get_pdf_bytes(doc_id)
+        if pdf is None:
+            raise HTTPException(status_code=404, detail="Okänt dokument.")
+
+        import fitz
+
+        doc = fitz.open(stream=pdf, filetype="pdf")
+        try:
+            if page < 1 or page > doc.page_count:
+                raise HTTPException(status_code=404, detail="Sidan finns inte.")
+            pdf_page = doc[page - 1]
+            width_pt = float(pdf_page.rect.width)
+            height_pt = float(pdf_page.rect.height)
+            zoom = w / width_pt
+            pixmap = pdf_page.get_pixmap(matrix=fitz.Matrix(zoom, zoom), alpha=False)
+            # PNG, not JPEG/WebP: PyMuPDF cannot emit WebP at all, and on these
+            # text pages PNG measured smaller than jpg_quality=85 at 1440px
+            # while staying lossless — JPEG ringing around glyphs is the last
+            # thing a document you are holding up as proof should have.
+            body = pixmap.tobytes("png")
+        finally:
+            doc.close()
+
+        return RawResponse(
+            content=body,
+            media_type="image/png",
+            headers={
+                # NO-STORE, deliberately, even though the bytes are immutable.
+                # This is tenant document content. The browser's HTTP cache is
+                # not something logout can clear, so an entry there would be a
+                # second copy of another user's pages surviving on a shared
+                # device — outside the tenant-namespaced client store that the
+                # wipe guarantee is built on. The client caches these itself
+                # (state/localStore.ts), so nothing is re-fetched twice.
+                "Cache-Control": "private, no-store",
+                "X-Page-Width-Pt": f"{width_pt:.2f}",
+                "X-Page-Height-Pt": f"{height_pt:.2f}",
+            },
+        )
+
     @app.get("/api/brf/{brf_id}/documents/{doc_id}/extraction")
     def get_extraction(doc_id: str, access: tuple[Store, str] = Depends(tenant_store)) -> dict:
         store, _ = access
@@ -273,6 +354,83 @@ def create_app(
             registry.delete(t["brf_id"])
         seeded = seed_demo(registry, auth)
         return {"status": "reseeded", **seeded}
+
+    # ---------- mobile app (xs_mobilapp) ----------
+
+    mobile_dist = Path(__file__).resolve().parent.parent.parent / "xs_mobilapp" / "dist"
+
+    # The mobile client is same-origin by design and talks to nothing else.
+    # Stating that as policy makes it enforceable rather than aspirational:
+    # a stray third-party script, pixel or beacon fails closed instead of
+    # quietly shipping document text off the device.
+    #   img-src blob:  — page rasters are rendered from IndexedDB blobs
+    #   style-src 'unsafe-inline' — React style={{...}} attributes
+    MOBILE_SECURITY_HEADERS = {
+        "Content-Security-Policy": "; ".join(
+            [
+                "default-src 'self'",
+                "script-src 'self'",
+                "style-src 'self' 'unsafe-inline'",
+                "img-src 'self' blob: data:",
+                "font-src 'self'",
+                "connect-src 'self'",
+                "manifest-src 'self'",
+                "worker-src 'self'",
+                "object-src 'none'",
+                "base-uri 'none'",
+                "form-action 'self'",
+                "frame-ancestors 'none'",
+            ]
+        ),
+        "X-Content-Type-Options": "nosniff",
+        "Referrer-Policy": "no-referrer",
+        "X-Frame-Options": "DENY",
+    }
+
+    @app.get("/m")
+    def mobile_root() -> RawResponse:
+        return RawResponse(status_code=307, headers={"Location": "/m/"})
+
+    @app.get("/m/{path:path}")
+    def mobile_app(path: str) -> RawResponse:
+        """Serve the built mobile client from the SAME ORIGIN as the API.
+
+        That is what lets it reuse the httpOnly session cookie with no CORS
+        entry and no token in JavaScript. Unknown paths fall back to
+        index.html because the client routes /svar/:id and /dokument/:id
+        itself — a deep link must open the app, not 404.
+        """
+        import mimetypes
+
+        if not mobile_dist.is_dir():
+            raise HTTPException(
+                status_code=404,
+                detail="Mobilappen är inte byggd. Kör `npm run build` i xs_mobilapp/.",
+            )
+
+        index = mobile_dist / "index.html"
+        candidate = (mobile_dist / path).resolve() if path else index
+
+        # Path traversal guard: a resolved path must stay inside dist.
+        inside = mobile_dist.resolve() in candidate.parents or candidate == mobile_dist.resolve()
+        target = candidate if (inside and candidate.is_file()) else index
+
+        if not target.is_file():
+            raise HTTPException(status_code=404, detail="Mobilappen saknar index.html.")
+
+        media_type = mimetypes.guess_type(target.name)[0] or "application/octet-stream"
+        # Vite fingerprints asset filenames; index.html and the service worker
+        # must never be pinned or a deploy cannot land.
+        cache = (
+            "public, max-age=31536000, immutable"
+            if target.parent.name == "assets"
+            else "no-cache"
+        )
+        return RawResponse(
+            content=target.read_bytes(),
+            media_type=media_type,
+            headers={"Cache-Control": cache, **MOBILE_SECURITY_HEADERS},
+        )
 
     return app
 

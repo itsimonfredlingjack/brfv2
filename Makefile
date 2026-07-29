@@ -34,6 +34,16 @@ frontend:           ## Kanoniska UI:t i brfv2-mockup på :5173
 frontend-legacy:    ## Äldre backendkopplad prototyp i rotens src/
 	npm run dev
 
+mobile:             ## Mobilklienten Källa (xs_mobilapp) på :5174 — kräver backend på :8787
+	@test -d xs_mobilapp/node_modules || (echo "xs_mobilapp/node_modules saknas — kör 'cd xs_mobilapp && npm install'."; exit 1)
+	cd xs_mobilapp && npm run dev
+
+mobile-build:       ## Produktionsbygge av mobilklienten; backend serverar den på /m
+	cd xs_mobilapp && npm run build
+
+mobile-test:        ## Mobilklientens enhetstester + browseracceptans + tillgänglighet
+	cd xs_mobilapp && npm test && npm run lint && npm run typecheck && npm run test:e2e
+
 test:               ## Backend-tester (offline, deterministiska)
 	cd backend && uv run pytest -q
 
