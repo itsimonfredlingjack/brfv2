@@ -20,9 +20,12 @@ export interface MeResponse {
   memberships: Membership[]
 }
 
-export interface LoginResponse extends MeResponse {
-  token: string
-}
+/* The backend also returns a bearer `token` for programmatic clients (eval,
+ * tests). It is deliberately NOT declared here: this app authenticates with
+ * the httpOnly session cookie, and leaving the field off the type makes
+ * "no token ever touches JavaScript" something the compiler enforces rather
+ * than something a comment asks for. */
+export type LoginResponse = MeResponse
 
 export interface DocumentMeta {
   id: string
