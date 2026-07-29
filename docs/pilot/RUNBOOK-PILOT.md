@@ -63,6 +63,12 @@ Kontot som skapas här blir **installationsadministratör**. Den behörigheten k
 inte delas ut i gränssnittet efteråt, och den är det enda som får peka om
 modelltjänsten.
 
+Korpusen ligger som fem PDF:er i `~/pilot-korpus/` och laddas upp genom appens
+egen uppladdningsväg — aldrig genom seedning. Filerna skrivs om vid behov med
+`backend/.venv/bin/python backend/scripts/export_corpus.py`; renderingen är
+deterministisk, så `sha256sum -c korpus.sha256` ska ge OK för alla fem både före
+och efter.
+
 ---
 
 ## Sessionsrutin
@@ -263,6 +269,7 @@ personuppgiftsfråga.
 * köra `dnf upgrade` av paketet;
 * ändra något under `REPRO_DELIVERY_PATHS` (pilotplanen §4.1);
 * ladda upp riktiga föreningsdokument eller andra personuppgifter;
-* köra acceptansen med förvald evidenskatalog innan arbetspunkt A3 är gjord —
-  den skriver då över committad XS-49-evidens;
+* köra acceptansen med `--overwrite-evidence` utan att först ha avgjort att den
+  committade evidensen verkligen ska ersättas — skyddet frågar en gång, och den
+  frågan är hela poängen med det;
 * köra rotens `npm run build` med den arkiverade RPM:en liggande i `dist/`.

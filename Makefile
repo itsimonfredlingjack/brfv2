@@ -59,15 +59,21 @@ desktop-install: desktop-runtime  ## Bygg och installera RPM:en (kräver sudo; d
 desktop-uninstall:  ## Avinstallera paketet (användardata under ~/.local/share lämnas kvar)
 	sudo dnf remove -y brf-dokument-ai
 
+# Acceptansens evidens namnges efter körningen, inte efter det ärende som råkade
+# vara öppet när skriptet skrevs. Sätt RUN_LABEL=... för att låta flera körningar
+# ligga sida vid sida; redan committad evidens skrivs aldrig över utan att
+# --overwrite-evidence begärs uttryckligen.
+RUN_LABEL ?= pilot
+
 desktop-acceptance: desktop-build  ## Full journey-acceptans mot riktig Tauri/WebKitGTK + självhostad modell
 	backend/.venv/bin/python backend/scripts/desktop_acceptance.py \
-	  --output docs/evidence/xs49-desktop-acceptance.json
+	  --run-label $(RUN_LABEL)
 
 desktop-acceptance-installed:  ## Samma acceptans mot det INSTALLERADE paketet (ange RPM=... för artefaktidentitet)
 	backend/.venv/bin/python backend/scripts/desktop_acceptance.py \
 	  --application /usr/bin/brfv2-desktop \
 	  $(if $(RPM),--artifact $(RPM),) \
-	  --output docs/evidence/xs49-desktop-acceptance-installed.json
+	  --run-label $(RUN_LABEL)-installed
 
 desktop-verify-artifact:  ## Granska den byggda (och ev. installerade) RPM:en mot ops/forbidden_providers.json
 	BRFV2_REQUIRE_ARTIFACT=1 $(if $(RPM),BRFV2_RPM=$(RPM),) backend/.venv/bin/pytest -q backend/tests/test_desktop_artifact.py

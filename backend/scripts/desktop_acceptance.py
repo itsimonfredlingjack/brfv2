@@ -38,6 +38,7 @@ import base64
 import hashlib
 import json
 import os
+import re
 import shutil
 import signal
 import socket
@@ -394,6 +395,80 @@ def app_data_dir(environment: dict[str, str]) -> Path:
 
 
 # ---------------------------------------------------------------------------
+# Where a run leaves its evidence
+# ---------------------------------------------------------------------------
+
+UI_SCREENSHOTS = ("setup", "documents", "answer-highlight", "refusal", "settings")
+FAILURE_SCREENSHOTS = ("startup-failure",)
+LABEL_PATTERN = re.compile(r"\A[a-z0-9][a-z0-9._-]*\Z")
+
+
+class Evidence:
+    """The files one acceptance run writes, and the name it writes them under.
+
+    These names were once hardcoded ``xs49-*`` in ``docs/evidence``, so the
+    default invocation overwrote the evidence a closed issue had been accepted
+    on — silently, and with a run of a different application. Two things follow
+    from that and both are here: the name comes from the run label, and
+    :meth:`tracked` refuses any target git already carries. The second is what
+    actually holds, because it holds for every future label too and not just
+    for the one that happened to collide.
+    """
+
+    def __init__(self, directory: Path, label: str, receipt: Path | None = None) -> None:
+        if not LABEL_PATTERN.match(label):
+            raise AcceptanceError(
+                f"Unusable run label {label!r}: use lowercase letters, digits, '.', '_' or '-'."
+            )
+        self.dir = directory
+        self.label = label
+        # An explicitly placed receipt is guarded exactly like a default one:
+        # --output is the older way to aim at a committed file.
+        self._receipt = receipt
+
+    def path(self, name: str) -> Path:
+        return self.dir / f"{self.label}-desktop-{name}.png"
+
+    @property
+    def receipt(self) -> Path:
+        return self._receipt or self.dir / f"{self.label}-desktop-acceptance.json"
+
+    def reference(self, name: str) -> str:
+        """The screenshot as a reader of the committed evidence would cite it."""
+        target = self.path(name).resolve()
+        try:
+            return str(target.relative_to(REPO))
+        except ValueError:
+            return str(target)
+
+    def targets(self) -> list[Path]:
+        """Every file a full run may write, regardless of the phases selected.
+
+        Deliberately not narrowed to the chosen phases: a guard that depends on
+        which phases run would pass on a partial run and destroy the evidence
+        on the next full one.
+        """
+        return [self.path(name) for name in (*UI_SCREENSHOTS, *FAILURE_SCREENSHOTS)] + [
+            self.receipt
+        ]
+
+    def tracked(self) -> list[str]:
+        """Targets that git already tracks — evidence somebody committed.
+
+        A checkout without git has no committed evidence to destroy, so the
+        absent-git case is genuinely empty rather than a suppressed failure.
+        """
+        result = subprocess.run(
+            ["git", "-C", str(REPO), "ls-files", "-z", "--", *(str(p) for p in self.targets())],
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0:
+            return []
+        return sorted(entry for entry in result.stdout.split("\0") if entry)
+
+
+# ---------------------------------------------------------------------------
 # Phase A — the UI journey through the real webview
 # ---------------------------------------------------------------------------
 
@@ -402,7 +477,7 @@ def ui_journey(
     application: Path,
     environment: dict[str, str],
     model_base_url: str,
-    evidence_dir: Path,
+    evidence: Evidence,
 ) -> dict:
     driver_logs: list[str] = []
     process = subprocess.Popen(
@@ -484,7 +559,7 @@ def ui_journey(
             # development cache it is a download.
             timeout=240,
         )
-        driver.screenshot(evidence_dir / "xs49-desktop-setup.png")
+        driver.screenshot(evidence.path("setup"))
 
         # -- model runtime -------------------------------------------------
         driver.type_labelled("Modelltjänstens adress", model_base_url)
@@ -624,7 +699,7 @@ def ui_journey(
             timeout=180,
         )
         ingestion_seconds = round(time.monotonic() - ingestion_started, 1)
-        driver.screenshot(evidence_dir / "xs49-desktop-documents.png")
+        driver.screenshot(evidence.path("documents"))
 
         # -- supported question --------------------------------------------
         driver.click_text("AI-chatt")
@@ -679,7 +754,7 @@ def ui_journey(
             ),
             timeout=90,
         )
-        driver.screenshot(evidence_dir / "xs49-desktop-answer-highlight.png")
+        driver.screenshot(evidence.path("answer-highlight"))
 
         zoom_before = driver.execute(
             "return [...document.querySelectorAll('.pdf-actions span')].map(e => e.textContent)"
@@ -720,7 +795,7 @@ def ui_journey(
         )
         if refusal["citations"] != 0:
             raise AcceptanceError(f"Refusal unexpectedly carried citations: {refusal!r}")
-        driver.screenshot(evidence_dir / "xs49-desktop-refusal.png")
+        driver.screenshot(evidence.path("refusal"))
 
         # -- backup from the UI ----------------------------------------------
         driver.click(".user-profile")
@@ -741,7 +816,7 @@ def ui_journey(
             ),
             timeout=120,
         )
-        driver.screenshot(evidence_dir / "xs49-desktop-settings.png")
+        driver.screenshot(evidence.path("settings"))
         driver.click_text("Stäng")
 
         # -- layout, security -------------------------------------------------
@@ -906,13 +981,7 @@ def ui_journey(
                 "nativeWebDriverElementValue": "unsupported by WebKitWebDriver for WRY",
                 "nativeWaylandAutomation": "blocked by this KWin/WebKit automation environment",
             },
-            "screenshots": [
-                "docs/evidence/xs49-desktop-setup.png",
-                "docs/evidence/xs49-desktop-documents.png",
-                "docs/evidence/xs49-desktop-answer-highlight.png",
-                "docs/evidence/xs49-desktop-refusal.png",
-                "docs/evidence/xs49-desktop-settings.png",
-            ],
+            "screenshots": [evidence.reference(name) for name in UI_SCREENSHOTS],
         }
     finally:
         try:
@@ -1277,7 +1346,7 @@ def lifecycle_journey(application: Path, environment: dict[str, str], model_base
 def failure_surfaces(
     application: Path,
     environment: dict[str, str],
-    evidence_dir: Path,
+    evidence: Evidence,
 ) -> dict:
     """An installed application must explain a failed start and a dead backend.
 
@@ -1354,14 +1423,14 @@ def failure_surfaces(
         # captured image shows the injected cause rather than the static
         # placeholder the document ships with.
         time.sleep(1.5)
-        driver.screenshot(evidence_dir / "xs49-desktop-startup-failure.png")
+        driver.screenshot(evidence.path("startup-failure"))
         results["startupFailure"] = {
             "trigger": "shell without a resolvable runtime (broken installation)",
             "headline": failure_page["headline"],
             "detail": failure_page["detail"],
             "detailState": failure_page["detailState"],
             "windowUrl": failure_page["href"],
-            "screenshot": "docs/evidence/xs49-desktop-startup-failure.png",
+            "screenshot": evidence.reference("startup-failure"),
         }
     finally:
         try:
@@ -1735,6 +1804,19 @@ def main() -> None:
         default=os.environ.get("BRF_LLM_BASE_URL") or "http://127.0.0.1:8000/v1",
     )
     parser.add_argument("--evidence-dir", type=Path, default=REPO / "docs/evidence")
+    parser.add_argument(
+        "--run-label",
+        default="pilot",
+        help="Names this run's evidence: <label>-desktop-<view>.png and "
+        "<label>-desktop-acceptance.json. Give each run that is to be kept its own "
+        "label; evidence already committed is never overwritten without --overwrite-evidence.",
+    )
+    parser.add_argument(
+        "--overwrite-evidence",
+        action="store_true",
+        help="Permit this run to overwrite committed evidence files. Destroys the record "
+        "an earlier acceptance was approved on, so it has to be asked for.",
+    )
     parser.add_argument("--keep-data", action="store_true", help="Keep the isolated XDG home")
     parser.add_argument("--output", type=Path, default=None)
     parser.add_argument(
@@ -1754,6 +1836,19 @@ def main() -> None:
     if not args.application.is_file():
         raise AcceptanceError(f"Application missing: {args.application}; run make desktop-build")
 
+    evidence = Evidence(args.evidence_dir, args.run_label, receipt=args.output)
+    # Checked before the model runtime, so an operator who picked a colliding
+    # label learns it without first having to bring the tunnel up.
+    committed = evidence.tracked()
+    if committed and not args.overwrite_evidence:
+        listing = "\n  ".join(committed)
+        raise AcceptanceError(
+            f"Run label {args.run_label!r} writes over evidence that is committed:\n  {listing}\n"
+            "That record is what an earlier acceptance was approved on. Give this run its own "
+            "--run-label, or pass --overwrite-evidence if replacing it is the intent."
+        )
+    evidence.dir.mkdir(parents=True, exist_ok=True)
+
     # Generation is real or the run does not happen. A green acceptance must
     # never be obtainable with a scripted or absent model.
     status, models, _ = http("GET", f"{args.model_base_url}/models", timeout=15)
@@ -1769,7 +1864,7 @@ def main() -> None:
     try:
         phases = [name.strip() for name in args.phases.split(",") if name.strip()]
         ui = (
-            ui_journey(args.application, environment, args.model_base_url, args.evidence_dir)
+            ui_journey(args.application, environment, args.model_base_url, evidence)
             if "ui" in phases
             else "skipped"
         )
@@ -1784,7 +1879,7 @@ def main() -> None:
             else "skipped"
         )
         failures = (
-            failure_surfaces(args.application, environment, args.evidence_dir)
+            failure_surfaces(args.application, environment, evidence)
             if "failure" in phases
             else "skipped"
         )
@@ -1842,8 +1937,9 @@ def main() -> None:
     rendered = rendered.replace(str(root), "<isolated-xdg-home>")
     rendered = rendered.replace(str(REPO), "<checkout>")
     rendered = rendered.replace(str(Path.home()), "~")
-    if args.output:
-        args.output.write_text(rendered + "\n", encoding="utf-8")
+    # A run always leaves a receipt beside its screenshots; --output only moves it.
+    evidence.receipt.parent.mkdir(parents=True, exist_ok=True)
+    evidence.receipt.write_text(rendered + "\n", encoding="utf-8")
     print(rendered)
 
 

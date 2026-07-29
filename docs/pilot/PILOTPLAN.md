@@ -56,6 +56,11 @@ Två konsekvenser för planen:
 | `dist/…rpm` — själva paketfilen | Utan den går det inte att installera om efter en avinstallation. Ombygge ger samma bytes (bevisad reproducerbarhet), men det är ett ombygge, inte en återställning. Arbetspunkt A1. |
 | `backend/.venv` | Krävs för acceptans, artefakttester och pytest. `make setup`. Arbetspunkt A1. |
 
+*Efterskrift 2026-07-29: båda punkterna är stängda i slinga 1 — artefakten är
+ombyggd och arkiverad i `~/pilot-artefakter/`, och `make setup` är kört. Evidens:
+[`docs/evidence/pilot/slinga1-startevidens.md`](../evidence/pilot/slinga1-startevidens.md).
+Planens text är i övrigt oförändrad sedan BP3-beslutet.*
+
 ---
 
 ## 2. Pilotens omfattning
