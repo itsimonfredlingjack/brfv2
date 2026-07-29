@@ -232,11 +232,14 @@ def apply_model_runtime(config: ModelRuntimeConfig) -> None:
     """Make ``config`` the process-wide generation configuration.
 
     ``BRF_LLM`` is pinned to ``selfhosted`` unconditionally.  That is the
-    structural part of the no-hidden-egress guarantee: even with an
-    ``ANTHROPIC_API_KEY`` in the environment or a logged-in ``claude`` CLI on
-    the machine, provider auto-detection can never select them here.  Without a
-    configured base URL the provider becomes ``none`` and every answer attempt
-    fails visibly instead of silently reaching a third party.
+    runtime half of the no-hidden-egress guarantee: whatever third-party
+    credentials or CLIs happen to exist on the machine, provider
+    auto-detection can never select one here.  The structural half is the
+    payload itself — the packaged delivery ships no hosted provider plug-in
+    (``app.llm_hosted``), so :func:`app.llm.hosted_providers` finds nothing to
+    register and no key selects one.  Without a configured base URL the
+    provider becomes ``none`` and every answer attempt fails visibly instead
+    of silently reaching a third party.
 
     The endpoint policy is re-checked here, at the last point before the
     address becomes process state.  Everything upstream already checks it; this

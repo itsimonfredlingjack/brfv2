@@ -36,13 +36,13 @@ APPNAME="BRF Dokument-AI"
 INSTALL_PREFIX="/usr/lib/$APPNAME/runtime"
 MODEL_DIR_NAME="potion-multilingual-128M"
 
-# Packages resolved by the lock that the desktop delivery deliberately does not
-# ship. Removing them is defence in depth, not an optimisation: `anthropic` is
-# the only other network LLM client in the dependency tree, and the desktop
-# product must have no code path to a third-party model at all. `hf_xet` and
-# `pip` only exist to download things at runtime, which a packaged, offline
-# application must never do.
-EXCLUDED_PACKAGES=(anthropic hf_xet hf_xet-* pip pip-* pkg_resources setuptools setuptools-*)
+# What the delivery must not ship, and why, is declared in
+# ops/forbidden_providers.json and removed by ops/prune_payload.py. Whether the
+# removal actually worked is a separate question, answered by
+# ops/inspect_payload.py against the staged tree — never by this script's own
+# list. An earlier version of this build kept that list here and wrote it
+# straight into BUNDLE.json; the quoted globs never expanded, four .dist-info
+# directories shipped, and the manifest asserted they had not.
 
 green() { printf '\033[32m%s\033[0m\n' "$*"; }
 yellow() { printf '\033[33m%s\033[0m\n' "$*"; }
@@ -165,9 +165,6 @@ for record in site.glob("*.dist-info/RECORD"):
         record.write_text("".join(kept), encoding="utf-8")
 PY
 
-for pattern in "${EXCLUDED_PACKAGES[@]}"; do
-  rm -rf "$RUNTIME/python/lib/$PY_TAG/site-packages/$pattern"
-done
 green "beroenden installerade ($(du -sh "$RUNTIME/python/lib/$PY_TAG/site-packages" | cut -f1))"
 
 # ---------------------------------------------------------------------------
@@ -179,6 +176,14 @@ step "Produktkod"
 mkdir -p "$RUNTIME/backend"
 cp -a backend/app "$RUNTIME/backend/app"
 find "$RUNTIME/backend" -name '__pycache__' -type d -prune -exec rm -rf {} +
+
+# ---------------------------------------------------------------------------
+step "Uteslutna leverantörer"
+# ---------------------------------------------------------------------------
+# Runs before bytecode compilation on purpose: a removed module must not leave
+# an importable .pyc behind, and the compileall pass below would otherwise
+# create one for app/llm_hosted.py.
+python3 ops/prune_payload.py "$RUNTIME"
 
 # ---------------------------------------------------------------------------
 step "Embedder-vikter (pinnad revision)"
@@ -267,13 +272,37 @@ PY
 )
 
 # ---------------------------------------------------------------------------
+step "Granskning av den stegade nyttolasten"
+# ---------------------------------------------------------------------------
+# The build's own answer to "did the exclusions work?", taken from the tree
+# that was just staged rather than from the list that asked for them. It runs
+# the packaged interpreter, so it distinguishes "the file is gone" from "the
+# module cannot be imported, the attribute cannot be reached, and no key
+# selects the provider" — which are four different claims.
+#
+# A finding here fails the build. There is no flag to continue past one.
+#
+# The result goes to a temporary file, never into the checkout: packaging
+# refuses a dirty tree, and a build artifact dropped next to the sources would
+# make every build dirty by existing.
+INSPECTION="$(mktemp -t brfv2-provider-exclusion.XXXXXX.json)"
+trap 'rm -f "$INSPECTION"' EXIT
+if ! ops/inspect_payload.py --runtime "$RUNTIME" --scope staged-runtime --json "$INSPECTION"; then
+  fail "den stegade nyttolasten innehåller förbjudet leverantörsmaterial (se fynden ovan)."
+fi
+
+# ---------------------------------------------------------------------------
 step "Härkomst"
 # ---------------------------------------------------------------------------
-backend/.venv/bin/python - "$RUNTIME" "$DELIVERY_TREE" "$EPOCH" <<'PY'
+backend/.venv/bin/python - "$RUNTIME" "$DELIVERY_TREE" "$EPOCH" "$INSPECTION" <<'PY'
 import hashlib, json, subprocess, sys
 from pathlib import Path
 
 runtime, delivery_tree, epoch = Path(sys.argv[1]), sys.argv[2], int(sys.argv[3])
+# The exclusion evidence is whatever the inspection found in this tree. It is
+# copied in verbatim: nothing here re-states, summarizes or overrides it, so
+# the manifest cannot claim an exclusion the payload does not have.
+exclusion = json.loads(Path(sys.argv[4]).read_text(encoding="utf-8"))
 requirements = (runtime / "requirements.lock.txt").read_bytes()
 pins = json.loads(
     subprocess.run(
@@ -308,7 +337,10 @@ def tree_bytes(path: Path) -> int:
                 "sha256": hashlib.sha256(requirements).hexdigest(),
                 "verifiedBy": "uv pip install --require-hashes",
             },
-            "excludedPackages": ["anthropic", "hf_xet", "pip", "setuptools"],
+            # Not a list of what the build meant to leave out — the result of
+            # inspecting what it actually produced. Every entry names the rule
+            # that was checked, how it was checked, and what was found.
+            "providerExclusion": exclusion,
             "embedder": {
                 "modelId": pins["embedder"]["repoId"],
                 "revision": pins["embedder"]["revision"],
@@ -327,7 +359,19 @@ def tree_bytes(path: Path) -> int:
     + "\n",
     encoding="utf-8",
 )
-print(json.dumps(json.loads((runtime / "BUNDLE.json").read_text()), indent=2, sort_keys=True))
+bundle = json.loads((runtime / "BUNDLE.json").read_text(encoding="utf-8"))
+counts = bundle["providerExclusion"]["counts"]
+summary = dict(bundle)
+# The exclusion evidence is a few hundred lines; the file keeps all of it, the
+# terminal gets the shape of it plus every finding (of which there must be none).
+summary["providerExclusion"] = {
+    "payloadSha256": bundle["providerExclusion"]["inspected"]["payloadSha256"],
+    "rulesSha256": bundle["providerExclusion"]["rules"]["sha256"],
+    "counts": counts,
+    "ok": bundle["providerExclusion"]["ok"],
+    "findings": bundle["providerExclusion"]["findings"],
+}
+print(json.dumps(summary, indent=2, sort_keys=True, ensure_ascii=False))
 PY
 
 # Last: one timestamp for the whole tree, taken from the commit. Everything

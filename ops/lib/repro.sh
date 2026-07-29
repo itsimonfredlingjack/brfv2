@@ -34,6 +34,15 @@ REPRO_DELIVERY_PATHS=(
   ops/build-runtime.sh
   ops/package-desktop.sh
   ops/brf-dokument-ai.spec
+  # What is removed from the payload, and the record of that removal which the
+  # bundle manifest carries, are as much inputs to the artifact as the sources
+  # are: change the rules and a different set of files ships; change the
+  # inspector and BUNDLE.json's contents change with it. Left off this list,
+  # two commits with different exclusion logic would report the same delivery
+  # tree and produce different packages.
+  ops/forbidden_providers.json
+  ops/prune_payload.py
+  ops/inspect_payload.py
 )
 
 # One fixed, tracked build clock. Declared in ops/pins.json instead of read

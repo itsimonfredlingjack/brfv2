@@ -289,15 +289,16 @@ describe('model status indicator', () => {
   it('never fabricates a Gemma/agenntserver claim for a different provider or model', async () => {
     api.me.mockResolvedValue({ user: MAX_USER, memberships: MAX_MEMBERSHIPS });
     api.health.mockResolvedValue({
-      llm: { provider: 'anthropic-api', model: 'claude-sonnet-5', display_name: '', runtime_label: '', ready: true },
+      llm: { provider: 'nagon-annan-leverantor', model: 'nagon-annan-modell', display_name: '', runtime_label: '', ready: true },
     });
     render(<App />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'AI-chatt' }));
-    // No display_name from the backend and an unrecognized model id — the
-    // shared normalizer must fall back to the raw identifier, never Gemma.
-    await screen.findByText('claude-sonnet-5');
-    expect(screen.getByText('Anthropic')).toBeInTheDocument();
+    // No display_name from the backend and an unrecognized provider/model id —
+    // the shared normalizer must fall back to the raw identifiers, never
+    // Gemma, and never invent a friendly name for something it does not know.
+    await screen.findByText('nagon-annan-modell');
+    expect(screen.getByText('nagon-annan-leverantor')).toBeInTheDocument();
     expect(screen.queryByText(/Gemma/)).not.toBeInTheDocument();
     expect(screen.queryByText(/agenntserver/)).not.toBeInTheDocument();
   });

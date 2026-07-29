@@ -69,6 +69,9 @@ desktop-acceptance-installed:  ## Samma acceptans mot det INSTALLERADE paketet (
 	  $(if $(RPM),--artifact $(RPM),) \
 	  --output docs/evidence/xs49-desktop-acceptance-installed.json
 
+desktop-verify-artifact:  ## Granska den byggda (och ev. installerade) RPM:en mot ops/forbidden_providers.json
+	BRFV2_REQUIRE_ARTIFACT=1 $(if $(RPM),BRFV2_RPM=$(RPM),) backend/.venv/bin/pytest -q backend/tests/test_desktop_artifact.py
+
 desktop-verify-reproducible:  ## Bygg RPM:en från två rena checkouter och jämför byte för byte
 	@ops/verify-reproducible.sh \
 	  $${REPRO_A:-/home/$$USER/brfv2-repro/a} \

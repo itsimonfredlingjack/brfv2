@@ -189,6 +189,42 @@ mkdir -p dist
 cp -f "$RPM" dist/
 RPM="dist/$(basename "$RPM")"
 SHA="$(sha256sum "$RPM" | cut -d' ' -f1)"
+
+# ---------------------------------------------------------------------------
+step "Granskning av paketets innehåll"
+# ---------------------------------------------------------------------------
+# The decisive check, and the reason it is here rather than only in the runtime
+# build: everything before this point inspected a tree the build controls.
+# This unpacks the artifact that will actually be shipped and answers the same
+# rules against it — the files rpm really carries, the interpreter really
+# packaged, the provider selection that interpreter really performs.
+#
+# Two things are asserted, and they are different claims:
+#   1. the unpacked package contains no forbidden provider material;
+#   2. the runtime inside the package is byte-for-byte the tree BUNDLE.json
+#      describes, so the manifest is a statement about this RPM and not about
+#      a staged tree that may since have moved.
+UNPACKED="$BUILD/unpacked"
+rm -rf "$UNPACKED"
+mkdir -p "$UNPACKED"
+(cd "$UNPACKED" && rpm2cpio "$ROOT/$RPM" | cpio -idm --quiet)
+[ -x "$UNPACKED/usr/bin/$BINNAME" ] || fail "det uppackade paketet saknar $BINNAME"
+
+ARTIFACT_INSPECTION="$BUILD/provider-exclusion.artifact.json"
+if ! ops/inspect_payload.py --root "$UNPACKED" --scope unpacked-rpm \
+     --artifact "$(basename "$RPM")" --artifact-sha256 "$SHA" \
+     --json "$ARTIFACT_INSPECTION"; then
+  rm -f "$RPM" "dist/$(basename "$RPM").provenance.json"
+  fail "den byggda RPM:en innehåller förbjudet leverantörsmaterial — artefakten är kasserad."
+fi
+
+PACKAGED_PAYLOAD="$(ops/inspect_payload.py --runtime "$UNPACKED/usr/lib/$APPNAME/runtime" --identity-only)"
+BUNDLE_PAYLOAD="$(python3 -c "import json;print(json.load(open('src-tauri/runtime/BUNDLE.json'))['providerExclusion']['inspected']['payloadSha256'])")"
+[ "$PACKAGED_PAYLOAD" = "$BUNDLE_PAYLOAD" ] || fail \
+  "BUNDLE.json beskriver inte körmiljön som ligger i paketet
+  manifest: $BUNDLE_PAYLOAD
+  i RPM:en: $PACKAGED_PAYLOAD"
+green "paketets nyttolast granskad: inga fynd, och BUNDLE.json beskriver dessa bytes ($PACKAGED_PAYLOAD)"
 green "Artefakt:     $RPM ($(du -h "$RPM" | cut -f1))"
 green "SHA-256:      $SHA"
 green "Commit:       $COMMIT"
@@ -197,11 +233,12 @@ green "Delivery tree: $DELIVERY_TREE"
 # A machine-readable receipt beside the artifact, so the acceptance evidence
 # never has to be retyped from a terminal scrollback.
 python3 - "$RPM" "$SHA" "$COMMIT" "$EPOCH" "$BUILD_HOST" "$SOURCE_PREFIX" "$DELIVERY_TREE" \
-  > "dist/$(basename "$RPM").provenance.json" <<'PY'
+  "$ARTIFACT_INSPECTION" > "dist/$(basename "$RPM").provenance.json" <<'PY'
 import json, os, subprocess, sys
 
-rpm, sha, commit, epoch, build_host, source_prefix, delivery_tree = sys.argv[1:8]
+rpm, sha, commit, epoch, build_host, source_prefix, delivery_tree, inspection = sys.argv[1:9]
 bundle = json.load(open("src-tauri/runtime/BUNDLE.json"))
+artifact_inspection = json.load(open(inspection, encoding="utf-8"))
 
 
 def query(tag: str) -> str:
@@ -241,6 +278,9 @@ print(json.dumps(
             "mtimePolicy": "clamp_to_source_date_epoch",
         },
         "bundle": bundle,
+        # Taken from the unpacked RPM named above, not from the staged tree:
+        # this is what the shipped artifact contains.
+        "providerExclusion": artifact_inspection,
     },
     ensure_ascii=False, indent=2, sort_keys=True,
 ))

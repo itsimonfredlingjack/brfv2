@@ -1,0 +1,20 @@
+{
+  "checkouts": [
+    {
+      "artifact": "brf-dokument-ai-0.2.0-1.fc44.x86_64.rpm",
+      "bytes": 574604029,
+      "path": "/home/aidev/brfv2-repro-xs51/a",
+      "sha256": "6ba028fb0498da34ddd25c89366da98ec1ec96618ac6a607236cb58ab345e98d"
+    },
+    {
+      "artifact": "brf-dokument-ai-0.2.0-1.fc44.x86_64.rpm",
+      "bytes": 574604029,
+      "path": "/home/aidev/brfv2-repro-xs51/b-longer-checkout-path",
+      "sha256": "6ba028fb0498da34ddd25c89366da98ec1ec96618ac6a607236cb58ab345e98d"
+    }
+  ],
+  "commit": "eef3b66d072fde00e0ef45f1c251013c70f14cf5",
+  "comparedBy": "cmp -s (byte för byte) + sha256sum",
+  "identical": true,
+  "schema": "brfv2-desktop-reproducibility/v1"
+}

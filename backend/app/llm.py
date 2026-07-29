@@ -1,22 +1,33 @@
 """Pluggable LLM providers with one strict JSON answer contract.
 
-Provider order: self-hosted OpenAI-compatible endpoint when BRF_LLM_BASE_URL
-is set (the pilot's only generation path — vLLM or Ollama serving Gemma 4),
-otherwise Anthropic SDK when ANTHROPIC_API_KEY is configured, otherwise the
-locally authenticated `claude` CLI. Tests always inject FakeLLM.
-Force with BRF_LLM=selfhosted|api|cli|fake.
+This module implements the providers that run entirely on infrastructure the
+deployment controls: the self-hosted OpenAI-compatible endpoint (the pilot's
+and the desktop product's only generation path — vLLM or Ollama serving
+Gemma 4) plus the local test/acceptance providers. Tests always inject FakeLLM.
+
+Providers that talk to a third party live in the optional plug-in module
+:mod:`app.llm_hosted` and are discovered at selection time. When that module is
+absent — which is how the Fedora desktop delivery is packaged; see
+ops/build-runtime.sh — there is nothing to import, nothing to register and no
+key that selects a hosted implementation. Nothing in this module names one, so
+the packaged code carries no hosted provider identifier either.
+
+Provider order: self-hosted endpoint when BRF_LLM_BASE_URL is set, otherwise
+the hosted plug-ins in their declared order, otherwise none.
+Force with BRF_LLM=selfhosted|fake|scripted, or with the key of a hosted
+plug-in when one is installed.
 """
 
 from __future__ import annotations
 
+import importlib
 import json
 import logging
 import os
 import re
-import shutil
-import subprocess
 import time
-from typing import Protocol
+from dataclasses import dataclass
+from typing import Callable, Protocol
 
 logger = logging.getLogger("brf.llm")
 
@@ -108,35 +119,51 @@ def parse_llm_json(raw: str) -> dict:
     }
 
 
-class AnthropicProvider:
-    name = "anthropic-api"
+@dataclass(frozen=True)
+class HostedProvider:
+    """Registration record for one third-party generation provider.
 
-    def __init__(self) -> None:
-        from anthropic import Anthropic
+    The plug-in module owns the whole record — the selection key, the reported
+    provider name, the auto-detection rule and the constructor. This module
+    only iterates over what it is given, so removing the plug-in removes the
+    provider entirely rather than leaving a dangling branch behind.
+    """
 
-        self.client = Anthropic()
+    key: str
+    """Value of BRF_LLM that selects this provider."""
 
-    def complete(self, system: str, user: str, *, max_tokens: int, model: str) -> str:
-        resp = self.client.messages.create(
-            model=model,
-            max_tokens=max_tokens,
-            thinking={"type": "adaptive"},
-            system=system,
-            messages=[{"role": "user", "content": user}],
-            output_config={"format": {"type": "json_schema", "schema": ANSWER_SCHEMA}},
-        )
-        if resp.stop_reason == "refusal":
-            raise LLMError("Modellen avböjde att svara (refusal).")
-        if resp.stop_reason == "max_tokens":
-            # Truncated JSON must not be parsed as a complete answer. max_tokens
-            # here is the whole envelope budget (answer + citation JSON,
-            # answer.py's _CITATION_HEADROOM_TOKENS already added on top of
-            # the user's "Maximal svarslängd") — don't blame that setting.
-            raise LLMError(
-                f"Svaret trunkerades vid den totala svarsbudgeten (max_tokens={max_tokens}, "
-                "inkluderar utrymme för källhänvisningar)."
-            )
-        return "".join(block.text for block in resp.content if block.type == "text")
+    provider_name: str
+    """The ``name`` the constructed provider reports."""
+
+    hint: str
+    """What an operator would have to do to make it selectable."""
+
+    forced: Callable[[], bool]
+    """May BRF_LLM=<key> select it right now?"""
+
+    auto: Callable[[], bool]
+    """Should BRF_LLM=auto select it right now?"""
+
+    build: Callable[[], "LLMProvider"]
+
+
+def hosted_providers() -> tuple[HostedProvider, ...]:
+    """The installed hosted plug-ins, or an empty tuple when none ships.
+
+    A missing plug-in module is the packaged desktop case and is not an error.
+    Any *other* import failure is a real defect in an installed plug-in and is
+    allowed to propagate rather than being silently downgraded to "no hosted
+    providers".
+    """
+
+    module_name = f"{__package__}.llm_hosted"
+    try:
+        module = importlib.import_module(module_name)
+    except ModuleNotFoundError as exc:
+        if exc.name != module_name:
+            raise
+        return ()
+    return tuple(module.HOSTED_PROVIDERS)
 
 
 class OpenAICompatProvider:
@@ -231,67 +258,6 @@ class OpenAICompatProvider:
         if not isinstance(content, str) or not content.strip():
             raise LLMError("LLM-servern gav ett tomt svar.")
         return content
-
-
-class ClaudeCLIProvider:
-    """Generation via the locally authenticated Claude Code CLI (`claude -p`).
-
-    Lets the demo run on this machine's existing login without an API key.
-    """
-
-    name = "claude-cli"
-    timeout_s = 300
-
-    def complete(self, system: str, user: str, *, max_tokens: int, model: str) -> str:
-        import tempfile
-
-        # The CLI has no output-token cap flag; honor the envelope budget
-        # (max_tokens, already includes citation headroom) as a soft
-        # instruction so it is not silently ignored.
-        system = f"{system}\n\nHåll hela svaret under cirka {max_tokens} tokens."
-        cmd = [
-            "claude",
-            "-p",
-            "--output-format",
-            "json",
-            "--model",
-            model,
-            "--max-turns",
-            "1",
-            # Replace the coding-assistant persona with our grounding contract
-            # and drop repo/tool context — this is pure text generation.
-            "--system-prompt",
-            system,
-            "--exclude-dynamic-system-prompt-sections",
-        ]
-        try:
-            proc = subprocess.run(
-                cmd,
-                input=user.encode("utf-8"),
-                capture_output=True,
-                timeout=self.timeout_s,
-                check=False,
-                cwd=tempfile.gettempdir(),  # neutral cwd: no repo pickup
-            )
-        except subprocess.TimeoutExpired as exc:
-            raise LLMError(f"claude CLI timeout efter {self.timeout_s}s") from exc
-        if proc.returncode != 0:
-            # Detail (paths, account info) goes to the server log only.
-            logger.error("claude CLI fel (kod %d): %s", proc.returncode, proc.stderr.decode(errors="replace")[:500])
-            raise LLMError(f"claude CLI misslyckades (kod {proc.returncode}).")
-        try:
-            envelope = json.loads(proc.stdout.decode("utf-8"))
-        except json.JSONDecodeError as exc:
-            raise LLMError(f"claude CLI gav ogiltig JSON: {proc.stdout[:200]!r}") from exc
-        if envelope.get("is_error"):
-            logger.error("claude CLI is_error: subtype=%s result=%s",
-                         envelope.get("subtype"), str(envelope.get("result"))[:300])
-            raise LLMError("claude CLI rapporterade ett internt fel.")
-        result = envelope.get("result")
-        if not isinstance(result, str):
-            raise LLMError(f"claude CLI-svar saknar 'result': {str(envelope)[:200]}")
-        # No finish_reason surfaces here, so truncation is undetectable — out of scope for punch-list #5.
-        return result
 
 
 class FakeLLM:
@@ -392,7 +358,12 @@ class NoLLMProvider:
     name = "none"
 
     def complete(self, system: str, user: str, *, max_tokens: int, model: str) -> str:
-        raise LLMError("Ingen LLM-leverantör är konfigurerad (sätt ANTHROPIC_API_KEY eller installera claude CLI).")
+        # The remedies are read off the providers this installation actually
+        # has, so a delivery that ships no hosted plug-in does not tell its
+        # operator to configure one that is not there.
+        remedies = ["ange den självhostade modelltjänstens adress (BRF_LLM_BASE_URL)"]
+        remedies += [provider.hint for provider in hosted_providers()]
+        raise LLMError(f"Ingen LLM-leverantör är konfigurerad ({' eller '.join(remedies)}).")
 
 
 _provider: LLMProvider | None = None
@@ -425,14 +396,19 @@ def pick_provider() -> LLMProvider:
         except Exception as exc:
             logger.error("Självhostad LLM kunde inte initieras: %s", exc)
             _provider = NoLLMProvider()
-    elif forced == "api" or (forced == "auto" and os.environ.get("ANTHROPIC_API_KEY")):
-        try:
-            _provider = AnthropicProvider()
-        except Exception as exc:  # a missing/bad key must not 500 /api/health
-            logger.error("Anthropic-klienten kunde inte initieras: %s", exc)
-            _provider = NoLLMProvider()
-    elif forced in ("auto", "cli") and shutil.which("claude"):
-        _provider = ClaudeCLIProvider()
     else:
-        _provider = NoLLMProvider()
+        # Hosted plug-ins, in the order the plug-in module declares them. An
+        # installation without the plug-in iterates over nothing and falls
+        # straight through to `none` — there is no key it could have matched.
+        for hosted in hosted_providers():
+            if not ((forced == hosted.key and hosted.forced()) or (forced == "auto" and hosted.auto())):
+                continue
+            try:
+                _provider = hosted.build()
+            except Exception as exc:  # a missing/bad credential must not 500 /api/health
+                logger.error("Leverantören %s kunde inte initieras: %s", hosted.provider_name, exc)
+                _provider = NoLLMProvider()
+            break
+        else:
+            _provider = NoLLMProvider()
     return _provider

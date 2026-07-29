@@ -68,7 +68,7 @@ class TestHealth:
 
         monkeypatch.setenv("BRF_LLM", "none-does-not-exist-so-falls-through")
         monkeypatch.delenv("ANTHROPIC_API_KEY", raising=False)
-        monkeypatch.setattr("app.llm.shutil.which", lambda _: None)
+        monkeypatch.setattr("app.llm_hosted.shutil.which", lambda _: None)
         monkeypatch.setattr(llm_mod, "_provider", None)
         try:
             llm = env.client.get("/api/health").json()["llm"]
