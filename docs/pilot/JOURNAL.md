@@ -29,19 +29,21 @@ underlag för BP4-avstämningarna och för BP5.
 ## Mätvärden (pilotplanen §7)
 
 Uppdateras efter varje pass. `—` betyder att inget pass ännu kunnat mäta det.
+Kolumnen **Slinga 3** är XS-56:s tre pass; per-pass-uppdelningen står i
+[`slinga3-upprepade-arbetspass.md`](../evidence/pilot/slinga3-upprepade-arbetspass.md) §6.
 
-| # | Mätvärde | Status |
-| --- | --- | --- |
-| M1 | Pass startade från applikationsmenyn utan terminalarbete utöver tunneln | **3 av 3 starter** — alla tre via systemd `app-BRF…@….service`, dvs. menyvägen (två under passet, en vid efterpassets återupptagande). Ingen start från terminal |
-| M2 | Terminalingripanden under pass, och vad de gällde | **2 sanktionerade + diagnostik.** Sanktionerat: SSH-tunneln (§7 undantar den) — vid återupptagandet krävde den dessutom **ombekräftelse av Tailscale SSH i webbläsare**, en följd av värdomstarten och inte av produkten. Sanktionerat: kopiering av säkerhetskopian till annan media, vilket runbookens efterpass kräver. Diagnostiska, utförda av agenten och utan verkan på produkten: `kbuildsycoca6` (menycache — obehövlig, posten låg redan i menyn), `journalctl --user`, skrivskyddade `sqlite3`-frågor och a11y-avläsningar. **Noll terminalingripanden krävdes för att använda produkten** |
-| M3 | Startmisslyckanden (felfönster) per pass | **0** — inget felfönster, båda instanserna nådde `status: ready` |
-| M4 | Oväntade backend-dödsfall per pass | **0** — pidbytet var en andra menystart; instans 1 avslutades rent (systemd loggade ingen `Failed`, ingen signal, ingen core-dump). Instans 2 upphörde när **värddatorn** gick ned 07:19:21; det räknas **inte** som M4, och skälet är utskrivet i avvikelsetabellen |
-| M5 | Fragment-faktafrågor besvarade med korrekt löst citat | **10 av 10** — samtliga citat verifierade mot extraherad sidtext |
-| M6 | Felaktiga avvisningar | **0** — ingen fråga med stöd i korpusen avvisades |
-| M7 | Fabricerade källhänvisningar | **0** — oberoende verifierat: alla 13 citat har stöd i den citerade sidan, och `arvode`/`radon` finns bevisligen inte i korpusen. **Måste förbli 0** (stoppkriterium 4) |
-| M8 | Backup/restore-övningar och om data stämde efteråt | — *(slinga 4)* |
-| M9 | Av-/ominstallationscykler med bevarad data | — *(slinga 4)* |
-| M10 | Tid från okonfigurerad maskin till första grundade svar | **Mätt men ogiltigt.** Rå: 7 h 50 min 04 s — kontaminerad av ~7 h nattlig paus. Observerad **aktiv** tid till färdig installation med korpus: **≈ 35 min**, varav 7 min 30 s för att hitta menyposten. Se sönderdelningen under Pass. Omtagning kräver ny okonfigurerad installation — BP4-beslut |
+| # | Mätvärde | Slinga 2 (XS-55, baslinje) | Slinga 3 (XS-56, tre pass) |
+| --- | --- | --- | --- |
+| M1 | Pass startade från applikationsmenyn utan terminalarbete utöver tunneln | **3 av 3 starter** — alla tre via systemd `app-BRF…@….service`, dvs. menyvägen (två under passet, en vid efterpassets återupptagande). Ingen start från terminal | **4 av 4 starter** (1 + 1 + 2), alla via KDE:s programstartare mot `.desktop`-posten, samma enhetsform `app-BRF…@….service`. Ingen start från terminal |
+| M2 | Terminalingripanden under pass, och vad de gällde | **2 sanktionerade + diagnostik.** Sanktionerat: SSH-tunneln (§7 undantar den) — vid återupptagandet krävde den dessutom **ombekräftelse av Tailscale SSH i webbläsare**, en följd av värdomstarten och inte av produkten. Sanktionerat: kopiering av säkerhetskopian till annan media, vilket runbookens efterpass kräver. Diagnostiska, utförda av agenten och utan verkan på produkten: `kbuildsycoca6` (menycache — obehövlig, posten låg redan i menyn), `journalctl --user`, skrivskyddade `sqlite3`-frågor och a11y-avläsningar. **Noll terminalingripanden krävdes för att använda produkten** | **0 krävdes för att använda produkten** i alla tre passen. Sanktionerat: SSH-tunneln (§7 undantar den) — samt att stänga och öppna den i pass 2, vilket *är* felinjektionen, och att döda backenden i pass 3, likaså. Verktyg utan verkan på produkten: `ydotoold` (input-daemon), pekarprofilen på den virtuella enheten (satt + återställd), a11y- och loggavläsningar |
+| M3 | Startmisslyckanden (felfönster) per pass | **0** — inget felfönster, båda instanserna nådde `status: ready` | **0 / 0 / 0.** Alla fyra instanserna nådde `status: ready`. Felfönstret i pass 3 räknas **inte** hit: det var svaret på en dödad backend, inte en misslyckad start |
+| M4 | Oväntade backend-dödsfall per pass | **0** — pidbytet var en andra menystart; instans 1 avslutades rent (systemd loggade ingen `Failed`, ingen signal, ingen core-dump). Instans 2 upphörde när **värddatorn** gick ned 07:19:21; det räknas **inte** som M4, och skälet är utskrivet i avvikelsetabellen | **0 oförklarade / 0 / 0** — i pass 3 dödades backenden **avsiktligt** (`kill -TERM`, signal 15) som felinjektion C4. Stoppkriterium 7 kräver tre **oförklarade** dödsfall i samma pass |
+| M5 | Fragment-faktafrågor besvarade med korrekt löst citat | **10 av 10** — samtliga citat verifierade mot extraherad sidtext | **10/10 · 10/10 · 10/10.** Två kontroller per fråga, separerade: löser citatet, *och* är svaret rätt mot facit |
+| M6 | Felaktiga avvisningar | **0** — ingen fråga med stöd i korpusen avvisades | **0 / 0 / 0.** Avvisningen under leverantörsbortfallet i pass 2 är korrekt beteende, inte en felaktig avvisning |
+| M7 | Fabricerade källhänvisningar | **0** — oberoende verifierat: alla 13 citat har stöd i den citerade sidan, och `arvode`/`radon` finns bevisligen inte i korpusen. **Måste förbli 0** (stoppkriterium 4) | **0 / 0 / 0** — **42 av 42** citat lösta mot extraherad sidtext över tre pass. **Måste förbli 0** (stoppkriterium 4) |
+| M8 | Backup/restore-övningar och om data stämde efteråt | — *(slinga 4)* | Kopia **skapad** i pass 3 genom Appinställningar och verifierad post för post (16 filer, `unzip -t` rent, index 5/13), kopierad till annan media med matchande SHA-256. **Återställning är inte prövad** — det är slinga 4 |
+| M9 | Av-/ominstallationscykler med bevarad data | — *(slinga 4)* | — *(slinga 4)* |
+| M10 | Tid från okonfigurerad maskin till första grundade svar | **Mätt men ogiltigt.** Rå: 7 h 50 min 04 s — kontaminerad av ~7 h nattlig paus. Observerad **aktiv** tid till färdig installation med korpus: **≈ 35 min**, varav 7 min 30 s för att hitta menyposten. Se sönderdelningen under Pass. Omtagning kräver ny okonfigurerad installation — BP4-beslut | inte ommätt — kräver en ny okonfigurerad installation, vilket slinga 3 inte gör |
 
 ---
 
@@ -54,6 +56,9 @@ källhänvisning är alltid ett stopp, från första körningen.
 | Datum | Fragment-fakta (av 10) | Prosa (av 2) | Obesvarbara avvisade (av 3) | Fabricerade | Anmärkning |
 | --- | --- | --- | --- | --- | --- |
 | **2026-07-30** | **10** | **2** besvarade med stött citat | **2** | **0** | **BASLINJEN.** u05 gav kvalificerat icke-svar med *stött* citat i stället för noll citat — avvikelse mot villkoret, inte fabricering. g17/g31/g44 överinkluderande men korrekt citerade |
+| 2026-07-30 *(slinga 3, pass 1)* | **10** | **2** | **3** | **0** | 14 av 14 citat lösta. u05 avvisade nu **utan** citat → 3/3. g31 inte längre överinkluderande. **g24 svarade `SBC …`, dvs. rätt företag** — baslinjens `Driftia` var fel, se avvikelsetabellen |
+| 2026-07-30 *(slinga 3, pass 2 — efter leverantörsbortfall)* | **10** | **2** | **3** | **0** | Kört **efter** att tunneln stängts och öppnats igen. Identiskt med pass 1, inklusive vilka två frågor som blir överinkluderande (g17, g44) |
+| 2026-07-30 *(slinga 3, pass 3 — efter backendens död och omstart)* | **10** | **2** | **3** | **0** | Kört **efter** omstarten, medvetet placerat där (skälet i evidensfilen §5.7). Identiskt med pass 1 och 2 |
 
 ---
 
@@ -94,12 +99,108 @@ Efter passet: säkerhetskopia skapad [ ] flyttad till annan media [ ] pgrep tomt
 | 2026-07-30 | S3 | **Sessionen överlever krasch och omstart.** Vid efterpassets start visades varken uppstartsdialogen eller inloggningsrutan — produkten återställde sessionen och gick rakt in i dokumentvyn. Sessionsraden skapades 21:24 dagen innan med giltighet **fjorton dagar**, och cookie-filen överlevde nedgången | **Säkerhetsdimension:** en pilotmaskin som kraschar och startar om är fortfarande inloggad, utan att någon behöver kunna lösenordet. Inget fel mot skriven kravbild, men hör hemma i BP5-underlaget för en produkt vars poäng är att data stannar lokalt. Följd här: inloggningsvägen prövades **separat** efteråt — gammal session togs bort, ny skapades, data oförändrad. En start med *utgången* session är fortfarande oprövad | Öppen |
 | 2026-07-30 | S3 (positivt) | **Tillståndet överlevde nedgången intakt.** `auth.db` `integrity_check ok`, exakt en förening, ett administratörskonto, **5 dokument / 13 chunks**, dokumenten bit-identiska med `~/pilot-korpus/`, modelladressen kvar, `rpm --verify` = 0, leveransträdet `a702a337…`, Btrfs noll fel | Baslinjen kördes därför **inte** om — villkoret för omkörning är faktisk skada på data eller index, och ingen av de trettio kontrollerna visade sådan | Stängd |
 
+| 2026-07-30 | **S3 / F** | **`Appinställningar` går inte att nå med tangentbordet.** Fokusringen i dokument-/chattvyn är en sluten cykel om sex element (uppmätt med 22 `Tab`-tryck); menyns ingång är en `<div className="user-profile">` **utan `tabIndex`** (`brfv2-mockup/src/App.jsx:863`). Menyposterna är fokuserbara först när menyn öppnats med pekare | En tangentbordsberoende operatör kan varken probe:a modelltjänsten, ändra modelladressen eller skapa säkerhetskopia. Ligger i `REPRO_DELIVERY_PATHS` → **får inte åtgärdas under piloten**. Klass **F**; BP4 bör klassa den uttryckligen | **Öppen** |
+| 2026-07-30 | **S3** | **Baslinjens g24-post är sakligt fel.** XS-55 redovisade `Driftia Fastighetsservice AB` som svar på *"vilket företag sköter den **ekonomiska** förvaltningen?"* och godkände det med citatkontrollen "✓ `Driftia`". Sidan säger att Driftia sköter den **tekniska** förvaltningen och att `SBC Sveriges BostadsrättsCentrum AB` sköter den ekonomiska — vilket också är facit i `golden.json`. XS-56 svarade `SBC …` i alla tre passen | **Metodisk rot, inte tur:** citatupplösning bevisar att *citatet* har stöd, inte att *svaret* är rätt. XS-55 använde den ena slutsatsen som om den var den andra. XS-56 kör de två kontrollerna separat. Följd: XS-55:s `M5 = 10 av 10` ska läsas med förbehåll. **Inget stoppkriterium** — citatet var inte fabricerat och inget ostött svar presenterades som grundat. Rättelsen tillhör BP4 | **Öppen — BP4** |
+| 2026-07-30 | S3 | **`OTILLRÄCKLIGT UNDERLAG` återanvänds som rubrik vid leverantörsfel.** Vid stängd tunnel svarade produkten `OTILLRÄCKLIGT UNDERLAG` + `Tekniskt fel vid svarsgenerering — försök igen om en stund.` Underlaget fanns; det var modellen som inte gick att nå | Beteendet är **säkert** (noll citat, inget påhittat svar) men rubriken kan få en operatör att tro att korpusen är otillräcklig när problemet är tunneln. Andra raden säger orsaken korrekt. Erfarenhetsåterföring; ingen produktändring under piloten | Öppen |
+| 2026-07-30 | S3 | **`backend.log` innehåller ingen rad om backendens död.** Processen fick `SIGTERM` och hann inte skriva | Orsaken finns i produktens felfönster (`signal 15`) och i systemd-journalen, men inte i produktens egen logg. Ligger nära det öppna fyndet om saknade tidsstämplar i `backend.log` | Öppen |
+| 2026-07-30 | S3 (positivt) | **Loggrotationen bevarade den kraschade instansens logg.** Efter dödandet var båda loggfilerna bit-identiska med före; vid omstarten blev den kraschade instansens `backend.log` (`4c08f922…`) till `backend.log.1` | Bevisat med SHA-256 före och efter, inte antaget. Betyder att en operatör kan läsa den döda instansens logg efter omstart, vilket felfönstret också hänvisar till | Stängd |
+| 2026-07-30 | S3 | **Sessionen överlevde tre appstarter och en backendkrasch.** Ingen inloggning krävdes i något av de tre passen | Bekräftar och utökar XS-55:s observation: sessionsraden från 2026-07-29 har fjorton dagars giltighet och överlever nu även en backendkrasch. Ingen ny åtgärd; hör till BP5-underlaget | Öppen |
+| 2026-07-30 | S3 *(mätmetod)* | **Sidindikatorn `Sida N av M` exponeras inte i AT-SPI**, så den klickade citatsidan kunde inte läsas som siffra | Sidan bevisades i stället genom highlight-overlayens renderingsvillkor: `PdfPane.jsx:82` renderar overlays endast när `highlightPage === clampedPage`. Begränsning i mätmetoden, inte i produkten | Öppen |
+| 2026-07-30 | S3 *(miljö)* | **Pekarinjektion fungerade först efter omställning.** `ydotool`s virtuella enhet har bara relativa axlar (`EV=7`) och KDE:s adaptiva acceleration skalade rörelsen (`+100` → `88,33`, uppmätt i `libinput debug-events`). Tangentbordsinjektion fungerade direkt | Nyanserar pilotplanens begränsning 3: i den här miljön är **tangentbord** automatiserbart, **pekaren** bara efter att accelerationsprofilen satts platt på just den virtuella enheten. Inställningen återställdes och enheten finns inte längre. Rör inte produkten | Öppen |
+
 Klasserna S1/S2/S3 definieras i pilotplanen §12. En S1 stoppar piloten och får en
 egen anteckning under `docs/evidence/pilot/incident-<datum>/`.
 
 ---
 
 ## Pass
+
+### Slinga 3 — 2026-07-30 · tre arbetspass i pilotens egen installation (XS-56)
+
+Full evidens:
+[`slinga3-upprepade-arbetspass.md`](../evidence/pilot/slinga3-upprepade-arbetspass.md).
+Startpunkt `c6db95a`. Arbetskopia `brfv2-desktop-xs56`.
+
+**Före pass 1** — artefakten och körmiljön oförändrade sedan XS-55, vilket är
+varför **C5 inte utlöstes**: `webkit2gtk4.1 2.52.5-1.fc44` och
+`gtk3 3.24.52-2.fc44` är samma versioner som slinga 1 och 2 noterade, så den
+formella acceptansen kördes **inte** om. Vidare: arkiv-RPM `6ba028fb…`,
+`rpm --verify` = 0, `deliveryTree` = `a702a337…`, leveransträdet i repot
+`a702a337…`, `inspect_payload --installed` 45 kontroller / 0 fynd, korpusens fem
+PDF:er OK, index 5 dokument / 13 chunks, modelladress `http://127.0.0.1:8000/v1`.
+XS-55:s säkerhetskopia på annan media återkontrollerad: SHA-256 `3ec8b4c3…`
+oförändrad, katalog `700`, fil `600`.
+
+**Evidensklass.** Passen kördes av agenten genom produktens **verkliga fönster**
+(start via KDE:s programstartare, frågetext via urklipp + Ctrl+V, Enter, läsning
+ur a11y-trädet). Ingen fråga gick genom API:et. Det är **inte**
+operatörsattestering och ska inte läsas som det; XS-55:s tangentbordssmoke står
+oförändrad och är inte omprövad.
+
+| | Pass 1 · normalt | Pass 2 · tunneln stängd (C3) | Pass 3 · backenden dödad (C4) |
+| --- | --- | --- | --- |
+| Start | 12:13:43 | 12:46:39 | 12:56:35 (+ omstart 12:58:49) |
+| Frågeuppsättning | 10/10 · 2/2 · 3/3 · 0 fabr. | 10/10 · 2/2 · 3/3 · 0 fabr. | 10/10 · 2/2 · 3/3 · 0 fabr. |
+| Citat lösta | 14/14 | 14/14 | 14/14 |
+| M1 | ja (1/1) | ja (1/1) | ja (2/2) |
+| M2 | 0 krävdes | 0 krävdes | 0 krävdes |
+| M3 / M4 | 0 / 0 | 0 / 0 | 0 / 0 oförklarade *(1 avsiktligt)* |
+
+**Pass 2 — leverantörsbortfall.** Tunneln stängdes 12:48:07 med passet öppet;
+port 8000 slutade lyssna och `curl` gav `000`. En fråga **med stöd i korpusen**
+(g35, samma som pass 1 besvarade med löst citat) gav då `OTILLRÄCKLIGT UNDERLAG`
++ `Tekniskt fel vid svarsgenerering — försök igen om en stund.`, **noll citat**,
+inget grundat-utseende svar och ingen fabricerad källhänvisning. Produktens logg:
+`ERROR brf.answer: … Kunde inte nå LLM-servern (http://127.0.0.1:8000/v1):
+ConnectError`. **Ingen annan värd kontaktades** — samtliga URL:er i loggen är
+`http://127.0.0.1:8000`. Tunneln öppnades 12:48:54, proben i Appinställningar
+kördes om (`200 OK`), och uppsättningen gav samma utfall som pass 1. Ingen
+dataskada: 5/13, `auth.db` `ok`, fem av fem PDF:er bit-identiska.
+
+**Pass 3 — backenden dödad.** `kill -TERM` mot pid `139757`, alltså den process
+som *är* backenden (`app.desktop`, ägare av lyssnaren på `127.0.0.1:39105`) —
+inte skalet. Utfall: arbetsfönstret **stängdes**, skalprocessen levde vidare och
+visade produktens **eget** felfönster med titeln `BRF Dokument-AI — kunde inte
+starta`, rubriken *Applikationen tappade sin bakgrundstjänst* och under **TEKNISK
+ORSAK** meningen *"Bakgrundstjänsten avslutades av **signal 15**"* — den faktiska
+orsaken, inte en generisk text — jämte påståendet att data ligger kvar, sökvägen
+till loggen och tre steg vidare. Loggarna var **bit-identiska** med före
+(`4c08f922…`, `c979d759…`), och vid omstarten bevarade rotationen den kraschade
+instansens logg som `backend.log.1`. Hela `data/`-trädets SHA-256 var
+**oförändrat** (`23e27246…`): föreningen, kontot, de fem dokumenten och de tretton
+chunkarna låg kvar in på byten. Efter omstart från menyn gav g19
+`Årets resultat blev -142 000 kronor.` med citat till Årsredovisning 2025 s. 2,
+oberoende löst mot sidans extraherade text; klick på citatet öppnade rätt dokument
+med markeringen renderad.
+
+**Varför uppsättningen kördes efter omstarten i pass 3.** Före dödandet hade den
+mätt om samma tillstånd en tredje gång. Efter omstarten prövar den passets enda
+egentliga fråga: kommer produkten tillbaka *hel* — och hela uppsättningen mot alla
+fem dokumenten är ett starkare belägg för att indexet är oskadat än ett enstaka
+lyckat svar. Skälet står också i evidensfilen §5.7.
+
+**Inget stoppkriterium i §8 inträffade.** Alla sju prövades var för sig; tabellen
+står i evidensfilen §7.1. Särskilt: 42 av 42 citat lösta (kriterium 4), `0 fynd`
+i `inspect_payload --installed` (kriterium 3), och enbart
+`http://127.0.0.1:8000` i loggarna (kriterium 2).
+
+**Efter passen:** fönstren stängda med produktens egen `Close`,
+`pgrep -f brfv2-desktop` tomt, systemd-enheterna borta, tunneln stängd,
+input-daemonen stoppad. Säkerhetskopia skapad i pass 3 genom Appinställningar
+(`brfv2-backup-20260730-110753-c54d.zip`, 16 filer, `unzip -t` rent, index 5/13)
+och kopierad till annan media (`agenntserver:~/pilot-sakerhetskopior/`, katalog
+`700`, fil `600`) med **matchande SHA-256 lokalt och på fjärrsidan**
+(`e7fd00d4…`). Kopian är **inte** committad. Återställning är oprövad — det är
+slinga 4.
+
+**BP4-3-rekommendation: passera och gå vidare till slinga 4.** Fyra punkter som
+BP4 bör *besluta* om, inte bara notera: rättelsen av g24 plus metodregeln att
+citatupplösning och svarsriktighet är två kontroller; villkoret för obesvarbara
+frågor; klassningen av tangentbordsotillgängligheten i Appinställningar; och en
+`M4`-definition som skiljer oförklarade dödsfall från förklarade. Motiveringen
+står i evidensfilen §9.
+
+---
 
 ### Slinga 2 / Pass 1 — 2026-07-29 · första start (PÅGÅENDE)
 

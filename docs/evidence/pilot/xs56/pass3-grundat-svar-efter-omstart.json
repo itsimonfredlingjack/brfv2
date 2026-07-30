@@ -1,0 +1,35 @@
+{
+ "id": "g19-postrestart",
+ "question": "Vad blev årets resultat 2025?",
+ "field_verified": true,
+ "elapsed_s": 12.3,
+ "answer_blocks": [
+  "Årets resultat blev -142 000 kronor."
+ ],
+ "citations": [
+  "[1] \"Årets resultat blev -142 000 kronor.\" — Årsredovisning 2025.pdf s.2"
+ ],
+ "provider": [
+  "Gemma 4 12B · Self-hosted"
+ ],
+ "raw_tail": [
+  {
+   "role": "section",
+   "name": "",
+   "text": "Årets resultat blev -142 000 kronor.",
+   "path": "0.1.0.0.0.0.2.6"
+  },
+  {
+   "role": "button",
+   "name": "[1] \"Årets resultat blev -142 000 kronor.\" — Årsredovisning 2025.pdf s.2",
+   "text": "",
+   "path": "0.1.0.0.0.0.2.7"
+  },
+  {
+   "role": "section",
+   "name": "",
+   "text": "Gemma 4 12B · Self-hosted",
+   "path": "0.1.0.0.0.0.2.8"
+  }
+ ]
+}

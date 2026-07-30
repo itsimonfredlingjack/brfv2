@@ -1,0 +1,553 @@
+[
+ {
+  "id": "g09",
+  "question": "Hur många ledamöter ska styrelsen ha?",
+  "field_verified": true,
+  "elapsed_s": 12.3,
+  "answer_blocks": [
+   "Styrelsen består av lägst tre och högst fem ledamöter med högst två suppleanter."
+  ],
+  "citations": [
+   "[1] \"Styrelsen består av lägst tre och högst fem ledamöter med högst två suppleanter.\" — Stadgar Brf Gjutformen 12.pdfs.2"
+  ],
+  "provider": [
+   "Gemma 4 12B · Self-hosted"
+  ],
+  "raw_tail": [
+   {
+    "role": "section",
+    "name": "",
+    "text": "Styrelsen består av lägst tre och högst fem ledamöter med högst två suppleanter.",
+    "path": "0.1.0.0.0.0.2.11"
+   },
+   {
+    "role": "button",
+    "name": "[1] \"Styrelsen består av lägst tre och högst fem ledamöter med högst två suppleanter.\" — Stadgar Brf Gjutformen 12.pdfs.2",
+    "text": "",
+    "path": "0.1.0.0.0.0.2.12"
+   },
+   {
+    "role": "section",
+    "name": "",
+    "text": "Gemma 4 12B · Self-hosted",
+    "path": "0.1.0.0.0.0.2.13"
+   }
+  ],
+  "kind": "fragment"
+ },
+ {
+  "id": "g17",
+  "question": "Vad kostade reliningen av avloppsstammarna?",
+  "field_verified": true,
+  "elapsed_s": 14.4,
+  "answer_blocks": [
+   "Under 2025 genomfördes etapp 1 av relining av avloppsstammarna till en kostnad av 1 850 000 kronor. År 2026 planeras etapp 2 av relining av avloppsstammarna till en beräknad kostnad av 1 900 000 kronor."
+  ],
+  "citations": [
+   "[1] \"Under 2025 genomfördes etapp 1 av relining av avloppsstammarna till en kostnad av 1 850 000 kronor.\" — Årsredovisning 2025.pdf s.1",
+   "[2] \"År 2026 genomförs etapp 2 av relining av avloppsstammarna till en beräknad kostnad av 1 900 000 kronor.\" — Underhållsplan 2026-2036.pdf s.2"
+  ],
+  "provider": [
+   "Gemma 4 12B · Self-hosted"
+  ],
+  "raw_tail": [
+   {
+    "role": "section",
+    "name": "",
+    "text": "Under 2025 genomfördes etapp 1 av relining av avloppsstammarna till en kostnad av 1 850 000 kronor. År 2026 planeras etapp 2 av relining av avloppsstammarna till en beräknad kostnad av 1 900 000 kronor.",
+    "path": "0.1.0.0.0.0.2.16"
+   },
+   {
+    "role": "button",
+    "name": "[1] \"Under 2025 genomfördes etapp 1 av relining av avloppsstammarna till en kostnad av 1 850 000 kronor.\" — Årsredovisning 2025.pdf s.1",
+    "text": "",
+    "path": "0.1.0.0.0.0.2.17"
+   },
+   {
+    "role": "button",
+    "name": "[2] \"År 2026 genomförs etapp 2 av relining av avloppsstammarna till en beräknad kostnad av 1 900 000 kronor.\" — Underhållsplan 2026-2036.pdf s.2",
+    "text": "",
+    "path": "0.1.0.0.0.0.2.18"
+   },
+   {
+    "role": "section",
+    "name": "",
+    "text": "Gemma 4 12B · Self-hosted",
+    "path": "0.1.0.0.0.0.2.19"
+   }
+  ],
+  "kind": "fragment"
+ },
+ {
+  "id": "g19",
+  "question": "Vad blev årets resultat 2025?",
+  "field_verified": true,
+  "elapsed_s": 12.4,
+  "answer_blocks": [
+   "Årets resultat blev -142 000 kronor."
+  ],
+  "citations": [
+   "[1] \"Årets resultat blev -142 000 kronor.\" — Årsredovisning 2025.pdf s.2"
+  ],
+  "provider": [
+   "Gemma 4 12B · Self-hosted"
+  ],
+  "raw_tail": [
+   {
+    "role": "section",
+    "name": "",
+    "text": "Årets resultat blev -142 000 kronor.",
+    "path": "0.1.0.0.0.0.2.22"
+   },
+   {
+    "role": "button",
+    "name": "[1] \"Årets resultat blev -142 000 kronor.\" — Årsredovisning 2025.pdf s.2",
+    "text": "",
+    "path": "0.1.0.0.0.0.2.23"
+   },
+   {
+    "role": "section",
+    "name": "",
+    "text": "Gemma 4 12B · Self-hosted",
+    "path": "0.1.0.0.0.0.2.24"
+   }
+  ],
+  "kind": "fragment"
+ },
+ {
+  "id": "g24",
+  "question": "Vilket företag sköter den ekonomiska förvaltningen?",
+  "field_verified": true,
+  "elapsed_s": 12.5,
+  "answer_blocks": [
+   "Den löpande ekonomiska förvaltningen har skötts av SBC Sveriges BostadsrättsCentrum AB."
+  ],
+  "citations": [
+   "[1] \"den löpande ekonomiska förvaltningen har skötts av SBC Sveriges BostadsrättsCentrum AB.\" — Årsredovisning 2025.pdfs.1"
+  ],
+  "provider": [
+   "Gemma 4 12B · Self-hosted"
+  ],
+  "raw_tail": [
+   {
+    "role": "section",
+    "name": "",
+    "text": "Den löpande ekonomiska förvaltningen har skötts av SBC Sveriges BostadsrättsCentrum AB.",
+    "path": "0.1.0.0.0.0.2.27"
+   },
+   {
+    "role": "button",
+    "name": "[1] \"den löpande ekonomiska förvaltningen har skötts av SBC Sveriges BostadsrättsCentrum AB.\" — Årsredovisning 2025.pdfs.1",
+    "text": "",
+    "path": "0.1.0.0.0.0.2.28"
+   },
+   {
+    "role": "section",
+    "name": "",
+    "text": "Gemma 4 12B · Self-hosted",
+    "path": "0.1.0.0.0.0.2.29"
+   }
+  ],
+  "kind": "fragment"
+ },
+ {
+  "id": "g28",
+  "question": "Vilket företag ska utföra fasadmålningen?",
+  "field_verified": true,
+  "elapsed_s": 12.5,
+  "answer_blocks": [
+   "Uppdraget tilldelas Måleri Väst AB."
+  ],
+  "citations": [
+   "[1] \"Uppdraget tilldelas Måleri Väst AB enligt offert om 450 000 kronor inklusive ställning och materiel.\" — Styrelseprotokoll 2026-03-12.pdf s.1"
+  ],
+  "provider": [
+   "Gemma 4 12B · Self-hosted"
+  ],
+  "raw_tail": [
+   {
+    "role": "section",
+    "name": "",
+    "text": "Uppdraget tilldelas Måleri Väst AB.",
+    "path": "0.1.0.0.0.0.2.32"
+   },
+   {
+    "role": "button",
+    "name": "[1] \"Uppdraget tilldelas Måleri Väst AB enligt offert om 450 000 kronor inklusive ställning och materiel.\" — Styrelseprotokoll 2026-03-12.pdf s.1",
+    "text": "",
+    "path": "0.1.0.0.0.0.2.33"
+   },
+   {
+    "role": "section",
+    "name": "",
+    "text": "Gemma 4 12B · Self-hosted",
+    "path": "0.1.0.0.0.0.2.34"
+   }
+  ],
+  "kind": "fragment"
+ },
+ {
+  "id": "g31",
+  "question": "Vad kostar installationen av laddstolpar enligt offerten?",
+  "field_verified": true,
+  "elapsed_s": 12.6,
+  "answer_blocks": [
+   "Styrelsen har inhämtat offert från Chargepark AB om 96 000 kronor för installation av sex laddplatser på gårdens parkering."
+  ],
+  "citations": [
+   "[1] \"Styrelsen har inhämtat offert från Chargepark AB om 96 000 kronor för installation av sex laddplatser på gårdens parkering.\" — Styrelseprotokoll 2026-03-12.pdf s.2"
+  ],
+  "provider": [
+   "Gemma 4 12B · Self-hosted"
+  ],
+  "raw_tail": [
+   {
+    "role": "section",
+    "name": "",
+    "text": "Styrelsen har inhämtat offert från Chargepark AB om 96 000 kronor för installation av sex laddplatser på gårdens parkering.",
+    "path": "0.1.0.0.0.0.2.37"
+   },
+   {
+    "role": "button",
+    "name": "[1] \"Styrelsen har inhämtat offert från Chargepark AB om 96 000 kronor för installation av sex laddplatser på gårdens parkering.\" — Styrelseprotokoll 2026-03-12.pdf s.2",
+    "text": "",
+    "path": "0.1.0.0.0.0.2.38"
+   },
+   {
+    "role": "section",
+    "name": "",
+    "text": "Gemma 4 12B · Self-hosted",
+    "path": "0.1.0.0.0.0.2.39"
+   }
+  ],
+  "kind": "fragment"
+ },
+ {
+  "id": "g35",
+  "question": "Vid vilket snödjup sker utryckning?",
+  "field_verified": true,
+  "elapsed_s": 11.2,
+  "answer_blocks": [
+   "Utryckning sker automatiskt vid ett snödjup om 5 centimeter."
+  ],
+  "citations": [
+   "[1] \"Utryckning sker automatiskt vid ett snödjup om 5 centimeter.\" — Snöröjningsavtal 2026.pdf s.1"
+  ],
+  "provider": [
+   "Gemma 4 12B · Self-hosted"
+  ],
+  "raw_tail": [
+   {
+    "role": "section",
+    "name": "",
+    "text": "Utryckning sker automatiskt vid ett snödjup om 5 centimeter.",
+    "path": "0.1.0.0.0.0.2.42"
+   },
+   {
+    "role": "button",
+    "name": "[1] \"Utryckning sker automatiskt vid ett snödjup om 5 centimeter.\" — Snöröjningsavtal 2026.pdf s.1",
+    "text": "",
+    "path": "0.1.0.0.0.0.2.43"
+   },
+   {
+    "role": "section",
+    "name": "",
+    "text": "Gemma 4 12B · Self-hosted",
+    "path": "0.1.0.0.0.0.2.44"
+   }
+  ],
+  "kind": "fragment"
+ },
+ {
+  "id": "g37",
+  "question": "Vad kostar maskinell snöröjning per timme?",
+  "field_verified": true,
+  "elapsed_s": 12.6,
+  "answer_blocks": [
+   "Maskinell snöröjning med traktor kostar 1 250 kronor per timme."
+  ],
+  "citations": [
+   "[1] \"maskinell snöröjning med traktor 1 250 kronor per timme\" — Snöröjningsavtal 2026.pdf s.2"
+  ],
+  "provider": [
+   "Gemma 4 12B · Self-hosted"
+  ],
+  "raw_tail": [
+   {
+    "role": "section",
+    "name": "",
+    "text": "Maskinell snöröjning med traktor kostar 1 250 kronor per timme.",
+    "path": "0.1.0.0.0.0.2.47"
+   },
+   {
+    "role": "button",
+    "name": "[1] \"maskinell snöröjning med traktor 1 250 kronor per timme\" — Snöröjningsavtal 2026.pdf s.2",
+    "text": "",
+    "path": "0.1.0.0.0.0.2.48"
+   },
+   {
+    "role": "section",
+    "name": "",
+    "text": "Gemma 4 12B · Self-hosted",
+    "path": "0.1.0.0.0.0.2.49"
+   }
+  ],
+  "kind": "fragment"
+ },
+ {
+  "id": "g44",
+  "question": "Vilket år ska stambytet genomföras?",
+  "field_verified": true,
+  "elapsed_s": 12.6,
+  "answer_blocks": [
+   "Stambyte av badrumsstammarna ska genomföras år 2032."
+  ],
+  "citations": [
+   "[1] \"År 2032 genomförs stambyte av badrumsstammarna med tillhörande våtrumsrenovering\" — Underhållsplan 2026-2036.pdf s.3",
+   "[2] \"De största posterna är stambyte av badrumsstammarna år 2032\" — Underhållsplan 2026-2036.pdf s.1"
+  ],
+  "provider": [
+   "Gemma 4 12B · Self-hosted"
+  ],
+  "raw_tail": [
+   {
+    "role": "section",
+    "name": "",
+    "text": "Stambyte av badrumsstammarna ska genomföras år 2032.",
+    "path": "0.1.0.0.0.0.2.52"
+   },
+   {
+    "role": "button",
+    "name": "[1] \"År 2032 genomförs stambyte av badrumsstammarna med tillhörande våtrumsrenovering\" — Underhållsplan 2026-2036.pdf s.3",
+    "text": "",
+    "path": "0.1.0.0.0.0.2.53"
+   },
+   {
+    "role": "button",
+    "name": "[2] \"De största posterna är stambyte av badrumsstammarna år 2032\" — Underhållsplan 2026-2036.pdf s.1",
+    "text": "",
+    "path": "0.1.0.0.0.0.2.54"
+   },
+   {
+    "role": "section",
+    "name": "",
+    "text": "Gemma 4 12B · Self-hosted",
+    "path": "0.1.0.0.0.0.2.55"
+   }
+  ],
+  "kind": "fragment"
+ },
+ {
+  "id": "g45",
+  "question": "Vad kostar stambytet enligt planen?",
+  "field_verified": true,
+  "elapsed_s": 12.7,
+  "answer_blocks": [
+   "Stambyte av badrumsstammarna genomförs år 2032 till en beräknad kostnad av 8 500 000 kronor."
+  ],
+  "citations": [
+   "[1] \"År 2032 genomförs stambyte av badrumsstammarna med tillhörande våtrumsrenovering till en beräknad kostnad av 8 500 000 kronor.\" — Underhållsplan 2026-2036.pdf s.3"
+  ],
+  "provider": [
+   "Gemma 4 12B · Self-hosted"
+  ],
+  "raw_tail": [
+   {
+    "role": "section",
+    "name": "",
+    "text": "Stambyte av badrumsstammarna genomförs år 2032 till en beräknad kostnad av 8 500 000 kronor.",
+    "path": "0.1.0.0.0.0.2.58"
+   },
+   {
+    "role": "button",
+    "name": "[1] \"År 2032 genomförs stambyte av badrumsstammarna med tillhörande våtrumsrenovering till en beräknad kostnad av 8 500 000 kronor.\" — Underhållsplan 2026-2036.pdf s.3",
+    "text": "",
+    "path": "0.1.0.0.0.0.2.59"
+   },
+   {
+    "role": "section",
+    "name": "",
+    "text": "Gemma 4 12B · Self-hosted",
+    "path": "0.1.0.0.0.0.2.60"
+   }
+  ],
+  "kind": "fragment"
+ },
+ {
+  "id": "g05",
+  "question": "Vad krävs för att hyra ut sin lägenhet i andra hand?",
+  "field_verified": true,
+  "elapsed_s": 12.7,
+  "answer_blocks": [
+   "En bostadsrättshavare får upplåta sin lägenhet i andra hand endast om styrelsen ger sitt skriftliga samtycke."
+  ],
+  "citations": [
+   "[1] \"En bostadsrättshavare får upplåta sin lägenhet i andra hand endast om styrelsen ger sitt skriftliga samtycke.\" — Stadgar Brf Gjutformen 12.pdf s.2"
+  ],
+  "provider": [
+   "Gemma 4 12B · Self-hosted"
+  ],
+  "raw_tail": [
+   {
+    "role": "section",
+    "name": "",
+    "text": "En bostadsrättshavare får upplåta sin lägenhet i andra hand endast om styrelsen ger sitt skriftliga samtycke.",
+    "path": "0.1.0.0.0.0.2.63"
+   },
+   {
+    "role": "button",
+    "name": "[1] \"En bostadsrättshavare får upplåta sin lägenhet i andra hand endast om styrelsen ger sitt skriftliga samtycke.\" — Stadgar Brf Gjutformen 12.pdf s.2",
+    "text": "",
+    "path": "0.1.0.0.0.0.2.64"
+   },
+   {
+    "role": "section",
+    "name": "",
+    "text": "Gemma 4 12B · Self-hosted",
+    "path": "0.1.0.0.0.0.2.65"
+   }
+  ],
+  "kind": "prosa"
+ },
+ {
+  "id": "g25",
+  "question": "Hur ofta ska underhållsplanen uppdateras?",
+  "field_verified": true,
+  "elapsed_s": 13.0,
+  "answer_blocks": [
+   "Planen revideras vart tredje år."
+  ],
+  "citations": [
+   "[1] \"Planen omfattar fastighetens gemensamma delar under perioden 2026 till 2036 och revideras vart tredje år.\" — Underhållsplan 2026-2036.pdf s.1"
+  ],
+  "provider": [
+   "Gemma 4 12B · Self-hosted"
+  ],
+  "raw_tail": [
+   {
+    "role": "section",
+    "name": "",
+    "text": "Planen revideras vart tredje år.",
+    "path": "0.1.0.0.0.0.2.68"
+   },
+   {
+    "role": "button",
+    "name": "[1] \"Planen omfattar fastighetens gemensamma delar under perioden 2026 till 2036 och revideras vart tredje år.\" — Underhållsplan 2026-2036.pdf s.1",
+    "text": "",
+    "path": "0.1.0.0.0.0.2.69"
+   },
+   {
+    "role": "section",
+    "name": "",
+    "text": "Gemma 4 12B · Self-hosted",
+    "path": "0.1.0.0.0.0.2.70"
+   }
+  ],
+  "kind": "prosa"
+ },
+ {
+  "id": "u02",
+  "question": "Vilket arvode får styrelsens ledamöter?",
+  "field_verified": true,
+  "elapsed_s": 10.8,
+  "answer_blocks": [
+   "OTILLRÄCKLIGT UNDERLAG",
+   "insufficient_data: Utdragen innehåller ingen information om vilket arvode styrelsens ledamöter får."
+  ],
+  "citations": [],
+  "provider": [
+   "Gemma 4 12B · Self-hosted"
+  ],
+  "raw_tail": [
+   {
+    "role": "section",
+    "name": "",
+    "text": "OTILLRÄCKLIGT UNDERLAG",
+    "path": "0.1.0.0.0.0.2.73"
+   },
+   {
+    "role": "section",
+    "name": "",
+    "text": "insufficient_data: Utdragen innehåller ingen information om vilket arvode styrelsens ledamöter får.",
+    "path": "0.1.0.0.0.0.2.74"
+   },
+   {
+    "role": "section",
+    "name": "",
+    "text": "Gemma 4 12B · Self-hosted",
+    "path": "0.1.0.0.0.0.2.75"
+   }
+  ],
+  "kind": "unanswerable"
+ },
+ {
+  "id": "u05",
+  "question": "Vilket datum hålls årsstämman 2026?",
+  "field_verified": true,
+  "elapsed_s": 13.7,
+  "answer_blocks": [
+   "OTILLRÄCKLIGT UNDERLAG",
+   "Det framgår inte vilket specifikt datum årsstämman 2026 hålls, men enligt stadgarna hålls ordinarie föreningsstämma årligen före juni månads utgång."
+  ],
+  "citations": [],
+  "provider": [
+   "Gemma 4 12B · Self-hosted"
+  ],
+  "raw_tail": [
+   {
+    "role": "section",
+    "name": "",
+    "text": "OTILLRÄCKLIGT UNDERLAG",
+    "path": "0.1.0.0.0.0.2.78"
+   },
+   {
+    "role": "section",
+    "name": "",
+    "text": "Det framgår inte vilket specifikt datum årsstämman 2026 hålls, men enligt stadgarna hålls ordinarie föreningsstämma årligen före juni månads utgång.",
+    "path": "0.1.0.0.0.0.2.79"
+   },
+   {
+    "role": "section",
+    "name": "",
+    "text": "Gemma 4 12B · Self-hosted",
+    "path": "0.1.0.0.0.0.2.80"
+   }
+  ],
+  "kind": "unanswerable"
+ },
+ {
+  "id": "u08",
+  "question": "Vad blev resultatet av radonmätningen?",
+  "field_verified": true,
+  "elapsed_s": 12.0,
+  "answer_blocks": [
+   "OTILLRÄCKLIGT UNDERLAG",
+   "Information om resultatet av radonmätningen saknas i de tillhandahållna utdragen."
+  ],
+  "citations": [],
+  "provider": [
+   "Gemma 4 12B · Self-hosted"
+  ],
+  "raw_tail": [
+   {
+    "role": "section",
+    "name": "",
+    "text": "OTILLRÄCKLIGT UNDERLAG",
+    "path": "0.1.0.0.0.0.2.83"
+   },
+   {
+    "role": "section",
+    "name": "",
+    "text": "Information om resultatet av radonmätningen saknas i de tillhandahållna utdragen.",
+    "path": "0.1.0.0.0.0.2.84"
+   },
+   {
+    "role": "section",
+    "name": "",
+    "text": "Gemma 4 12B · Self-hosted",
+    "path": "0.1.0.0.0.0.2.85"
+   }
+  ],
+  "kind": "unanswerable"
+ }
+]
