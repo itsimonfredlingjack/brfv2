@@ -466,7 +466,37 @@ citatet löste mot rätt sida.
 | Innehåll | 15 filer, trädsumma `23e27246…` — oförändrad sedan flytten |
 | Klassning | **identitetsbärande** (`auth.db` med operatörens verkliga namn och e-postadress) |
 | I Git? | **nej** — ligger helt utanför repots träd |
-| Disposition | **behålls** vid `0700`. Instruktionen tillåter radering först när återställd aktiv data är fullt verifierad **och** cleanup uttryckligen tillåtits; något sådant tillstånd har inte givits, så kopian lämnas skyddad och dokumenterad |
+| Disposition *(vid D4:s avslut)* | behölls vid `0700` i väntan på uttryckligt tillstånd — **därefter raderad, se §9.11** |
+
+### 9.11 Karantänkopian raderad (efterpass 2026-07-30)
+
+**Auktoriserad av det formella BP4-4-beslutet** (`PASS BP4-4 — ALL FOUR PILOT
+LOOPS COMPLETE`, Linear XS-57 2026-07-30 16:57): karantänkopian ska inte behållas
+som ytterligare permanent identitetsbärande kopia när aktiv data och flera
+oberoende återställningspunkter redan är verifierade, och får raderas efter en
+sista hash- och existenskontroll av aktiv data och fjärrkopior, med journalförd
+disposition.
+
+**Raderad kanonisk sökväg:** `/home/aidev/pilot-quarantine-xs57/data-20260730-xs57-d4`
+
+| Steg | Tidpunkt | Utfall |
+| --- | --- | --- |
+| Kontroll före | 2026-07-30 19:05:40 +02:00 | aktivt träd `23e27246…` (krävt värde) · `auth.db` `ok` · 5 dokument / 13 chunks · 5/5 PDF:er mot `~/pilot-korpus/` · D1 `5fe53c7a…` och skyddsnät `5a37c881…` med **matchande summor lokalt och på fjärrsidan** · kataloger `0700`, filer `0600`. Appen stoppad, 0 processer och 0 enheter |
+| Målkontroll | omedelbart före | kanonisk = literal sökväg · **inga symlänkar** i någon komponent eller inuti trädet · verklig katalog · **strikt under** `~/pilot-quarantine-xs57/` · bevisat **inte** aktiv `data/`, inte `backups/`, inte inuti appens datakatalog, inte skyddsnätskopian · identitet: **15 filer**, trädsumma `23e27246…`, innehöll **`auth.db`** |
+| Radering | 2026-07-30 19:07:13 +02:00 | `rm -rf /home/aidev/pilot-quarantine-xs57/data-20260730-xs57-d4` → exit `0` |
+| Kontroll efter | 2026-07-30 19:07:30 +02:00 | målet **finns inte**, föräldern kvar och tom (`0700`) · aktivt träd **`23e27246…` oförändrat** · `auth.db` `ok`, filsumma `96636b3e…` oförändrad · 5 / 13 · 5/5 PDF:er · modelladress `http://127.0.0.1:8000/v1` · tre produktkopior kvar lokalt, D1 `5fe53c7a…` (`0700`/`0600`) · fjärrkopiorna `5fe53c7a…` och `5a37c881…` oförändrade, `0700`/`0600` |
+
+**Ingen kryptografisk radering påstås.** Filsystemet är **btrfs**
+(copy-on-write). `rm` tar bort katalogposterna ur namnrymden; blocken kan ligga
+kvar oöverskrivna tills filsystemet återanvänder dem, och metoden verifierar
+ingen överskrivning. Det som påstås är att **kopian inte längre finns i
+filsystemets namnrymd** — inte att dess bytes är oåterkalleligt förstörda.
+
+**Ingen aktiv data och ingen återställningspunkt gick förlorad.** Kvar: tre
+produktkopior lokalt, D1-kopian på annan media, och den oberoende
+skyddsnätskopian på annan media. Den enda borttagna artefakten är den
+identitetsbärande karantänkopian, vars enda syfte var att vara skyddsnät under
+D4.
 
 ### 9.10 Vad D4 nu fastställer — och vad den fortfarande inte gör
 

@@ -228,6 +228,68 @@ vilket avgränsar begränsning 13 till menyns *ingång* · sessionen överlevde 
 
 **Inget stoppkriterium i §8 inträffade.**
 
+#### Efterpass — karantänkopian raderad (2026-07-30)
+
+**Auktorisation:** det formella **BP4-4-beslutet** (`PASS BP4-4 — ALL FOUR PILOT
+LOOPS COMPLETE`, Linear XS-57 2026-07-30 16:57), som säger att karantänkopian
+*inte* ska behållas som ytterligare permanent identitetsbärande kopia när aktiv
+data och flera oberoende återställningspunkter redan är verifierade, och att den
+får raderas **efter en sista hash-/existenskontroll av aktiv data och fjärrkopior**
+med journalförd disposition. Det är den kontrollen och den journalföringen.
+
+**Kontroll före radering** *(19:05:40 +02:00, appen stoppad, 0 processer och 0
+systemd-enheter, så ingenting kunde ändras under kontrollen)*:
+
+| Kontroll | Observerat |
+| --- | --- |
+| Aktivt `data/`-träd | `23e2724658b914487c3baf58cd94324108fff484ad70fcd33ceb2f32341b5b49` — krävt värde |
+| `auth.db` | `integrity_check ok`, 1 konto / 1 medlemskap / 1 session |
+| Dokument / chunks | 5 / 13 |
+| Fem PDF:er mot `~/pilot-korpus/` | 5/5 bit-identiska |
+| D1-kopian, lokalt och på annan media | `5fe53c7a…` på båda sidor |
+| Skyddsnätskopian, lokalt och på annan media | `5a37c881…` på båda sidor |
+| Rättigheter | kopiekatalogerna `0700`, kopiefilerna `0600` — lokalt och på fjärrsidan |
+
+**Målkontroll omedelbart före radering.** Kanonisk sökväg identisk med den
+literala; **inga symlänkar** i någon sökvägskomponent och inga inuti trädet;
+verklig katalog; **strikt under** `~/pilot-quarantine-xs57/`; bevisat **inte**
+den aktiva datakatalogen, inte `backups/`, inte inuti appens datakatalog och inte
+skyddsnätskopian. Identitet bekräftad: **15 filer**, trädsumma
+`23e2724658b914487c3baf58cd94324108fff484ad70fcd33ceb2f32341b5b49`, och den
+innehöll **`auth.db`** — alltså identitetsbärande data (operatörens verkliga namn
+och e-postadress), vilket är hela skälet att den inte skulle ligga kvar.
+
+**Radering** *(19:07:13 +02:00)*:
+
+```
+rm -rf /home/aidev/pilot-quarantine-xs57/data-20260730-xs57-d4     # exit 0
+```
+
+**Ingen kryptografisk radering påstås.** Filsystemet är **btrfs** (copy-on-write)
+på `/dev/nvme0n1p3`. `rm` länkar bort katalogposterna; blocken kan ligga kvar
+oöverskrivna tills filsystemet återanvänder dem, och metoden verifierar ingen
+överskrivning. Påståendet som görs är exakt: **kopian är borttagen ur
+filsystemets namnrymd**, inte att dess bytes är oåterkalleligt förstörda.
+
+**Kontroll efter radering** *(19:07:30 +02:00)*:
+
+| Kontroll | Observerat |
+| --- | --- |
+| Karantänmålet | **finns inte**; föräldrakatalogen `~/pilot-quarantine-xs57/` kvar och tom, `0700` |
+| Aktivt `data/`-träd | `23e2724658b914487c3baf58cd94324108fff484ad70fcd33ceb2f32341b5b49` — **oförändrat** |
+| `auth.db` | `integrity_check ok`; filens summa `96636b3e…` oförändrad |
+| Dokument / chunks | 5 / 13 |
+| Fem PDF:er mot `~/pilot-korpus/` | 5/5 bit-identiska |
+| Modelladress | `http://127.0.0.1:8000/v1` |
+| Säkerhetskopior lokalt | alla tre kvar; D1 `5fe53c7a…`, katalog `0700`, fil `0600` |
+| Fjärrkopior | D1 `5fe53c7a…` och skyddsnät `5a37c881…` oförändrade, kataloger `0700`, filer `0600` |
+
+**Ingen aktiv data och ingen återställningspunkt gick förlorad.** Kvar finns tre
+produktkopior lokalt, samma D1-kopia på annan media och den oberoende
+skyddsnätskopian på annan media. Den enda borttagna artefakten är den
+identitetsbärande karantänkopian, vars enda syfte var att vara ett skyddsnät
+under D4.
+
 ---
 
 ### Slinga 3 — 2026-07-30 · tre arbetspass i pilotens egen installation (XS-56)
