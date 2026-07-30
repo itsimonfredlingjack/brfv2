@@ -38,7 +38,7 @@ Kolumnen **Slinga 3** är XS-56:s tre pass; per-pass-uppdelningen står i
 | M2 | Terminalingripanden under pass, och vad de gällde | **2 sanktionerade + diagnostik.** Sanktionerat: SSH-tunneln (§7 undantar den) — vid återupptagandet krävde den dessutom **ombekräftelse av Tailscale SSH i webbläsare**, en följd av värdomstarten och inte av produkten. Sanktionerat: kopiering av säkerhetskopian till annan media, vilket runbookens efterpass kräver. Diagnostiska, utförda av agenten och utan verkan på produkten: `kbuildsycoca6` (menycache — obehövlig, posten låg redan i menyn), `journalctl --user`, skrivskyddade `sqlite3`-frågor och a11y-avläsningar. **Noll terminalingripanden krävdes för att använda produkten** | **0 krävdes för att använda produkten** i alla tre passen. Sanktionerat: SSH-tunneln (§7 undantar den) — samt att stänga och öppna den i pass 2, vilket *är* felinjektionen, och att döda backenden i pass 3, likaså. Verktyg utan verkan på produkten: `ydotoold` (input-daemon), pekarprofilen på den virtuella enheten (satt + återställd), a11y- och loggavläsningar |
 | M3 | Startmisslyckanden (felfönster) per pass | **0** — inget felfönster, båda instanserna nådde `status: ready` | **0 / 0 / 0.** Alla fyra instanserna nådde `status: ready`. Felfönstret i pass 3 räknas **inte** hit: det var svaret på en dödad backend, inte en misslyckad start |
 | M4 | Oväntade backend-dödsfall per pass | **0** — pidbytet var en andra menystart; instans 1 avslutades rent (systemd loggade ingen `Failed`, ingen signal, ingen core-dump). Instans 2 upphörde när **värddatorn** gick ned 07:19:21; det räknas **inte** som M4, och skälet är utskrivet i avvikelsetabellen | **0 oförklarade / 0 / 0** — i pass 3 dödades backenden **avsiktligt** (`kill -TERM`, signal 15) som felinjektion C4. Stoppkriterium 7 kräver tre **oförklarade** dödsfall i samma pass |
-| M5 | Fragment-faktafrågor besvarade med korrekt löst citat | **10 av 10** — samtliga citat verifierade mot extraherad sidtext | **10/10 · 10/10 · 10/10.** Två kontroller per fråga, separerade: löser citatet, *och* är svaret rätt mot facit |
+| M5 | Fragment-faktafrågor besvarade med korrekt löst citat | ~~10 av 10~~ → **9 av 10** *(rättad 2026-07-30 efter slinga 3)*. Samtliga citat var verifierade mot extraherad sidtext, men g24:s **svar** angav fel företag — se rättelsen under Pass | **10/10 · 10/10 · 10/10.** Två kontroller per fråga, separerade: löser citatet, *och* är svaret rätt mot facit (§6.3) |
 | M6 | Felaktiga avvisningar | **0** — ingen fråga med stöd i korpusen avvisades | **0 / 0 / 0.** Avvisningen under leverantörsbortfallet i pass 2 är korrekt beteende, inte en felaktig avvisning |
 | M7 | Fabricerade källhänvisningar | **0** — oberoende verifierat: alla 13 citat har stöd i den citerade sidan, och `arvode`/`radon` finns bevisligen inte i korpusen. **Måste förbli 0** (stoppkriterium 4) | **0 / 0 / 0** — **42 av 42** citat lösta mot extraherad sidtext över tre pass. **Måste förbli 0** (stoppkriterium 4) |
 | M8 | Backup/restore-övningar och om data stämde efteråt | — *(slinga 4)* | Kopia **skapad** i pass 3 genom Appinställningar och verifierad post för post (16 filer, `unzip -t` rent, index 5/13), kopierad till annan media med matchande SHA-256. **Återställning är inte prövad** — det är slinga 4 |
@@ -55,7 +55,7 @@ källhänvisning är alltid ett stopp, från första körningen.
 
 | Datum | Fragment-fakta (av 10) | Prosa (av 2) | Obesvarbara avvisade (av 3) | Fabricerade | Anmärkning |
 | --- | --- | --- | --- | --- | --- |
-| **2026-07-30** | **10** | **2** besvarade med stött citat | **2** | **0** | **BASLINJEN.** u05 gav kvalificerat icke-svar med *stött* citat i stället för noll citat — avvikelse mot villkoret, inte fabricering. g17/g31/g44 överinkluderande men korrekt citerade |
+| **2026-07-30** | ~~10~~ → **9** *(rättad)* | **2** besvarade med stött citat | **2** | **0** | **BASLINJEN.** u05 gav kvalificerat icke-svar med *stött* citat i stället för noll citat — avvikelse mot villkoret, inte fabricering. g17/g31/g44 överinkluderande men korrekt citerade. **Rättad efter slinga 3:** g24:s svar angav teknisk i stället för ekonomisk förvaltare — citatet löste, svaret var fel |
 | 2026-07-30 *(slinga 3, pass 1)* | **10** | **2** | **3** | **0** | 14 av 14 citat lösta. u05 avvisade nu **utan** citat → 3/3. g31 inte längre överinkluderande. **g24 svarade `SBC …`, dvs. rätt företag** — baslinjens `Driftia` var fel, se avvikelsetabellen |
 | 2026-07-30 *(slinga 3, pass 2 — efter leverantörsbortfall)* | **10** | **2** | **3** | **0** | Kört **efter** att tunneln stängts och öppnats igen. Identiskt med pass 1, inklusive vilka två frågor som blir överinkluderande (g17, g44) |
 | 2026-07-30 *(slinga 3, pass 3 — efter backendens död och omstart)* | **10** | **2** | **3** | **0** | Kört **efter** omstarten, medvetet placerat där (skälet i evidensfilen §5.7). Identiskt med pass 1 och 2 |
@@ -193,12 +193,14 @@ och kopierad till annan media (`agenntserver:~/pilot-sakerhetskopior/`, katalog
 (`e7fd00d4…`). Kopian är **inte** committad. Återställning är oprövad — det är
 slinga 4.
 
-**BP4-3-rekommendation: passera och gå vidare till slinga 4.** Fyra punkter som
-BP4 bör *besluta* om, inte bara notera: rättelsen av g24 plus metodregeln att
-citatupplösning och svarsriktighet är två kontroller; villkoret för obesvarbara
-frågor; klassningen av tangentbordsotillgängligheten i Appinställningar; och en
-`M4`-definition som skiljer oförklarade dödsfall från förklarade. Motiveringen
-står i evidensfilen §9.
+**BP4-3-rekommendation: passera och gå vidare till slinga 4.** Underlaget är
+sammanställt i [`BP4-3-BESLUTSUNDERLAG.md`](BP4-3-BESLUTSUNDERLAG.md) —
+*agenten sammanställer, människan beslutar.* Fyra punkter ligger där för beslut:
+rättelsen av g24 plus metodregeln (verkställd som dokumentändring, bör
+bekräftas), `M4`-definitionen (likaså), klassningen av
+tangentbordsotillgängligheten (förslag `A + F`), och **villkoret för obesvarbara
+frågor, som medvetet lämnats oförändrat** eftersom det inte får avgöras av den
+som körde testet. Motiveringen står också i evidensfilen §9.
 
 ---
 
@@ -333,7 +335,7 @@ citat har stöd.
 | g09 | Stadgar s. 2 | lägst 3, högst 5 ledamöter + högst 2 suppleanter | Stadgar | 2 | ✓ `ledamöter`, `suppleant` | **✅** |
 | g17 | Årsredovisning s. 1 | etapp 1 = 1 850 000 kr; etapp 2 beräknad 1 900 000 kr | Årsredovisning; Underhållsplan | 1; 2 | ✓ `1 850 000`, `relining` | **✅** *(överinkluderande)* |
 | g19 | Årsredovisning s. 2 | −142 000 kr | Årsredovisning | 2 | ✓ `142 000` | **✅** |
-| g24 | Årsredovisning s. 1 | Driftia Fastighetsservice AB | Årsredovisning | 1 | ✓ `Driftia` | **✅** |
+| g24 | Årsredovisning s. 1 | Driftia Fastighetsservice AB | Årsredovisning | 1 | ✓ `Driftia` | **❌ RÄTTAD — se nedan** *(stod ursprungligen ✅)* |
 | g28 | Protokoll s. 1 | Måleri Väst AB | Styrelseprotokoll | 1 | ✓ `Måleri Väst` | **✅** |
 | g31 | Protokoll s. 2 | 96 000 kr (Chargepark); tog även upp fasadoffert 450 000 kr | Styrelseprotokoll | 2; 1 | ✓ `96 000`, `Chargepark` | **✅** *(överinkluderande)* |
 | g35 | Snöröjningsavtal s. 1 | utryckning vid 5 cm snödjup | Snöröjningsavtal | 1 | ✓ *"snödjup om 5 centimeter"* | **✅** |
@@ -346,11 +348,63 @@ citat har stöd.
 | u05 | *obesvarbar* | "inget specifikt datum framgår; stämman hålls årligen före juni månads utgång" | Stadgar | 3 | ✓ *"§ 11 … hålls årligen före juni månads utgång"* | **⚠️ avvikelse** |
 | u08 | *obesvarbar* | **OTILLRÄCKLIGT UNDERLAG** — radonresultat saknas | inget citat | – | ✓ `radon` **finns inte i korpusen** | **✅** |
 
+### Rättelse av g24 — skriven 2026-07-30 efter slinga 3
+
+**Raden ovan var fel, och den rättas här i stället för att skrivas om.** Den
+ursprungliga bedömningen (`Driftia Fastighetsservice AB`, ✅) står kvar så att det
+går att se vad som bedömdes och varför det brast.
+
+Frågan är *"Vilket företag sköter den **ekonomiska** förvaltningen?"*. Sidans text
+säger:
+
+```
+Den tekniska förvaltningen har under året skötts av Driftia Fastighetsservice AB
+medan den löpande ekonomiska för- valtningen har skötts av
+SBC Sveriges BostadsrättsCentrum AB.
+```
+
+Driftia är **teknisk** förvaltare. Facit i `backend/eval/golden.json` är
+`SBC Sveriges BostadsrättsCentrum AB`. Svaret angav alltså fel företag.
+
+**Varför det passerade:** citatkontrollen sökte ordet `Driftia` på den citerade
+sidan, fann det, och slutsatsen "citatet har stöd" användes som om den också vore
+"svaret är rätt". Det är två olika påståenden. Slinga 3 körde de två kontrollerna
+separat och svarade `SBC …` i alla tre passen.
+
+**Följd för baslinjen:** fragment-fakta för 2026-07-30 är **9 av 10**, inte 10 av
+10. Övriga kategorier är oförändrade. Rättelsen är **inget stoppkriterium** —
+citatet var inte fabricerat och inget ostött svar presenterades som grundat
+(stoppkriterium 4 gäller fabricering, inte felaktigt urval bland stödda uppgifter).
+
+Regeln som förhindrar upprepning står nu i pilotplanen §6.3, se
+planändringarna nedan.
+
+### Ändringar i utvärderingsplanen, med skäl (pilotplanen §6 kräver detta)
+
+§6 säger att uppsättningen ska köras oförändrad, och att varje ändring i
+utvärderingsplanen ska skrivas in här med skälet. Tre ändringar gjordes
+2026-07-30 efter slinga 3. **Ingen av dem sänker ribban, och ingen av dem ändrar
+någon fråga eller något facit.**
+
+| # | Ändring | Skäl | Effekt på tidigare mätning |
+| --- | --- | --- | --- |
+| 1 | §6.3: **två kontroller per fråga** — citatupplösning *och* svarsriktighet, båda måste hålla | g24 passerade på den ena kontrollen och var ändå fel. Att slå ihop dem gör måttet svagare än det utger sig för att vara | **Höjer** ribban. Slinga 2:s fragment-fakta blir 9/10 vid omräkning; slinga 3 mättes redan så och står oförändrat 10/10 |
+| 2 | §7: `M4` räknar **oförklarade** dödsfall, inte "oväntade", med tre namngivna fall | §7 sade "oväntade", §8:s stoppkriterium 7 säger "oförklarade". Skillnaden avgör när piloten stoppas och fick inte förbli oskriven. Tre olika fall har nu faktiskt inträffat | Ingen. Alla tidigare M4-noteringar var redan 0 och deras skäl redan utskrivna |
+| 3 | §9: begränsning **13** — `Appinställningar` går inte att nå med tangentbordet, klass **A + F** | XS-53 kräver att kända begränsningar klassificeras i stället för att absorberas tyst. Fyndet gjordes i slinga 3 och hörde därför inte i planen förut | Ingen på mätvärden |
+
+Ändring 1 är den enda som rör en godkännanderegel, och den gör regeln strängare.
+Det **öppna** villkoret — om obesvarbara frågor ska få besvaras med kvalificerat
+icke-svar plus stött citat — är medvetet **inte** ändrat, eftersom det inte får
+avgöras av den som kört testet. Det ligger i BP4-3-underlaget.
+
 ### Baslinjen
+
+Talen nedan är som de skrevs 2026-07-30. Fragment-faktaraden är rättad efter
+slinga 3; se rättelsen ovan.
 
 | Kategori | Utfall | Krav |
 | --- | --- | --- |
-| Fragment-fakta med korrekt löst citat | **10 / 10** | alla 10 |
+| Fragment-fakta med korrekt löst citat | ~~**10 / 10**~~ → **9 / 10** *(rättad)* | alla 10 |
 | Prosakontroller | **2 / 2 besvarade med stött citat** | fick avvisas — behövde inte |
 | Obesvarbara avvisade med noll citat | **2 / 3** | 3 |
 | **Fabricerade källhänvisningar** | **0** | måste vara 0 |

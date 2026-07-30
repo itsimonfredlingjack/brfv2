@@ -576,6 +576,14 @@ acceptansens isolerade miljö.
 
 **Rekommendation: passera BP4-3 och gå vidare till slinga 4 (XS-57).**
 
+Underlaget är sammanställt som grindunderlag i
+[`BP4-3-BESLUTSUNDERLAG.md`](../../pilot/BP4-3-BESLUTSUNDERLAG.md), där de fyra
+besluten nedan ligger var för sig med alternativ och belägg. Tre av dem är
+verkställda som dokumentändringar i pilotplanen och journalen (rättelsen av g24
+med metodregeln, `M4`-definitionen, begränsning 13); det fjärde — villkoret för
+obesvarbara frågor — är **oförändrat**, och skälet är att den som kört testet inte
+får avgöra det.
+
 Underlaget för det:
 
 | Vad slinga 3 skulle visa | Utfall |

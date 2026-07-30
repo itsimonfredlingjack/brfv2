@@ -340,12 +340,32 @@ får avvisas. Skillnaden är att den här uppsättningen körs manuellt genom
 skrivbordsappen mot den syntetiska korpusen i stället för automatiskt mot den
 skyddade realkorpusen.
 
+**Två kontroller per fråga, och de får inte slås ihop** *(tillagt efter slinga 3;
+skälet står i journalen)*. Varje besvarad fråga prövas i två oberoende steg:
+
+1. **Löser citatet?** Finns den citerade passagen på den citerade sidan, kontrollerat
+   mot `data/tenants/<tenant>/extract/<id>.json` — inte mot produktens eget påstående.
+2. **Är svaret rätt?** Säger svaret den uppgift facit i `golden.json` kräver?
+
+En fråga räknas som godkänd bara om **båda** stegen håller. Skälet är inte teoretiskt:
+i slinga 2:s baslinje godkändes g24 på steg 1 enbart, och svaret angav då fel företag
+(teknisk i stället för ekonomisk förvaltare). Ett citat kan peka på en sida som
+verkligen innehåller det citerade ordet och ändå besvara frågan fel. Regeln höjer
+alltså ribban jämfört med hur baslinjen mättes — den sänker den inte.
+
 **Baslinje kontra tröskel.** Det finns ingen tidigare mätning av just den här
 uppsättningen genom skrivbordsappen. Första körningen (B5) *sätter* baslinjen och
 skrivs in i journalen. Därefter jämförs varje körning mot baslinjen: ett tapp är en
 avvikelse som ska förklaras, inte automatiskt ett stopp. **En fabricerad
 källhänvisning är alltid ett stopp** (§8) — den regeln gäller från första
 körningen.
+
+**Öppet villkor, tillhör BP4-3 och är inte avgjort här.** Godkännandevillkoret för
+de tre obesvarbara kontrollerna är i dag `OTILLRÄCKLIGT UNDERLAG` **och noll citat**.
+Slinga 2 gav ett kvalificerat icke-svar *med stött citat* för u05 och räknades därför
+som 2 av 3; slinga 3 gav noll citat i alla tre passen och därmed 3 av 3. Frågan om
+villkoret *borde* tillåta ett kvalificerat icke-svar med stött citat är **inte**
+ändrad i den här planen, eftersom den inte får avgöras av den som kört testet.
 
 ### 6.4 Mänsklig tangentbordssmoke
 
@@ -374,7 +394,7 @@ in det i journalen efter passet.
 | M1 | Pass startade från applikationsmenyn utan terminalarbete (utöver tunneln) | journalrad per pass |
 | M2 | Terminalingripanden under pass, och vad de gällde | journalrad — **det här är effektmålets mätvärde** |
 | M3 | Startmisslyckanden (felfönster) per pass | journal + `logs/backend.log` |
-| M4 | Oväntade backend-dödsfall per pass | journal + `logs/backend.log.1` |
+| M4 | **Oförklarade** backend-dödsfall per pass | journal + `logs/backend.log.1` — se definitionen under tabellen |
 | M5 | Fragment-faktafrågor besvarade med korrekt löst citat | frågeuppsättningen §6.3 |
 | M6 | Felaktiga avvisningar (fråga med stöd i korpusen som avvisades) | frågeuppsättningen §6.3 |
 | M7 | Fabricerade källhänvisningar | frågeuppsättningen §6.3 — måste vara 0 |
@@ -385,6 +405,21 @@ in det i journalen efter passet.
 M10 mäts därför att den är effektmålets mest konkreta uttryck. Den har medvetet
 inget måltal — ett måltal skulle vara en gissning, och gissningen skulle sedan
 läsas som ett krav.
+
+**M4 räknar oförklarade dödsfall, inte alla avslutningar** *(skärpt efter slinga 3;
+skälet står i journalen)*. Tabellen sade tidigare "oväntade", medan stoppkriterium 7
+i §8 säger "oförklarade". Skillnaden är inte språklig — den avgör när piloten stoppas.
+Tre fall har nu faktiskt inträffat och de ska räknas olika:
+
+| Fall | Räknas i M4? | Belägg som krävs |
+| --- | --- | --- |
+| Backenden dör och orsaken går inte att fastställa | **Ja** | tre sådana i samma pass är stoppkriterium 7 |
+| Backenden avslutas därför att **värden** försvinner (slinga 2:s nedgång 07:19:21) | **Nej** | att värdens journal slutar mitt i drift och produktens sista rad ligger före den |
+| Backenden dödas **avsiktligt** som felinjektion (slinga 3:s C4, `signal 15`) | **Nej** | injektionen journalförd före körningen, och signalen namngiven i produktens felfönster |
+
+Ett dödsfall som inte räknas i M4 ska ändå journalföras med sitt belägg. Det som
+diskvalificerar ett dödsfall från M4 är att orsaken är **fastställd** — aldrig att
+den är obekväm.
 
 ---
 
@@ -429,6 +464,7 @@ pilotstart, `F` = uttrycklig uppföljning efter piloten.
 | 10 | Rotens `npm run build` raderar `dist/` | **M** | Skulle radera den arkiverade RPM:en. **M:** artefakten arkiveras utanför `dist/` (A1). |
 | 11 | Ingen telemetri i produkten | **A + M** | **M:** journalen (A5) är hela mätinsamlingen; utan den finns inga mätvärden alls. |
 | 12 | Säkerhetskopior hamnar lokalt bredvid datakatalogen | **A + M** | **M:** varje pass som skapat ny data avslutas med att kopian flyttas till annan media (runbooken). |
+| 13 | **`Appinställningar` går inte att nå med tangentbordet** *(funnen i slinga 3)* | **A + F** | Fokusringen i dokument-/chattvyn är en sluten cykel om sex element; menyns ingång är en `<div className="user-profile">` utan `tabIndex` (`brfv2-mockup/src/App.jsx:863`). Menyposterna är fokuserbara först när menyn öppnats med pekare. Följd: en tangentbordsberoende operatör kan varken probe:a modelltjänsten, ändra modelladressen eller skapa säkerhetskopia. **A** för den här piloten: en operatör, med mus, som kan nå allt. Ligger i `brfv2-mockup/src` och därmed i `REPRO_DELIVERY_PATHS` — en ändring skulle flytta artefaktens bytes och upphäva BP2-underlaget, så den **får inte** åtgärdas under piloten. **F:** krävs åtgärdad innan produkten släpps till någon som inte kan använda mus; hör ihop med begränsning 3 (tangentbordsvägen) och bör åtgärdas i samma medvetna artefaktändring som begränsning 8. |
 
 ---
 
