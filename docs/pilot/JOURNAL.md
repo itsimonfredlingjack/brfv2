@@ -41,7 +41,7 @@ Kolumnen **Slinga 3** är XS-56:s tre pass; per-pass-uppdelningen står i
 | M5 | Fragment-faktafrågor besvarade med korrekt löst citat | ~~10 av 10~~ → **9 av 10** *(rättad 2026-07-30 efter slinga 3)*. Samtliga citat var verifierade mot extraherad sidtext, men g24:s **svar** angav fel företag — se rättelsen under Pass | **10/10 · 10/10 · 10/10.** Två kontroller per fråga, separerade: löser citatet, *och* är svaret rätt mot facit (§6.3) |
 | M6 | Felaktiga avvisningar | **0** — ingen fråga med stöd i korpusen avvisades | **0 / 0 / 0.** Avvisningen under leverantörsbortfallet i pass 2 är korrekt beteende, inte en felaktig avvisning |
 | M7 | Fabricerade källhänvisningar | **0** — oberoende verifierat: alla 13 citat har stöd i den citerade sidan, och `arvode`/`radon` finns bevisligen inte i korpusen. **Måste förbli 0** (stoppkriterium 4) | **0 / 0 / 0** — **42 av 42** citat lösta mot extraherad sidtext över tre pass. **Måste förbli 0** (stoppkriterium 4) |
-| M8 | Backup/restore-övningar och om data stämde efteråt | — *(slinga 4)* | Kopia **skapad** i pass 3, verifierad post för post, kopierad till annan media. Återställning inte prövad där. **Slinga 4: 1 kopia + 1 återställning, genomförd och bevisad** — `data/`-trädet återgick **exakt** till utgångssumman `23e27246…` och avvikelsen som skapats efter kopian rullades bort |
+| M8 | Backup/restore-övningar och om data stämde efteråt | — *(slinga 4)* | Kopia **skapad** i pass 3, verifierad post för post, kopierad till annan media. Återställning inte prövad där. **Slinga 4: 1 kopia + 2 återställningsövningar, båda med korrekt data efteråt.** D2 — återställning över en avsiktlig avvikelse; D4 — återställning när `data/` var **helt frånvarande**. I båda fallen återgick `data/`-trädet **exakt** till utgångssumman `23e27246…` |
 | M9 | Av-/ominstallationscykler med bevarad data | — *(slinga 4)* | **Slinga 4: 1 cykel.** `dnf remove` → datakatalogen kvar och byte-identisk → ominstallation från arkivet efter SHA-256-kontroll → fem dokument lästes tillbaka genom produktens gränssnitt |
 | M10 | Tid från okonfigurerad maskin till första grundade svar | **Mätt men ogiltigt.** Rå: 7 h 50 min 04 s — kontaminerad av ~7 h nattlig paus. Observerad **aktiv** tid till färdig installation med korpus: **≈ 35 min**, varav 7 min 30 s för att hitta menyposten. Se sönderdelningen under Pass. Omtagning kräver ny okonfigurerad installation — BP4-beslut | inte ommätt — kräver en ny okonfigurerad installation, vilket slinga 3 inte gör |
 
@@ -115,14 +115,15 @@ egen anteckning under `docs/evidence/pilot/incident-<datum>/`.
 
 ## Pass
 
-### Slinga 4 — 2026-07-30 · säkerhetskopiering, återställning, paketbyte (XS-57) — **D4 KVARSTÅR**
+### Slinga 4 — 2026-07-30 · säkerhetskopiering, återställning, paketbyte (XS-57)
 
 Full evidens:
 [`slinga4-sakerhetskopiering-och-paketbyte.md`](../evidence/pilot/slinga4-sakerhetskopiering-och-paketbyte.md).
 Startpunkt `813f26d`. Arbetskopia `brfv2-desktop-xs57`.
 
-**Status: D1, D2 och D3 genomförda och bevisade. D4 inte genomförd. Slingan är
-inte stängd och BP4-4 skrivs inte.**
+**Status: D1, D2, D3 och D4 genomförda och bevisade.** Passet skrevs i två
+omgångar: D1–D3 i mellanleveransen `e96db7d3…` med D4 öppen, och D4 därefter med
+beslutad metod. Underlag: [`BP4-4-BESLUTSUNDERLAG.md`](BP4-4-BESLUTSUNDERLAG.md).
 
 **Före passet:** modelltjänsten annonserade Gemma 4 12B, `rpm --verify` = 0,
 `deliveryTree` = `a702a337…`, arkiv-RPM `6ba028fb…`, leveransträdet i repot
@@ -169,14 +170,49 @@ tre säkerhetskopiorna. Ominstallation från arkivet gav `rpm --verify` = 0,
 från menyn: `status: ready`, **fem dokument listade vid namn**, aktiv förening
 FREDLING, och **ingen inloggning krävdes**. **M9 = 1 cykel med bevarad data.**
 
-**D4 kördes inte.** Den rekursiva raderingen av datakatalogen stoppades av
-sessionens skyddsspärr mot destruktiva kommandon. **Ingenting kringgicks:**
-datakatalogen är orörd och slutkontrollen visar samma summa som utgångsläget.
-Runbookens dataåterställningsavsnitt är därför **fortfarande märkt `Härlett`** —
-märkningen står kvar oförändrad eftersom den fortfarande är sann. Det som
-återstår oprövat är specifikt fallet att `data/` saknas helt: att
-uppstartsdialogen möter en tom installation, och att installationsadministratören
-adopteras för den återställda installationen.
+**D4 kördes inte i första omgången.** Den rekursiva raderingen av datakatalogen
+stoppades av sessionens skyddsspärr mot destruktiva kommandon. **Ingenting
+kringgicks.** Mellanleveransen `e96db7d3…` skrevs med D4 öppen.
+
+**D4 genomfördes därefter, med beslutad metod (Linear XS-57, 2026-07-30):
+reversibel frånvaro i stället för radering.** Datakatalogen **byteraderades
+aldrig** — den flyttades atomärt (`mv`, rename på samma filsystem) till
+`~/pilot-quarantine-xs57/data-20260730-xs57-d4`, satt till `0700`. Karantänens
+trädsumma var identisk med det aktiva trädet före flytten (`23e27246…`), alltså
+gick inget förlorat i flytten, och den ordinarie sökvägen `data/` fanns därefter
+**inte**. `backups/` låg kvar — den ligger utanför `data/`, vilket är hela
+förutsättningen och nu prövat i skarpt läge.
+
+Utfall: appen startad **från applikationsmenyn** mötte en **tom installation** —
+`Välkommen`, *"Den här datorn har ingen förening ännu"*, och i loggen
+`BRF_LLM_BASE_URL saknas` precis som vid en genuin förstagångsstart. Ett
+**tillfälligt** konto och en tillfällig förening skapades enbart för att nå
+Appinställningar (lösenordet slumpat i minnet, aldrig utskrivet, aldrig sparat;
+urklipp rensat). Modellsteget hoppades över. Alla tre säkerhetskopiorna listades
+i gränssnittet trots att `data/` varit borta. Återställning av D1-kopian stagade
+ett arkiv **bit-identiskt** med den valda (`5fe53c7a…`), produkten erbjöd
+`Starta om nu`, erbjudandet **accepterades**, och bytet tillämpades vid starten
+(`INFO brf.desktop: Återställning: restored`).
+
+Efter återställningen: `data/`-trädet **exakt** `23e27246…`, **det ursprungliga
+kontot** (`fc69c8f41250`) och medlemskapet tillbaka — drillkontot
+(`example.invalid`) förekommer inte — föreningen `fredling` återställd, den
+tillfälliga föreningen borta, **5 dokument / 13 chunks**, `auth.db`
+`integrity_check ok` med samma summa som utgångsläget (`96636b3e…`),
+modelladressen `http://127.0.0.1:8000/v1` tillbaka och korpusen **5/5
+bit-identisk**. Ett grundat svar genom AI-chatten: *"Vad blev årets resultat
+2025?"* → `Årets resultat blev -142 000 kronor.` med citat till
+**Årsredovisning 2025.pdf s. 2**, oberoende löst exakt på den citerade sidan —
+rätt dokument och rätt sida enligt facit.
+
+**Runbookens dataåterställningsavsnitt är därmed omklassat från `Härlett` till
+`Verifierat`**, med det uttryckliga förbehållet att frånvaron åstadkoms genom
+karantänflytt och att beteendet vid **fysisk radering av bytes** fortfarande är
+oprövat. Evidensen påstår inte att bytes raderades.
+
+**Karantänkopian behålls** vid `0700` i `~/pilot-quarantine-xs57/`, utanför Git
+och klassad som identitetsbärande (`auth.db`). Radering kräver uttryckligt
+tillstånd, vilket inte har givits.
 
 **Avvikelser:** `restore-staging/pending-restore.zip` skrivs `0644` medan kopian
 den kommer från är `0600`, och filen innehåller `auth.db` (**S3/F**, ligger i

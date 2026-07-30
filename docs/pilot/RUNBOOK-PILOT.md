@@ -200,8 +200,9 @@ migreringsmekanism och ingen testad uppgraderingsväg:
 Att `backups/` ligger utanför `data/` är det som gör återställning möjlig även när
 `data/` är borta.
 
-**Om `data/` är raderad eller obrukbar** *(Härlett — läst ur koden, inte kört;
-detta är precis vad övning D4 i pilotplanen ska bevisa)*:
+**Om `data/` är raderad eller obrukbar** *(**Verifierat** 2026-07-30 i slinga 4,
+övning D4 — hela sekvensen nedan kördes och gav det utfall som står här. Evidens:
+[`slinga4-sakerhetskopiering-och-paketbyte.md`](../evidence/pilot/slinga4-sakerhetskopiering-och-paketbyte.md) §9)*:
 
 1. starta appen — den möter en tom installation och visar uppstartsdialogen;
 2. skapa ett tillfälligt konto och en tillfällig förening;
@@ -211,6 +212,14 @@ detta är precis vad övning D4 i pilotplanen ska bevisa)*:
    installationsadministratör adopteras för den återställda installationen om
    ingen sådan finns i kopian;
 6. verifiera: föreningar, dokument, ett citat som löser till rätt sida.
+
+**Ett förbehåll som hör till märkningen:** i övningen gjordes `data/` frånvarande
+genom en **atomär flytt till karantän**, inte genom att bytes raderades. För
+produkten är driftvillkoret detsamma — sökvägen finns inte — men beteendet vid
+fysisk radering av bytes är fortfarande oprövat, och steget påstår inte annat.
+Övningen bekräftade också att kopiorna i `backups/` överlever, just därför att de
+ligger utanför `data/`, samt att steg 5 stämmer: efter återställningen gällde det
+**ursprungliga** kontot igen och det tillfälliga var borta.
 
 **Om hela maskinen är borta:** installera Fedora 44, installera den arkiverade
 RPM:en efter SHA-256-kontroll, starta, och följ stegen ovan med kopian från den
