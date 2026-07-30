@@ -41,8 +41,8 @@ Kolumnen **Slinga 3** är XS-56:s tre pass; per-pass-uppdelningen står i
 | M5 | Fragment-faktafrågor besvarade med korrekt löst citat | ~~10 av 10~~ → **9 av 10** *(rättad 2026-07-30 efter slinga 3)*. Samtliga citat var verifierade mot extraherad sidtext, men g24:s **svar** angav fel företag — se rättelsen under Pass | **10/10 · 10/10 · 10/10.** Två kontroller per fråga, separerade: löser citatet, *och* är svaret rätt mot facit (§6.3) |
 | M6 | Felaktiga avvisningar | **0** — ingen fråga med stöd i korpusen avvisades | **0 / 0 / 0.** Avvisningen under leverantörsbortfallet i pass 2 är korrekt beteende, inte en felaktig avvisning |
 | M7 | Fabricerade källhänvisningar | **0** — oberoende verifierat: alla 13 citat har stöd i den citerade sidan, och `arvode`/`radon` finns bevisligen inte i korpusen. **Måste förbli 0** (stoppkriterium 4) | **0 / 0 / 0** — **42 av 42** citat lösta mot extraherad sidtext över tre pass. **Måste förbli 0** (stoppkriterium 4) |
-| M8 | Backup/restore-övningar och om data stämde efteråt | — *(slinga 4)* | Kopia **skapad** i pass 3 genom Appinställningar och verifierad post för post (16 filer, `unzip -t` rent, index 5/13), kopierad till annan media med matchande SHA-256. **Återställning är inte prövad** — det är slinga 4 |
-| M9 | Av-/ominstallationscykler med bevarad data | — *(slinga 4)* | — *(slinga 4)* |
+| M8 | Backup/restore-övningar och om data stämde efteråt | — *(slinga 4)* | Kopia **skapad** i pass 3, verifierad post för post, kopierad till annan media. Återställning inte prövad där. **Slinga 4: 1 kopia + 1 återställning, genomförd och bevisad** — `data/`-trädet återgick **exakt** till utgångssumman `23e27246…` och avvikelsen som skapats efter kopian rullades bort |
+| M9 | Av-/ominstallationscykler med bevarad data | — *(slinga 4)* | **Slinga 4: 1 cykel.** `dnf remove` → datakatalogen kvar och byte-identisk → ominstallation från arkivet efter SHA-256-kontroll → fem dokument lästes tillbaka genom produktens gränssnitt |
 | M10 | Tid från okonfigurerad maskin till första grundade svar | **Mätt men ogiltigt.** Rå: 7 h 50 min 04 s — kontaminerad av ~7 h nattlig paus. Observerad **aktiv** tid till färdig installation med korpus: **≈ 35 min**, varav 7 min 30 s för att hitta menyposten. Se sönderdelningen under Pass. Omtagning kräver ny okonfigurerad installation — BP4-beslut | inte ommätt — kräver en ny okonfigurerad installation, vilket slinga 3 inte gör |
 
 ---
@@ -114,6 +114,85 @@ egen anteckning under `docs/evidence/pilot/incident-<datum>/`.
 ---
 
 ## Pass
+
+### Slinga 4 — 2026-07-30 · säkerhetskopiering, återställning, paketbyte (XS-57) — **D4 KVARSTÅR**
+
+Full evidens:
+[`slinga4-sakerhetskopiering-och-paketbyte.md`](../evidence/pilot/slinga4-sakerhetskopiering-och-paketbyte.md).
+Startpunkt `813f26d`. Arbetskopia `brfv2-desktop-xs57`.
+
+**Status: D1, D2 och D3 genomförda och bevisade. D4 inte genomförd. Slingan är
+inte stängd och BP4-4 skrivs inte.**
+
+**Före passet:** modelltjänsten annonserade Gemma 4 12B, `rpm --verify` = 0,
+`deliveryTree` = `a702a337…`, arkiv-RPM `6ba028fb…`, leveransträdet i repot
+`a702a337…`, leverantörsgränsen 45 kontroller / 0 fynd,
+`webkit2gtk4.1 2.52.5-1.fc44` och `gtk3 3.24.52-2.fc44` oförändrade,
+utgångsläge 5 dokument / 13 chunks. Utgångssumma för `data/`-trädet:
+`23e2724658b914487c3baf58cd94324108fff484ad70fcd33ceb2f32341b5b49`.
+
+**Skyddsnät före destruktivt arbete:** en rå kopia av datakatalogen lades på annan
+media (`agenntserver:~/pilot-safetynet/`, katalog `700`, fil `600`, SHA-256
+`5a37c881…` identisk på båda sidor), avsiktligt **utanför** produktens egen
+säkerhetskopiering så att den inte delar felläge med det som skulle prövas. Den är
+inte evidens för något och committas inte.
+
+**D1.** Kopia skapad genom **Appinställningar → Skapa säkerhetskopia nu**:
+`brfv2-backup-20260730-145457-9999.zip`, 16 poster, `unzip -t` rent, index
+5 dokument / 13 chunks, `auth.db` i arkivet bit-identisk med den levande,
+modelladressen med. Kopierad till annan media med **matchande SHA-256**
+(`5fe53c7a…`), katalog `700`, fil `600`.
+
+**D2 — återställningen är nu bevisad, inte härledd.** Övningen gjordes med en
+avsiktlig avvikelse *efter* kopian: en ny förening `Testforening XS57 ROLLBACK`
+skapades genom gränssnittet, vilket flyttade `data/`-trädets summa
+`23e27246…` → `aaab8211…`. Därefter **Appinställningar → Återställ** på D1-kopian.
+Produkten frågade först — *"Återställ från 30 juli 2026 16:54? Allt som lagts till
+efter den tidpunkten försvinner. **Bytet sker vid nästa start.**"* — och erbjöd
+`Starta om nu`. Bekräftelsen stagade `restore-staging/pending-restore.zip`, vars
+SHA-256 är **bit-identisk med den valda kopian**: produkten stagade alltså exakt det
+arkiv operatören pekade på. Bytet skedde **vid nästa start**, inte under
+igångvarande databas: efter omstart från menyn var `pending-restore.zip` konsumerad,
+`last-restore.json` skriven (`status: restored`, `createdAt` = D1-kopians tidpunkt)
+och loggen skrev `INFO brf.desktop: Återställning: restored`. Utfall: `data/`-trädet
+tillbaka på **exakt** `23e27246…`, testföreningen borta, 5 dokument / 13 chunks,
+`auth.db` `ok` med samma summa som utgångsläget, modelladressen bevarad, korpusen
+5/5 bit-identisk. **M8 = 1 kopia + 1 återställning, data korrekt efteråt.**
+
+**D3 — data överlever paketbyte.** Arkivets SHA-256 kontrollerad före installation
+(`6ba028fb…`). `dnf remove` tog bort paketet, `/usr/lib/BRF Dokument-AI` och
+menyposten — men **datakatalogen låg kvar byte-identisk** (`23e27246…`), med alla
+tre säkerhetskopiorna. Ominstallation från arkivet gav `rpm --verify` = 0,
+`deliveryTree` `a702a337…`, 45 kontroller / 0 fynd och återställd menypost.
+`dnf` varnade för utebliven OpenPGP-kontroll — väntat och accepterat
+(pilotplanen §9, begränsning 1); SHA-256-kontrollen ersätter signaturen. Startad
+från menyn: `status: ready`, **fem dokument listade vid namn**, aktiv förening
+FREDLING, och **ingen inloggning krävdes**. **M9 = 1 cykel med bevarad data.**
+
+**D4 kördes inte.** Den rekursiva raderingen av datakatalogen stoppades av
+sessionens skyddsspärr mot destruktiva kommandon. **Ingenting kringgicks:**
+datakatalogen är orörd och slutkontrollen visar samma summa som utgångsläget.
+Runbookens dataåterställningsavsnitt är därför **fortfarande märkt `Härlett`** —
+märkningen står kvar oförändrad eftersom den fortfarande är sann. Det som
+återstår oprövat är specifikt fallet att `data/` saknas helt: att
+uppstartsdialogen möter en tom installation, och att installationsadministratören
+adopteras för den återställda installationen.
+
+**Avvikelser:** `restore-staging/pending-restore.zip` skrivs `0644` medan kopian
+den kommer från är `0600`, och filen innehåller `auth.db` (**S3/F**, ligger i
+`backend/app` och får inte åtgärdas under piloten) · ett **oavsiktligt klick från
+agentens pekarstyrning** öppnade uppladdningsdialogen, som är modal och blockerade
+gränssnittet tills den stängdes med Escape — **ingen fil laddades upp**, korpusen
+kontrollerad omedelbart efteråt (**S3, agentorsakad**) · pekarstyrningen var
+väsentligt mer opålitlig än i slinga 3 och löstes genom att ge appfönstret hela
+primärskärmen och driva bekräftelsen med tangentbord (**S3, mätmiljö**) · positivt:
+bekräftelsedialogens knappar **är** tangentbordsnåbara när dialogen är öppen,
+vilket avgränsar begränsning 13 till menyns *ingång* · sessionen överlevde både
+återställning och paketbyte utan ny inloggning.
+
+**Inget stoppkriterium i §8 inträffade.**
+
+---
 
 ### Slinga 3 — 2026-07-30 · tre arbetspass i pilotens egen installation (XS-56)
 
