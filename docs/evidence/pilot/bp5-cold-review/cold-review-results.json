@@ -1,0 +1,130 @@
+{
+  "reviewer": "grok-bp5-independent-cold-review",
+  "reviewed_at": "2026-07-31T09:43:25.978399+00:00",
+  "tip": "a5a112b095d28f2e740b9fe8a095e2c62b9c5803",
+  "branch": "grok/bp5-independent-cold-review",
+  "machine": {
+    "fedora": "Fedora release 44 (Forty Four)",
+    "kernel": "7.1.5-201.fc44.x86_64",
+    "session": "wayland",
+    "desktop": "KDE"
+  },
+  "ancestry": {
+    "XS-54": {
+      "sha": "7cd1f9211e4c7b670cd8185302fb01a9d3c65057",
+      "is_ancestor": true,
+      "subject": "chore(pilot): establish recoverable evidence-safe pilot environment (XS-54)"
+    },
+    "XS-55": {
+      "sha": "c6db95a55cdfa82898acc3f6dd5b663e90330fe3",
+      "is_ancestor": true,
+      "subject": "docs(pilot): an unconfigured machine becomes a working installation (XS-55)"
+    },
+    "XS-56": {
+      "sha": "df9f664b738d735d6c7c8a3e9cc91e1d724e41f0",
+      "is_ancestor": true,
+      "subject": "test(pilot): exercise repeated real sessions (XS-56)"
+    },
+    "BP4-3": {
+      "sha": "813f26dbd9d266360bf7ebf6c86e16e3fd3c142f",
+      "is_ancestor": true,
+      "subject": "docs(pilot): compile the BP4-3 gate and act on what slinga 3 found (XS-56)"
+    },
+    "XS-57-D1-D3": {
+      "sha": "e96db7d31d175ddcbe4d7b3276986436b54107b3",
+      "is_ancestor": true,
+      "subject": "test(pilot): prove backup, restore and package swap (XS-57, D4 outstanding)"
+    },
+    "XS-57-D4": {
+      "sha": "298337a5419c73ccadf544f575b3d089bb5accee",
+      "is_ancestor": true,
+      "subject": "test(pilot): prove disaster recovery from missing data directory (XS-57)"
+    },
+    "XS-57-cleanup": {
+      "sha": "a5a112b095d28f2e740b9fe8a095e2c62b9c5803",
+      "is_ancestor": true,
+      "subject": "docs(pilot): close XS-57 quarantine afterpass"
+    }
+  },
+  "integrity": {
+    "deliveryTree_tip": "a702a3378ec524d8d2d4ff2603d0f00d35c2881d34bfc9640715f896a181e083",
+    "deliveryTree_bp2": "a702a3378ec524d8d2d4ff2603d0f00d35c2881d34bfc9640715f896a181e083",
+    "deliveryTree_expected": "a702a3378ec524d8d2d4ff2603d0f00d35c2881d34bfc9640715f896a181e083",
+    "repro_paths_diff_stat": "(empty)",
+    "rpm_q": "brf-dokument-ai-0.2.0-1.fc44.x86_64",
+    "rpm_verify_exit": 0,
+    "rpm_verify_stdout": "",
+    "installed_deliveryTree": "a702a3378ec524d8d2d4ff2603d0f00d35c2881d34bfc9640715f896a181e083",
+    "archived_rpm_sha256": "6ba028fb0498da34ddd25c89366da98ec1ec96618ac6a607236cb58ab345e98d",
+    "expected_rpm_sha256": "6ba028fb0498da34ddd25c89366da98ec1ec96618ac6a607236cb58ab345e98d",
+    "inspect_live": {
+      "ok": true,
+      "counts": {
+        "absent": 21,
+        "checks": 45,
+        "findings": 0,
+        "outOfScope": 0,
+        "pass": 24
+      },
+      "findings": []
+    }
+  },
+  "xs56": {
+    "fragesvar-pass1.json": {
+      "sha256": "1ef534a753f6685b9d1c933a12ecfdf421d77eb09428c91965d39448069f2c5f",
+      "bytes": 15824
+    },
+    "fragesvar-pass2.json": {
+      "sha256": "b3f2907d36c7707e682ca075488d7725a2ab5ac78b63de58efc03228babada4e",
+      "bytes": 15824
+    },
+    "fragesvar-pass3.json": {
+      "sha256": "781e6a7d90b6d1fdbc4b8e8e0654758d11d4a6b4e3250d767c03f92945373275",
+      "bytes": 15824
+    },
+    "pass3-grundat-svar-efter-omstart.json": {
+      "sha256": "170cc99b29fbbc21f269a597e449445e3b4eca37caade4bbb5a10c2766309263",
+      "bytes": 767
+    },
+    "answers_identical_sans_times": true,
+    "times_differ_p1_p2": true,
+    "field_verified_all": true,
+    "zero_cite_ids": [
+      "u02",
+      "u05",
+      "u08"
+    ],
+    "g24_answer": [
+      "Den löpande ekonomiska förvaltningen har skötts av SBC Sveriges BostadsrättsCentrum AB."
+    ]
+  },
+  "live_data": {
+    "docs": 5,
+    "chunks": 13,
+    "auth_sha256": "96636b3e1c6ff930aa6e9236cccee21962f633ff3d0a22bbb1f92002490db960",
+    "auth_sha_expected": "96636b3e1c6ff930aa6e9236cccee21962f633ff3d0a22bbb1f92002490db960",
+    "endpoint": "http://127.0.0.1:8000/v1",
+    "d1_backup_sha256": "5fe53c7a7df28c39c5061808f5cfed5217734bf33c07be0c7cbc0f1ce41d7733",
+    "d1_backup_expected": "5fe53c7a7df28c39c5061808f5cfed5217734bf33c07be0c7cbc0f1ce41d7733",
+    "files_identical_to_d1": {
+      "same": 15,
+      "diff": 0
+    },
+    "pilot_tree_hash_T0_recorded": "23e2724658b914487c3baf58cd94324108fff484ad70fcd33ceb2f32341b5b49",
+    "independent_sha256sum_pipeline": "f7ba3e77377f0edf1684b2ffa818ddd88aa863b15bf070fc191524197934de79"
+  },
+  "citations": {
+    "supported": 14,
+    "unsupported": 0,
+    "method": "reconstruct page text from extract words; dehyphenate soft breaks"
+  },
+  "limitations_notes": [
+    "Independent reconstruction of the pilot aggregate tree-hash string 23e27246… with find|sha256sum|sha256sum yields a different digest; file-level identity to D1 backup (15/15) and auth.db SHA 96636b3e… are verified instead."
+  ],
+  "backups": {
+    "brfv2-backup-20260730-074335-fd3e.zip": "3ec8b4c331f063532ebd5bbca92fadbf3f7486e05740a76ee3dde0890d448719",
+    "brfv2-backup-20260730-110753-c54d.zip": "e7fd00d42103789ecd767ebcd06349fc63b4612ab376a6a878055eae92381883",
+    "brfv2-backup-20260730-145457-9999.zip": "5fe53c7a7df28c39c5061808f5cfed5217734bf33c07be0c7cbc0f1ce41d7733"
+  },
+  "quarantine_target_absent": true
+}

@@ -1,0 +1,3 @@
+payload:  installed (4675 filer, sha256=55c20520e4a5054c…)
+regler:   ops/forbidden_providers.json@500e8c852a3539b6…
+kontroller: 45  frånvarande: 21  godkända: 24  utanför omfång: 0  fynd: 0

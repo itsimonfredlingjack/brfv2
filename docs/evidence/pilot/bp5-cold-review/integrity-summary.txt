@@ -1,0 +1,15 @@
+reviewed_tip=a5a112b095d28f2e740b9fe8a095e2c62b9c5803
+delivery_tree_tip=a702a3378ec524d8d2d4ff2603d0f00d35c2881d34bfc9640715f896a181e083
+delivery_tree_bp2=a702a3378ec524d8d2d4ff2603d0f00d35c2881d34bfc9640715f896a181e083
+rpm_q=brf-dokument-ai-0.2.0-1.fc44.x86_64
+rpm_verify_exit=0
+installed_deliveryTree=a702a3378ec524d8d2d4ff2603d0f00d35c2881d34bfc9640715f896a181e083
+archived_rpm_sha256=6ba028fb0498da34ddd25c89366da98ec1ec96618ac6a607236cb58ab345e98d
+inspect_counts={'absent': 21, 'checks': 45, 'findings': 0, 'outOfScope': 0, 'pass': 24}
+inspect_findings=[]
+live_docs=5
+live_chunks=13
+auth_sha_match=True
+d1_sha_match=True
+files_identical_to_d1={'same': 15, 'diff': 0}
+citations={'supported': 14, 'unsupported': 0, 'method': 'reconstruct page text from extract words; dehyphenate soft breaks'}
