@@ -106,9 +106,26 @@ class TestForgedCredentials:
             resp = getattr(env.client, method)(path, **kwargs)
             assert resp.status_code == 401, (path, resp.status_code)
 
-    def test_forged_bearer_token_rejected(self, env):
-        h = {"Authorization": "Bearer " + "f" * 43}
+    def test_forged_session_cookie_rejected(self, env):
+        h = {"Cookie": "brf_session=" + "f" * 43}
         assert env.client.get("/api/brf/brf-a/documents", headers=h).status_code == 401
+
+    def test_bearer_header_is_not_an_authentication_path(self, env):
+        """Auth is cookie-only. A REAL, currently-valid session token offered
+        in an Authorization header must still be refused — otherwise the
+        httpOnly cookie would be pointless, since anything that could read a
+        token could also spend it."""
+        real = env.token("admin-a@a.se", "lösenord-a-admin")
+        assert env.client.get(
+            "/api/brf/brf-a/documents",
+            headers={"Authorization": f"Bearer {real}"},
+        ).status_code == 401
+        # …and the same token in the cookie still works, so the token itself
+        # is valid and it is genuinely the transport being rejected.
+        assert env.client.get(
+            "/api/brf/brf-a/documents",
+            headers={"Cookie": f"brf_session={real}"},
+        ).status_code == 200
 
     def test_bs_valid_session_cannot_touch_a(self, env):
         # A perfectly valid B session is still a stranger to A.

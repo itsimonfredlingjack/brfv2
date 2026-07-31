@@ -130,6 +130,27 @@ class TestAuthFlow:
         r = env.client.post("/api/auth/login", json={"email": "admin-a@a.se", "password": "fel"})
         assert r.status_code == 401
 
+    def test_login_body_carries_no_session_token(self, env):
+        """The session travels as the httpOnly cookie and nowhere else.
+
+        Echoing it in the JSON body put a long-lived credential somewhere
+        page script — or any logging proxy in between — could read it, which
+        is exactly what httpOnly exists to prevent.
+        """
+        r = env.client.post(
+            "/api/auth/login",
+            json={"email": "admin-a@a.se", "password": "lösenord-a-admin"},
+        )
+        env.client.cookies.clear()
+        assert r.status_code == 200
+        body = r.json()
+        assert set(body) == {"user", "memberships"}
+        assert "token" not in body
+        # The cookie is still issued, and is httpOnly.
+        set_cookie = r.headers["set-cookie"]
+        assert "brf_session=" in set_cookie
+        assert "httponly" in set_cookie.lower()
+
     def test_me_requires_auth(self, env):
         assert env.client.get("/api/auth/me").status_code == 401
         r = env.client.get("/api/auth/me", headers=env.admin_a_headers)
@@ -137,7 +158,7 @@ class TestAuthFlow:
 
     def test_logout_invalidates_session(self, env):
         tok = env.token("admin-a@a.se", "lösenord-a-admin")
-        h = {"Authorization": f"Bearer {tok}"}
+        h = {"Cookie": f"brf_session={tok}"}
         assert env.client.get("/api/auth/me", headers=h).status_code == 200
         env.client.post("/api/auth/logout", headers=h)
         assert env.client.get("/api/auth/me", headers=h).status_code == 401

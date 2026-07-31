@@ -21,6 +21,10 @@ komplett — ingen nästlad utcheckning, ingen submodul, inget att hämta separa
   generering, citatverifiering, driftverktyg och evidens;
 - `brfv2-mockup/` är den **kanoniska produktfrontenden**. Namnet är historiskt;
   dess verifierade pilotslinga använder backendens verkliga HTTP-kontrakt.
+- `xs_mobilapp/` är **mobilklienten Källa** — samma backend, samma auth, samma
+  citatverifiering, men bara den slingan som är värd att ha i fickan: fråga →
+  grundat svar → källa med markerad passage. Se
+  [xs_mobilapp/README.md](xs_mobilapp/README.md).
 
 Fram till juli 2026 var `brfv2-mockup/` ett separat, gitignorerat repo, vilket
 gjorde att en ren klon inte gick att köra. Den historiken finns kvar på
@@ -97,6 +101,16 @@ cd brfv2-mockup
 npm test
 npm run lint
 npm run build
+```
+
+Mobilklienten har sin egen acceptans, som startar en isolerad backend med
+scriptad generering och kör mot verklig auth, tenantskopning, retrieval,
+citatverifiering och sidrastrering — på två telefonviewporter, plus en
+axe-genomgång av hela resan:
+
+```bash
+cd xs_mobilapp && npm install
+make mobile-test
 ```
 
 Senast sammanhållna verifiering, på Fedora 44 från ren checkout efter enbart

@@ -43,6 +43,40 @@ Evidence in `docs/evidence/`.
 GraphRAG / corpus-wide questions, formal DPIA, audit dashboards, the unwired
 Granskning/Bevakningar tabs, scaling beyond a handful of tenants.
 
+## Post-BP6 narrowing: session transport (2026-07-29)
+
+Recorded here because it changes behavior this contract's §3 covers. It is a
+**narrowing of an existing guarantee, not new scope**, and it reopens no gate:
+BP1–BP6 stand as decided, and the BP6 artifacts in `docs/` are left exactly as
+they were approved.
+
+Session credentials now travel **only** in the httpOnly `brf_session` cookie:
+
+- `POST /api/auth/login` no longer returns the session token in its JSON body.
+  The response is `{user, memberships}`. Echoing the token put a long-lived
+  credential where page script — or any logging proxy in between — could read
+  it, which is what httpOnly exists to prevent.
+- `Authorization: Bearer` is no longer an authentication path. Login issues no
+  token, so accepting one would only widen the auth surface for a credential
+  no legitimate client can obtain.
+
+Nothing outside the test fixtures consumed the token. Those now take the
+session from `Set-Cookie` and pass it explicitly per request, so the
+adversarial isolation suite keeps its defining property — a request without
+the header is genuinely unauthenticated — with no assertion relaxed.
+
+Proven by:
+
+- `tests/test_api.py::TestAuthFlow::test_login_body_carries_no_session_token`
+  — the body is exactly `{user, memberships}` and the cookie is httpOnly;
+- `tests/test_isolation.py::TestForgedCredentials::test_bearer_header_is_not_an_authentication_path`
+  — a **real, currently-valid** token is refused as a Bearer header while the
+  same token in the cookie still works, so it is the transport being rejected
+  and not an invalid token;
+- `tests/test_isolation.py::TestForgedCredentials::test_forged_session_cookie_rejected`.
+
+Commit `991349d`; full backend suite green at 588 passed, 3 skipped.
+
 ## Departures from deep-research-report.md (deliberate, per the brief)
 
 - Generation: **Gemma 4** (brief) instead of Mistral Large 2 / Silo Viking (report).

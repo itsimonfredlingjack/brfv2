@@ -1,0 +1,10 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["react", "typescript"],
+  "env": { "browser": true, "es2024": true },
+  "ignorePatterns": ["dist", "node_modules", "test-results", "playwright-report"],
+  "rules": {
+    "no-unused-vars": "error",
+    "no-console": ["warn", { "allow": ["warn", "error"] }]
+  }
+}
