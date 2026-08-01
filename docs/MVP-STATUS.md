@@ -240,6 +240,13 @@ lyssnar med flit bara på en slumpmässig loopback-port och exponeras inte på
 nätverket för att en telefon ska nå den. Att ändra på det vore en annan
 säkerhetsdiskussion än den här.
 
+**Verifierat mot ett installerat paket.** En RPM byggd från integrationsgrenen
+(`f0e8be1`, sha256 `a06233fa…`) är installerad och har klarat både
+payload-granskningen (40 tester mot `ops/forbidden_providers.json`) och hela
+desktopacceptansen mot verklig Tauri/WebKitGTK och självhostad Gemma 4 12B —
+exit 0 på 132 sekunder från ett oprovisionerat utgångsläge. Se
+[evidence/integrations-installed-rpm-2026-08-01.md](evidence/integrations-installed-rpm-2026-08-01.md).
+
 Detaljer: [INTEGRATIONSDOMAN.md](INTEGRATIONSDOMAN.md),
 [INTEGRATION-OUTLOOK.md](INTEGRATION-OUTLOOK.md),
 [INTEGRATION-FORTNOX.md](INTEGRATION-FORTNOX.md),
