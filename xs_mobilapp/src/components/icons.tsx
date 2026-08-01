@@ -72,6 +72,26 @@ export const AlertIcon = ({ size = 18, className }: IconProps) => (
   </svg>
 )
 
+/* The mark for "nothing could be verified". Deliberately not a cross: nothing
+ * failed and nothing is broken — the honest answer is simply that the archive
+ * does not settle it. */
+export const UnknownIcon = ({ size = 16, className }: IconProps) => (
+  <svg {...base(size)} className={className}>
+    <circle cx="12" cy="12" r="8.5" />
+    <path d="M9.7 9.6a2.4 2.4 0 0 1 4.6.9c0 1.6-2.3 1.9-2.3 3.3" />
+    <path d="M12 17.3v.1" />
+  </svg>
+)
+
+export const ReviewIcon = ({ size = 22, className }: IconProps) => (
+  <svg {...base(size)} className={className}>
+    <path d="M14 3H7a1.5 1.5 0 0 0-1.5 1.5v15A1.5 1.5 0 0 0 7 21h5" />
+    <path d="M14 3v4.5h4.5" />
+    <circle cx="16.3" cy="15.3" r="3.3" />
+    <path d="m18.8 17.8 2.4 2.4" />
+  </svg>
+)
+
 export const DocIcon = ({ size = 20, className }: IconProps) => (
   <svg {...base(size)} className={className}>
     <path d="M14 3H7a1.5 1.5 0 0 0-1.5 1.5v15A1.5 1.5 0 0 0 7 21h10a1.5 1.5 0 0 0 1.5-1.5V7.5Z" />

@@ -1,0 +1,191 @@
+/* The mapping check. Read side by side with the invoice in the accounting
+ * system, so the table is wide, quiet and comparable rather than pretty: one
+ * row per field, the source field named in full, and a value column that keeps
+ * numbers aligned. A row the mapping could not fill is tinted, not omitted. */
+
+.mp-lookup {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.mp-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1 1 240px;
+}
+
+.mp-field > span {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.mp-field input {
+  padding: 9px 11px;
+  border-radius: 9px;
+  border: 1px solid var(--panel-border);
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.mp-lookup button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 10px 14px;
+  border-radius: 9px;
+  border: 1px solid var(--accent, #6384ff);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.mp-lookup button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.mp-result {
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  background: var(--panel-bg, rgba(255, 255, 255, 0.02));
+  overflow-x: auto;
+}
+
+.mp-result-head h4 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.mp-note {
+  margin: 10px 0 0;
+  padding: 11px 13px;
+  border-radius: 10px;
+  background: rgba(99, 132, 255, 0.09);
+  border: 1px solid rgba(99, 132, 255, 0.22);
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+.mp-result h5 {
+  margin: 20px 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.mp-fields,
+.mp-rows {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.mp-fields th,
+.mp-rows th {
+  text-align: left;
+  padding: 7px 10px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  border-bottom: 1px solid var(--panel-border);
+  white-space: nowrap;
+}
+
+.mp-fields td,
+.mp-rows td {
+  padding: 9px 10px;
+  border-bottom: 1px solid var(--panel-border);
+  color: var(--text-primary);
+  vertical-align: top;
+}
+
+.mp-fields tr.unmatched {
+  background: rgba(230, 180, 70, 0.08);
+}
+
+.mp-target {
+  display: block;
+  margin-top: 3px;
+}
+
+.mp-target code,
+.mp-source code {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.mp-value {
+  display: block;
+  font-variant-numeric: tabular-nums;
+}
+
+.mp-source {
+  display: block;
+  margin-top: 3px;
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.mp-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.mp-flag.ok { color: rgb(120, 210, 160); }
+.mp-flag.missing { color: rgb(235, 190, 95); }
+
+.mp-fieldnote {
+  display: block;
+  margin-top: 5px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  max-width: 42ch;
+}
+
+.mp-observed {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.mp-observed > div {
+  display: grid;
+  grid-template-columns: minmax(180px, 30%) 1fr;
+  gap: 12px;
+}
+
+.mp-observed dt {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.mp-observed dd {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+@media (max-width: 720px) {
+  .mp-observed > div {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}

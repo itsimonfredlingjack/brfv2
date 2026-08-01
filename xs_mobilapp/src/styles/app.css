@@ -78,7 +78,10 @@
   bottom: 0;
   z-index: 20;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  /* Auto columns rather than a counted template: the number of destinations
+   * is the router's business, not the stylesheet's. */
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
   background: color-mix(in srgb, var(--paper) 92%, transparent);
   backdrop-filter: blur(12px);
   border-top: 1px solid var(--hairline);
@@ -92,8 +95,13 @@
   justify-content: center;
   gap: 3px;
   min-height: var(--tabbar-h);
+  padding: 0 2px;
   font-size: var(--t-label);
   font-weight: 560;
+  text-align: center;
+  /* At 200% text a one-word label is wider than a third of a 320px screen.
+   * Breaking it is ugly; spilling over the neighbour is worse. */
+  overflow-wrap: anywhere;
   color: var(--ink-3);
 }
 
@@ -527,6 +535,227 @@
 .disclosure__item {
   padding: var(--s2) 0;
   border-top: 1px solid var(--hairline);
+}
+
+/* -------------------------------------------------------------- granskning
+ *
+ * The card's hierarchy is the point: facts are data, the suggestion is prose
+ * in a tinted block, the uncertainty is a WARMER block that the eye cannot
+ * slide past, and the verdict is stated in words with a mark that only
+ * carries a check when something verified verbatim.
+ */
+
+.readonly-note {
+  margin-top: var(--s3);
+  padding: var(--s2) var(--s3);
+  background: var(--surface-sunken);
+  border-left: 3px solid var(--hairline-strong);
+  border-radius: 6px;
+  font-size: var(--t-meta);
+  color: var(--ink-2);
+}
+
+.finding {
+  padding: var(--s4);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-left: 3px solid var(--ink-3);
+  border-radius: var(--r-card);
+}
+
+.finding--grounded {
+  border-left-color: var(--grounded);
+}
+
+.finding--deviation {
+  border-left-color: var(--refusal);
+}
+
+/* Nothing could be verified: no colour claim either way, and a dashed edge so
+ * the state is legible without relying on hue. */
+.finding--unknown {
+  border-left-style: dashed;
+}
+
+.finding__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+
+.finding__verdict {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  font-size: var(--t-body);
+  font-weight: 660;
+  letter-spacing: -0.01em;
+}
+
+.finding__mark {
+  display: inline-flex;
+  flex: none;
+  color: var(--ink-3);
+}
+
+.finding__mark[data-mark='grounded'] {
+  color: var(--grounded);
+}
+
+.finding__mark[data-mark='deviation'] {
+  color: var(--refusal);
+}
+
+.finding__status {
+  flex: none;
+}
+
+.finding__status--approved {
+  background: var(--grounded-wash);
+  color: var(--grounded);
+}
+
+.finding__status--corrected,
+.finding__status--dismissed {
+  background: var(--refusal-wash);
+  color: var(--refusal);
+}
+
+.finding__when {
+  margin-top: 2px;
+  font-size: var(--t-meta);
+  color: var(--ink-3);
+}
+
+/* facts — read as data */
+
+.finding__facts {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s4);
+  margin-top: var(--s4);
+}
+
+.facts__list {
+  margin-top: var(--s2);
+  border-top: 1px solid var(--hairline);
+}
+
+.facts__row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s1) var(--s3);
+  padding: var(--s2) 0;
+  border-bottom: 1px solid var(--hairline);
+}
+
+.facts__term {
+  font-size: var(--t-meta);
+  color: var(--ink-2);
+}
+
+.facts__value {
+  /* Real labels run long ("À-pris enligt fakturan — Snöröjning enligt
+   * avtal"), so the row wraps often. The value keeps to the right edge on
+   * either line, and amounts stay column-scannable. */
+  margin-left: auto;
+  font-weight: 620;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.facts__empty {
+  margin-top: var(--s2);
+  font-size: var(--t-meta);
+  color: var(--ink-3);
+}
+
+.finding__citations {
+  margin-top: var(--s5);
+}
+
+.finding__citations .cite {
+  margin-top: var(--s2);
+}
+
+/* the suggestion — prose, tinted, and named */
+
+.finding__suggestion {
+  margin-top: var(--s5);
+  padding: var(--s3) var(--s4);
+  background: var(--surface-sunken);
+  border-radius: var(--r-field);
+}
+
+.finding__prose {
+  margin-top: var(--s2);
+  line-height: 1.5;
+}
+
+/* the uncertainty and a weak anchor — warmer, and not skimmable */
+
+.finding__uncertainty,
+.finding__anchor--weak {
+  margin-top: var(--s3);
+  padding: var(--s3) var(--s4);
+  background: var(--refusal-wash);
+  border: 1px solid var(--refusal-edge);
+  border-radius: var(--r-field);
+}
+
+.finding__warm-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  font-size: var(--t-label);
+  font-weight: 660;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--refusal);
+}
+
+.finding__anchor {
+  margin-top: var(--s3);
+  font-size: var(--t-meta);
+  color: var(--ink-3);
+}
+
+.finding__anchor-label {
+  font-weight: 620;
+  color: var(--ink-2);
+}
+
+/* Waiting on a person elsewhere. Held open with a dashed edge rather than
+ * tinted with the accent: the accent means "you can act on this", and the one
+ * thing this block says is that you cannot — not from here. */
+.finding__alias {
+  margin-top: var(--s3);
+  padding: var(--s3) var(--s4);
+  background: var(--surface-sunken);
+  border-left: 3px dashed var(--hairline-strong);
+  border-radius: var(--r-field);
+  font-size: var(--t-quote);
+  color: var(--ink);
+}
+
+.finding__decision {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  margin-top: var(--s4);
+  padding-top: var(--s3);
+  border-top: 1px solid var(--hairline);
+  font-size: var(--t-meta);
+  color: var(--ink-3);
+}
+
+.finding__decision-who {
+  font-weight: 620;
+  color: var(--ink-2);
 }
 
 /* --------------------------------------------------------------- states */

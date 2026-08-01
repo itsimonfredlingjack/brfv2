@@ -30,6 +30,30 @@ med två verifierade citat samtidigt som q11 fortsätter att vägras säkert.
   inställningsflöden ligger utanför MVP. I pilotvyn är de dolda, spärrade eller
   uttryckligen märkta som otillgängliga; de visar inte fiktiva backendresultat.
 
+## Skrivbordsleverans (XS-47, 2026-07-28)
+
+Samma produkt finns nu som en installerbar Fedora-applikation. Skalet i
+`src-tauri/` startar en paketerad Python-körmiljö som serverar det byggda
+React-gränssnittet och `/api/*` från samma slumpmässiga loopback-origin; ingen
+produktlogik dupliceras i skalet.
+
+- Artefakt: `dist/brf-dokument-ai-0.2.0-1.fc44.x86_64.rpm` (547 MiB, sha256 `b0b1a90a…`), byggd med
+  Fedoras `rpmbuild`, med `webkit2gtk4.1`, `gtk3`, `tesseract` och
+  `tesseract-langpack-swe` som enda beroenden.
+- Hela resan — förstagångskonfiguration, uppladdning, ingestion, grundat svar
+  från riktig Gemma 4 12B, citation, PDF-markering, vägran, omstart, bevarat
+  tillstånd, säkerhetskopiering och återställning — är körd mot det
+  **installerade** paketet, inte mot en checkout.
+- Produkten levereras utan konton: `--seed-demo` och `backend/scripts/` finns
+  inte i bundlen, och `max@demo.se` fungerar inte.
+- Generering kan bara ske mot den självhostade modelltjänst användaren anger.
+  `BRF_LLM` är fastnaglat till `selfhosted` och `anthropic` är borttaget ur
+  bundlen.
+
+Evidens: [evidence/xs47-desktop-delivery.md](evidence/xs47-desktop-delivery.md),
+[maskinläsbar acceptans](evidence/xs47-desktop-acceptance-installed.json).
+Byggbeslut: [adr/0001-desktop-python-runtime.md](adr/0001-desktop-python-runtime.md).
+
 ## Verifierat MVP-kontrakt
 
 Den automatiserade browser-acceptansen använder Chromium, kanonisk frontend
@@ -174,6 +198,60 @@ korpusåtkomst och runtimeåtkomst. Allt annat i
 isolering, frontendtester, lint, bygge och Playwright-acceptansen — körs helt
 från en ren checkout efter enbart `make setup`.
 
+## Integrationsblocket — liveläge (2026-08-01)
+
+Desktopinstallationen kan nu läsa ur två verkliga system, båda read-only och
+båda igångsatta av en namngiven administratör:
+
+* **Brevlåda över Microsoft Graph.** Behörigheterna är en konstant i koden
+  (`offline_access`, `User.Read`, `Mail.Read`, plus `Mail.Read.Shared` för en
+  delad brevlåda) och kan inte vidgas av någon inställning. Ett valt meddelande
+  hämtas som rå MIME och går genom exakt samma importväg som en manuell
+  `.eml` — samma formatgränser, samma hash, samma atomiska återställning.
+  Ingenting markeras, flyttas eller raderas i brevlådan.
+* **Fortnox leverantörsfakturor.** Mappningen är densamma som fixturadaptern
+  övade in, och en fältmappningsvy visar vilket Fortnox-fält som blev vilket av
+  våra, så att första livekopplingen går att kontrollera i stället för att
+  antas. Fortnox erbjuder inget läs-scope; read-only är klientsidigt och vilar
+  på att ingen skrivväg finns — se ADR 0004.
+
+Gränsen är byggd som frånvaro av kodväg: `protocols.py` vägrar vid import ett
+adapterprotokoll med ett utåtriktat skrivverb, och `egress.py` har ingen metod
+som kan skicka annat än GET mot ett API. Det finns ingen polling, ingen
+webhook och ingen bakgrundstråd — varje läsning sker för att någon klickade.
+
+Credentials ligger `0600` i föreningens egen katalog och **ingår aldrig i en
+säkerhetskopia**; en återställd installation måste anslutas om, vilket
+manifestet säger rakt ut.
+
+Granskningen har samtidigt fått läsa det den tidigare bara kunde avstå från:
+leverantörsidentitet med styrka (organisationsnummer, exakt namn, bekräftat
+alias, bolagsform, svag delträff), svenska datum och löpande avtalstider,
+indexreglerade priser som blockerar en självsäker avvikelse, och löptider och
+uppsägningstider som citerade fakta. En bilaga som kommit per mejl kan numera
+bli föreningens underlag genom att en administratör **arkiverar** den med ett
+angivet skäl; en fakturas egna bilagor är fortfarande uteslutna som bevis om
+just den fakturan.
+
+Mobilklienten har en **read-only vy av fynden**: samma tre block, samma
+citatnavigering till rätt sida med markerad passage, och inget sätt att fatta
+ett beslut därifrån. Den gäller den servade backenden — desktopinstallationen
+lyssnar med flit bara på en slumpmässig loopback-port och exponeras inte på
+nätverket för att en telefon ska nå den. Att ändra på det vore en annan
+säkerhetsdiskussion än den här.
+
+**Verifierat mot ett installerat paket.** En RPM byggd från integrationsgrenen
+(`f0e8be1`, sha256 `a06233fa…`) är installerad och har klarat både
+payload-granskningen (40 tester mot `ops/forbidden_providers.json`) och hela
+desktopacceptansen mot verklig Tauri/WebKitGTK och självhostad Gemma 4 12B —
+exit 0 på 132 sekunder från ett oprovisionerat utgångsläge. Se
+[evidence/integrations-installed-rpm-2026-08-01.md](evidence/integrations-installed-rpm-2026-08-01.md).
+
+Detaljer: [INTEGRATIONSDOMAN.md](INTEGRATIONSDOMAN.md),
+[INTEGRATION-OUTLOOK.md](INTEGRATION-OUTLOOK.md),
+[INTEGRATION-FORTNOX.md](INTEGRATION-FORTNOX.md),
+[adr/0004-utgaende-integrationsgrans.md](adr/0004-utgaende-integrationsgrans.md).
+
 ## Återstående blockerare och begränsningar
 
 1. q01:s prose-control kan fortfarande ge ett icke-ordagrant citat; dagens
@@ -187,6 +265,18 @@ från en ren checkout efter enbart `make setup`.
    är en kvarvarande mätbar begränsning.
 5. Ingen liveevidens eller automatisk acceptans gör funktioner utanför den
    uttryckliga MVP-gränsen till produktfunktioner.
+6. **Liveintegrationerna är verifierade genom en injicerad transport, inte mot
+   Microsofts eller Fortnox verkliga servrar.** Varje URL, huvud, formfält,
+   vägran och tokenrotation prövas — men den första riktiga inloggningen kräver
+   en app-registrering respektive en Fortnox-integration som en människa
+   skapar, och den kan ingen testsvit göra åt någon. Fältmappningsvyn finns
+   just för att göra den första livekopplingen kontrollerbar.
+7. Fortnox leverantörsfaktura saknar periodfält, så periodgranskning görs inte
+   för fakturor som läses den vägen. Beloppsgranskningen påverkas inte.
+8. Granskningen räknar aldrig upp ett indextal och kan inte härleda ett
+   undertecknandedatum som inte står i en citerad passage. Båda fallen ger
+   *kan inte verifieras* med klausulen citerad, vilket är rätt svar men inte
+   ett svar på frågan.
 
 ## Omtag av livegaten
 

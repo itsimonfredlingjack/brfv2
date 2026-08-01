@@ -1,0 +1,346 @@
+/* The connections panel. Same visual grammar as Appinställningar — one section
+ * per thing that can be configured, a hint that explains the consequence before
+ * the field that causes it, and a confirmation that spells out what survives an
+ * irreversible-looking action. */
+
+.ic {
+  display: block;
+}
+
+.ic-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  margin-bottom: 14px;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+.ic-banner.ok {
+  background: rgba(80, 190, 130, 0.13);
+  border: 1px solid rgba(80, 190, 130, 0.35);
+}
+
+.ic-banner.bad {
+  background: rgba(220, 90, 90, 0.14);
+  border: 1px solid rgba(220, 90, 90, 0.4);
+}
+
+.ic-provider {
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-bottom: 16px;
+  background: var(--panel-bg, rgba(255, 255, 255, 0.02));
+}
+
+.ic-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.ic-head h4 {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.ic-status {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.ic-status.ok {
+  background: rgba(80, 190, 130, 0.16);
+  border-color: rgba(80, 190, 130, 0.4);
+}
+
+.ic-status.warn {
+  background: rgba(230, 180, 70, 0.12);
+  border-color: rgba(230, 180, 70, 0.35);
+}
+
+.ic-status.bad {
+  background: rgba(220, 90, 90, 0.14);
+  border-color: rgba(220, 90, 90, 0.4);
+}
+
+.ic-step {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--panel-border);
+}
+
+.ic-step > h5,
+.ic-limits h5 {
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.ic-hint {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.ic-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+}
+
+.ic-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ic-field.ic-span {
+  grid-column: 1 / -1;
+}
+
+.ic-field > span {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.ic-field input,
+.ic-field select {
+  padding: 9px 11px;
+  border-radius: 9px;
+  border: 1px solid var(--panel-border);
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.ic-field small,
+.ic-check small {
+  display: block;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.ic-field small code,
+.ic-check small code {
+  font-size: 11px;
+  padding: 0 3px;
+}
+
+.ic-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(230, 180, 70, 0.3);
+  background: rgba(230, 180, 70, 0.08);
+}
+
+.ic-check strong {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 4px;
+  color: var(--text-primary);
+}
+
+.ic-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.ic-primary,
+.ic-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 14px;
+  border-radius: 9px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ic-primary {
+  border: 1px solid var(--accent, #6384ff);
+  background: var(--accent, #6384ff);
+  color: #fff;
+}
+
+.ic-secondary {
+  border: 1px solid var(--panel-border);
+  background: transparent;
+  color: var(--text-primary);
+}
+
+.ic-primary.danger {
+  background: rgba(220, 90, 90, 0.85);
+  border-color: rgba(220, 90, 90, 0.9);
+}
+
+.ic-secondary.danger {
+  border-color: rgba(220, 90, 90, 0.45);
+  color: var(--text-primary);
+}
+
+.ic-primary:disabled,
+.ic-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.ic-device {
+  margin-top: 12px;
+  padding: 14px 16px;
+  border-radius: 11px;
+  border: 1px solid rgba(99, 132, 255, 0.28);
+  background: rgba(99, 132, 255, 0.09);
+}
+
+.ic-device p {
+  margin: 0 0 10px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+.ic-device a {
+  color: var(--accent, #6384ff);
+  overflow-wrap: anywhere;
+}
+
+/* The code is read aloud across a room and typed on a phone. Big, spaced and
+   selectable beats tidy. */
+.ic-usercode {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.ic-usercode code {
+  font-size: 30px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  user-select: all;
+  color: var(--text-primary);
+}
+
+.ic-usercode button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.ic-facts {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 12px;
+}
+
+.ic-facts > div {
+  display: grid;
+  grid-template-columns: minmax(150px, 30%) 1fr;
+  gap: 12px;
+}
+
+.ic-facts dt {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.ic-facts dd {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-primary);
+  overflow-wrap: anywhere;
+}
+
+.ic-facts dd code {
+  font-size: 12px;
+  margin-right: 8px;
+}
+
+.ic-lasterror {
+  margin: 0 0 12px;
+  font-size: 13px;
+  color: rgb(230, 140, 140);
+}
+
+.ic-confirm {
+  margin-top: 12px;
+  padding: 14px 16px;
+  border-radius: 11px;
+  border: 1px solid rgba(220, 90, 90, 0.4);
+  background: rgba(220, 90, 90, 0.1);
+}
+
+.ic-confirm p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+.ic-limits {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 18px;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--panel-border);
+}
+
+.ic-limits ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 5px;
+}
+
+.ic-limits code {
+  font-size: 12px;
+  color: var(--text-primary);
+}
+
+@media (max-width: 720px) {
+  .ic-facts > div {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}

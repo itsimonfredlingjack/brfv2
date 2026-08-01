@@ -1,0 +1,222 @@
+.setup-screen {
+  min-height: 100vh;
+  width: 100vw;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  overflow-y: auto;
+}
+
+.setup-panel {
+  width: 100%;
+  max-width: 520px;
+  padding: 40px 36px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  /* Same reasoning as the settings dialog: an opaque surface, since this
+     screen owns the whole viewport rather than floating on content. */
+  background: #12141a;
+}
+
+.setup-mark {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary-action), #9b72e3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  margin-bottom: 18px;
+  box-shadow: 0 0 25px rgba(59, 130, 246, 0.45);
+}
+
+.setup-mark.done {
+  background: linear-gradient(135deg, #34a853, #2f8f49);
+  box-shadow: 0 0 25px rgba(52, 168, 83, 0.4);
+}
+
+.setup-title {
+  font-size: 25px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+
+.setup-subtitle {
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  margin-bottom: 26px;
+}
+
+.setup-form {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.setup-row {
+  display: flex;
+  gap: 14px;
+}
+
+.setup-row .setup-field {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+.setup-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  text-align: left;
+}
+
+.setup-field > span {
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-secondary);
+}
+
+.setup-field input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-family: inherit;
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.setup-field input::placeholder {
+  color: rgba(255, 255, 255, 0.25);
+}
+
+.setup-field input:focus {
+  border-color: var(--primary-action);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+}
+
+.setup-field small {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+}
+
+.setup-field small.warn {
+  color: #f0b429;
+}
+
+.setup-error,
+.setup-probe {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 13px;
+  text-align: left;
+}
+
+.setup-error,
+.setup-probe.bad {
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  background: rgba(248, 113, 113, 0.08);
+  color: #f87171;
+}
+
+.setup-probe.ok {
+  border: 1px solid rgba(52, 168, 83, 0.4);
+  background: rgba(52, 168, 83, 0.1);
+  color: #6ee7a0;
+}
+
+.setup-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 2px;
+}
+
+.setup-submit,
+.setup-secondary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 24px;
+  padding: 13px 18px;
+  font-size: 15px;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex: 1 1 0;
+}
+
+.setup-submit {
+  background: var(--text-primary);
+  color: var(--bg-color);
+  border: none;
+  margin-top: 4px;
+}
+
+.setup-submit:hover:not(:disabled) {
+  transform: scale(1.02);
+  box-shadow: 0 4px 15px rgba(255, 255, 255, 0.1);
+}
+
+.setup-submit:disabled,
+.setup-secondary:disabled {
+  opacity: 0.55;
+  cursor: default;
+  transform: none;
+}
+
+.setup-secondary {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--panel-border);
+  margin-top: 4px;
+  flex: 0 0 auto;
+  padding-inline: 22px;
+}
+
+.setup-secondary:hover:not(:disabled) {
+  color: var(--text-primary);
+}
+
+.setup-submit .spin {
+  color: inherit;
+}
+
+.setup-note {
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+  text-align: left;
+  margin: 2px 0 0;
+}
+
+.setup-storage {
+  margin-top: 22px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  max-width: 100%;
+}
+
+.setup-storage code {
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}

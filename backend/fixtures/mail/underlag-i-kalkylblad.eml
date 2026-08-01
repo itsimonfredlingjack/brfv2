@@ -1,0 +1,23 @@
+From: =?utf-8?q?Leverant=C3=B6r?= AB <post@leverantor.example>
+To: Styrelsen <styrelsen@gjutformen12.example>
+Subject: Underlag i kalkylblad
+Date: Thu, 05 Feb 2026 08:14:00 +0100
+Message-ID: <kalkyl@fixture.invalid>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="----brfv2-fixture-kalkyl"
+
+------brfv2-fixture-kalkyl
+Content-Type: text/plain; charset="utf-8"
+Content-Transfer-Encoding: 7bit
+
+Underlaget ligger i bifogat kalkylblad.
+
+------brfv2-fixture-kalkyl
+Content-Type: text/csv
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="underlag.csv"
+MIME-Version: 1.0
+
+a29sdW1uO3ZhcmRlCnN1bW1hOzEwMDAK
+
+------brfv2-fixture-kalkyl--

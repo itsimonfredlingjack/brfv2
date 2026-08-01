@@ -82,5 +82,9 @@ Klart. Nästa steg:
 Frontend + backend var för sig:
   make backend           :8787 i dev-läge
   make frontend          :5173 kanoniskt UI
+
+Skrivbordsapplikationen (Fedora):
+  make desktop-run       kör skalet mot den här checkouten
+  make desktop-package   bygger RPM:en (kräver `sudo dnf install rpm-build`)
 ────────────────────────────────────────────────────────────
 EOF

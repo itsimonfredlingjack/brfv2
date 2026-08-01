@@ -5,12 +5,19 @@ på rätt PDF-sida med den citerade passagen markerad. Frågor som saknar stöd 
 föreningens dokument ska avvisas i stället för att gissas.
 
 - [Aktuell MVP-status](docs/MVP-STATUS.md)
+- [Skrivbordsapplikationen för Fedora](docs/DESKTOP-FEDORA.md)
+- [Integrationsdomänen: mejlintag och fakturagranskning](docs/INTEGRATIONSDOMAN.md)
+- [Post-BP6-produktbasen och porteringen](docs/POST-BP6-PRODUKTBAS.md)
 - [Demo quickstart](docs/DEMO-QUICKSTART.md)
 - [Operatörsrunbook](docs/DEMO-RUNBOOK.md)
 - [Pilotdrift med Gemma 4 12B](docs/DEPLOY-SELFHOSTED-LLM.md)
 - [Drift- och förvaltningsplan](docs/DRIFT-FORVALTNINGSPLAN.md)
 - [Erfarenhetsåterföring](docs/ERFARENHETSATERFORING.md)
 - [Slutrapport](docs/SLUTRAPPORT.md)
+- [Integrationsdomänen](docs/INTEGRATIONSDOMAN.md) — inkommande underlag och
+  read-only fakturagranskning
+- [Ansluta en brevlåda](docs/INTEGRATION-OUTLOOK.md) ·
+  [Ansluta Fortnox](docs/INTEGRATION-FORTNOX.md)
 
 ## Ett repo, en produkt
 
@@ -77,6 +84,15 @@ Administratörer kan också ladda upp och radera PDF-dokument. Medlemmar kan
 inte göra det. Global sök, dokumentbunden chatt, kvalitetskontroll,
 bevakningar och allmän styrelseadministration ingår inte i MVP:n och är dolda
 eller spärrade i pilotvyn.
+
+Desktopinstallationen har utöver det en **granskningsslinga för inkommande
+underlag**: ett mejl kommer in — manuellt som `.eml` eller ur en ansluten
+brevlåda — bilagorna blir vanliga dokument, en leverantörsfaktura läses
+read-only ur fixturunderlag eller ur ett anslutet ekonomisystem, och
+jämförelsen mot föreningens egna avtal läggs fram som ett *fynd* med exakta
+citat, uttalad osäkerhet och tre möjliga domar. En människa avgör; produkten
+skriver aldrig tillbaka någonstans. Se
+[docs/INTEGRATIONSDOMAN.md](docs/INTEGRATIONSDOMAN.md).
 
 ## Lokal verifiering
 
@@ -156,6 +172,33 @@ Se den icke-känsliga rapporten
 [docs/evidence/pilot-live-gemma4-12b-2026-07-22.md](docs/evidence/pilot-live-gemma4-12b-2026-07-22.md).
 Fix och omkörning:
 [docs/evidence/xs32-q03-linked-context-2026-07-22.md](docs/evidence/xs32-q03-linked-context-2026-07-22.md).
+
+## Skrivbordsleverans (Fedora)
+
+Samma produkt kan installeras som ett vanligt skrivbordsprogram. Skalet i
+`src-tauri/` startar en paketerad Python-körmiljö som serverar det byggda
+React-gränssnittet och `/api/*` från samma slumpmässiga loopback-origin; ingen
+produktlogik dupliceras i skalet.
+
+```bash
+make desktop-package    # -> dist/brf-dokument-ai-<version>.x86_64.rpm
+make desktop-install    # dnf install (drar in tesseract + webkit2gtk4.1)
+make desktop-acceptance # full journey mot riktig Tauri/WebKitGTK + självhostad modell
+```
+
+### Inkommande underlag och fakturagranskning
+
+Skrivbordsappen har en granskningskö: en sparad `.eml` importeras manuellt, dess
+PDF-bilagor går genom den vanliga dokumentkedjan, och en fixturfaktura kan
+jämföras **read-only** mot ett exakt citerat avtalsvillkor. Inga externa
+skrivningar, ingen OAuth, ingen brevlådeanslutning.
+Se [docs/INTEGRATIONSDOMAN.md](docs/INTEGRATIONSDOMAN.md).
+
+- [Användar- och byggguide](docs/DESKTOP-FEDORA.md)
+- [Beslut om Python-körmiljön](docs/adr/0001-desktop-python-runtime.md)
+- [Modellgränsen: vem får peka om, och vart](docs/adr/0002-model-endpoint-boundary.md)
+- [Reproducerbar RPM](docs/adr/0003-reproducerbar-rpm.md)
+- [Arkitekturbeviset som föregick den](docs/evidence/xs46-tauri-fedora.md)
 
 ## Arkitektur
 

@@ -1,8 +1,11 @@
 import React, { useState } from 'react';
-import { MessageSquare, Folders, Search as SearchIcon, FileText, ArrowRight, Loader2, Sparkles, AlertCircle, Upload, CheckCircle2, AlertTriangle, X, ChevronRight, ChevronDown, CornerDownRight, ArrowLeft, ZoomIn, ZoomOut, ThumbsDown, MessageCircle, Info, Menu, ChevronUp, LogOut, Trash2 } from 'lucide-react';
+import { MessageSquare, Folders, Inbox, Search as SearchIcon, FileText, ArrowRight, Loader2, Sparkles, AlertCircle, Upload, CheckCircle2, AlertTriangle, X, ChevronRight, ChevronDown, CornerDownRight, ArrowLeft, ZoomIn, ZoomOut, ThumbsDown, MessageCircle, Info, Menu, ChevronUp, LogOut, Trash2, Settings } from 'lucide-react';
 import Login from './components/Login';
 import PdfPane from './components/PdfPane';
-import { api } from './api';
+import Setup from './components/Setup';
+import DesktopSettings from './components/DesktopSettings';
+import Integrations from './components/Integrations';
+import { api, desktopApi } from './api';
 import { displayNameForModel, displayNameForProvider } from './modelDisplay';
 import './App.css';
 
@@ -156,13 +159,41 @@ function App() {
     setActiveBrfId(m.brf_id);
   };
 
-  // Session bootstrap: restore an existing session cookie, else show login.
+  // ---- Desktop delivery ----
+  // /api/desktop/state only exists in the installed application; on the web it
+  // 404s and every desktop-only surface below stays absent. There is no build
+  // flag and no second bundle — the running backend decides.
+  const [desktopState, setDesktopState] = useState(null);
+  const [desktopReady, setDesktopReady] = useState(false);
+  const [showDesktopSettings, setShowDesktopSettings] = useState(false);
+
+  const refreshDesktopState = React.useCallback(
+    () => desktopApi.state()
+      .then((state) => { setDesktopState(state); return state; })
+      .catch(() => { setDesktopState(null); return null; }),
+    [],
+  );
+
+  // Session bootstrap: probe the delivery, then restore an existing session
+  // cookie, else show login (or first-run setup on an unprovisioned desktop).
   React.useEffect(() => {
-    api.me()
-      .then(handleLoggedIn)
-      .catch(() => setAuthState('loggedOut'));
+    let cancelled = false;
+    refreshDesktopState()
+      .then((state) => {
+        if (cancelled) return null;
+        setDesktopReady(true);
+        // An unprovisioned installation has no accounts at all, so there is
+        // nothing for /api/auth/me to restore.
+        if (state && !state.provisioned) {
+          setAuthState('loggedOut');
+          return null;
+        }
+        return api.me().then(handleLoggedIn).catch(() => setAuthState('loggedOut'));
+      })
+      .catch(() => { if (!cancelled) { setDesktopReady(true); setAuthState('loggedOut'); } });
+    return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [refreshDesktopState]);
 
   const [currentTab, setCurrentTab] = useState('docs');
   const [selectedDocument, setSelectedDocument] = useState(null);
@@ -327,25 +358,22 @@ function App() {
   // backend is actually configured to generate with.
   const [llmStatus, setLlmStatus] = useState({ kind: 'loading' });
 
-  React.useEffect(() => {
-    let cancelled = false;
-    api.health()
-      .then((body) => {
-        if (cancelled) return;
-        const llm = body.llm || {};
-        setLlmStatus({
-          kind: llm.ready ? 'ready' : 'warning',
-          provider: llm.provider || '',
-          model: llm.model || '',
-          displayName: llm.display_name || displayNameForModel(llm.model || ''),
-          runtimeLabel: llm.runtime_label || '',
-        });
-      })
-      .catch(() => {
-        if (!cancelled) setLlmStatus({ kind: 'unknown' });
+  // Also re-read after the desktop model runtime is reconfigured, so the badge
+  // reflects what the backend will actually generate with right now.
+  const refreshLlmStatus = React.useCallback(() => api.health()
+    .then((body) => {
+      const llm = body.llm || {};
+      setLlmStatus({
+        kind: llm.ready ? 'ready' : 'warning',
+        provider: llm.provider || '',
+        model: llm.model || '',
+        displayName: llm.display_name || displayNameForModel(llm.model || ''),
+        runtimeLabel: llm.runtime_label || '',
       });
-    return () => { cancelled = true; };
-  }, []);
+    })
+    .catch(() => setLlmStatus({ kind: 'unknown' })), []);
+
+  React.useEffect(() => { refreshLlmStatus(); }, [refreshLlmStatus]);
 
   // General Chat State — wired to the real POST /api/brf/{brfId}/ask
   const [chatInput, setChatInput] = useState('');
@@ -666,7 +694,7 @@ function App() {
     docsSearchQuery === '' || doc.name.toLowerCase().includes(docsSearchQuery.toLowerCase())
   );
 
-  if (authState === 'loading') {
+  if (authState === 'loading' || !desktopReady) {
     return (
       <div className="auth-loading-screen">
         <Loader2 size={28} className="spin" />
@@ -676,11 +704,35 @@ function App() {
   }
 
   if (authState !== 'loggedIn') {
+    // A desktop installation with no association yet has nothing to log in to.
+    if (desktopState && !desktopState.provisioned) {
+      return (
+        <Setup
+          state={desktopState}
+          onProvisioned={(session) => {
+            handleLoggedIn(session);
+            refreshDesktopState();
+            refreshLlmStatus();
+          }}
+        />
+      );
+    }
     return <Login onLoggedIn={handleLoggedIn} modelStatus={<ModelStatusBadge status={llmStatus} />} />;
   }
 
   return (
     <div className="app-shell">
+      {showDesktopSettings && desktopState && (
+        <DesktopSettings
+          state={desktopState}
+          onClose={() => setShowDesktopSettings(false)}
+          onStateChanged={async () => {
+            await refreshDesktopState();
+            await refreshLlmStatus();
+          }}
+          onMembershipsChanged={(next) => setMemberships(next)}
+        />
+      )}
       {toastMessage && (
         <div role="status" aria-live="polite" style={{ position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)', background: toastMessage.type === 'success' ? 'var(--status-ok)' : 'var(--panel-bg)', color: toastMessage.type === 'success' ? '#000' : '#fff', padding: '12px 24px', borderRadius: '8px', zIndex: 1000, display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)', border: toastMessage.type !== 'success' ? '1px solid var(--panel-border)' : 'none' }}>
           {toastMessage.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
@@ -719,7 +771,7 @@ function App() {
       {/* MOBILE TOP NAVIGATION */}
       {!selectedDocument && (
         <header className="mobile-top-nav">
-          <div className="logo">Simons <span>RAG</span></div>
+          <div className="logo">BRF <span>Dokument-AI</span></div>
           <button ref={mobileMenuBtnRef} className="icon-action-btn mobile-menu-btn" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} aria-label="Meny" aria-expanded={isMobileMenuOpen}>
             {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
           </button>
@@ -741,7 +793,7 @@ function App() {
             inert={isMobile && !isMobileMenuOpen ? true : undefined}
           >
             <div className="sidebar-brand desktop-only">
-              <div className="logo">Simons <span>RAG</span></div>
+              <div className="logo">BRF <span>Dokument-AI</span></div>
             </div>
 
             <div className="sidebar-menu">
@@ -751,6 +803,14 @@ function App() {
               <button className={`nav-item ${currentTab === 'chat' ? 'active' : ''}`} onClick={() => { setCurrentTab('chat'); setIsMobileMenuOpen(false); }}>
                 <MessageSquare size={20} /> AI-chatt
               </button>
+              {/* Desktop only. /api/desktop/state 404s on the web, so
+                  desktopState stays null there and this entry never renders —
+                  the running backend decides, not a build flag. */}
+              {desktopState && (
+                <button className={`nav-item ${currentTab === 'integrations' ? 'active' : ''}`} onClick={() => { setCurrentTab('integrations'); setIsMobileMenuOpen(false); }}>
+                  <Inbox size={20} /> Inkommande
+                </button>
+              )}
 
             </div>
 
@@ -787,6 +847,23 @@ function App() {
 
               {showUserMenu && (
                 <div className="user-menu-popover glass-panel">
+                  {desktopState && (
+                    <div
+                      className="user-menu-item"
+                      role="button"
+                      tabIndex={0}
+                      onClick={() => { setShowDesktopSettings(true); setShowUserMenu(false); }}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault();
+                          setShowDesktopSettings(true);
+                          setShowUserMenu(false);
+                        }
+                      }}
+                    >
+                      <Settings size={16} /> Appinställningar
+                    </div>
+                  )}
                   <div className="user-menu-item text-danger" onClick={handleLogout}><LogOut size={16} /> Logga ut</div>
                 </div>
               )}
@@ -1465,6 +1542,17 @@ function App() {
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {currentTab === 'integrations' && desktopState && activeBrfId && (
+              <div className="tab-content">
+                <Integrations
+                  brfId={activeBrfId}
+                  documents={documents}
+                  onOpenDocument={openDocument}
+                  onOpenCitation={openDocumentFromCitation}
+                />
               </div>
             )}
 

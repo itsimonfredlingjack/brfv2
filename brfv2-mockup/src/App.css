@@ -41,7 +41,12 @@ body {
   margin: 0;
   background: var(--bg-color);
   color: var(--text-primary);
-  font-family: 'Inter', -apple-system, sans-serif;
+  /* No webfont is loaded (see index.html): Inter when the system has it,
+     otherwise the platform UI font — Cantarell on the Fedora/GNOME stack,
+     Noto Sans on KDE. All of them carry the Swedish diacritics the corpus
+     needs. */
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Cantarell,
+    'Noto Sans', sans-serif;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
 }

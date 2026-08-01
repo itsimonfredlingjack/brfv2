@@ -1,0 +1,339 @@
+.desktop-settings {
+  width: min(640px, calc(100vw - 48px));
+  max-height: min(760px, calc(100vh - 64px));
+  display: flex;
+  flex-direction: column;
+  border-radius: 16px;
+  overflow: hidden;
+  /* .glass-panel is translucent by design — it is meant to sit on a page
+     background, not over one. A full-height dialog needs its own opaque
+     surface, or the page behind it reads straight through the text. */
+  background: #12141a;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+}
+
+.ds-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--panel-border);
+  flex: 0 0 auto;
+}
+
+.ds-header h2 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.ds-close {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  display: flex;
+}
+
+.ds-close:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.ds-body {
+  padding: 4px 24px 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.ds-section {
+  padding: 20px 0;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.ds-section:last-child {
+  border-bottom: none;
+  padding-bottom: 4px;
+}
+
+.ds-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-primary);
+}
+
+.ds-hint {
+  margin: 0 0 14px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.ds-hint code,
+.ds-facts code {
+  font-size: 11.5px;
+  overflow-wrap: anywhere;
+}
+
+.ds-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.ds-span {
+  grid-column: 1 / -1;
+}
+
+.ds-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.ds-field > span {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.ds-field input,
+.ds-inline-form input {
+  width: 100%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 10px 13px;
+  font-size: 13.5px;
+  font-family: inherit;
+  color: var(--text-primary);
+  outline: none;
+}
+
+.ds-field input:focus,
+.ds-inline-form input:focus {
+  border-color: var(--primary-action);
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.ds-field small {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
+.ds-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 13px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  margin: 12px 0 0;
+}
+
+.ds-banner.ok {
+  border: 1px solid rgba(52, 168, 83, 0.4);
+  background: rgba(52, 168, 83, 0.1);
+  color: #6ee7a0;
+}
+
+.ds-banner.bad {
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  background: rgba(248, 113, 113, 0.08);
+  color: #f87171;
+}
+
+.ds-banner.warn {
+  border: 1px solid rgba(245, 179, 66, 0.4);
+  background: rgba(245, 179, 66, 0.08);
+  color: #f5b342;
+}
+
+.ds-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 14px;
+  flex-wrap: wrap;
+}
+
+.ds-state {
+  font-size: 12px;
+  margin-right: auto;
+}
+
+.ds-state.ok { color: #6ee7a0; }
+.ds-state.warn { color: #f0b429; }
+
+.ds-primary,
+.ds-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border-radius: 20px;
+  padding: 9px 18px;
+  font-size: 13.5px;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.ds-primary {
+  background: var(--text-primary);
+  color: var(--bg-color);
+  border: none;
+}
+
+.ds-primary.danger {
+  background: #e05656;
+  color: #fff;
+}
+
+.ds-secondary {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--panel-border);
+}
+
+.ds-secondary:hover:not(:disabled) { color: var(--text-primary); }
+
+.ds-primary:disabled,
+.ds-secondary:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.ds-primary .spin { color: inherit; }
+
+.ds-empty {
+  margin: 14px 0 0;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
+.ds-backups {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.ds-backups li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.ds-backup-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.ds-backup-meta strong {
+  font-size: 13px;
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.ds-backup-meta span {
+  font-size: 11px;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ds-backup-actions {
+  display: flex;
+  gap: 6px;
+  flex: 0 0 auto;
+}
+
+.ds-backup-actions button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 12px;
+  padding: 6px 10px;
+  cursor: pointer;
+}
+
+.ds-backup-actions button:hover:not(:disabled) { color: var(--text-primary); }
+.ds-backup-actions button.danger:hover:not(:disabled) { color: #f87171; }
+.ds-backup-actions button:disabled { opacity: 0.5; cursor: default; }
+
+.ds-confirm {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid rgba(224, 86, 86, 0.45);
+  border-radius: 12px;
+  background: rgba(224, 86, 86, 0.08);
+}
+
+.ds-confirm p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-primary);
+}
+
+.ds-inline-form {
+  display: flex;
+  gap: 10px;
+}
+
+.ds-facts {
+  display: grid;
+  grid-template-columns: minmax(120px, auto) 1fr;
+  gap: 6px 16px;
+  margin: 0;
+  font-size: 12.5px;
+}
+
+.ds-facts dt {
+  color: var(--text-secondary);
+}
+
+.ds-facts dd {
+  margin: 0;
+  color: var(--text-primary);
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .ds-grid { grid-template-columns: 1fr; }
+  .ds-facts { grid-template-columns: 1fr; gap: 2px 0; }
+  .ds-facts dd { margin-bottom: 8px; }
+}

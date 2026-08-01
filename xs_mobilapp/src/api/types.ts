@@ -97,6 +97,72 @@ export interface AskResponse {
   model: string
 }
 
+/* --------------------------------------------------------- granskningsfynd
+ *
+ * Mirrors backend/app/integrations/models.py. A finding is something a human
+ * decides on; this client only ever renders one. Nothing here re-derives a
+ * verdict, and there is deliberately no type for a decision payload — see
+ * api/client.ts.
+ */
+
+export type Verdict = 'matches' | 'possible_deviation' | 'cannot_be_verified'
+
+export type FindingStatus = 'open' | 'approved' | 'dismissed' | 'corrected'
+
+/** How the cited document was tied to the invoice's supplier. `partial` is
+ * the weak one — the backend's own WEAK_STRENGTHS. */
+export type AnchorStrength = 'org_number' | 'exact' | 'alias' | 'legal_form' | 'partial'
+
+export interface VerifiedFact {
+  label: string
+  value: string
+  /** `invoice` is a normalised field off the invoice; `document` is a value
+   * read out of a passage that verified verbatim. Nothing inferred lands
+   * here — that is what `suggestion` is for. */
+  source: 'invoice' | 'document'
+  /** Index into the finding's own `citations`, when there is one. */
+  citation_index: number | null
+}
+
+export interface AliasProposal {
+  invoice_name: string
+  document_name: string
+  document_id: string
+  basis: string
+}
+
+export interface ReviewFinding {
+  id: string
+  tenant_id: string
+  finding_type: string
+  created_at: string
+
+  invoice_id: string | null
+  source_event_id: string | null
+
+  verdict: Verdict
+  /** Swedish, from the backend. The client keeps a fallback map but never a
+   * second opinion. */
+  verdict_label: string
+
+  verified_facts: VerifiedFact[]
+  suggestion: string
+  suggested_by: string
+  uncertainty: string | null
+
+  /** Same type, same verification and same rects as an answer's citations. */
+  citations: Citation[]
+
+  anchor_strength: AnchorStrength | null
+  anchor_note: string | null
+  alias_proposal: AliasProposal | null
+
+  status: FindingStatus
+  decided_by: string | null
+  decided_at: string | null
+  decision_note: string | null
+}
+
 export interface Health {
   status: string
   mode: string

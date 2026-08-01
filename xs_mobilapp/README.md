@@ -130,9 +130,10 @@ förening B, och en odelad klientcache skulle lämna tillbaka precis den läckan
 src/
   api/          typad klient mot backendens HTTP-kontrakt
   app/          router (~60 rader) och skärmsammansättning
-  components/   AppFrame, CitationChip, KallaSheet, Notice, ikoner
-  lib/          rects (transformen), refusals (vägranstexter), format
-  screens/      Login, ValjForening, Fraga, Svar, Bibliotek, Dokument, Konto, Lock
+  components/   AppFrame, CitationChip, Finding, KallaSheet, Notice, ikoner
+  lib/          rects (transformen), refusals (vägranstexter), findings, format
+  screens/      Login, ValjForening, Fraga, Svar, Bibliotek, Dokument,
+                Granskning, Konto, Lock
   state/        session, localStore (IndexedDB), usePageImage, useOnline, lock
   styles/       tokens.css (designsystem), app.css (komponenter)
 e2e/            browseracceptans + tillgänglighet
@@ -154,6 +155,12 @@ aldrig, den är bevismaterialet.
 
 ## Gränser
 
+- **Granskningen är en läsvy.** Fynden ur fakturagranskningen
+  (`docs/INTEGRATIONSDOMAN.md`) visas med sina citat, men klienten känner inte
+  till beslutsendpointen: att godkänna, avfärda, korrigera eller bekräfta ett
+  leverantörsalias är ett ställningstagande med en person bakom sig och görs i
+  webbappen. Fynden cachas inte heller på telefonen — det som ligger kvar där
+  är de två raderna i tabellen ovan, ingenting mer.
 - **Ingen uppladdning eller kamera.** Väntar på OCR-gaten (`docs/SLUTRAPPORT.md` §5).
   Administration sker i webbappen.
 - **Ingen strömning** av svar (XS-21, parkerad). Väntetiden beskrivs i stället

@@ -6,6 +6,7 @@ import type {
   LoginResponse,
   MeResponse,
   PageWidth,
+  ReviewFinding,
 } from './types'
 
 export class ApiError extends Error {
@@ -94,6 +95,17 @@ export const api = {
 
   ask: (brfId: string, question: string) =>
     request<AskResponse>(`/api/brf/${seg(brfId)}/ask`, jsonBody('POST', { question }), ASK_TIMEOUT_MS),
+
+  /* Reading findings needs membership, the same as the document list.
+   *
+   * The backend also exposes POST .../findings/{id}/decision, and it is
+   * deliberately NOT declared here — the same trick as the missing bearer
+   * token in types.ts. Taking a position on a finding is an act with a named
+   * person behind it, done at a desk; the phone is where it is read in the
+   * meeting. Leaving the method off makes that a compile error instead of a
+   * code-review note. */
+  listFindings: (brfId: string) =>
+    request<ReviewFinding[]>(`/api/brf/${seg(brfId)}/integrations/findings`),
 
   pageImageUrl: (brfId: string, docId: string, page: number, width: PageWidth) =>
     `/api/brf/${seg(brfId)}/documents/${seg(docId)}/page/${seg(page)}?w=${seg(width)}`,

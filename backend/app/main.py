@@ -43,7 +43,20 @@ def create_app(
     registry: TenantRegistry | None = None,
     auth: AuthStore | None = None,
     data_root: str | Path | None = None,
+    session_cookie_name: str = SESSION_COOKIE,
+    session_cookie_path: str = "/",
+    integration_transport=None,
 ) -> FastAPI:
+    """Build the product app.
+
+    ``integration_transport`` replaces the outbound HTTP transport the live
+    integrations use (:mod:`app.integrations.egress`). It exists so the test
+    suite can exercise the real Graph and Fortnox code paths — the same URLs,
+    the same headers, the same refusals — without a credential, a network or a
+    recording. Left ``None`` in every shipped configuration, which is what
+    makes "the tests need no network" a property of the product rather than of
+    the tests.
+    """
     mode = os.environ.get("BRF_MODE", "dev")
     root = Path(data_root) if data_root is not None else _default_data_root()
     auth = auth if auth is not None else AuthStore(root / "auth.db")
@@ -102,8 +115,11 @@ def create_app(
         There is deliberately no Authorization/Bearer path: /api/auth/login
         does not hand out a token, so accepting one would only widen the auth
         surface for a credential no legitimate client can obtain.
+
+        The cookie *name* is a parameter because the installed desktop product
+        gives each installation its own; the transport rule is not.
         """
-        return request.cookies.get(SESSION_COOKIE, "")
+        return request.cookies.get(session_cookie_name, "")
 
     def current_user(request: Request) -> dict:
         user = auth.resolve_session(_token_from(request))
@@ -172,12 +188,12 @@ def create_app(
         token = auth.create_session(user_id)
         user = auth.get_user(user_id)
         response.set_cookie(
-            SESSION_COOKIE,
+            session_cookie_name,
             token,
             httponly=True,
             samesite="lax",
             max_age=14 * 24 * 3600,
-            path="/",
+            path=session_cookie_path,
         )
         # The session token is returned ONLY as the httpOnly cookie set above.
         # It used to be echoed here as `token` for programmatic clients, which
@@ -192,7 +208,7 @@ def create_app(
         token = _token_from(request)
         if token:
             auth.delete_session(token)
-        response.delete_cookie(SESSION_COOKIE, path="/")
+        response.delete_cookie(session_cookie_name, path=session_cookie_path)
         return {"status": "utloggad"}
 
     @app.get("/api/auth/me")
@@ -336,9 +352,33 @@ def create_app(
 
     @app.delete("/api/brf/{brf_id}")
     def delete_tenant(brf_id: str, store: Store = Depends(require_admin)) -> dict:
-        """Hard-delete the whole BRF: files, index, settings, memberships."""
+        """Hard-delete the whole BRF: files, index, settings, memberships.
+
+        Integration records go with it without being mentioned here: they live
+        inside the tenant's own directory (Store.integrations), so the tree
+        removal that deletes documents deletes them too. A domain that needed a
+        line in this function would be a domain that had put tenant data
+        somewhere else.
+        """
         registry.delete(brf_id)
         return {"deleted": brf_id}
+
+    # ---------- integrations (source events, invoices, findings) ----------
+    #
+    # Mounted with the SAME dependencies as everything above: a membership
+    # resolves to exactly one Store, and that Store is the only place its
+    # integration records exist. Nothing here has its own authorisation path.
+
+    from .integrations.routes import build_router as _build_integration_router
+
+    app.include_router(
+        _build_integration_router(
+            tenant_store=tenant_store,
+            require_admin=require_admin,
+            current_user=current_user,
+            transport=integration_transport,
+        )
+    )
 
     # ---------- dev only ----------
 

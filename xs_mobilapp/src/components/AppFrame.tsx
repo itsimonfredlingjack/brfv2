@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { Link, useRouter } from '../app/router'
 import { useSession } from '../state/session'
 import { useOnline } from '../state/useOnline'
-import { AskIcon, LibraryIcon } from './icons'
+import { AskIcon, LibraryIcon, ReviewIcon } from './icons'
 
 function initials(name: string | undefined, email: string): string {
   const source = (name ?? '').trim() || email
@@ -20,6 +20,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
 
   const onAsk = path === '/' || path.startsWith('/svar')
   const onLibrary = path.startsWith('/bibliotek') || path.startsWith('/dokument')
+  const onReview = path.startsWith('/granskning')
 
   return (
     <div className="frame">
@@ -53,6 +54,10 @@ export function AppFrame({ children }: { children: ReactNode }) {
         <Link to="/bibliotek" className="tabbar__item" aria-current={onLibrary ? 'page' : undefined}>
           <LibraryIcon className="tabbar__icon" />
           Bibliotek
+        </Link>
+        <Link to="/granskning" className="tabbar__item" aria-current={onReview ? 'page' : undefined}>
+          <ReviewIcon className="tabbar__icon" />
+          Granskning
         </Link>
       </nav>
     </div>

@@ -1,5 +1,6 @@
 import json
 import os
+from pathlib import Path
 
 import httpx
 import pytest
@@ -312,6 +313,87 @@ class TestPickProviderSelfhosted:
         assert isinstance(provider, DeterministicTestLLM)
         assert provider.name == "fake"
         assert provider.model == ""
+
+
+class TestHostedProviderPlugin:
+    """The hosted providers are a removable plug-in, not a branch in app.llm.
+
+    The desktop delivery excludes app.llm_hosted from the payload
+    (ops/build-runtime.sh, ops/forbidden_providers.json). These tests pin the
+    two halves of that contract at source level: the plug-in still registers
+    the hosted providers when it is installed, and app.llm degrades to `none`
+    — not to a dangling key or an import error — when it is not.
+
+    The artifact-level proof lives in tests/test_desktop_artifact.py; this is
+    the unit-level one, so a refactor that quietly reintroduced a hard
+    reference from app.llm to a hosted implementation fails here first.
+    """
+
+    @pytest.fixture(autouse=True)
+    def _reset_provider_cache(self):
+        llm_mod._provider = None
+        yield
+        llm_mod._provider = None
+
+    def test_the_installed_plugin_registers_both_hosted_providers(self):
+        registered = {p.key: p for p in llm_mod.hosted_providers()}
+        assert set(registered) == {"api", "cli"}
+        assert registered["api"].provider_name == "anthropic-api"
+        assert registered["cli"].provider_name == "claude-cli"
+
+    def test_app_llm_itself_names_no_hosted_provider(self):
+        """The packaged module must not carry a hosted identifier at all."""
+        source = Path(llm_mod.__file__).read_text(encoding="utf-8")
+        for token in ("anthropic", "claude", "ANTHROPIC_API_KEY"):
+            assert token.lower() not in source.lower(), (
+                f"app.llm nämner {token!r} — då följer identifieraren med in i paketet "
+                "även när implementationen inte gör det"
+            )
+
+    def test_auto_selects_a_hosted_provider_when_its_plugin_detects_one(self, monkeypatch):
+        monkeypatch.setenv("BRF_LLM", "auto")
+        monkeypatch.delenv("BRF_LLM_BASE_URL", raising=False)
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-test")
+        monkeypatch.setattr("app.llm_hosted.AnthropicProvider.__init__", lambda self: None)
+        assert llm_mod.pick_provider().name == "anthropic-api"
+
+    def test_without_the_plugin_every_hosted_key_falls_through_to_none(self, monkeypatch):
+        """Exactly the packaged situation: the module is not importable."""
+        monkeypatch.setattr(llm_mod, "hosted_providers", lambda: ())
+        monkeypatch.delenv("BRF_LLM_BASE_URL", raising=False)
+        monkeypatch.setenv("ANTHROPIC_API_KEY", "sk-ant-should-never-be-used")
+        for forced in ("auto", "api", "cli"):
+            llm_mod._provider = None
+            monkeypatch.setenv("BRF_LLM", forced)
+            assert llm_mod.pick_provider().name == "none", forced
+
+    def test_a_broken_plugin_is_not_silently_treated_as_absent(self, monkeypatch):
+        """A plug-in that fails to import for its OWN reasons is a defect.
+
+        Swallowing that would make a misinstalled hosted provider look exactly
+        like a correctly excluded one — the failure mode this whole split
+        exists to make impossible.
+        """
+        real_import = llm_mod.importlib.import_module
+
+        def broken(name, *args, **kwargs):
+            if name.endswith(".llm_hosted"):
+                raise ModuleNotFoundError("No module named 'httpx_not_installed'",
+                                          name="httpx_not_installed")
+            return real_import(name, *args, **kwargs)
+
+        monkeypatch.setattr(llm_mod.importlib, "import_module", broken)
+        with pytest.raises(ModuleNotFoundError):
+            llm_mod.hosted_providers()
+
+    def test_the_no_provider_message_only_offers_remedies_that_exist(self, monkeypatch):
+        monkeypatch.setattr(llm_mod, "hosted_providers", lambda: ())
+        with pytest.raises(LLMError) as exc:
+            llm_mod.NoLLMProvider().complete("s", "u", max_tokens=1, model="m")
+        message = str(exc.value)
+        assert "BRF_LLM_BASE_URL" in message
+        assert "ANTHROPIC" not in message.upper()
+        assert "claude" not in message.lower()
 
 
 class TestDeterministicTestLLM:

@@ -1,0 +1,128 @@
+{
+  "Schema": "brfv2-accounting-fixture/v1",
+  "Note": "Syntetiskt underlag. Ingen verklig leverantör, förening, organisation eller faktura. Formen efterliknar en leverantörsfakturaexport ur ett svenskt ekonomisystem så att en framtida riktig adapter kan mappa samma fält — men inget i kärndomänen känner till formen. SI-2026-114 och SI-2026-131 avser perioder före den seedade avtalstidens början och är därför inte fel i underlaget utan just det ett granskningsverktyg ska upptäcka. SI-2026-402 ligger inne i avtalstiden. SI-2027-018 skriver leverantörens namn utan \"Entreprenad\" och utan organisationsnummer, vilket är fallet där ankaret blir svagt och ett alias behöver bekräftas av en människa.",
+  "Dataset": "gjutformen12-2026",
+  "SupplierInvoices": [
+    {
+      "AssociationRef": "gjutformen-12",
+      "DocumentNumber": "SI-2026-114",
+      "InvoiceNumber": "2026-114",
+      "SupplierName": "Snösvängen Entreprenad AB",
+      "SupplierOrgNo": "556812-3344",
+      "InvoiceDate": "2026-02-03",
+      "DueDate": "2026-03-05",
+      "Period": {
+        "From": "2026-01-01",
+        "To": "2026-01-31"
+      },
+      "Currency": "SEK",
+      "Total": "6250.00",
+      "VAT": "1250.00",
+      "InvoiceRows": [
+        {
+          "Description": "Maskinell snöröjning med traktor",
+          "DeliveredQuantity": "4",
+          "Price": "1250.00",
+          "Total": "5000.00",
+          "VAT": "1250.00"
+        }
+      ]
+    },
+    {
+      "AssociationRef": "gjutformen-12",
+      "DocumentNumber": "SI-2026-131",
+      "InvoiceNumber": "2026-131",
+      "SupplierName": "Snösvängen Entreprenad AB",
+      "SupplierOrgNo": "556812-3344",
+      "InvoiceDate": "2026-03-03",
+      "DueDate": "2026-04-02",
+      "Period": {
+        "From": "2026-02-01",
+        "To": "2026-02-28"
+      },
+      "Currency": "SEK",
+      "Total": "10875.00",
+      "VAT": "2175.00",
+      "InvoiceRows": [
+        {
+          "Description": "Maskinell snöröjning med traktor",
+          "DeliveredQuantity": "6",
+          "Price": "1450.00",
+          "Total": "8700.00",
+          "VAT": "2175.00"
+        }
+      ]
+    },
+    {
+      "AssociationRef": "gjutformen-12",
+      "DocumentNumber": "SI-2026-207",
+      "InvoiceNumber": "2026-207",
+      "SupplierName": "Nordisk Hissteknik AB",
+      "SupplierOrgNo": "556990-1122",
+      "InvoiceDate": "2026-04-11",
+      "DueDate": "2026-05-11",
+      "Currency": "SEK",
+      "Total": "18750.00",
+      "VAT": "3750.00",
+      "InvoiceRows": [
+        {
+          "Description": "Akut utryckning hiss, port B",
+          "DeliveredQuantity": "1",
+          "Price": "15000.00",
+          "Total": "15000.00",
+          "VAT": "3750.00"
+        }
+      ]
+    },
+    {
+      "AssociationRef": "gjutformen-12",
+      "DocumentNumber": "SI-2026-402",
+      "InvoiceNumber": "2026-402",
+      "SupplierName": "Snösvängen Entreprenad AB",
+      "SupplierOrgNo": "556812-3344",
+      "InvoiceDate": "2026-12-02",
+      "DueDate": "2027-01-01",
+      "Period": {
+        "From": "2026-11-01",
+        "To": "2026-11-30"
+      },
+      "Currency": "SEK",
+      "Total": "6250.00",
+      "VAT": "1250.00",
+      "InvoiceRows": [
+        {
+          "Description": "Maskinell snöröjning med traktor",
+          "DeliveredQuantity": "4",
+          "Price": "1250.00",
+          "Total": "5000.00",
+          "VAT": "1250.00"
+        }
+      ]
+    },
+    {
+      "AssociationRef": "gjutformen-12",
+      "DocumentNumber": "SI-2027-018",
+      "InvoiceNumber": "2027-018",
+      "SupplierName": "Snösvängen AB",
+      "SupplierOrgNo": "",
+      "InvoiceDate": "2027-01-04",
+      "DueDate": "2027-02-03",
+      "Period": {
+        "From": "2026-12-01",
+        "To": "2026-12-31"
+      },
+      "Currency": "SEK",
+      "Total": "6250.00",
+      "VAT": "1250.00",
+      "InvoiceRows": [
+        {
+          "Description": "Maskinell snöröjning med traktor",
+          "DeliveredQuantity": "4",
+          "Price": "1250.00",
+          "Total": "5000.00",
+          "VAT": "1250.00"
+        }
+      ]
+    }
+  ]
+}

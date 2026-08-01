@@ -57,3 +57,139 @@ export const api = {
     jsonBody('PUT', settings),
   ),
 };
+
+// Incoming source events, read-only invoice snapshots and review findings.
+// Tenant-scoped like everything else in `api`: the brf_id in the path is what
+// the backend resolves an authenticated membership against.
+export const integrationsApi = {
+  format: (brfId) => request(`/api/brf/${brfId}/integrations/format`),
+
+  // Live connections. Configuring where to read and signing in to it are two
+  // separate calls because they are two separate human acts — an administrator
+  // may point the installation at a mailbox today and sign in tomorrow.
+  connections: (brfId) => request(`/api/brf/${brfId}/integrations/connections`),
+  configureGraph: (brfId, config) => request(
+    `/api/brf/${brfId}/integrations/connections/microsoft-graph`,
+    jsonBody('PUT', config),
+  ),
+  configureFortnox: (brfId, config) => request(
+    `/api/brf/${brfId}/integrations/connections/fortnox`,
+    jsonBody('PUT', config),
+  ),
+  beginLogin: (brfId, provider) => request(
+    `/api/brf/${brfId}/integrations/connections/${provider}/login`,
+    { method: 'POST' },
+  ),
+  pollLogin: (brfId, provider) => request(
+    `/api/brf/${brfId}/integrations/connections/${provider}/login/poll`,
+    { method: 'POST' },
+  ),
+  // An operator pastes the bare code as often as the whole redirect address.
+  // The backend pulls `code` and `state` out of either, so whatever was pasted
+  // goes in as `code` and nothing is parsed here.
+  completeLogin: (brfId, provider, pasted) => request(
+    `/api/brf/${brfId}/integrations/connections/${provider}/login/complete`,
+    jsonBody('POST', { code: pasted, state: '' }),
+  ),
+  disconnect: (brfId, provider) => request(
+    `/api/brf/${brfId}/integrations/connections/${provider}`,
+    { method: 'DELETE' },
+  ),
+
+  listMailboxMessages: (brfId, { limit = 25, onlyWithAttachments = true } = {}) => request(
+    `/api/brf/${brfId}/integrations/mailbox/messages`
+    + `?limit=${limit}&onlyWithAttachments=${onlyWithAttachments}`,
+  ),
+  importMailboxMessage: (brfId, messageId) => request(
+    `/api/brf/${brfId}/integrations/mailbox/messages/${encodeURIComponent(messageId)}/import`,
+    { method: 'POST' },
+  ),
+
+  listSourceEvents: (brfId) => request(`/api/brf/${brfId}/integrations/source-events`),
+  importSourceEvent: (brfId, file) => {
+    const form = new FormData();
+    form.append('file', file);
+    return request(`/api/brf/${brfId}/integrations/source-events`, {
+      method: 'POST',
+      body: form,
+    });
+  },
+  decideSourceEvent: (brfId, eventId, decision) => request(
+    `/api/brf/${brfId}/integrations/source-events/${eventId}/decision`,
+    jsonBody('POST', decision),
+  ),
+  deleteSourceEvent: (brfId, eventId) => request(
+    `/api/brf/${brfId}/integrations/source-events/${eventId}`,
+    { method: 'DELETE' },
+  ),
+
+  // Adoption: the attachment stays exactly where it is, and stops being
+  // excluded from the evidence the review may cite. The note is required by
+  // the route, so the form asks for it rather than sending something invented.
+  archiveAttachment: (brfId, eventId, attachmentId, note) => request(
+    `/api/brf/${brfId}/integrations/source-events/${eventId}`
+    + `/attachments/${attachmentId}/archive`,
+    jsonBody('POST', { note }),
+  ),
+  withdrawAttachment: (brfId, eventId, attachmentId) => request(
+    `/api/brf/${brfId}/integrations/source-events/${eventId}`
+    + `/attachments/${attachmentId}/archive`,
+    { method: 'DELETE' },
+  ),
+
+  availableInvoices: (brfId, source = 'fixture') => request(
+    `/api/brf/${brfId}/integrations/available-invoices?source=${encodeURIComponent(source)}`,
+  ),
+  listInvoices: (brfId) => request(`/api/brf/${brfId}/integrations/invoices`),
+  importInvoice: (brfId, externalRef, source = 'fixture') => request(
+    `/api/brf/${brfId}/integrations/invoices`,
+    jsonBody('POST', { external_ref: externalRef, source }),
+  ),
+  mappingPreview: (brfId, externalRef) => request(
+    `/api/brf/${brfId}/integrations/invoices/mapping-preview`
+    + `?external_ref=${encodeURIComponent(externalRef)}`,
+  ),
+  reviewInvoice: (brfId, invoiceId) => request(
+    `/api/brf/${brfId}/integrations/invoices/${invoiceId}/review`,
+    { method: 'POST' },
+  ),
+
+  listFindings: (brfId) => request(`/api/brf/${brfId}/integrations/findings`),
+  decideFinding: (brfId, findingId, decision) => request(
+    `/api/brf/${brfId}/integrations/findings/${findingId}/decision`,
+    jsonBody('POST', decision),
+  ),
+
+  listSupplierAliases: (brfId) => request(`/api/brf/${brfId}/integrations/supplier-aliases`),
+  addSupplierAlias: (brfId, alias) => request(
+    `/api/brf/${brfId}/integrations/supplier-aliases`,
+    jsonBody('POST', alias),
+  ),
+  deleteSupplierAlias: (brfId, aliasId) => request(
+    `/api/brf/${brfId}/integrations/supplier-aliases/${aliasId}`,
+    { method: 'DELETE' },
+  ),
+};
+
+// Routes that only the installed desktop application serves. On the web these
+// 404, which is exactly how the UI detects which delivery it is running in —
+// there is no build flag and no second bundle.
+export const desktopApi = {
+  state: () => request('/api/desktop/state'),
+  setup: (payload) => request('/api/desktop/setup', jsonBody('POST', payload)),
+  createBrf: (name) => request('/api/desktop/brf', jsonBody('POST', { name })),
+  getModelRuntime: () => request('/api/desktop/model-runtime'),
+  putModelRuntime: (config) => request('/api/desktop/model-runtime', jsonBody('PUT', config)),
+  testModelRuntime: () => request('/api/desktop/model-runtime/test', { method: 'POST' }),
+  listBackups: () => request('/api/desktop/backups'),
+  createBackup: () => request('/api/desktop/backups', { method: 'POST' }),
+  deleteBackup: (name) => request(
+    `/api/desktop/backups/${encodeURIComponent(name)}`,
+    { method: 'DELETE' },
+  ),
+  restoreBackup: (name) => request(
+    `/api/desktop/backups/${encodeURIComponent(name)}/restore`,
+    { method: 'POST' },
+  ),
+  restart: () => request('/api/desktop/restart', { method: 'POST' }),
+};

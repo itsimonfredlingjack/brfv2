@@ -1,0 +1,1073 @@
+/* Incoming queue and invoice review.
+ *
+ * The visual hierarchy carries the epistemic one, and that is the only design
+ * decision here worth defending: verified facts read as data (monospace values,
+ * plain background), the system's proposal reads as prose in a tinted block,
+ * and uncertainty reads as prose in a *warmer* block that cannot be skimmed
+ * past. If the three ever look alike, a reader stops being able to tell what
+ * the product knows from what it guesses. */
+
+.integrations {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 4px 48px;
+}
+
+.integrations-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.integrations-tabs {
+  display: flex;
+  gap: 6px;
+}
+
+.integrations-tabs button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.integrations-tabs button.active {
+  background: var(--accent-soft, rgba(99, 132, 255, 0.14));
+  border-color: var(--accent, #6384ff);
+  color: var(--text-primary);
+}
+
+.integrations-tabs .pill {
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--accent, #6384ff);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+}
+
+.integrations .refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.integrations-banner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  margin-bottom: 14px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.integrations-banner.error {
+  background: rgba(220, 90, 90, 0.14);
+  border: 1px solid rgba(220, 90, 90, 0.4);
+  color: var(--text-primary);
+}
+
+.integrations-banner.ok {
+  background: rgba(80, 190, 130, 0.13);
+  border: 1px solid rgba(80, 190, 130, 0.35);
+  color: var(--text-primary);
+}
+
+.banner-dismiss {
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+}
+
+.integrations-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.spin {
+  animation: integrations-spin 1s linear infinite;
+}
+
+@keyframes integrations-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spin { animation: none; }
+}
+
+.pane-intro {
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 18px;
+  background: var(--panel-bg, rgba(255, 255, 255, 0.02));
+}
+
+.pane-intro p {
+  margin: 0 0 10px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.pane-intro .format-note {
+  font-size: 13px;
+  color: var(--text-tertiary, var(--text-secondary));
+}
+
+.hidden-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* A label, not a button, so the file input stays the real control and the
+   keyboard path is the input's own — the pilot found the settings menu
+   unreachable by keyboard precisely because a div was used as a button. */
+.import-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: var(--accent, #6384ff);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.hidden-file-input:focus-visible + .import-button {
+  outline: 2px solid var(--accent, #6384ff);
+  outline-offset: 3px;
+}
+
+.import-button.busy {
+  opacity: 0.7;
+  pointer-events: none;
+}
+
+.empty,
+.muted {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.event,
+.invoice {
+  border: 1px solid var(--panel-border);
+  border-radius: 14px;
+  padding: 18px 20px;
+  margin-bottom: 16px;
+  background: var(--panel-bg, rgba(255, 255, 255, 0.02));
+}
+
+.event.approved { border-left: 3px solid rgba(80, 190, 130, 0.7); }
+.event.dismissed { opacity: 0.75; }
+
+.event-head,
+.invoice-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 10px;
+}
+
+.event-head h4,
+.invoice-head h4 {
+  margin: 0 0 4px;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.event-meta,
+.invoice-meta {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.event-status,
+.finding-status {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.invoice-total {
+  font-size: 18px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.event-provenance,
+.invoice-provenance {
+  margin: 10px 0;
+  font-size: 13px;
+}
+
+.event-provenance summary,
+.invoice-provenance summary {
+  cursor: pointer;
+  color: var(--text-secondary);
+  padding: 4px 0;
+}
+
+.event-provenance dl,
+.invoice-provenance dl,
+.finding-facts dl {
+  margin: 8px 0 0;
+  display: grid;
+  gap: 4px;
+}
+
+.event-provenance dl > div,
+.invoice-provenance dl > div,
+.finding-facts dl > div {
+  display: grid;
+  grid-template-columns: minmax(140px, 34%) 1fr;
+  gap: 12px;
+}
+
+.event-provenance dt,
+.invoice-provenance dt,
+.finding-facts dt {
+  color: var(--text-secondary);
+  font-size: 13px;
+}
+
+.event-provenance dd,
+.invoice-provenance dd,
+.finding-facts dd {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.event-provenance code,
+.invoice-provenance code,
+.finding-facts code {
+  font-size: 12px;
+}
+
+.event-body {
+  margin: 10px 0;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.22);
+  font-family: inherit;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.event-attachments h5,
+.event-links h5,
+.finding-facts h5,
+.finding-citations h5,
+.finding-suggestion h5,
+.finding-uncertainty h5,
+.invoice-findings h5 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 14px 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.event-attachments ul,
+.link-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 7px;
+  font-size: 13px;
+}
+
+.link-list li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.link-list label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  color: var(--text-secondary);
+}
+
+.badge.confirmed {
+  background: rgba(80, 190, 130, 0.16);
+  border-color: rgba(80, 190, 130, 0.4);
+}
+
+.badge.proposed {
+  background: rgba(230, 180, 70, 0.12);
+  border-color: rgba(230, 180, 70, 0.35);
+}
+
+.badge.dedup {
+  background: rgba(99, 132, 255, 0.14);
+  border-color: rgba(99, 132, 255, 0.4);
+}
+
+.integrations button.link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent, #6384ff);
+  font: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.event-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--panel-border);
+  flex-wrap: wrap;
+}
+
+.event-delete {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: 1px solid var(--panel-border);
+  border-radius: 9px;
+  padding: 7px 11px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.decision-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  flex: 1 1 340px;
+}
+
+.decision-note {
+  flex: 1 1 220px;
+  min-width: 180px;
+  padding: 8px 11px;
+  border-radius: 9px;
+  border: 1px solid var(--panel-border);
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--text-primary);
+  font-size: 13px;
+}
+
+.decision-buttons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.decision {
+  padding: 8px 13px;
+  border-radius: 9px;
+  border: 1px solid var(--panel-border);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.decision:disabled { opacity: 0.5; cursor: not-allowed; }
+.decision.approve { border-color: rgba(80, 190, 130, 0.5); }
+.decision.dismiss { border-color: rgba(220, 90, 90, 0.45); }
+.decision.correct { border-color: rgba(230, 180, 70, 0.5); }
+
+/* --- findings --- */
+
+.finding {
+  border: 1px solid var(--panel-border);
+  border-left-width: 3px;
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 14px;
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.finding.ok { border-left-color: rgba(80, 190, 130, 0.8); }
+.finding.warn { border-left-color: rgba(230, 180, 70, 0.9); }
+.finding.unknown { border-left-color: rgba(150, 155, 170, 0.8); }
+.finding.decided { opacity: 0.82; }
+
+.finding-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.verdict {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.verdict.ok { color: rgb(120, 210, 160); }
+.verdict.warn { color: rgb(235, 190, 95); }
+.verdict.unknown { color: rgb(175, 180, 195); }
+
+.finding-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 18px;
+}
+
+.finding-facts dd { font-variant-numeric: tabular-nums; }
+
+.finding-citations {
+  display: grid;
+  gap: 8px;
+}
+
+.finding-citation {
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  text-align: left;
+  padding: 11px 13px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.finding-citation:hover,
+.finding-citation:focus-visible {
+  border-color: var(--accent, #6384ff);
+}
+
+.citation-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.citation-approx { font-weight: 500; font-style: italic; }
+
+.citation-quote {
+  display: block;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+/* The proposal. Tinted, prose, clearly the system talking. */
+.finding-suggestion {
+  margin-top: 14px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(99, 132, 255, 0.09);
+  border: 1px solid rgba(99, 132, 255, 0.22);
+}
+
+.finding-suggestion h5,
+.finding-uncertainty h5 { margin-top: 0; }
+
+.finding-suggestion p,
+.finding-uncertainty p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+.suggested-by {
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-secondary);
+}
+
+/* Uncertainty. Warmer than the proposal on purpose: it must not be the block
+   a hurried reader's eye slides over. */
+.finding-uncertainty {
+  margin-top: 10px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: rgba(230, 180, 70, 0.09);
+  border: 1px solid rgba(230, 180, 70, 0.26);
+}
+
+.finding-decision-note {
+  margin: 10px 0 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.finding .decision-bar {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--panel-border);
+}
+
+/* --- invoices --- */
+
+.available-invoices {
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+  overflow-x: auto;
+}
+
+.available-invoices h4 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.available-invoices table,
+.invoice-lines {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.available-invoices th,
+.invoice-lines th {
+  text-align: left;
+  padding: 7px 10px;
+  color: var(--text-secondary);
+  font-weight: 600;
+  border-bottom: 1px solid var(--panel-border);
+}
+
+.available-invoices td,
+.invoice-lines td {
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--panel-border);
+  color: var(--text-primary);
+}
+
+.invoice-lines td:nth-child(n + 2),
+.available-invoices td:nth-child(4) {
+  font-variant-numeric: tabular-nums;
+}
+
+.available-invoices button {
+  padding: 6px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--accent, #6384ff);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.invoice-lines { margin: 12px 0; }
+
+.invoice-findings { margin-top: 16px; }
+
+.invoice-findings-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.invoice-findings-head button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+/* --- how it got here --- */
+
+.event-method {
+  margin: 0 0 4px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* --- adopting an attachment into the archive --- */
+
+.adoption-explainer {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  max-width: 78ch;
+}
+
+.event-attachments li {
+  display: grid;
+  gap: 7px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* An adopted attachment is evidence the review may cite, so it reads like the
+   confirmed half of the queue rather than like the proposed half. */
+.event-attachments li.adopted {
+  border-left: 3px solid rgba(80, 190, 130, 0.7);
+}
+
+.attachment-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.attachment-adoption {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.attachment-adoption p {
+  margin: 0;
+  flex: 1 1 260px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.attachment-adoption input {
+  flex: 1 1 260px;
+  min-width: 200px;
+  padding: 7px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--panel-border);
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.attachment-adopt,
+.attachment-withdraw {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--panel-border);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.attachment-adopt { border-color: rgba(80, 190, 130, 0.5); }
+
+.attachment-adopt:disabled,
+.attachment-withdraw:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* --- the connected mailbox --- */
+
+.mailbox {
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+}
+
+.mailbox h4 {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.mailbox > p {
+  margin: 0 0 12px;
+  line-height: 1.6;
+  max-width: 78ch;
+}
+
+.mailbox-absent {
+  margin: 0 0 18px;
+  line-height: 1.6;
+  max-width: 78ch;
+}
+
+.mailbox-controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.mailbox-controls label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.mailbox-controls button,
+.mailbox-list button {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--accent, #6384ff);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.mailbox-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.mailbox-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  flex-wrap: wrap;
+}
+
+.mailbox-message {
+  display: grid;
+  gap: 3px;
+  flex: 1 1 320px;
+  font-size: 13px;
+}
+
+.mailbox-preview {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* --- invoice source --- */
+
+.source-picker {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.source-picker label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.source-picker label.disabled {
+  color: var(--text-secondary);
+  cursor: not-allowed;
+}
+
+.available-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.available-invoices button.secondary {
+  border-color: var(--panel-border);
+  color: var(--text-secondary);
+}
+
+/* --- the anchor --- */
+
+/* Strong and weak must not be two shades of the same block. A weak anchor is
+   the one thing that turns a verified number into a possibly irrelevant one,
+   so it is tinted like uncertainty and says so in words as well. */
+.finding-anchor {
+  margin-bottom: 12px;
+  padding: 10px 13px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+}
+
+.finding-anchor h5 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.finding-anchor p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+.finding-anchor.strong {
+  background: rgba(80, 190, 130, 0.08);
+  border-color: rgba(80, 190, 130, 0.3);
+}
+
+.finding-anchor.weak {
+  background: rgba(230, 180, 70, 0.12);
+  border-color: rgba(230, 180, 70, 0.45);
+  border-left-width: 3px;
+}
+
+.anchor-basis {
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-secondary);
+}
+
+.anchor-warning {
+  margin-top: 6px !important;
+  font-weight: 600;
+  color: rgb(235, 190, 95) !important;
+}
+
+/* --- alias --- */
+
+.alias-proposal {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px dashed rgba(99, 132, 255, 0.4);
+  background: rgba(99, 132, 255, 0.07);
+}
+
+.alias-proposal h5 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.alias-proposal p {
+  margin: 0 0 8px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+.alias-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.alias-actions input {
+  flex: 1 1 220px;
+  padding: 7px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--panel-border);
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.alias-confirm,
+.alias-rerun {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 13px;
+  border-radius: 9px;
+  border: 1px solid var(--accent, #6384ff);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.alias-confirm:disabled,
+.alias-rerun:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.alias-list {
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-top: 18px;
+}
+
+.alias-list h4 {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.alias-list > p {
+  margin: 0 0 10px;
+  line-height: 1.6;
+  max-width: 78ch;
+}
+
+.alias-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.alias-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+
+.alias-list button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+@media (max-width: 720px) {
+  .event-provenance dl > div,
+  .invoice-provenance dl > div,
+  .finding-facts dl > div {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+
+  .event-head,
+  .invoice-head {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
