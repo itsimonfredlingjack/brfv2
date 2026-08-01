@@ -1,5 +1,8 @@
-.PHONY: setup backend backend-pilot require-pilot-llm frontend frontend-legacy test test-isolation eval eval-b eval-fast eval-sweep \
-        eval-selfhosted eval-b-selfhosted demo demo-stop demo-status demo-reset build build-legacy model-readiness model-readiness-selftest \
+.PHONY: setup backend backend-pilot require-pilot-llm frontend frontend-legacy mobile mobile-build mobile-test \
+        desktop-runtime desktop-build desktop-run desktop-check desktop-package desktop-install desktop-uninstall desktop-acceptance \
+        test test-isolation eval eval-b eval-fast eval-sweep \
+        eval-selfhosted eval-b-selfhosted desktop-acceptance-installed desktop-verify-reproducible demo demo-stop demo-status demo-reset \
+        build build-legacy model-readiness model-readiness-selftest \
         model-readiness-selftest-negative
 
 # Generation default for dev + eval is the standard hosted provider (logged-in `claude`
@@ -43,6 +46,55 @@ mobile-build:       ## Produktionsbygge av mobilklienten; backend serverar den p
 
 mobile-test:        ## Mobilklientens enhetstester + browseracceptans + tillgänglighet
 	cd xs_mobilapp && npm test && npm run lint && npm run typecheck && npm run test:e2e
+
+desktop-runtime:    ## Stega den paketerade Python-körmiljön (src-tauri/runtime, ~776 MB)
+	@ops/build-runtime.sh
+
+desktop-build:      ## Bygg kanoniskt UI + release-skalet (ingen installatör)
+	@test -x backend/.venv/bin/python || (echo "backend/.venv saknas — kör 'make setup' först."; exit 1)
+	@test -d brfv2-mockup/node_modules || (echo "brfv2-mockup/node_modules saknas — kör 'make setup' först."; exit 1)
+	cd brfv2-mockup && npm run build
+	cargo build --release --locked --manifest-path src-tauri/Cargo.toml
+
+desktop-run: desktop-build  ## Kör release-skalet mot checkouten (Ctrl+C eller stäng fönstret)
+	./src-tauri/target/release/brfv2-desktop
+
+desktop-check:      ## Rust-enhetstester + desktopadapterns pytest
+	cargo test --locked --manifest-path src-tauri/Cargo.toml
+	backend/.venv/bin/pytest -q backend/tests/test_desktop.py
+
+desktop-package: desktop-runtime  ## Bygg distributionsartefakten (RPM) från ren checkout
+	@ops/package-desktop.sh
+
+desktop-install: desktop-runtime  ## Bygg och installera RPM:en (kräver sudo; dnf löser tesseract/webkit)
+	@ops/package-desktop.sh --install
+
+desktop-uninstall:  ## Avinstallera paketet (användardata under ~/.local/share lämnas kvar)
+	sudo dnf remove -y brf-dokument-ai
+
+# Acceptansens evidens namnges efter körningen, inte efter det ärende som råkade
+# vara öppet när skriptet skrevs. Sätt RUN_LABEL=... för att låta flera körningar
+# ligga sida vid sida; redan committad evidens skrivs aldrig över utan att
+# --overwrite-evidence begärs uttryckligen.
+RUN_LABEL ?= pilot
+
+desktop-acceptance: desktop-build  ## Full journey-acceptans mot riktig Tauri/WebKitGTK + självhostad modell
+	backend/.venv/bin/python backend/scripts/desktop_acceptance.py \
+	  --run-label $(RUN_LABEL)
+
+desktop-acceptance-installed:  ## Samma acceptans mot det INSTALLERADE paketet (ange RPM=... för artefaktidentitet)
+	backend/.venv/bin/python backend/scripts/desktop_acceptance.py \
+	  --application /usr/bin/brfv2-desktop \
+	  $(if $(RPM),--artifact $(RPM),) \
+	  --run-label $(RUN_LABEL)-installed
+
+desktop-verify-artifact:  ## Granska den byggda (och ev. installerade) RPM:en mot ops/forbidden_providers.json
+	BRFV2_REQUIRE_ARTIFACT=1 $(if $(RPM),BRFV2_RPM=$(RPM),) backend/.venv/bin/pytest -q backend/tests/test_desktop_artifact.py
+
+desktop-verify-reproducible:  ## Bygg RPM:en från två rena checkouter och jämför byte för byte
+	@ops/verify-reproducible.sh \
+	  $${REPRO_A:-/home/$$USER/brfv2-repro/a} \
+	  $${REPRO_B:-/home/$$USER/brfv2-repro/b-longer-checkout-path}
 
 test:               ## Backend-tester (offline, deterministiska)
 	cd backend && uv run pytest -q

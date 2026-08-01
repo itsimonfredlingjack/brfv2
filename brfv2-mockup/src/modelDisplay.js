@@ -10,10 +10,15 @@ const KNOWN_MODEL_DISPLAY_NAMES = {
   'gemma4:e4b': 'Gemma 4 4B',
 };
 
+// Only the providers this UI ships alongside. The desktop payload contains no
+// hosted provider implementation at all (ops/forbidden_providers.json), so a
+// friendly label for one would be a hosted identifier shipped in the artifact
+// for a provider that cannot occur. A backend that does report one — the web
+// product in development, where the hosted plug-in is installed — falls
+// through to the raw identifier, which is the same rule this module already
+// applies to every model it does not know.
 const PROVIDER_LABELS = {
   selfhosted: 'Self-hosted',
-  'anthropic-api': 'Anthropic',
-  'claude-cli': 'Claude CLI',
   fake: 'Testläge',
   none: 'Ingen modell',
 };

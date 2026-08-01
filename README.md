@@ -5,6 +5,7 @@ på rätt PDF-sida med den citerade passagen markerad. Frågor som saknar stöd 
 föreningens dokument ska avvisas i stället för att gissas.
 
 - [Aktuell MVP-status](docs/MVP-STATUS.md)
+- [Skrivbordsapplikationen för Fedora](docs/DESKTOP-FEDORA.md)
 - [Demo quickstart](docs/DEMO-QUICKSTART.md)
 - [Operatörsrunbook](docs/DEMO-RUNBOOK.md)
 - [Pilotdrift med Gemma 4 12B](docs/DEPLOY-SELFHOSTED-LLM.md)
@@ -156,6 +157,25 @@ Se den icke-känsliga rapporten
 [docs/evidence/pilot-live-gemma4-12b-2026-07-22.md](docs/evidence/pilot-live-gemma4-12b-2026-07-22.md).
 Fix och omkörning:
 [docs/evidence/xs32-q03-linked-context-2026-07-22.md](docs/evidence/xs32-q03-linked-context-2026-07-22.md).
+
+## Skrivbordsleverans (Fedora)
+
+Samma produkt kan installeras som ett vanligt skrivbordsprogram. Skalet i
+`src-tauri/` startar en paketerad Python-körmiljö som serverar det byggda
+React-gränssnittet och `/api/*` från samma slumpmässiga loopback-origin; ingen
+produktlogik dupliceras i skalet.
+
+```bash
+make desktop-package    # -> dist/brf-dokument-ai-<version>.x86_64.rpm
+make desktop-install    # dnf install (drar in tesseract + webkit2gtk4.1)
+make desktop-acceptance # full journey mot riktig Tauri/WebKitGTK + självhostad modell
+```
+
+- [Användar- och byggguide](docs/DESKTOP-FEDORA.md)
+- [Beslut om Python-körmiljön](docs/adr/0001-desktop-python-runtime.md)
+- [Modellgränsen: vem får peka om, och vart](docs/adr/0002-model-endpoint-boundary.md)
+- [Reproducerbar RPM](docs/adr/0003-reproducerbar-rpm.md)
+- [Arkitekturbeviset som föregick den](docs/evidence/xs46-tauri-fedora.md)
 
 ## Arkitektur
 

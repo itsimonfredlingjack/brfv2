@@ -31,4 +31,5 @@ markers = [
     "ocr: tests that need a local tesseract binary",
     "rerank: tests that load the real cross-encoder reranker model",
     "realdata: tests that walk the real dev data root, backend/data/tenants (gitignored; self-skips if absent)",
+    "artifact: tests that inspect the built or installed desktop RPM rather than the source tree (self-skips without one; BRFV2_REQUIRE_ARTIFACT=1 makes the skip a failure)",
 ]

@@ -1,0 +1,39 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="BRF Dokument-AI">
+  <!--
+    Product mark: a document page whose lower half is a highlighted, cited
+    passage. It says what the application actually does — answer from the
+    association's own documents and point at the exact place in the page.
+  -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#2f4a7a" />
+      <stop offset="1" stop-color="#1d2e4d" />
+    </linearGradient>
+  </defs>
+
+  <rect width="512" height="512" rx="112" fill="url(#bg)" />
+
+  <!-- page with a folded corner -->
+  <path d="M150 108h140l72 72v224a20 20 0 0 1-20 20H150a20 20 0 0 1-20-20V128a20 20 0 0 1 20-20z"
+        fill="#f7f9fc" />
+  <path d="M290 108l72 72h-58a14 14 0 0 1-14-14z" fill="#c9d6ea" />
+
+  <!-- ordinary text lines -->
+  <g fill="#9aa8bf">
+    <rect x="166" y="212" width="120" height="13" rx="6.5" />
+    <rect x="166" y="244" width="160" height="13" rx="6.5" />
+  </g>
+
+  <!-- the cited passage: highlight band plus the quoted line inside it -->
+  <rect x="152" y="282" width="208" height="46" rx="10" fill="#ffd76a" />
+  <rect x="166" y="299" width="150" height="13" rx="6.5" fill="#4a3a12" />
+
+  <g fill="#9aa8bf">
+    <rect x="166" y="352" width="140" height="13" rx="6.5" />
+  </g>
+
+  <!-- citation marker anchored to the highlighted line -->
+  <circle cx="360" cy="305" r="34" fill="#3f8f5f" stroke="#f7f9fc" stroke-width="10" />
+  <path d="M346 305l10 11 20-22" fill="none" stroke="#ffffff" stroke-width="11"
+        stroke-linecap="round" stroke-linejoin="round" />
+</svg>

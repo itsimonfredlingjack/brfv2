@@ -24,6 +24,8 @@ docs-external/
 backend/data/
 backend/.venv/
 backend/out/
+src-tauri/target/
+src-tauri/gen/
 __pycache__/
 *.pyc
 .pytest_cache/
@@ -59,3 +61,12 @@ playwright-report/
 
 # Byggda distributionsartefakter (stora binärer, spåras inte i git)
 /artifacts/
+
+# Desktop delivery build output. None of this is committed: it is reproducible
+# from the tracked sources by `make desktop-package`.
+#   src-tauri/runtime/  staged Python runtime + embedder weights (~776 MB)
+#   /dist/              the built RPM (~548 MB) — already covered by the `dist`
+#                       rule above, listed explicitly so its size is not a
+#                       surprise to anyone reading this file
+src-tauri/runtime/
+/dist/

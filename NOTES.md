@@ -253,3 +253,35 @@
   a score gate that the data shows cannot separate right rows from confident wrong ones. The
   real fix is grounding/answer-alignment (does the cited row's label match the question?), not
   reranker choice or a score threshold.
+
+- **2026-07-28 — A packaged app's default provider is a security decision, not a convenience.**
+  The XS-46 spike launched the backend with `BRF_LLM=scripted` — a stand-in that reads the real
+  retrieval excerpts and echoes the best-matching sentence. Removing that default did not give a
+  working product; it gave `llm_provider: "claude-cli"`, because `pick_provider()`'s `auto` path
+  falls through to an `ANTHROPIC_API_KEY` in the environment and then to whatever `claude` binary
+  is on PATH. An installed application would have inherited whatever the launching desktop
+  session happened to export and quietly sent members' documents there. The desktop adapter now
+  pins `BRF_LLM=selfhosted` unconditionally, so an unconfigured installation degrades to provider
+  `none` and says so; a test asserts the pin holds with a key exported and the CLI present.
+  Why it mattered: "no hidden external egress" cannot rest on a default that silently changes
+  meaning depending on the machine the app is launched from.
+
+- **2026-07-28 — Prove a bundle is relocatable, or you have only proved it works on the build
+  machine.** `uv` keeps a `cpython-3.12-…` symlink beside the real `cpython-3.12.13-…` directory.
+  `cp -a` on that path faithfully copies the *symlink*, so the staged runtime smoke-tested green
+  (the link still resolved locally) while the RPM would have shipped a dangling pointer to a
+  path that does not exist on any other machine. The build now resolves the source with
+  `readlink -f`, copies the contents rather than the directory, and fails the build on any
+  symlink that is absolute or resolves outside the bundle. Why it mattered: every functional test
+  passed. Only a property check about *where things point* could catch it before installation.
+
+- **2026-07-28 — Restore by staging and restarting, not by swapping data under live handles.**
+  Restoring a backup means replacing the directory that holds open SQLite connections, cached
+  `Store` objects and in-memory indexes. Doing it in-process is a corruption bug waiting for a
+  slow moment. The restore endpoint therefore only *stages* the archive; the swap runs at the
+  next start before a single store is opened, and rolls back to the untouched original if
+  extraction fails. Getting the restart without opening a Tauri IPC capability to the remote HTTP
+  page came free from the process boundary that already existed: the backend exits with code 86
+  and the shell — which owns the child — re-executes the app. Why it mattered: the alternative
+  was granting the webview an `app:restart` permission, which would have spent the strongest
+  security property the desktop shell has to save one process signal.

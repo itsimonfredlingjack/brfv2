@@ -1,0 +1,65 @@
+{
+  "schema": "brfv2-desktop-pins/v1",
+  "note": "Every third-party input the Fedora desktop delivery bakes into the RPM, pinned to an immutable identity and checked by SHA-256 before use. ops/fetch_pinned.py is the only thing that downloads any of it; a local cache may hold the bytes but never decides what they are.",
+  "build": {
+    "epoch": 1785196800,
+    "epochIso": "2026-07-28T00:00:00Z",
+    "why": "SOURCE_DATE_EPOCH for the whole packaging run: file mtimes in the payload, the RPM BUILDTIME header, and anything else that would otherwise read a wall clock. Declared here rather than derived from the commit date so that adding acceptance evidence to the delivery commit — which is not an input to the artifact — cannot change the artifact's bytes. Bump it deliberately when the delivery is re-cut."
+  },
+  "python": {
+    "implementation": "cpython",
+    "version": "3.12.13",
+    "build": "20260718",
+    "target": "x86_64-unknown-linux-gnu",
+    "flavor": "install_only_stripped",
+    "distribution": "astral-sh/python-build-standalone",
+    "archive": "cpython-3.12.13+20260718-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz",
+    "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20260718/cpython-3.12.13%2B20260718-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz",
+    "sha256": "5854aa6ec71cad00334d5065633c210b2e7feb40956767a59a91791cadcf0b79",
+    "why": "The same python-build-standalone release uv resolves for `cpython-3.12.13-linux-x86_64-gnu`, so the interpreter in the package is byte-for-byte the build the test suite runs on. ops/build-runtime.sh asserts that parity against backend/.venv and refuses to package if it ever drifts."
+  },
+  "uv": {
+    "version": "0.11.32",
+    "target": "x86_64-unknown-linux-gnu",
+    "archive": "uv-x86_64-unknown-linux-gnu.tar.gz",
+    "url": "https://github.com/astral-sh/uv/releases/download/0.11.32/uv-x86_64-unknown-linux-gnu.tar.gz",
+    "sha256": "aab924fd522efd06f1c5f3b93a243864fc453132c94b2dc49f1371b528a4b967",
+    "why": "The resolver that turns backend/uv.lock into the shipped site-packages. Pinned and verified so the package does not depend on whichever uv happens to be on the builder's PATH."
+  },
+  "embedder": {
+    "repoId": "minishlab/potion-multilingual-128M",
+    "revision": "73908c3438cf03b6a01bcb9611d62b23d0726f08",
+    "urlTemplate": "https://huggingface.co/{repoId}/resolve/{revision}/{file}",
+    "why": "An exact commit on the model repository, not a mutable branch, and an explicit file list — the package must not depend on which revision happens to be in a Hugging Face cache on the build machine, nor pick up files that were never declared.",
+    "files": {
+      "config.json": {
+        "sha256": "595e4cab2093732efd5dbe084fd5c1826b5eea693b73b4c1fd971672867d2e54",
+        "bytes": 271
+      },
+      "model.safetensors": {
+        "sha256": "14b5eb39cb4ce5666da8ad1f3dc6be4346e9b2d601c073302fa0a31bf7943397",
+        "bytes": 512361560
+      },
+      "modules.json": {
+        "sha256": "a68dcbed0429dcdd5bfdca92b0b03cc30d09122c0a3fcf4758787d4b244e45b2",
+        "bytes": 278
+      },
+      "special_tokens_map.json": {
+        "sha256": "d05497f1da52c5e09554c0cd874037a083e1dc1b9cfd48034d1c717f1afc07a7",
+        "bytes": 167
+      },
+      "tokenizer.json": {
+        "sha256": "19f1909063da3cfe3bd83a782381f040dccea475f4816de11116444a73e1b6a1",
+        "bytes": 18616131
+      },
+      "tokenizer_config.json": {
+        "sha256": "bd0e8c3a56aeac5078a6445e6b04425cd17b41bcc8d382ae925b5dbca287f8eb",
+        "bytes": 1898
+      },
+      "vocab.txt": {
+        "sha256": "090a91cb4ec3969e9dd3bf9f0fb4bd88006a857737f4144c64acc03ed13db53b",
+        "bytes": 6355735
+      }
+    }
+  }
+}

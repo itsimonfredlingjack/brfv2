@@ -1,0 +1,231 @@
+{
+  "schema": "brfv2-desktop-forbidden-providers/v1",
+  "note": "What the Fedora desktop payload must not contain. This file states the RULES only. It is never evidence: ops/inspect_payload.py answers every rule by looking at the artifact — listing the packaged tree, parsing the packaged distribution metadata and entry points, and running the packaged interpreter — and the answer is whatever it finds. A rule that finds nothing is a checked absence; a rule that finds something fails the build. Nothing here can make an exclusion succeed.",
+
+  "distributions": [
+    {
+      "name": "anthropic",
+      "why": "Network client for a third-party model API. The desktop product must have no code path to a model somebody else runs, so neither the package nor its .dist-info may be in the payload."
+    },
+    {
+      "name": "hf_xet",
+      "why": "Hugging Face Xet transfer backend. It exists only to download model data at runtime; a packaged, offline application ships its weights and must never fetch any."
+    },
+    {
+      "name": "pip",
+      "why": "Installs more software at runtime into a tree that is read-only on the target."
+    },
+    {
+      "name": "setuptools",
+      "why": "Build-time machinery; nothing in the packaged application builds anything."
+    }
+  ],
+
+  "modules": [
+    {
+      "name": "anthropic",
+      "why": "The hosted Anthropic SDK. Must not be importable from the packaged interpreter."
+    },
+    {
+      "name": "hf_xet",
+      "why": "Runtime download backend; not required by the approved self-hosted runtime (model2vec loads the bundled weights from disk)."
+    },
+    {
+      "name": "huggingface_hub.inference",
+      "why": "InferenceClient/AsyncInferenceClient and the whole hosted inference surface, including huggingface_hub.inference._providers — a registry of ~20 third-party inference-provider adapters (together, replicate, fal_ai, openai, cohere, groq, ...). Every one of them is a hosted generation path."
+    },
+    {
+      "name": "huggingface_hub.inference._providers",
+      "why": "The hosted inference-provider registry itself, named separately so its absence is asserted in its own right and not only as a consequence of its parent package."
+    },
+    {
+      "name": "huggingface_hub.inference_api",
+      "why": "Legacy hosted InferenceApi client."
+    },
+    {
+      "name": "app.llm_hosted",
+      "why": "The repository's hosted-generation plug-in (Anthropic SDK provider and Claude CLI provider). Present for the web product, deliberately not copied into the desktop payload; app.llm discovers it at selection time, so its absence removes the implementations, the registration and the selection keys together."
+    }
+  ],
+
+  "attributes": [
+    {
+      "module": "huggingface_hub",
+      "attribute": "InferenceClient",
+      "why": "huggingface_hub exposes its hosted client through a lazy module __getattr__, so file absence alone does not prove the attribute cannot be reached. Access must raise."
+    },
+    {
+      "module": "huggingface_hub",
+      "attribute": "AsyncInferenceClient",
+      "why": "Same lazy-attribute surface, async variant."
+    }
+  ],
+
+  "pathPatterns": [
+    {
+      "glob": "**/huggingface_hub/inference/**",
+      "why": "Adapter sources and bytecode for the hosted inference providers."
+    },
+    {
+      "glob": "**/huggingface_hub/inference_api.py*",
+      "why": "Legacy hosted inference client module and its bytecode."
+    },
+    {
+      "glob": "**/anthropic/**",
+      "why": "Hosted Anthropic SDK package contents."
+    },
+    {
+      "glob": "**/hf_xet/**",
+      "why": "Runtime download backend contents."
+    },
+    {
+      "glob": "**/app/llm_hosted.py*",
+      "why": "The hosted plug-in module and its bytecode."
+    }
+  ],
+
+  "entryPointPatterns": [
+    {
+      "pattern": "(?i)anthropic|claude|(^|[^a-z])hf_xet|huggingface_hub\\.inference|tiny-agents",
+      "why": "An entry point is a registration: it names an implementation a plug-in host can load without the application ever importing it explicitly. None may point at a hosted provider, at a hosted inference CLI, or at the removed inference tree."
+    }
+  ],
+
+  "providerIdentifiers": [
+    {
+      "id": "anthropic-api",
+      "why": "The provider name the Anthropic implementation reports. It must not be selectable, and no packaged module may name it."
+    },
+    {
+      "id": "claude-cli",
+      "why": "The provider name the Claude CLI implementation reports. Same rule."
+    }
+  ],
+
+  "selectionKeys": [
+    {
+      "key": "api",
+      "why": "BRF_LLM=api selected the Anthropic provider. In the packaged payload it must fall through to `none`."
+    },
+    {
+      "key": "cli",
+      "why": "BRF_LLM=cli selected the Claude CLI provider. Same rule."
+    }
+  ],
+
+  "selectionEnvironments": [
+    {
+      "label": "auto with a hosted API key exported",
+      "env": {"BRF_LLM": "auto", "ANTHROPIC_API_KEY": "sk-ant-must-never-be-used"},
+      "why": "The historical auto-detection trigger. Must yield `none`, not a hosted provider."
+    },
+    {
+      "label": "auto with a `claude` executable on PATH",
+      "env": {"BRF_LLM": "auto"},
+      "fakeClaudeOnPath": true,
+      "why": "The other historical auto-detection trigger: a logged-in CLI on the machine. Must yield `none`."
+    },
+    {
+      "label": "forced hosted API key",
+      "env": {"BRF_LLM": "api", "ANTHROPIC_API_KEY": "sk-ant-must-never-be-used"},
+      "why": "An explicit attempt to force the hosted provider must not find one."
+    },
+    {
+      "label": "forced hosted CLI",
+      "env": {"BRF_LLM": "cli"},
+      "fakeClaudeOnPath": true,
+      "why": "An explicit attempt to force the CLI provider must not find one."
+    }
+  ],
+
+  "filenameScan": {
+    "pattern": "(?i)((^|/)(anthropic|hf_xet|llm_hosted)[^/]*(/|$)|/huggingface_hub/inference(/|_api\\.py))",
+    "why": "Every path in the whole payload — package directories, modules, bytecode, metadata directories, data files — swept for a forbidden name. Cheap, exhaustive, and it cannot be satisfied by anything except the files actually being gone. Scoped to huggingface_hub's inference tree rather than any directory called `inference`, because model2vec ships a local `model2vec/inference` head-pipeline that runs entirely on this machine and is not a hosted path.",
+    "root": ""
+  },
+
+  "textScan": {
+    "pattern": "(?i)anthropic|claude|hf_xet|huggingface_hub\\.inference|InferenceClient",
+    "why": "A strict content sweep over the parts of the payload this project authors and can therefore hold to a no-forbidden-names standard: the packaged product code and the built desktop UI. Every match must be an explicitly declared reference (see declaredReferences) or the inspection fails.",
+    "scan": [
+      {
+        "root": "usr/lib/BRF Dokument-AI/runtime/backend",
+        "why": "The product code that ships."
+      },
+      {
+        "root": "usr/lib/BRF Dokument-AI/ui",
+        "why": "The built desktop UI. A shipped provider label would be an exposed hosted identifier even though it is not an implementation."
+      }
+    ],
+    "notScanned": [
+      {
+        "root": "usr/lib/BRF Dokument-AI/runtime/python/lib/python3.12/site-packages",
+        "why": "Third-party sources are held to the structural rules above (distributions, modules, attributes, pathPatterns, entryPointPatterns, filenameScan, import probes) rather than to a content sweep. huggingface_hub legitimately keeps guarded optional imports of hf_xet and dangling lazy-attribute entries for the removed inference tree; editing vendored sources to erase those names would risk the approved embedder for no gain, and the probes below prove that none of them can resolve. See guardedOptionalImports."
+      },
+      {
+        "root": "usr/bin/brfv2-desktop",
+        "why": "A compiled binary is not a content surface a text sweep can reason about; its one forbidden literal is declared, counted and asserted in declaredReferences instead."
+      }
+    ]
+  },
+
+  "guardedOptionalImports": [
+    {
+      "module": "huggingface_hub.file_download",
+      "absentDependency": "hf_xet",
+      "availabilityProbe": "huggingface_hub.utils._runtime.is_xet_available",
+      "expected": false,
+      "why": "huggingface_hub imports hf_xet lazily behind an availability check, so its sources still name it. With the distribution absent the check is False and the import is unreachable; this probe proves that rather than asserting it."
+    }
+  ],
+
+  "declaredReferences": [
+    {
+      "path": "usr/bin/brfv2-desktop",
+      "pattern": "ANTHROPIC_API_KEY",
+      "expectedOccurrences": 1,
+      "classification": "environment-scrub argument in the compiled shell",
+      "why": "src-tauri/src/main.rs removes ANTHROPIC_API_KEY from the backend child process's environment. The literal is therefore present in the compiled binary as the name of a variable being DELETED, not as an implementation, an import, a registration or a selectable identifier. It is declared here so the inspection reports it explicitly instead of quietly not looking; the count is asserted, so a second, undeclared occurrence still fails.",
+      "retainedBecause": "Defence in depth costs nothing and removing a security scrub to make a string search pass would weaken the product to flatter the evidence."
+    },
+    {
+      "path": "usr/lib/BRF Dokument-AI/runtime/backend/app/schemas.py",
+      "pattern": "claude-opus-4-8",
+      "expectedOccurrences": 1,
+      "classification": "default value of the per-tenant `aiModel` setting",
+      "why": "Settings.aiModel is a tenant preference, not a provider: it names no implementation, registers nothing, and selects no provider. The desktop never uses it for generation — app.desktop.apply_model_runtime always exports the configured ModelRuntimeConfig.model (default gemma4:e12b) and app.answer prefers the provider's own model over the setting — and the desktop UI has no control that displays it. The selection probes below assert the reported generation model, so the claim is checked rather than argued.",
+      "retainedBecause": "Changing a persisted per-tenant default is a persistence change with no packaging necessity, and it would break the repository's hosted dev/eval default, which this repair must preserve. Recorded as a known residual instead of quietly rewritten."
+    }
+  ],
+
+  "requiredPresent": [
+    {
+      "module": "model2vec",
+      "why": "The approved self-hosted embedder. The exclusions must not have damaged it."
+    },
+    {
+      "module": "huggingface_hub",
+      "why": "model2vec imports it (model cards, persistence). Pruning the hosted inference surface must leave the package itself working."
+    },
+    {
+      "module": "huggingface_hub.hf_api",
+      "why": "Reached transitively by model2vec's persistence path. It imports huggingface_hub._inference_endpoints at module scope, which is why that one module is retained — see retainedModules."
+    },
+    {
+      "module": "app.llm",
+      "why": "The provider registry that ships."
+    },
+    {
+      "module": "app.desktop",
+      "why": "The desktop backend entry point."
+    }
+  ],
+
+  "retainedModules": [
+    {
+      "module": "huggingface_hub._inference_endpoints",
+      "why": "A management dataclass for HF Inference Endpoints, not an inference-provider adapter. huggingface_hub.hf_api imports it at module scope, and model2vec reaches hf_api through its model-card path, so removing it breaks the approved embedder outright (verified: ModuleNotFoundError from model2vec.persistence).",
+      "provenInert": "Its only route to a hosted client is InferenceEndpoint.client / .async_client, which import huggingface_hub.inference._client — removed. The inspection constructs the class and asserts that both properties raise instead of returning a client."
+    }
+  ]
+}

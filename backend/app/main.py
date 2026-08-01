@@ -43,6 +43,8 @@ def create_app(
     registry: TenantRegistry | None = None,
     auth: AuthStore | None = None,
     data_root: str | Path | None = None,
+    session_cookie_name: str = SESSION_COOKIE,
+    session_cookie_path: str = "/",
 ) -> FastAPI:
     mode = os.environ.get("BRF_MODE", "dev")
     root = Path(data_root) if data_root is not None else _default_data_root()
@@ -102,8 +104,11 @@ def create_app(
         There is deliberately no Authorization/Bearer path: /api/auth/login
         does not hand out a token, so accepting one would only widen the auth
         surface for a credential no legitimate client can obtain.
+
+        The cookie *name* is a parameter because the installed desktop product
+        gives each installation its own; the transport rule is not.
         """
-        return request.cookies.get(SESSION_COOKIE, "")
+        return request.cookies.get(session_cookie_name, "")
 
     def current_user(request: Request) -> dict:
         user = auth.resolve_session(_token_from(request))
@@ -172,12 +177,12 @@ def create_app(
         token = auth.create_session(user_id)
         user = auth.get_user(user_id)
         response.set_cookie(
-            SESSION_COOKIE,
+            session_cookie_name,
             token,
             httponly=True,
             samesite="lax",
             max_age=14 * 24 * 3600,
-            path="/",
+            path=session_cookie_path,
         )
         # The session token is returned ONLY as the httpOnly cookie set above.
         # It used to be echoed here as `token` for programmatic clients, which
@@ -192,7 +197,7 @@ def create_app(
         token = _token_from(request)
         if token:
             auth.delete_session(token)
-        response.delete_cookie(SESSION_COOKIE, path="/")
+        response.delete_cookie(session_cookie_name, path=session_cookie_path)
         return {"status": "utloggad"}
 
     @app.get("/api/auth/me")
