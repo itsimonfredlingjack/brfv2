@@ -56,3 +56,6 @@ backend/eval/network_audit.json
 # Playwright run artifacts from the canonical frontend's acceptance suite
 test-results/
 playwright-report/
+
+# Byggda distributionsartefakter (stora binärer, spåras inte i git)
+/artifacts/
