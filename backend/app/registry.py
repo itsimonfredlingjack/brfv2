@@ -100,7 +100,10 @@ class TenantRegistry:
                     "återuppstå som 'synthetic'. Använd TenantRegistry.create(...) för att skapa "
                     "tenanten (med ett explicit corpus_origin) innan get() anropas."
                 )
-            store = Store(data_dir=tenant_dir, corpus_origin=corpus_origin)
+            # tenant_id is passed explicitly rather than derived from the
+            # directory name: the registry is the component that knows which
+            # brf_id this Store is, and integration records are stamped with it.
+            store = Store(data_dir=tenant_dir, corpus_origin=corpus_origin, tenant_id=brf_id)
             self._stores[brf_id] = store
             return store
 

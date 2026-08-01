@@ -6,6 +6,8 @@ föreningens dokument ska avvisas i stället för att gissas.
 
 - [Aktuell MVP-status](docs/MVP-STATUS.md)
 - [Skrivbordsapplikationen för Fedora](docs/DESKTOP-FEDORA.md)
+- [Integrationsdomänen: mejlintag och fakturagranskning](docs/INTEGRATIONSDOMAN.md)
+- [Post-BP6-produktbasen och porteringen](docs/POST-BP6-PRODUKTBAS.md)
 - [Demo quickstart](docs/DEMO-QUICKSTART.md)
 - [Operatörsrunbook](docs/DEMO-RUNBOOK.md)
 - [Pilotdrift med Gemma 4 12B](docs/DEPLOY-SELFHOSTED-LLM.md)
@@ -170,6 +172,14 @@ make desktop-package    # -> dist/brf-dokument-ai-<version>.x86_64.rpm
 make desktop-install    # dnf install (drar in tesseract + webkit2gtk4.1)
 make desktop-acceptance # full journey mot riktig Tauri/WebKitGTK + självhostad modell
 ```
+
+### Inkommande underlag och fakturagranskning
+
+Skrivbordsappen har en granskningskö: en sparad `.eml` importeras manuellt, dess
+PDF-bilagor går genom den vanliga dokumentkedjan, och en fixturfaktura kan
+jämföras **read-only** mot ett exakt citerat avtalsvillkor. Inga externa
+skrivningar, ingen OAuth, ingen brevlådeanslutning.
+Se [docs/INTEGRATIONSDOMAN.md](docs/INTEGRATIONSDOMAN.md).
 
 - [Användar- och byggguide](docs/DESKTOP-FEDORA.md)
 - [Beslut om Python-körmiljön](docs/adr/0001-desktop-python-runtime.md)

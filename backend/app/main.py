@@ -341,9 +341,32 @@ def create_app(
 
     @app.delete("/api/brf/{brf_id}")
     def delete_tenant(brf_id: str, store: Store = Depends(require_admin)) -> dict:
-        """Hard-delete the whole BRF: files, index, settings, memberships."""
+        """Hard-delete the whole BRF: files, index, settings, memberships.
+
+        Integration records go with it without being mentioned here: they live
+        inside the tenant's own directory (Store.integrations), so the tree
+        removal that deletes documents deletes them too. A domain that needed a
+        line in this function would be a domain that had put tenant data
+        somewhere else.
+        """
         registry.delete(brf_id)
         return {"deleted": brf_id}
+
+    # ---------- integrations (source events, invoices, findings) ----------
+    #
+    # Mounted with the SAME dependencies as everything above: a membership
+    # resolves to exactly one Store, and that Store is the only place its
+    # integration records exist. Nothing here has its own authorisation path.
+
+    from .integrations.routes import build_router as _build_integration_router
+
+    app.include_router(
+        _build_integration_router(
+            tenant_store=tenant_store,
+            require_admin=require_admin,
+            current_user=current_user,
+        )
+    )
 
     # ---------- dev only ----------
 

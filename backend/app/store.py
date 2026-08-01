@@ -53,7 +53,12 @@ def _atomic_write(path: Path, content: str) -> None:
 
 
 class Store:
-    def __init__(self, data_dir: str | Path | None = None, corpus_origin: CorpusOrigin | None = None) -> None:
+    def __init__(
+        self,
+        data_dir: str | Path | None = None,
+        corpus_origin: CorpusOrigin | None = None,
+        tenant_id: str | None = None,
+    ) -> None:
         # Guards every mutation; FastAPI runs sync endpoints concurrently in a
         # threadpool. Rebuilds rebind fresh objects (never mutate in place),
         # so readers that snapshot references under the lock stay consistent.
@@ -87,6 +92,34 @@ class Store:
         self.chunks: dict[str, Chunk] = {}
         self.index = HybridIndex(get_embedder())
         self._rebuild()
+
+        # The tenant this Store *is*. TenantRegistry passes the brf_id it
+        # resolved; the directory name is the fallback for the ad hoc
+        # Store(tmp_path) shape that tests and scripts use. Held so that
+        # integration records can be stamped with a tenant id that comes from
+        # the store rather than from a caller — the same discipline that keeps
+        # corpus_origin honest in add_document().
+        self.tenant_id = tenant_id or self.data_dir.name
+        self._integrations = None
+
+    @property
+    def integrations(self):
+        """This tenant's integration records, in this tenant's own directory.
+
+        Lazy because most of the product never touches them and constructing
+        one reads and validates three JSON files. Living *inside* the Store is
+        what makes tenant isolation inherited rather than re-implemented: there
+        is no integration store you can obtain without first having resolved a
+        membership to a brf_id, and `registry.delete()` removes this directory
+        with everything else in it.
+        """
+        if self._integrations is None:
+            from .integrations.store import IntegrationStore
+
+            self._integrations = IntegrationStore(
+                self.data_dir / "integrations", tenant_id=self.tenant_id
+            )
+        return self._integrations
 
     # ---------- persistence helpers ----------
 

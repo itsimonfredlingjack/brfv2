@@ -86,3 +86,51 @@ def two_tenant_app(tmp_path):
         secret_a="ALFA-XYZZY-111",
         secret_b="BETA-PLUGH-222",
     )
+
+
+@pytest.fixture()
+def integration_env(tmp_path):
+    """One tenant with the seeded demo corpus, ready for integration work.
+
+    The real corpus is used rather than a hand-built page, because the whole
+    point of the review engine is that it reads amounts out of documents that
+    were not written to make it succeed. `Snöröjningsavtal 2026.pdf` states an
+    hourly rate in prose, in a table-less paragraph, with a trailing comma —
+    which is exactly the shape that broke the first version.
+    """
+    import sys
+    from pathlib import Path
+    from types import SimpleNamespace
+
+    backend_root = str(Path(__file__).resolve().parent.parent)
+    if backend_root not in sys.path:
+        sys.path.insert(0, backend_root)
+
+    from app.auth import AuthStore
+    from app.integrations.accounting_fixture import FixtureAccountingAdapter
+    from app.registry import TenantRegistry
+    from scripts.seed import seed_demo
+
+    auth = AuthStore(tmp_path / "auth.db")
+    registry = TenantRegistry(tmp_path, auth)
+    seed_demo(registry, auth)
+
+    brf_id = "gjutformen-12"
+    store = registry.get(brf_id)
+    assert store is not None, "seed_demo skapade inte den förväntade föreningen"
+
+    adapter = FixtureAccountingAdapter()
+
+    def import_invoice(external_ref: str):
+        return store.integrations.upsert_invoice(adapter.get_invoice(brf_id, external_ref))
+
+    return SimpleNamespace(
+        root=tmp_path,
+        auth=auth,
+        registry=registry,
+        brf_id=brf_id,
+        store=store,
+        integrations=store.integrations,
+        adapter=adapter,
+        import_invoice=import_invoice,
+    )

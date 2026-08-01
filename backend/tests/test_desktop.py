@@ -801,3 +801,77 @@ def test_the_installation_cookie_name_is_per_install_and_stable(tmp_path):
         )
     assert again.status_code == 200
     assert again.headers["set-cookie"].startswith(name_a + "=")
+
+
+def test_the_integration_queue_works_through_the_desktop_boundary(tmp_path):
+    """The vertical slice, end to end, in the delivery it is built for.
+
+    Unit tests exercise the intake and the review directly; the isolation suite
+    exercises the routes on the web app. Neither proves the surface an operator
+    actually touches: the same routes behind the desktop adapter's exact-origin
+    middleware, its per-installation cookie and its security headers. A wrong
+    Origin check or a cookie-path mistake would leave every integration route
+    unreachable from the desktop UI while every other test stayed green.
+    """
+    from pathlib import Path
+
+    fixtures = Path(__file__).resolve().parent.parent / "fixtures" / "mail"
+
+    with _provisioned(tmp_path) as client:
+        listed = client.get("/api/auth/me").json()
+        brf_id = listed["memberships"][0]["brf_id"]
+
+        fmt = client.get(f"/api/brf/{brf_id}/integrations/format")
+        assert fmt.status_code == 200, fmt.text
+        assert fmt.json()["mail"]["attachmentTypes"] == ["application/pdf"]
+        # Security headers apply to these routes like every other.
+        assert fmt.headers["content-security-policy"] == CSP
+        assert fmt.headers["x-frame-options"] == "DENY"
+
+        imported = client.post(
+            f"/api/brf/{brf_id}/integrations/source-events",
+            files={
+                "file": (
+                    "faktura.eml",
+                    (fixtures / "faktura-snosvangen-2026-02.eml").read_bytes(),
+                    "message/rfc822",
+                )
+            },
+        )
+        assert imported.status_code == 200, imported.text
+        event = imported.json()
+        assert event["attachments"][0]["ingested"] is True
+
+        # The attachment is a real document of this installation's association.
+        documents = client.get(f"/api/brf/{brf_id}/documents").json()
+        assert event["attachments"][0]["document_id"] in {d["id"] for d in documents}
+
+        # A refusal keeps its stable code through the desktop boundary too.
+        refused = client.post(
+            f"/api/brf/{brf_id}/integrations/source-events",
+            files={
+                "file": (
+                    "kalkyl.eml",
+                    (fixtures / "underlag-i-kalkylblad.eml").read_bytes(),
+                    "message/rfc822",
+                )
+            },
+        )
+        assert refused.status_code == 422
+        assert refused.headers["X-Import-Rejection"] == "unsupported_attachment"
+
+        decided = client.post(
+            f"/api/brf/{brf_id}/integrations/source-events/{event['id']}/decision",
+            json={"status": "approved", "note": "Hör till snöröjningsavtalet."},
+        )
+        assert decided.status_code == 200
+        assert decided.json()["review_status"] == "approved"
+
+    # A request from another origin never reaches any of it.
+    with _client(tmp_path) as client:
+        blocked = client.get(
+            f"/api/brf/{brf_id}/integrations/source-events",
+            headers={"origin": "http://127.0.0.1:5173"},
+        )
+        assert blocked.status_code == 403
+        assert blocked.json()["detail"] == "Otillåten desktop-origin."

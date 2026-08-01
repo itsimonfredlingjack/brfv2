@@ -58,6 +58,48 @@ export const api = {
   ),
 };
 
+// Incoming source events, read-only invoice snapshots and review findings.
+// Tenant-scoped like everything else in `api`: the brf_id in the path is what
+// the backend resolves an authenticated membership against.
+export const integrationsApi = {
+  format: (brfId) => request(`/api/brf/${brfId}/integrations/format`),
+
+  listSourceEvents: (brfId) => request(`/api/brf/${brfId}/integrations/source-events`),
+  importSourceEvent: (brfId, file) => {
+    const form = new FormData();
+    form.append('file', file);
+    return request(`/api/brf/${brfId}/integrations/source-events`, {
+      method: 'POST',
+      body: form,
+    });
+  },
+  decideSourceEvent: (brfId, eventId, decision) => request(
+    `/api/brf/${brfId}/integrations/source-events/${eventId}/decision`,
+    jsonBody('POST', decision),
+  ),
+  deleteSourceEvent: (brfId, eventId) => request(
+    `/api/brf/${brfId}/integrations/source-events/${eventId}`,
+    { method: 'DELETE' },
+  ),
+
+  availableInvoices: (brfId) => request(`/api/brf/${brfId}/integrations/available-invoices`),
+  listInvoices: (brfId) => request(`/api/brf/${brfId}/integrations/invoices`),
+  importInvoice: (brfId, externalRef) => request(
+    `/api/brf/${brfId}/integrations/invoices`,
+    jsonBody('POST', { external_ref: externalRef }),
+  ),
+  reviewInvoice: (brfId, invoiceId) => request(
+    `/api/brf/${brfId}/integrations/invoices/${invoiceId}/review`,
+    { method: 'POST' },
+  ),
+
+  listFindings: (brfId) => request(`/api/brf/${brfId}/integrations/findings`),
+  decideFinding: (brfId, findingId, decision) => request(
+    `/api/brf/${brfId}/integrations/findings/${findingId}/decision`,
+    jsonBody('POST', decision),
+  ),
+};
+
 // Routes that only the installed desktop application serves. On the web these
 // 404, which is exactly how the UI detects which delivery it is running in —
 // there is no build flag and no second bundle.

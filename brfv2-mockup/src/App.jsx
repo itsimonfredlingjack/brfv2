@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { MessageSquare, Folders, Search as SearchIcon, FileText, ArrowRight, Loader2, Sparkles, AlertCircle, Upload, CheckCircle2, AlertTriangle, X, ChevronRight, ChevronDown, CornerDownRight, ArrowLeft, ZoomIn, ZoomOut, ThumbsDown, MessageCircle, Info, Menu, ChevronUp, LogOut, Trash2, Settings } from 'lucide-react';
+import { MessageSquare, Folders, Inbox, Search as SearchIcon, FileText, ArrowRight, Loader2, Sparkles, AlertCircle, Upload, CheckCircle2, AlertTriangle, X, ChevronRight, ChevronDown, CornerDownRight, ArrowLeft, ZoomIn, ZoomOut, ThumbsDown, MessageCircle, Info, Menu, ChevronUp, LogOut, Trash2, Settings } from 'lucide-react';
 import Login from './components/Login';
 import PdfPane from './components/PdfPane';
 import Setup from './components/Setup';
 import DesktopSettings from './components/DesktopSettings';
+import Integrations from './components/Integrations';
 import { api, desktopApi } from './api';
 import { displayNameForModel, displayNameForProvider } from './modelDisplay';
 import './App.css';
@@ -802,6 +803,14 @@ function App() {
               <button className={`nav-item ${currentTab === 'chat' ? 'active' : ''}`} onClick={() => { setCurrentTab('chat'); setIsMobileMenuOpen(false); }}>
                 <MessageSquare size={20} /> AI-chatt
               </button>
+              {/* Desktop only. /api/desktop/state 404s on the web, so
+                  desktopState stays null there and this entry never renders —
+                  the running backend decides, not a build flag. */}
+              {desktopState && (
+                <button className={`nav-item ${currentTab === 'integrations' ? 'active' : ''}`} onClick={() => { setCurrentTab('integrations'); setIsMobileMenuOpen(false); }}>
+                  <Inbox size={20} /> Inkommande
+                </button>
+              )}
 
             </div>
 
@@ -1533,6 +1542,17 @@ function App() {
                     </div>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {currentTab === 'integrations' && desktopState && activeBrfId && (
+              <div className="tab-content">
+                <Integrations
+                  brfId={activeBrfId}
+                  documents={documents}
+                  onOpenDocument={openDocument}
+                  onOpenCitation={openDocumentFromCitation}
+                />
               </div>
             )}
 
