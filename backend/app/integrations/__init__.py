@@ -25,7 +25,10 @@ collection to filter and ``registry.delete()`` sweeps them with everything
 else.
 """
 
+from .credentials import Connection, CredentialStore, PROVIDER_IDS
+from .egress import EgressPolicy, EgressRefused, ReadOnlyEgress, RemoteError
 from .models import (
+    AliasProposal,
     Attachment,
     FindingStatus,
     FindingType,
@@ -36,12 +39,14 @@ from .models import (
     ReviewStatus,
     SourceEvent,
     SourceType,
+    SupplierAlias,
     VerifiedFact,
     Verdict,
 )
 from .protocols import (
     FORBIDDEN_METHOD_STEMS,
     AccountingReadAdapter,
+    MailboxReadAdapter,
     MailImportAdapter,
     ReadOnlyAdapterError,
     assert_read_only,
@@ -51,7 +56,12 @@ from .store import IntegrationStore, SCHEMA_VERSION
 __all__ = [
     "SCHEMA_VERSION",
     "AccountingReadAdapter",
+    "AliasProposal",
     "Attachment",
+    "Connection",
+    "CredentialStore",
+    "EgressPolicy",
+    "EgressRefused",
     "FORBIDDEN_METHOD_STEMS",
     "FindingStatus",
     "FindingType",
@@ -60,11 +70,16 @@ __all__ = [
     "InvoiceLine",
     "InvoiceSnapshot",
     "MailImportAdapter",
+    "MailboxReadAdapter",
+    "PROVIDER_IDS",
     "ReadOnlyAdapterError",
+    "ReadOnlyEgress",
+    "RemoteError",
     "ReviewFinding",
     "ReviewStatus",
     "SourceEvent",
     "SourceType",
+    "SupplierAlias",
     "Verdict",
     "VerifiedFact",
     "assert_read_only",

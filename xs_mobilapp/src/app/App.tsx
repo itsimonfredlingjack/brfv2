@@ -4,6 +4,7 @@ import { AppFrame } from '../components/AppFrame'
 import { Bibliotek } from '../screens/Bibliotek'
 import { Dokument } from '../screens/Dokument'
 import { Fraga } from '../screens/Fraga'
+import { Granskning } from '../screens/Granskning'
 import { Konto } from '../screens/Konto'
 import { LockScreen } from '../screens/LockScreen'
 import { Login } from '../screens/Login'
@@ -32,6 +33,7 @@ function Routes({ brfId }: { brfId: string }) {
 
   if (path === '/') return <Fraga brfId={brfId} />
   if (path === '/bibliotek') return <Bibliotek brfId={brfId} />
+  if (path === '/granskning') return <Granskning brfId={brfId} />
   if (path === '/konto') return <Konto brfId={brfId} />
   if (path === '/valj') return <ValjForening />
 

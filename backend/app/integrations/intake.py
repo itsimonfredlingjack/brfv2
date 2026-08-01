@@ -89,9 +89,12 @@ def suggest_documents(
         return []
     skip = set(exclude or ())
     try:
-        from .review import incoming_document_ids
+        from .review import unadopted_incoming_document_ids
 
-        skip |= incoming_document_ids(store)
+        # Unadopted only: a contract somebody deliberately put in the archive
+        # is a document of the association's and is exactly what a later
+        # invoice mail should be suggested against.
+        skip |= unadopted_incoming_document_ids(store)
     except Exception as exc:  # a queue read must never be able to fail an import
         logger.warning("Kunde inte läsa köns bilagor för uteslutning: %s", exc)
     settings = store.settings
@@ -117,6 +120,110 @@ def suggest_documents(
     return seen
 
 
+class AdoptionError(ValueError):
+    """An attachment cannot be adopted into the archive, and the message says why."""
+
+
+def adopt_attachment(
+    *,
+    store: Store,
+    integrations: IntegrationStore,
+    event_id: str,
+    attachment_id: str,
+    user_id: str,
+    note: str,
+) -> SourceEvent:
+    """Make a queued attachment part of the association's own archive.
+
+    This is the answer to the question the first version of this block left
+    open: *how does a contract that arrived by mail become something the review
+    may cite?* The conservative default — never — was right about the danger
+    and wrong about the situation. The danger is that an invoice corroborates
+    itself, which is what happens when incoming material is evidence by
+    default. The situation is that boards receive contracts by mail, and a
+    product that can see the contract and refuses to use it is not being
+    careful, it is being useless.
+
+    So adoption is an act, not a setting:
+
+    * a **named administrator** does it, and their id is recorded;
+    * they must say **why** — a sentence, required, because a document entering
+      the evidence base on nobody's stated authority is how an archive stops
+      meaning anything;
+    * it is **per attachment**, not per message: a mail carrying a contract and
+      an invoice adopts the contract and leaves the invoice where it is;
+    * the document itself does not move or change. It was already ingested and
+      citable; what changes is that it is no longer excluded from being
+      evidence (:func:`app.integrations.review.unadopted_incoming_document_ids`).
+
+    An invoice's own attachments stay excluded for that invoice's review even
+    after adoption — see
+    :func:`app.integrations.review.evidence_excluded_document_ids`.
+    """
+    reason = (note or "").strip()
+    if not reason:
+        raise AdoptionError(
+            "Ange varför bilagan ska räknas som föreningens underlag. Ett dokument som "
+            "blir bevis utan att någon säger varför är inte ett arkiv."
+        )
+    event = integrations.get_source_event(event_id)
+    if event is None:
+        raise AdoptionError("Okänd källhändelse.")
+    attachments = list(event.attachments)
+    for i, attachment in enumerate(attachments):
+        if attachment.id != attachment_id:
+            continue
+        if not attachment.document_id or attachment.document_id not in store.documents:
+            raise AdoptionError(
+                "Bilagan finns inte som dokument längre och kan inte arkiveras."
+            )
+        if attachment.archived:
+            return event
+        attachments[i] = attachment.model_copy(
+            update={
+                "archived": True,
+                "archived_by": user_id,
+                "archived_at": utc_now_iso(),
+                "archive_note": reason,
+            }
+        )
+        return integrations.update_source_event(
+            event.model_copy(update={"attachments": attachments})
+        )
+    raise AdoptionError("Okänd bilaga.")
+
+
+def withdraw_attachment(
+    *,
+    integrations: IntegrationStore,
+    event_id: str,
+    attachment_id: str,
+) -> SourceEvent:
+    """Undo an adoption. The document stays; it stops counting as evidence.
+
+    Reversible on purpose. An irreversible decision is one people avoid making,
+    and the point of adoption is that it should be easy to do correctly.
+    """
+    event = integrations.get_source_event(event_id)
+    if event is None:
+        raise AdoptionError("Okänd källhändelse.")
+    attachments = list(event.attachments)
+    for i, attachment in enumerate(attachments):
+        if attachment.id == attachment_id:
+            attachments[i] = attachment.model_copy(
+                update={
+                    "archived": False,
+                    "archived_by": None,
+                    "archived_at": None,
+                    "archive_note": None,
+                }
+            )
+            return integrations.update_source_event(
+                event.model_copy(update={"attachments": attachments})
+            )
+    raise AdoptionError("Okänd bilaga.")
+
+
 def import_eml(
     *,
     store: Store,
@@ -124,11 +231,26 @@ def import_eml(
     raw: bytes,
     filename: str,
     imported_by: str,
+    method: str = "manual-file-import",
+    adapter_name: str | None = None,
+    external_hint: str = "",
 ) -> SourceEvent:
-    """Import one `.eml`. Raises :class:`~app.integrations.eml.EmlRejected` or
-    :class:`DuplicateSourceEvent`; on success nothing is left half-done."""
+    """Import one message's raw MIME. All of it, or none of it.
 
-    adapter = EmlFileAdapter()
+    The signature grew two parameters when the live mailbox arrived, and it is
+    worth saying why they are the only two. A message read from Microsoft Graph
+    is the same bytes as a message exported to a file — Graph's ``/$value``
+    returns the MIME as it stands — so the parsing, the format ceiling, the
+    attachment rule, the content hash, the duplicate check and the rollback are
+    all the same code, exercised by both paths. What genuinely differs is the
+    *provenance*: which method brought it in and which adapter read it. Those
+    are recorded; nothing else about the flow changes.
+
+    Raises :class:`~app.integrations.eml.EmlRejected` or
+    :class:`DuplicateSourceEvent`; on success nothing is left half-done.
+    """
+
+    adapter = adapter_name or EmlFileAdapter().name
 
     # 1. Everything is validated before anything is written.
     message = parse_eml(raw, filename=filename)
@@ -195,11 +317,11 @@ def import_eml(
         source_type="email",
         received_at=utc_now_iso(),
         occurred_at=message.sent_at,
-        external_ref=message.message_id,
+        external_ref=message.message_id or external_hint or None,
         content_sha256=content_sha256,
         provenance=Provenance(
-            method="manual-file-import",
-            adapter=adapter.name,
+            method=method,
+            adapter=adapter,
             origin_filename=filename,
             origin_bytes=len(raw),
             imported_by=imported_by,

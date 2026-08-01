@@ -32,6 +32,15 @@ from ..schemas import CitationOut
 SourceType = Literal["email"]
 SOURCE_TYPES: tuple[SourceType, ...] = ("email",)
 
+# How the material got here. A vocabulary rather than free text, because the
+# queue's provenance is read by people deciding whether to trust an entry, and
+# "manuell fil" and "läst ur brevlådan styrelsen@…" are different assurances.
+IntakeMethod = Literal["manual-file-import", "graph-mailbox-import"]
+INTAKE_METHOD_LABELS: dict[str, str] = {
+    "manual-file-import": "Manuellt vald .eml-fil",
+    "graph-mailbox-import": "Hämtad ur ansluten brevlåda",
+}
+
 # Did the import land? There is no "partial": an import either produced a
 # complete SourceEvent with every attachment accounted for, or it was refused
 # and nothing was written. See app.integrations.eml for why.
@@ -52,6 +61,12 @@ FindingType = Literal[
     "invoice_contract_period",
     # No candidate contract passage could be verified for this invoice at all.
     "invoice_without_contract",
+    # A term was read and cited but is not of a kind that can be compared to
+    # anything on an invoice — an index-regulated price, a duration counted
+    # from a signing date nobody recorded, a notice period. Its own type
+    # because "we read this and it does not answer your question" is different
+    # information from "we found nothing".
+    "contract_term_not_comparable",
 ]
 
 # The three answers this product is allowed to give. There is no fourth, and in
@@ -107,6 +122,19 @@ class Attachment(BaseModel):
     # forwards the same defect into the document archive is worse, because the
     # copies then compete in retrieval.
     reused_existing_document: bool = False
+
+    # An attachment starts as *material under review* and is not evidence
+    # about anything. A named administrator can adopt it into the
+    # association's own archive, and only then may the review engine cite it
+    # (app.integrations.review.evidence_excluded_document_ids). The three
+    # fields are one decision: what was adopted, by whom, when.
+    archived: bool = False
+    archived_by: str | None = None
+    archived_at: str | None = None
+    # Why a person said this belongs in the archive. Free text, and required
+    # by the route: adopting a document into the evidence base is exactly the
+    # kind of act that should be uncomfortable to do silently.
+    archive_note: str | None = None
 
 
 class Provenance(BaseModel):
@@ -253,6 +281,39 @@ class VerifiedFact(BaseModel):
     citation_index: int | None = None
 
 
+class SupplierAlias(BaseModel):
+    """A human's statement that two supplier names are one supplier.
+
+    The review can *guess* this — "Snösvängen AB" and "Snösvängen Entreprenad
+    AB" share a distinctive head — but a guess is only ever allowed to produce
+    a weak anchor that says so. An alias is the same claim made by a named
+    person at the association, recorded once and strong thereafter. That is the
+    difference between a system that learns and a system that assumes.
+    """
+
+    id: str
+    tenant_id: str
+    # As the invoice writes it, and as the document writes it. Both stored as
+    # typed, plus a normalised key so lookup does not depend on spacing or
+    # legal form.
+    invoice_name: str
+    document_name: str
+    normalized_key: str
+    created_by: str
+    created_at: str = Field(default_factory=utc_now_iso)
+    note: str | None = None
+
+
+class AliasProposal(BaseModel):
+    """The alias a weak anchor would like a human to confirm or reject."""
+
+    invoice_name: str
+    document_name: str
+    document_id: str
+    # Why the engine thinks they are the same, in words a reviewer can check.
+    basis: str
+
+
 class ReviewFinding(BaseModel):
     """Something worth a human's attention. Not a decision, and not an answer."""
 
@@ -282,6 +343,16 @@ class ReviewFinding(BaseModel):
     # Exact citations, verified verbatim through app.citations — same machinery,
     # same rects, same all-or-nothing rule as an answer's citations.
     citations: list[CitationOut] = Field(default_factory=list)
+
+    # How the document under citation was tied to this invoice's supplier:
+    # "org_number", "exact", "alias", "legal_form" or "partial". Carried on the
+    # finding rather than left implicit, because a reviewer weighing a "möjlig
+    # avvikelse" needs to know whether the two papers are certainly about the
+    # same company or merely probably.
+    anchor_strength: str | None = None
+    anchor_note: str | None = None
+    # Present only for a weak anchor: the alias the engine would like confirmed.
+    alias_proposal: AliasProposal | None = None
 
     status: FindingStatus = "open"
     decided_by: str | None = None

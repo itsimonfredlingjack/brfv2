@@ -45,7 +45,18 @@ def create_app(
     data_root: str | Path | None = None,
     session_cookie_name: str = SESSION_COOKIE,
     session_cookie_path: str = "/",
+    integration_transport=None,
 ) -> FastAPI:
+    """Build the product app.
+
+    ``integration_transport`` replaces the outbound HTTP transport the live
+    integrations use (:mod:`app.integrations.egress`). It exists so the test
+    suite can exercise the real Graph and Fortnox code paths — the same URLs,
+    the same headers, the same refusals — without a credential, a network or a
+    recording. Left ``None`` in every shipped configuration, which is what
+    makes "the tests need no network" a property of the product rather than of
+    the tests.
+    """
     mode = os.environ.get("BRF_MODE", "dev")
     root = Path(data_root) if data_root is not None else _default_data_root()
     auth = auth if auth is not None else AuthStore(root / "auth.db")
@@ -365,6 +376,7 @@ def create_app(
             tenant_store=tenant_store,
             require_admin=require_admin,
             current_user=current_user,
+            transport=integration_transport,
         )
     )
 

@@ -1,29 +1,42 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
+  Archive,
   CheckCircle2,
   FileText,
   HelpCircle,
   Inbox,
+  Link2,
   Loader2,
+  Mail,
   Paperclip,
+  Plug,
   Receipt,
   RefreshCw,
+  Table2,
   Trash2,
   Upload,
   X,
 } from 'lucide-react';
 import { integrationsApi } from '../api';
+import IntegrationConnections from './IntegrationConnections';
+import MappingPreview from './MappingPreview';
 import './Integrations.css';
 
 /**
  * The board's incoming queue and the read-only invoice review.
  *
- * Two panes, one rule between them: nothing on this screen presents a system
+ * Four panes, one rule across them: nothing on this screen presents a system
  * proposal as an established fact. Verified facts, the proposal and the stated
  * uncertainty are three separate blocks with three different visual weights,
  * and a citation is always clickable through to the page it came from — a
  * finding whose evidence cannot be opened is an assertion, not a finding.
+ *
+ * The live connections widen where material may come from and change nothing
+ * about that rule: a message read out of a connected mailbox goes through the
+ * same format check, the same hash, the same duplicate rule and the same queue
+ * as a file someone picked by hand, and neither is evidence until a person
+ * says so.
  */
 
 const VERDICT_TONE = {
@@ -43,6 +56,29 @@ const STATUS_LABEL = {
   approved: 'Godkänd',
   dismissed: 'Avfärdad',
   corrected: 'Korrigerad',
+};
+
+// How the event got here, in words. The stored value is a stable code and is
+// shown next to the sentence, because the two are read by different people.
+const METHOD_LABEL = {
+  'manual-file-import': 'Någon valde en sparad .eml-fil',
+  'graph-mailbox-import': 'Hämtat ur den anslutna brevlådan, på begäran',
+};
+
+const ANCHOR_LABEL = {
+  org_number: 'organisationsnummer',
+  exact: 'leverantörens namn ordagrant',
+  alias: 'ett namn en person här har bekräftat',
+  legal_form: 'samma namn, annan bolagsform',
+  partial: 'delvis namnlikhet',
+};
+
+// Only "partial" is weak, and the backend says so too (supplier.WEAK_STRENGTHS).
+const WEAK_ANCHORS = new Set(['partial']);
+
+const SOURCE_LABEL = {
+  fixture: 'Syntetiskt underlag',
+  fortnox: 'Fortnox',
 };
 
 function formatDateTime(iso) {
@@ -151,11 +187,70 @@ function Citation({ citation, onOpen }) {
   );
 }
 
-function Finding({ finding, busy, onDecide, onOpenCitation }) {
+/**
+ * The alias a weak anchor would like confirmed.
+ *
+ * The engine may notice that two names share a distinctive head; only a person
+ * here can say they are the same company. Confirming is therefore a statement
+ * by a named human, and the review has to be re-run before it counts — nothing
+ * about an already recorded finding changes retroactively.
+ */
+function AliasProposal({ proposal, busy, confirmed, onConfirm, onRerun }) {
+  const [note, setNote] = useState('');
+
+  if (confirmed) {
+    return (
+      <div className="alias-proposal confirmed">
+        <p>
+          Sparat. Namnen räknas som samma leverantör från och med nu — det gäller
+          granskningar som körs härefter.
+        </p>
+        <button type="button" className="alias-rerun" disabled={busy} onClick={onRerun}>
+          <RefreshCw size={14} /> Kör om granskningen
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="alias-proposal">
+      <h5>Är det samma leverantör?</h5>
+      <p>{proposal.basis}</p>
+      <p>
+        Fakturan skriver <strong>{proposal.invoice_name}</strong>, dokumentet
+        skriver <strong>{proposal.document_name}</strong>. Ingen utom ni kan avgöra
+        om det är samma företag.
+      </p>
+      <div className="alias-actions">
+        <input
+          type="text"
+          value={note}
+          onChange={(e) => setNote(e.target.value)}
+          placeholder="Anteckning (valfri)"
+          aria-label="Anteckning om leverantörsnamnen"
+        />
+        <button
+          type="button"
+          className="alias-confirm"
+          disabled={busy}
+          onClick={() => onConfirm(note.trim() || null)}
+        >
+          Ja, samma leverantör
+        </button>
+      </div>
+      <p className="muted">
+        Säger ni ingenting står kopplingen kvar som svag, och fyndet läses därefter.
+      </p>
+    </div>
+  );
+}
+
+function Finding({ finding, busy, aliasConfirmed, onDecide, onOpenCitation, onConfirmAlias, onRerun }) {
   const tone = VERDICT_TONE[finding.verdict] || 'unknown';
   const Icon = VERDICT_ICON[finding.verdict] || HelpCircle;
   const invoiceFacts = finding.verified_facts.filter((f) => f.source === 'invoice');
   const documentFacts = finding.verified_facts.filter((f) => f.source === 'document');
+  const weakAnchor = WEAK_ANCHORS.has(finding.anchor_strength);
 
   return (
     <article className={`finding ${tone} ${finding.status !== 'open' ? 'decided' : ''}`}>
@@ -165,6 +260,22 @@ function Finding({ finding, busy, onDecide, onOpenCitation }) {
         </span>
         <span className="finding-status">{STATUS_LABEL[finding.status] || finding.status}</span>
       </header>
+
+      {finding.anchor_strength && (
+        <div className={`finding-anchor ${weakAnchor ? 'weak' : 'strong'}`}>
+          <h5>
+            <Link2 size={13} />
+            {weakAnchor ? 'Svag koppling till leverantören' : 'Säker koppling till leverantören'}
+            <span className="anchor-basis">{ANCHOR_LABEL[finding.anchor_strength] || finding.anchor_strength}</span>
+          </h5>
+          {finding.anchor_note && <p>{finding.anchor_note}</p>}
+          {weakAnchor && (
+            <p className="anchor-warning">
+              Jämförelsen kan alltså gälla fel leverantör. Läs fyndet med det i minnet.
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="finding-facts">
         <div>
@@ -210,6 +321,16 @@ function Finding({ finding, busy, onDecide, onOpenCitation }) {
         </div>
       )}
 
+      {finding.alias_proposal && (
+        <AliasProposal
+          proposal={finding.alias_proposal}
+          busy={busy}
+          confirmed={aliasConfirmed}
+          onConfirm={(note) => onConfirmAlias(finding, note)}
+          onRerun={() => onRerun(finding.invoice_id)}
+        />
+      )}
+
       {finding.decision_note && (
         <p className="finding-decision-note">Anteckning: {finding.decision_note}</p>
       )}
@@ -224,14 +345,185 @@ function Finding({ finding, busy, onDecide, onOpenCitation }) {
   );
 }
 
+/**
+ * One attachment, and the decision whether it belongs in the association's own
+ * archive. The note is required here as well as in the backend — a form that
+ * sent something invented to satisfy the route would defeat the point of
+ * requiring it.
+ */
+function AttachmentItem({ attachment, busy, onOpen, onAdopt, onWithdraw }) {
+  const [note, setNote] = useState('');
+  const canAdopt = Boolean(attachment.document_id) && !busy && note.trim().length > 0;
+
+  return (
+    <li className={attachment.archived ? 'adopted' : ''}>
+      <div className="attachment-line">
+        <button type="button" className="link" onClick={onOpen}>
+          {attachment.filename}
+        </button>
+        <span className="muted"> · {attachment.bytes} byte · sha256 {attachment.sha256.slice(0, 16)}…</span>
+        {attachment.reused_existing_document && (
+          <span className="badge dedup">samma fil fanns redan — länkad, inte inläst igen</span>
+        )}
+        <span className={`badge ${attachment.archived ? 'confirmed' : 'proposed'}`}>
+          {attachment.archived ? 'i föreningens arkiv' : 'material under granskning'}
+        </span>
+      </div>
+
+      {attachment.archived ? (
+        <div className="attachment-adoption">
+          <p className="muted">
+            Lagd i arkivet av {attachment.archived_by} {formatDateTime(attachment.archived_at)}
+            {attachment.archive_note ? ` — ${attachment.archive_note}` : ''}
+          </p>
+          <button type="button" className="attachment-withdraw" disabled={busy} onClick={onWithdraw}>
+            Ta tillbaka ur arkivet
+          </button>
+        </div>
+      ) : (
+        <div className="attachment-adoption">
+          <input
+            type="text"
+            value={note}
+            onChange={(e) => setNote(e.target.value)}
+            placeholder="Varför hör den till föreningens underlag? (krävs)"
+            aria-label={`Varför ${attachment.filename} hör till föreningens underlag`}
+            disabled={busy}
+          />
+          <button
+            type="button"
+            className="attachment-adopt"
+            disabled={!canAdopt}
+            title={attachment.document_id
+              ? (note.trim() ? undefined : 'Skriv först varför bilagan hör till arkivet.')
+              : 'Bilagan lästes aldrig in som dokument och kan inte läggas i arkivet.'}
+            onClick={() => onAdopt(note.trim())}
+          >
+            <Archive size={14} /> Lägg i arkivet
+          </button>
+        </div>
+      )}
+    </li>
+  );
+}
+
+/**
+ * The connected mailbox, listed on request.
+ *
+ * Nothing is fetched by itself: there is no sync, no polling and no watcher —
+ * every read here happened because someone pressed something. Reading a message
+ * does not mark, move or delete it, so the mailbox looks the same afterwards as
+ * it did before.
+ */
+function MailboxBrowser({ brfId, connection, onImported, onError }) {
+  const [messages, setMessages] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [importing, setImporting] = useState('');
+  const [onlyWithAttachments, setOnlyWithAttachments] = useState(true);
+
+  async function load(withAttachmentsOnly = onlyWithAttachments) {
+    setLoading(true);
+    try {
+      const result = await integrationsApi.listMailboxMessages(brfId, {
+        limit: 25,
+        onlyWithAttachments: withAttachmentsOnly,
+      });
+      setMessages(result.messages || []);
+    } catch (err) {
+      setMessages(null);
+      onError(err.message || 'Brevlådan kunde inte läsas.');
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function importMessage(message) {
+    setImporting(message.id);
+    try {
+      await integrationsApi.importMailboxMessage(brfId, message.id);
+      await onImported(message);
+    } catch (err) {
+      // Same two refusals as the manual import: 409 when these exact bytes are
+      // already in the queue, 422 when the message is outside the format.
+      onError(err.message || 'Meddelandet kunde inte läsas in.');
+    } finally {
+      setImporting('');
+    }
+  }
+
+  return (
+    <div className="mailbox">
+      <h4><Mail size={15} /> Ansluten brevlåda</h4>
+      <p className="muted">
+        {connection.mailbox
+          ? `Delad brevlåda ${connection.mailbox}, mappen ${connection.folder}.`
+          : `Det inloggade kontots egen brevlåda (${connection.account_label || 'okänt konto'}), mappen ${connection.folder}.`}
+        {' '}Listan hämtas när du ber om den. Meddelanden markeras, flyttas eller
+        raderas aldrig — brevlådan ser likadan ut efteråt.
+      </p>
+
+      <div className="mailbox-controls">
+        <label>
+          <input
+            type="checkbox"
+            checked={onlyWithAttachments}
+            onChange={(e) => { setOnlyWithAttachments(e.target.checked); load(e.target.checked); }}
+          />
+          Bara meddelanden med bilagor
+        </label>
+        <button type="button" disabled={loading} onClick={() => load()}>
+          {loading ? <Loader2 size={14} className="spin" /> : <RefreshCw size={14} />}
+          {messages === null ? ' Hämta meddelanden' : ' Hämta igen'}
+        </button>
+      </div>
+
+      {messages !== null && messages.length === 0 && (
+        <p className="empty">Inga meddelanden i mappen som matchar.</p>
+      )}
+
+      {messages !== null && messages.length > 0 && (
+        <ul className="mailbox-list">
+          {messages.map((message) => (
+            <li key={message.id}>
+              <div className="mailbox-message">
+                <strong>{message.subject || '(utan ämne)'}</strong>
+                <span className="muted">
+                  {message.fromDisplay ? `${message.fromDisplay} <${message.from}>` : message.from}
+                  {' · '}{formatDateTime(message.receivedAt)}
+                  {message.hasAttachments ? ' · med bilaga' : ' · utan bilaga'}
+                </span>
+                {message.preview && <span className="mailbox-preview">{message.preview}</span>}
+              </div>
+              <button
+                type="button"
+                disabled={Boolean(importing)}
+                onClick={() => importMessage(message)}
+              >
+                {importing === message.id ? <Loader2 size={14} className="spin" /> : <Upload size={14} />}
+                {' '}Läs in
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export default function Integrations({ brfId, documents, onOpenDocument, onOpenCitation }) {
   const [pane, setPane] = useState('inbox');
 
   const [events, setEvents] = useState([]);
   const [invoices, setInvoices] = useState([]);
   const [available, setAvailable] = useState([]);
+  const [availableError, setAvailableError] = useState('');
   const [findings, setFindings] = useState([]);
   const [format, setFormat] = useState(null);
+  const [connections, setConnections] = useState(null);
+  const [aliases, setAliases] = useState([]);
+  const [source, setSource] = useState('fixture');
+  const [mappingRef, setMappingRef] = useState('');
+  const [aliasConfirmed, setAliasConfirmed] = useState({});
 
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -248,25 +540,38 @@ export default function Integrations({ brfId, documents, onOpenDocument, onOpenC
     if (!brfId) return;
     setLoading(true);
     try {
-      const [e, i, a, f, fmt] = await Promise.all([
+      const [e, i, f, fmt, conns, als] = await Promise.all([
         integrationsApi.listSourceEvents(brfId),
         integrationsApi.listInvoices(brfId),
-        integrationsApi.availableInvoices(brfId),
         integrationsApi.listFindings(brfId),
         integrationsApi.format(brfId),
+        integrationsApi.connections(brfId),
+        integrationsApi.listSupplierAliases(brfId),
       ]);
       setEvents(e);
       setInvoices(i);
-      setAvailable(a.invoices || []);
       setFindings(f);
       setFormat(fmt);
+      setConnections(conns);
+      setAliases(als);
       setError('');
+      // Kept apart from the rest: a live accounting source that is down or
+      // signed out must not blank the queue, the findings and the archive that
+      // are all stored locally and perfectly readable.
+      try {
+        const a = await integrationsApi.availableInvoices(brfId, source);
+        setAvailable(a.invoices || []);
+        setAvailableError('');
+      } catch (err) {
+        setAvailable([]);
+        setAvailableError(err.message || 'Fakturakällan svarade inte.');
+      }
     } catch (err) {
       setError(err.message || 'Kunde inte hämta integrationsdata.');
     } finally {
       setLoading(false);
     }
-  }, [brfId]);
+  }, [brfId, source]);
 
   useEffect(() => { refresh(); }, [refresh]);
 
@@ -279,6 +584,22 @@ export default function Integrations({ brfId, documents, onOpenDocument, onOpenC
     });
     return map;
   }, [findings]);
+
+  const graph = connections?.['microsoft-graph'];
+  const fortnox = connections?.fortnox;
+  const mailboxReady = graph?.connection?.status === 'connected';
+  const fortnoxReady = fortnox?.connection?.status === 'connected';
+  const invoiceSources = format?.invoiceSources || ['fixture'];
+
+  // The engine may not read from a source that is not connected, so neither may
+  // the picker: an option that always answers 409 is not a choice.
+  useEffect(() => {
+    if (source === 'fortnox' && connections && !fortnoxReady) setSource('fixture');
+  }, [source, connections, fortnoxReady]);
+
+  useEffect(() => {
+    if (pane === 'mapping' && connections && !fortnoxReady) setPane('invoices');
+  }, [pane, connections, fortnoxReady]);
 
   // The app's own citation navigation: it opens the document, jumps to the
   // page AND paints the rects. A finding's evidence therefore lands exactly
@@ -352,11 +673,38 @@ export default function Integrations({ brfId, documents, onOpenDocument, onOpenC
     }
   }
 
+  async function adoptAttachment(eventId, attachment, note) {
+    setBusy(true);
+    setError('');
+    try {
+      await integrationsApi.archiveAttachment(brfId, eventId, attachment.id, note);
+      setNotice(`${attachment.filename} ingår nu i föreningens arkiv och kan citeras som bevis.`);
+      await refresh();
+    } catch (err) {
+      setError(err.message || 'Bilagan kunde inte läggas i arkivet.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function withdrawAttachment(eventId, attachment) {
+    setBusy(true);
+    try {
+      await integrationsApi.withdrawAttachment(brfId, eventId, attachment.id);
+      setNotice(`${attachment.filename} räknas åter som material under granskning. Dokumentet ligger kvar.`);
+      await refresh();
+    } catch (err) {
+      setError(err.message || 'Kunde inte ta tillbaka bilagan.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function readInvoice(externalRef) {
     setBusy(true);
     setError('');
     try {
-      const snapshot = await integrationsApi.importInvoice(brfId, externalRef);
+      const snapshot = await integrationsApi.importInvoice(brfId, externalRef, source);
       await integrationsApi.reviewInvoice(brfId, snapshot.id);
       setNotice(`Faktura ${snapshot.invoice_number || snapshot.external_ref} inläst och granskad.`);
       await refresh();
@@ -391,6 +739,37 @@ export default function Integrations({ brfId, documents, onOpenDocument, onOpenC
     }
   }
 
+  async function confirmAlias(finding, note) {
+    setBusy(true);
+    setError('');
+    try {
+      await integrationsApi.addSupplierAlias(brfId, {
+        invoice_name: finding.alias_proposal.invoice_name,
+        document_name: finding.alias_proposal.document_name,
+        note,
+      });
+      setAliasConfirmed((current) => ({ ...current, [finding.id]: true }));
+      setNotice('Namnen är bekräftade. Kör om granskningen för att använda dem.');
+      await refresh();
+    } catch (err) {
+      setError(err.message || 'Kunde inte spara leverantörsnamnet.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function removeAlias(aliasId) {
+    setBusy(true);
+    try {
+      await integrationsApi.deleteSupplierAlias(brfId, aliasId);
+      await refresh();
+    } catch (err) {
+      setError(err.message || 'Kunde inte ta bort posten.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
   const openEvents = events.filter((e) => e.review_status === 'open').length;
   const openFindings = findings.filter((f) => f.status === 'open').length;
 
@@ -418,6 +797,26 @@ export default function Integrations({ brfId, documents, onOpenDocument, onOpenC
             <Receipt size={16} /> Fakturagranskning
             {openFindings > 0 && <span className="pill">{openFindings}</span>}
           </button>
+          {fortnoxReady && (
+            <button
+              type="button"
+              role="tab"
+              aria-selected={pane === 'mapping'}
+              className={pane === 'mapping' ? 'active' : ''}
+              onClick={() => setPane('mapping')}
+            >
+              <Table2 size={16} /> Fältkontroll
+            </button>
+          )}
+          <button
+            type="button"
+            role="tab"
+            aria-selected={pane === 'connections'}
+            className={pane === 'connections' ? 'active' : ''}
+            onClick={() => setPane('connections')}
+          >
+            <Plug size={16} /> Anslutningar
+          </button>
         </div>
         <button type="button" className="refresh" onClick={refresh} disabled={loading || busy}>
           <RefreshCw size={15} /> Uppdatera
@@ -435,9 +834,8 @@ export default function Integrations({ brfId, documents, onOpenDocument, onOpenC
         <section className="pane">
           <div className="pane-intro">
             <p>
-              Välj en sparad <code>.eml</code>-fil. Filen läses en gång, på din begäran —
-              appen kopplar sig aldrig till en brevlåda, hämtar ingenting löpande och
-              skickar aldrig något.
+              Välj en sparad <code>.eml</code>-fil. Filen läses en gång, på din
+              begäran, och fungerar utan någon anslutning alls.
             </p>
             {format && (
               <p className="format-note">
@@ -461,6 +859,25 @@ export default function Integrations({ brfId, documents, onOpenDocument, onOpenC
             </label>
           </div>
 
+          {mailboxReady ? (
+            <MailboxBrowser
+              brfId={brfId}
+              connection={graph.connection}
+              onImported={async (message) => {
+                setNotice(`Inläst ur brevlådan: ${message.subject || message.id}`);
+                setError('');
+                await refresh();
+              }}
+              onError={(message) => { setNotice(''); setError(message); }}
+            />
+          ) : (
+            <p className="mailbox-absent muted">
+              Ingen brevlåda är ansluten. Det behövs inte för att importera en
+              fil — en anslutning gör bara att meddelanden kan väljas ur en lista
+              i stället för att exporteras för hand. Se <strong>Anslutningar</strong>.
+            </p>
+          )}
+
           {events.length === 0 && <p className="empty">Inget har importerats ännu.</p>}
 
           {events.map((event) => (
@@ -476,6 +893,10 @@ export default function Integrations({ brfId, documents, onOpenDocument, onOpenC
                 </div>
                 <span className="event-status">{STATUS_LABEL[event.review_status]}</span>
               </header>
+
+              <p className="event-method">
+                {METHOD_LABEL[event.provenance.method] || event.provenance.method}
+              </p>
 
               <details className="event-provenance">
                 <summary>Proveniens</summary>
@@ -493,21 +914,22 @@ export default function Integrations({ brfId, documents, onOpenDocument, onOpenC
               {event.attachments.length > 0 && (
                 <div className="event-attachments">
                   <h5><Paperclip size={14} /> Bilagor</h5>
+                  <p className="adoption-explainer">
+                    En bilaga är material under granskning tills någon lägger den i
+                    föreningens arkiv: dessförinnan citerar granskningen den inte,
+                    därefter är den en del av arkivet och kan användas som bevis —
+                    och det går att ta tillbaka.
+                  </p>
                   <ul>
                     {event.attachments.map((attachment) => (
-                      <li key={attachment.id}>
-                        <button
-                          type="button"
-                          className="link"
-                          onClick={() => onOpenDocument?.(attachment.document_id, 1)}
-                        >
-                          {attachment.filename}
-                        </button>
-                        <span className="muted"> · {attachment.bytes} byte · sha256 {attachment.sha256.slice(0, 16)}…</span>
-                        {attachment.reused_existing_document && (
-                          <span className="badge dedup">samma fil fanns redan — länkad, inte inläst igen</span>
-                        )}
-                      </li>
+                      <AttachmentItem
+                        key={attachment.id}
+                        attachment={attachment}
+                        busy={busy}
+                        onOpen={() => onOpenDocument?.(attachment.document_id, 1)}
+                        onAdopt={(note) => adoptAttachment(event.id, attachment, note)}
+                        onWithdraw={() => withdrawAttachment(event.id, attachment)}
+                      />
                     ))}
                   </ul>
                 </div>
@@ -566,15 +988,46 @@ export default function Integrations({ brfId, documents, onOpenDocument, onOpenC
               Appen kan inte bokföra, kontera, attestera, betala eller ändra någon
               status i ett ekonomisystem — det finns ingen kodväg som skriver utåt.
             </p>
+            <div className="source-picker" role="radiogroup" aria-label="Fakturakälla">
+              {invoiceSources.map((name) => {
+                const disabled = name === 'fortnox' && !fortnoxReady;
+                return (
+                  <label key={name} className={disabled ? 'disabled' : ''}>
+                    <input
+                      type="radio"
+                      name="invoice-source"
+                      value={name}
+                      checked={source === name}
+                      disabled={disabled}
+                      onChange={() => setSource(name)}
+                    />
+                    {SOURCE_LABEL[name] || name}
+                    {disabled && <span className="muted"> (inte ansluten)</span>}
+                  </label>
+                );
+              })}
+            </div>
           </div>
+
+          {availableError && (
+            <Banner tone="error" onDismiss={() => setAvailableError('')}>{availableError}</Banner>
+          )}
 
           {available.length > 0 && (
             <div className="available-invoices">
-              <h4>Tillgängliga att läsa in</h4>
+              <h4>Tillgängliga att läsa in — {SOURCE_LABEL[source] || source}</h4>
+              {source === 'fortnox' && (
+                <p className="muted">
+                  Bokförd och annullerad läses ur ekonomisystemet och ändras aldrig
+                  av den här produkten.
+                </p>
+              )}
               <table>
                 <thead>
                   <tr>
-                    <th>Referens</th><th>Leverantör</th><th>Datum</th><th>Belopp</th><th />
+                    <th>Referens</th><th>Leverantör</th><th>Datum</th><th>Belopp</th>
+                    {source === 'fortnox' && <><th>Bokförd</th><th>Annullerad</th></>}
+                    <th />
                   </tr>
                 </thead>
                 <tbody>
@@ -586,10 +1039,25 @@ export default function Integrations({ brfId, documents, onOpenDocument, onOpenC
                         <td>{row.supplier_name}</td>
                         <td>{row.invoice_date || '—'}</td>
                         <td>{formatAmount(row.total_amount, row.currency)}</td>
-                        <td>
+                        {source === 'fortnox' && (
+                          <>
+                            <td>{row.booked ? 'ja' : 'nej'}</td>
+                            <td>{row.cancelled ? 'ja' : 'nej'}</td>
+                          </>
+                        )}
+                        <td className="available-actions">
                           <button type="button" disabled={busy} onClick={() => readInvoice(row.external_ref)}>
                             {alreadyRead ? 'Läs om och granska' : 'Läs in och granska'}
                           </button>
+                          {source === 'fortnox' && (
+                            <button
+                              type="button"
+                              className="secondary"
+                              onClick={() => { setMappingRef(row.external_ref); setPane('mapping'); }}
+                            >
+                              Kontrollera fälten
+                            </button>
+                          )}
                         </td>
                       </tr>
                     );
@@ -657,8 +1125,11 @@ export default function Integrations({ brfId, documents, onOpenDocument, onOpenC
                     key={finding.id}
                     finding={finding}
                     busy={busy}
+                    aliasConfirmed={Boolean(aliasConfirmed[finding.id])}
                     onDecide={decideFinding}
                     onOpenCitation={openCitation}
+                    onConfirmAlias={confirmAlias}
+                    onRerun={rerunReview}
                   />
                 ))}
                 {!findingsByInvoice.get(invoice.id) && (
@@ -667,6 +1138,57 @@ export default function Integrations({ brfId, documents, onOpenDocument, onOpenC
               </div>
             </article>
           ))}
+
+          <div className="alias-list">
+            <h4>Bekräftade leverantörsnamn</h4>
+            <p className="muted">
+              Namn som en person här har sagt hör till samma leverantör. De gör
+              kopplingen mellan faktura och avtal säker i stället för trolig.
+            </p>
+            {aliases.length === 0 ? (
+              <p className="empty">Inga bekräftade namn ännu.</p>
+            ) : (
+              <ul>
+                {aliases.map((alias) => (
+                  <li key={alias.id}>
+                    <span>
+                      <strong>{alias.invoice_name}</strong> är samma som{' '}
+                      <strong>{alias.document_name}</strong>
+                    </span>
+                    <span className="muted">
+                      {alias.note ? `${alias.note} · ` : ''}
+                      {alias.created_by} · {formatDateTime(alias.created_at)}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={busy}
+                      aria-label={`Ta bort ${alias.invoice_name} = ${alias.document_name}`}
+                      onClick={() => removeAlias(alias.id)}
+                    >
+                      <Trash2 size={14} /> Ta bort
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </section>
+      )}
+
+      {pane === 'mapping' && !loading && fortnoxReady && (
+        <section className="pane">
+          <MappingPreview brfId={brfId} initialRef={mappingRef} key={mappingRef} />
+        </section>
+      )}
+
+      {pane === 'connections' && !loading && connections && (
+        <section className="pane">
+          <IntegrationConnections
+            brfId={brfId}
+            connections={connections}
+            mailFolders={format?.mailFolders}
+            onChanged={refresh}
+          />
         </section>
       )}
     </div>

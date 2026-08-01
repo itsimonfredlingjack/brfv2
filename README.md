@@ -14,6 +14,10 @@ föreningens dokument ska avvisas i stället för att gissas.
 - [Drift- och förvaltningsplan](docs/DRIFT-FORVALTNINGSPLAN.md)
 - [Erfarenhetsåterföring](docs/ERFARENHETSATERFORING.md)
 - [Slutrapport](docs/SLUTRAPPORT.md)
+- [Integrationsdomänen](docs/INTEGRATIONSDOMAN.md) — inkommande underlag och
+  read-only fakturagranskning
+- [Ansluta en brevlåda](docs/INTEGRATION-OUTLOOK.md) ·
+  [Ansluta Fortnox](docs/INTEGRATION-FORTNOX.md)
 
 ## Ett repo, en produkt
 
@@ -80,6 +84,15 @@ Administratörer kan också ladda upp och radera PDF-dokument. Medlemmar kan
 inte göra det. Global sök, dokumentbunden chatt, kvalitetskontroll,
 bevakningar och allmän styrelseadministration ingår inte i MVP:n och är dolda
 eller spärrade i pilotvyn.
+
+Desktopinstallationen har utöver det en **granskningsslinga för inkommande
+underlag**: ett mejl kommer in — manuellt som `.eml` eller ur en ansluten
+brevlåda — bilagorna blir vanliga dokument, en leverantörsfaktura läses
+read-only ur fixturunderlag eller ur ett anslutet ekonomisystem, och
+jämförelsen mot föreningens egna avtal läggs fram som ett *fynd* med exakta
+citat, uttalad osäkerhet och tre möjliga domar. En människa avgör; produkten
+skriver aldrig tillbaka någonstans. Se
+[docs/INTEGRATIONSDOMAN.md](docs/INTEGRATIONSDOMAN.md).
 
 ## Lokal verifiering
 

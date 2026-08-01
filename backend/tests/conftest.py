@@ -89,6 +89,61 @@ def two_tenant_app(tmp_path):
 
 
 @pytest.fixture()
+def live_integration_app(tmp_path):
+    """Two tenants, over real HTTP, with the outbound transport replaced.
+
+    Same app, same routes, same auth as :func:`two_tenant_app` — the only
+    difference is that the live integrations' HTTP transport is a stub that
+    asserts the exact request shape and answers from a route table. That makes
+    the connection routes testable end to end without a credential, without a
+    network and without a recording, which is the property the whole suite is
+    built on.
+    """
+    from types import SimpleNamespace
+
+    from fastapi.testclient import TestClient
+
+    from app.auth import AuthStore
+    from app.main import SESSION_COOKIE, create_app
+    from app.registry import TenantRegistry
+    from tests.test_integrations_live import StubTransport
+
+    transport = StubTransport()
+    auth = AuthStore(tmp_path / "auth.db")
+    registry = TenantRegistry(tmp_path, auth)
+    app = create_app(
+        registry=registry, auth=auth, data_root=tmp_path, integration_transport=transport
+    )
+    client = TestClient(app)
+
+    registry.create("Brf A", "synthetic", "brf-a")
+    registry.create("Brf B", "synthetic", "brf-b")
+    admin_a = auth.create_user("admin-a@a.se", "lösenord-a-admin", "Admin A")
+    member_a = auth.create_user("member-a@a.se", "lösenord-a-medlem", "Member A")
+    admin_b = auth.create_user("admin-b@b.se", "lösenord-b-admin", "Admin B")
+    auth.add_membership(admin_a, "brf-a", "admin")
+    auth.add_membership(member_a, "brf-a", "member")
+    auth.add_membership(admin_b, "brf-b", "admin")
+
+    def auth_headers(email: str, password: str) -> dict:
+        r = client.post("/api/auth/login", json={"email": email, "password": password})
+        assert r.status_code == 200, r.text
+        session = r.cookies.get(SESSION_COOKIE)
+        assert session
+        client.cookies.clear()
+        return {"Cookie": f"{SESSION_COOKIE}={session}"}
+
+    return SimpleNamespace(
+        client=client,
+        transport=transport,
+        registry=registry,
+        admin_a_headers=auth_headers("admin-a@a.se", "lösenord-a-admin"),
+        member_a_headers=auth_headers("member-a@a.se", "lösenord-a-medlem"),
+        admin_b_headers=auth_headers("admin-b@b.se", "lösenord-b-admin"),
+    )
+
+
+@pytest.fixture()
 def integration_env(tmp_path):
     """One tenant with the seeded demo corpus, ready for integration work.
 

@@ -116,15 +116,58 @@ class MailImportAdapter(Protocol):
     ``SourceEvent`` — and whether its attachments are ingested — is the
     importer's call, made inside the tenant's own store.
 
-    There is no ``list_messages`` here on purpose. A mailbox listing is the
-    first step of continuous sync, and continuous sync is the thing this block
-    is explicitly not building. The operator chooses the file.
+    There is no ``list_messages`` here, because a file adapter has nothing to
+    list — the operator chose the file. Listing a *mailbox* is
+    :class:`MailboxReadAdapter`, and the distinction is the point: this
+    protocol cannot reach a mailbox at all, so the manual path stays available,
+    unchanged and credential-free even on an installation that has connected
+    one.
     """
 
     name: str
 
     def parse_message(self, raw: bytes, *, filename: str) -> object:
         """Parse and validate ``raw``. Raise on anything outside the accepted format."""
+        ...
+
+
+@runtime_checkable
+class MailboxReadAdapter(Protocol):
+    """Read a connected mailbox: list what is there, fetch one message's MIME.
+
+    Added when the live Microsoft Graph integration replaced the fixture-only
+    path. An earlier version of this file argued that no mailbox listing should
+    exist because "a mailbox listing is the first step of continuous sync". The
+    first half of that was wrong and the second half was the real point, so the
+    rule is now stated as what it always meant:
+
+        **Every read happens because a person asked for it.**
+
+    There is no polling loop, no webhook subscription, no delta token and no
+    background thread anywhere in this package, and the test suite asserts
+    that. What an operator gets is a list they asked to see and a message they
+    chose to import — which is the same shape as picking a file, with the
+    file-picking step done against the mailbox instead of the filesystem.
+
+    ``get_message_mime`` returns the message exactly as it exists on the wire,
+    so it can go through the same parser and the same atomic importer as a
+    manually exported `.eml`. Nothing here marks a message read, moves it,
+    replies to it or deletes it: the verb check below would refuse a method
+    named for any of those, and the adapter issues nothing but GETs.
+    """
+
+    name: str
+
+    def list_messages(self, *, limit: int, only_with_attachments: bool) -> list:
+        """Recent messages in the configured folder. Headers only, never bodies."""
+        ...
+
+    def get_message_mime(self, message_id: str) -> bytes:
+        """One message's raw MIME, for the ordinary `.eml` import path."""
+        ...
+
+    def account_label(self) -> str:
+        """Whose authority this connection reads under, for the operator to see."""
         ...
 
 
@@ -147,4 +190,5 @@ class AccountingReadAdapter(Protocol):
 # adapter protocol that is not passed through this call is the one hole in the
 # scheme, so the test suite asserts that every Protocol in this module is.
 assert_read_only(MailImportAdapter)
+assert_read_only(MailboxReadAdapter)
 assert_read_only(AccountingReadAdapter)

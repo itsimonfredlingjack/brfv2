@@ -328,6 +328,25 @@ test.describe('Bibliotek', () => {
   })
 })
 
+test.describe('Granskning', () => {
+  /* Against the real endpoint: a member's session cookie is the whole
+   * credential, and a förening that has imported nothing has no findings.
+   * "Nothing has come in" is a state the screen owes an answer to — a
+   * spinner that never resolves would be the same screen for both. */
+  test('a member with no findings is told so, and is offered no way to decide', async ({ page }) => {
+    await login(page)
+    await expect(page.getByRole('heading', { name: 'Fråga' })).toBeVisible()
+
+    const response = page.waitForResponse((r) => r.url().endsWith('/integrations/findings'))
+    await page.getByRole('link', { name: 'Granskning' }).click()
+    expect((await response).status()).toBe(200)
+
+    await expect(page.getByRole('heading', { name: 'Granskning' })).toBeVisible()
+    await expect(page.getByText('Inga fynd ännu')).toBeVisible()
+    await expect(page.getByTestId('readonly-note')).toContainText('görs i webbappen')
+  })
+})
+
 test.describe('Offline', () => {
   test('asking is refused up front, and an already-seen page still renders', async ({
     page,

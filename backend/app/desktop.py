@@ -320,8 +320,33 @@ def _backup_inventory(data_root: Path) -> dict:
     return {"tenants": tenants}
 
 
+def _is_excluded_from_backup(relative: Path) -> bool:
+    """True for the integration credential files, which never go in an archive.
+
+    A backup is the artefact most likely to leave the machine: copied to a USB
+    stick, mailed to a consultant, restored onto a spare laptop. A refresh
+    token in it is a standing grant to read somebody's mailbox that outlives
+    every conversation about who was allowed to, and nothing about a `.zip`
+    named "backup" tells the person handling it that it is a credential.
+
+    So the exclusion is structural rather than a cipher: the bytes are not in
+    the archive at all. Everything about the connection *except* the secret is
+    — which account, which scopes, who connected it — so a restored
+    installation shows its integrations as needing to be signed in again
+    rather than silently forgetting they existed. See
+    ``app.integrations.credentials``.
+    """
+    from .integrations.credentials import SECRET_DIRNAME
+
+    return SECRET_DIRNAME in relative.parts
+
+
 def create_backup(data_root: Path, backup_root: Path) -> dict:
-    """Zip the whole application data directory, atomically published."""
+    """Zip the whole application data directory, atomically published.
+
+    Everything except integration credentials — see
+    :func:`_is_excluded_from_backup`.
+    """
 
     backup_root.mkdir(parents=True, exist_ok=True)
     os.chmod(backup_root, 0o700)
@@ -331,20 +356,40 @@ def create_backup(data_root: Path, backup_root: Path) -> dict:
     tmp = backup_root / (name + ".part")
 
     inventory = _backup_inventory(data_root)
+
+    # Decide what goes in before the manifest is written, so the manifest can
+    # state the exclusion count. A manifest that described a different archive
+    # than the one it sits in would be worse than no manifest.
+    included: list[tuple[Path, Path]] = []
+    excluded = 0
+    for path in sorted(data_root.rglob("*")):
+        if path.is_symlink() or not path.is_file():
+            continue
+        relative = path.relative_to(data_root)
+        if _is_excluded_from_backup(relative):
+            excluded += 1
+            continue
+        included.append((path, relative))
+
     manifest = {
         "schema": BACKUP_SCHEMA,
         "createdAt": _utc_now().isoformat(),
         "appVersion": APP_VERSION,
+        # Stated in the archive itself: a restore is expected to ask for a new
+        # sign-in, and the person doing it should learn that from the backup
+        # rather than from a surprised integration.
+        "excludedCredentialFiles": excluded,
+        "excludedCredentialNote": (
+            "Integrationernas hemligheter (access- och refresh-tokens) ingår aldrig i en "
+            "säkerhetskopia. Efter återställning behöver en administratör ansluta igen."
+        ),
         **inventory,
     }
 
     files = 0
     with zipfile.ZipFile(tmp, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=6) as archive:
         archive.writestr(BACKUP_MANIFEST, json.dumps(manifest, ensure_ascii=False, indent=2))
-        for path in sorted(data_root.rglob("*")):
-            if path.is_symlink() or not path.is_file():
-                continue
-            relative = path.relative_to(data_root)
+        for path, relative in included:
             archive.write(path, BACKUP_PAYLOAD_PREFIX + relative.as_posix())
             files += 1
     os.chmod(tmp, 0o600)

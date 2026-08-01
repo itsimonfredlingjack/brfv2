@@ -93,16 +93,77 @@ mot den drift som faktiskt inträffar — någon utökar en adapter för att dat
 adaptrarna importerar en HTTP-klient eller nämner ett URL-schema över huvud
 taget, vilket testas separat.
 
-Två adaptrar levereras:
+Fyra adaptrar levereras:
 
 * **`EmlFileAdapter`** — läser en fil användaren pekat ut. Ingen brevlåda, ingen
   credential, ingen mapp, inget schema. Därav *fil*adapter, inte mejladapter.
-  Det finns medvetet ingen `list_messages`: en brevlådelistning är första steget
-  i kontinuerlig synk.
+* **`GraphMailAdapter`** — läser en **ansluten brevlåda** över Microsoft Graph.
+  Se [INTEGRATION-OUTLOOK.md](INTEGRATION-OUTLOOK.md).
 * **`FixtureAccountingAdapter`** — läser syntetiska fixturfiler från disk.
   Payloaden är formad som en leverantörsfakturaexport ur ett svenskt
-  ekonomisystem, så att mappningen är den riktiga övningen. En framtida adapter
-  mot ett verkligt system ersätter `_to_snapshot()` och ärver resten.
+  ekonomisystem, så att mappningen är den riktiga övningen.
+* **`FortnoxAccountingAdapter`** — läser leverantörsfakturor ur ett **anslutet
+  Fortnox-företag**, genom exakt den mappning fixturen övade in. Se
+  [INTEGRATION-FORTNOX.md](INTEGRATION-FORTNOX.md).
+
+### Rättelse: "ingen brevlådelistning"
+
+Den första versionen av `protocols.py` motiverade avsaknaden av `list_messages`
+med att "en brevlådelistning är första steget i kontinuerlig synk". Första
+halvan var fel och andra halvan var poängen. Regeln är nu skriven som det den
+alltid betydde:
+
+> **Varje läsning sker för att en människa bad om den.**
+
+Det finns ingen pollingslinga, ingen webhook-prenumeration, ingen delta-token
+och ingen bakgrundstråd någonstans i paketet, och testsviten kontrollerar det.
+Det en operatör får är en lista hen bad om att se och ett meddelande hen valde
+att importera — samma form som att peka ut en fil, med filvalet gjort mot
+brevlådan i stället för mot filsystemet.
+
+### Utgående trafik
+
+`app/integrations/egress.py` är den enda platsen produkten talar med ett system
+den inte äger. Tre regler, alla tvingande:
+
+1. **Sluten värdlista per leverantör.** En URL mot något annat vägras innan en
+   socket öppnas — även efter en omdirigering, för `Location` kontrolleras med
+   samma funktion som originalanropet.
+2. **GET för data, POST bara för tokens.** Att läsa någons brevlåda eller
+   reskontra är en GET. Den enda POST som finns är en egen metod, bunden till
+   leverantörens auktoritetsvärd och dess token-sökväg. Det finns ingen allmän
+   POST, ingen PUT, ingen PATCH och ingen DELETE.
+3. **Hemligheter når aldrig en logg.** Loggen skriver metod, värd och sökväg.
+   Query-strängen släpps hel — Graph lägger `$filter`-värden där, och en token
+   kan hamna var som helst efter en dålig refaktorering.
+
+Klassen tar sin transport som argument. I produktion är den `httpx`; i
+testsviten är den en stub som kräver exakt rätt begäran. Det är därför hela
+integrationen — inklusive vägranden — går att testa utan credential, utan nät
+och utan inspelad trafik.
+
+### Var credentials ligger, och inte ligger
+
+`app/integrations/credentials.py`. Två poster per ansluten leverantör:
+`Connection` (allt gränssnittet, API:et och ett supportsamtal får se — ingen
+hemlighet finns i typen, så ingen route behöver komma ihåg att skala bort en)
+och hemlighetsfilen (`0600` i en `0700`-katalog inne i föreningens egen
+katalog, så `registry.delete()` sveper den).
+
+**Säkerhetskopior bär inga credentials.** `create_backup` hoppar över katalogen
+vid namn och skriver antalet uteslutna filer i manifestet. Följden sägs rakt
+ut i stället för att döljas: efter en återställning står integrationerna som
+anslutna men oanvändbara, och en administratör loggar in igen. Det är rätt håll
+att ha fel åt — en refresh-token i ett arkiv som ingen behandlar som en
+hemlighet är ett stående tillstånd att läsa någons brevlåda, och det överlever
+varje samtal om vem som fick det.
+
+Det finns medvetet inget krypteringslager. En nyckel som ligger bredvid sin
+kryptotext skyddar mot exakt en sak, och på en enanvändarinstallation skulle
+nyckeln ligga i samma hemkatalog under samma rättigheter som filen den skyddar.
+Det som faktiskt skyddar de här bytena är filrättigheterna — samma skydd
+`auth.db` får för lösenordshashar och levande sessioner. Att rulla ett chiffer
+för att få det att se starkare ut vore värre än att säga det rakt ut.
 
 ## 4. Mejlintaget
 
@@ -164,9 +225,26 @@ Kvar i kandidatmängden hittade granskningen "5 000 kronor" *i fakturan själv*
 och rapporterade att fakturan stämmer med fakturan. Verifierat citat, tydlig
 dom, noll information. Regeln som stänger det är inte en filnamnskontroll: en
 inkommande bilaga är **det som granskas**, och föreningens eget arkiv är det som
-granskas mot. Ett avtal som kommit per mejl räknas alltså inte som underlag
-förrän någon medvetet lägger det i arkivet — en verklig begränsning, och rätt
-riktning att ha fel åt.
+granskas mot.
+
+Fram till det här blocket betydde det att ett avtal som kommit per mejl aldrig
+kunde bli underlag — konservativt, och en verklig lucka: styrelsen hade avtalet,
+produkten kunde se det, och den vägrade använda det. Nu finns steget som
+saknades, och det är en **handling, inte en inställning**:
+
+* en **namngiven administratör** arkiverar bilagan, och det sparas med vem;
+* hen måste säga **varför** — en mening, obligatorisk, för ett dokument som blir
+  bevis på ingens uttalade ansvar är inte ett arkiv;
+* det sker **per bilaga**, inte per meddelande: ett mejl med både avtal och
+  faktura arkiverar avtalet och låter fakturan ligga;
+* dokumentet flyttas inte och ändras inte. Det var redan inläst och citerbart;
+  det som ändras är att det inte längre utesluts som bevis;
+* det går att ångra. Ett oåterkalleligt beslut är ett beslut folk undviker att
+  fatta, och poängen är att det ska vara lätt att göra rätt.
+
+En fakturas **egna** bilagor är fortfarande uteslutna för just den fakturans
+granskning, arkiverade eller inte. Att arkivera en faktura-PDF är fullt rimligt;
+att låta den intyga sig själv är det inte.
 
 **2. Jämför bara samma sorts kvantitet.**
 Avtalet säger "1 250 kronor per timme". Fakturan går på 6 250 kr. De är inte
@@ -176,14 +254,39 @@ klassificeras därför som `rate` (per timme, per säck, per styck), `periodic`
 jämförbar post på fakturan — ett à-pris mot ett à-pris, ett periodbelopp mot
 fakturans periodbelopp.
 
-**3. Granskningen ankras på leverantörens namn.**
+**3. Granskningen ankras på leverantörens identitet.**
 Utan ankaret jämförde motorn ett hissbolags utryckningsavgift mot
 snöröjningsavtalets timtaxa och rapporterade en "möjlig avvikelse" på 13 750
 kronor. Allt i det var verifierat: beloppet stod verkligen i dokumentet, citatet
 löste verkligen upp. Det var ändå nonsens, för de två talen handlade aldrig om
-samma avtal. Nu gäller: om inget dokument namnger leverantören — ordagrant
+samma avtal. Nu gäller: om inget dokument identifierar leverantören — ordagrant
 verifierat, inte bara högt rankat — finns ingenting i arkivet som är bevis om
 den här fakturan, och enda ärliga svaret är *kan inte verifieras*.
+
+### Ankaret har en styrka, och styrkan står i fyndet
+
+Första versionen jämförde exakt tokensekvens, vilket var fel åt andra hållet:
+ett avtal som skriver "Snösvängen AB" var osynligt för en faktura från
+"Snösvängen Entreprenad AB", som är samma bolag. `app/integrations/supplier.py`
+avgör nu vad som ska letas efter, och `ReviewFinding.anchor_strength` bär svaret:
+
+| Styrka | Betyder |
+| -- | -- |
+| `org_number` | Fakturans organisationsnummer står ordagrant i dokumentet. Två bolag kan dela firmanamn; inga delar organisationsnummer. |
+| `exact` | Hela namnet står ordagrant. |
+| `alias` | En människa **här** har bekräftat att de två namnen är samma leverantör. Ett beslut, sparat med vems. |
+| `legal_form` | Samma namn, annan eller ingen bolagsform. |
+| `partial` | Den särskiljande delen stämmer, resten inte. **Svagt.** |
+
+Ett svagt ankare ger ett fynd — tystnad vore sämre — men fyndet måste då säga
+att namnen skiljer sig, och bär ett `alias_proposal` som en människa kan
+bekräfta med ett klick. Efter bekräftelsen är samma koppling stark. Det är
+skillnaden mellan ett system som lär sig och ett system som antar.
+
+Två spärrar mot att det blir slarv: en träff som bara är *början* på ett längre
+namn i dokumentet degraderas alltid till `partial` (annars hade "Snösvängen"
+inuti "Snösvängen Entreprenad AB" räknats som samma namn), och ett generiskt
+förstaord räcker aldrig ensamt — "Svenska Hiss AB" ankrar inte på "Svenska".
 
 ### Domarna
 
@@ -198,14 +301,43 @@ en avvikelse vore att påstå vad avtalet *säger*; det som faktiskt är fastst�
 är att den passage som hittades säger något annat — vilket inte är samma sak,
 eftersom villkoret kan stå på en sida som retrieval inte lyfte fram.
 
-### Vad den inte klarar
+### Villkor som inte är siffror
 
-Belopp och ISO-daterade perioder. Ett avtal som uttrycker sitt pris som "index
-enligt SCB:s entreprenadindex", eller sin löptid som "tolv månader från
-undertecknande", bär inget jämförbart värde. Då blir svaret *kan inte
-verifieras* i stället för en gissning — vilket är rätt svar och det en granskare
-kan agera på. Den seedade snöröjningsavtalets avtalstid ("från den 1 november
-2026 och tills vidare") är exakt det fallet, och används som testfall.
+`app/integrations/terms.py`. Den första versionen läste belopp och ISO-datum och
+svarade *kan inte verifieras* på allt annat — vilket är rätt svar när avtalet är
+tyst, men gavs till klausuler en människa läser utan besvär:
+
+> "Avtalet gäller från den 1 november 2026 och tills vidare."
+> "Avtalstiden är tolv (12) månader från undertecknande."
+> "Priserna indexregleras årligen enligt SCB:s entreprenadindex E84."
+> "Uppsägningstiden är tre månader."
+
+Problemet är att *kan inte verifieras* ser likadant ut oavsett om avtalet är
+tyst eller om koden inte kunde läsa vad det sa, och det är två helt olika
+situationer för den som ska agera. Så de läses nu, och används på tre sätt:
+
+**En löpande avtalstid är en avtalstid.** "från den 1 november 2026 och tills
+vidare" begränsar nedåt, och det räcker för att säga att en faktura ligger inom
+avtalet — med förbehållet om uppsägning utskrivet, för ett avtal som löper tills
+vidare är precis ett som kan ha upphört. Svenska datum (`den 1 november 2026`)
+läses; ett datum utan år gissas aldrig.
+
+**En indexklausul förbjuder en självsäker avvikelse.** Säger avtalet att priset
+indexregleras är ett citerat grundbelopp som skiljer sig från fakturan inte
+bevis för en avvikelse — det är bevis för att grundbeloppet inte är dagens pris.
+Domen blir *kan inte verifieras* med **både** beloppet och indexklausulen
+citerade, vilket är mer användbart än en "möjlig avvikelse" en granskare måste
+motbevisa. Är beloppen däremot lika är det fortfarande *överensstämmer*, med
+noteringen att ingen uppräkning slagit igenom.
+
+**Ett villkor som inte går att jämföra är ändå värt att citera.** En löptid utan
+känt undertecknandedatum, eller en uppsägningstid, redovisas som verifierat
+faktum med sitt citat. Svaret förblir *kan inte verifieras* och säger nu vilken
+klausul som lästes och varför den inte gick att jämföra.
+
+Kvar som gräns: ett indextal räknas aldrig upp åt någon, och ett
+undertecknandedatum som inte står i en citerad passage finns inte att räkna
+från.
 
 ## 6. API
 
@@ -217,17 +349,36 @@ allt som ändrar tillstånd kräver `admin`. En icke-medlem får `404`, aldrig `
 | Metod | Väg | Vad |
 | -- | -- | -- |
 | GET | `format` | Det accepterade formatet, ur parserns egna konstanter |
+| GET | `connections` | Anslutningarnas status. Innehåller ingen hemlighet |
+| PUT | `connections/microsoft-graph` | Konfigurera brevlådan (admin) |
+| PUT | `connections/fortnox` | Konfigurera ekonomisystemet (admin) |
+| POST | `connections/{p}/login` | Starta inloggning (admin) |
+| POST | `connections/{p}/login/poll` | Ett svep av device code-inloggningen (admin) |
+| POST | `connections/{p}/login/complete` | Lös in en inklistrad kod (admin) |
+| DELETE | `connections/{p}` | Koppla bort. Allt redan importerat ligger kvar (admin) |
+| GET | `mailbox/messages` | Lista den anslutna brevlådan. Bara rubrikrader (admin) |
+| POST | `mailbox/messages/{id}/import` | Importera ett valt meddelande (admin) |
 | GET | `source-events` | Kön |
 | GET | `source-events/{id}` | En händelse |
 | POST | `source-events` | Importera en `.eml` (admin) |
 | POST | `source-events/{id}/decision` | Godkänn/avfärda/korrigera, koppla dokument (admin) |
+| POST | `source-events/{e}/attachments/{a}/archive` | Arkivera bilagan som föreningens underlag; kräver ett skäl (admin) |
+| DELETE | `source-events/{e}/attachments/{a}/archive` | Ångra arkiveringen (admin) |
 | DELETE | `source-events/{id}` | Ta bort köposten. **Inte** kaskad: inlästa dokument ligger kvar |
-| GET | `available-invoices` | Vad adaptern kan erbjuda. Att titta lagrar ingenting |
+| GET | `supplier-aliases` | Bekräftade leverantörsnamn |
+| POST | `supplier-aliases` | Bekräfta att två namn är samma leverantör (admin) |
+| DELETE | `supplier-aliases/{id}` | Ta bort en bekräftelse (admin) |
+| GET | `available-invoices?source=` | Vad källan kan erbjuda. Att titta lagrar ingenting |
+| GET | `invoices/mapping-preview` | Vilket källfält som blev vilket av våra (admin) |
 | GET | `invoices` | Inlästa ögonblicksbilder |
 | POST | `invoices` | Läs in en (admin) |
 | POST | `invoices/{id}/review` | Kör granskningen (admin) |
-| GET | `findings` | Fynden |
+| GET | `findings` | Fynden. Läses också av mobilklienten, read-only |
 | POST | `findings/{id}/decision` | Ställningstagande (admin) |
+
+`source` på fakturaruttarna är `fixture` eller `fortnox`, aldrig gissat: en
+installation med Fortnox ansluten kan fortfarande läsa fixturunderlaget, och en
+skärmdump ska inte kunna förväxla de två.
 
 En omkörd granskning ersätter bara `open` fynd. Ett godkänt eller avfärdat fynd
 är ett protokoll över ett mänskligt beslut och raderas aldrig av en ny körning.
@@ -247,15 +398,30 @@ påstående, inte ett fynd.
 
 ## 8. Vad som inte finns, och varför
 
-Ingen Outlook, ingen Microsoft Graph, ingen Fortnox-OAuth, ingen API-klient,
-ingen polling, ingen webhook, ingen brevlådemapp, inget utskick, inget svar,
-ingen vidarebefordran, ingen extern arkivering, ingen bokföring, ingen kontering,
-ingen attest, ingen betalning och ingen statusändring i ett främmande system.
+Ingen polling, ingen webhook, ingen prenumeration, ingen delta-fråga, ingen
+bakgrundstråd, inget utskick, inget svar, ingen vidarebefordran, ingen
+markering som läst, ingen flytt, ingen radering i brevlådan, ingen extern
+arkivering, ingen bokföring, ingen kontering, ingen attest, ingen betalning och
+ingen statusändring i ett främmande system.
 
-Det är inte kvarvarande arbete i det här blocket. Det är blockets gräns. En
-live-spik mot Outlook eller Fortnox får starta först när ägarskap, samtycke,
-minsta behörighet, retention och faktiskt återkommande behov är beslutade — se
-Linear-dokumentet *Genomförandeordning — desktop, mejlintag och Fortnox*.
+Det är inte kvarvarande arbete. Det är blockets gräns, och den är byggd som
+frånvaro av kodväg snarare än som en regel någon ska minnas: `protocols.py`
+vägrar vid import ett adapterprotokoll med ett utåtriktat skrivverb, och
+`egress.py` har ingen metod som kan skicka något annat än GET mot ett API.
+
+Det som **numera finns**, och som §8 tidigare räknade upp som frånvarande, är
+live-läsning ur en ansluten brevlåda (Microsoft Graph) och ur ett anslutet
+Fortnox-företag — båda read-only, båda igångsatta av en namngiven
+administratör, båda dokumenterade i
+[INTEGRATION-OUTLOOK.md](INTEGRATION-OUTLOOK.md) och
+[INTEGRATION-FORTNOX.md](INTEGRATION-FORTNOX.md). Det som **inte** följer av
+det, och som fortfarande är föreningens beslut och inte programmets: vem som
+äger brevlådan, vem integrationen loggar in som, vilka fält styrelsen lagligen
+får läsa, och hur länge inläst material sparas.
+
+En ärlighet till, eftersom den inte går att koda bort: **Fortnox scopes är inte
+uppdelade i läs och skriv.** Read-only mot Fortnox är klientsidigt och vilar på
+de tre kontrollerbara sakerna i INTEGRATION-FORTNOX.md — inte på en behörighet.
 
 ## 9. Fixtures
 
@@ -272,22 +438,39 @@ generatorn inte längre reproducerar upptäcks.
 
 ## 10. Verifiering
 
-`backend/tests/test_integrations.py` (52) — adaptergränser, formatet och dess
+`backend/tests/test_integrations.py` — adaptergränser, formatet och dess
 vägran, atomisk import, dedup, värdeutvinning, granskningens tre domar,
 persistens och fixturhygien.
 
-`backend/tests/test_integrations_isolation.py` (18) — samma sak över riktig
-HTTP, med två föreningar: kön, fakturorna, fynden och bilagorna är osynliga för
-den andra tenanten, en bilaga läcker inte genom retrieval, en medlem får läsa men
-inte ändra, och `DELETE /api/brf/{id}` sveper integrationskatalogen.
+`backend/tests/test_integrations_review.py` — leverantörsnamn och
+organisationsnummer, svenska datum, löpande och relativa avtalstider,
+indexklausuler, ankarstyrkor, alias-slingan, och arkiveringen av en bilaga.
+
+`backend/tests/test_integrations_live.py` — utgående-gränsen (vägrad värd,
+vägrad omdirigering, ingen POST mot ett API), båda inloggningsflödena, roterad
+refresh-token, Graph- och Fortnox-adaptrarnas exakta anrop, och att ingen
+hemlighet lämnar processen — inklusive att en säkerhetskopia innehåller
+anslutningen men inte token.
+
+`backend/tests/test_integrations_isolation.py` och
+`backend/tests/test_integrations_connections_http.py` — samma sak över riktig
+HTTP, med två föreningar: kön, fakturorna, fynden, bilagorna, anslutningarna,
+aliasen och de påbörjade inloggningarna är osynliga för den andra tenanten, en
+medlem får läsa men inte ansluta, och `DELETE /api/brf/{id}` sveper
+integrationskatalogen inklusive credentials.
 
 `backend/tests/test_desktop.py` — den vertikala skivan genom desktopadapterns
 exakta origin-kontroll och installationsspecifika cookie.
 
-`brfv2-mockup/src/Integrations.test.jsx` (12) — att vyn håller isär verifierat,
-föreslaget och osäkert, att ett citat navigerar dit det säger, och att en
-korrigering utan förklaring vägras.
+`brfv2-mockup/src/Integrations.test.jsx` — att vyn håller isär verifierat,
+föreslaget och osäkert, att ett citat navigerar dit det säger, att en svag
+koppling syns som svag, och att en korrigering utan förklaring vägras.
+
+`xs_mobilapp` — mobilens read-only vy av fynden: samma tre block, samma
+citatnavigering, och inget sätt att fatta ett beslut därifrån.
 
 Ingenting i någon av dem behöver en credential, en nätverksendpoint eller en
 körande modell. Att de inte gör det är i sig en del av det som testas — en
-testsvit som behövde det skulle betyda att kodvägen gjorde det.
+testsvit som behövde det skulle betyda att kodvägen gjorde det. De två
+liveintegrationerna testas genom en injicerad transport som kräver exakt rätt
+begäran, vilket är strängare än ett verkligt anrop mot en förlåtande server.

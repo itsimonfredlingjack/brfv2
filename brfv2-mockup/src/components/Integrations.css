@@ -667,6 +667,396 @@
   cursor: pointer;
 }
 
+/* --- how it got here --- */
+
+.event-method {
+  margin: 0 0 4px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* --- adopting an attachment into the archive --- */
+
+.adoption-explainer {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  max-width: 78ch;
+}
+
+.event-attachments li {
+  display: grid;
+  gap: 7px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+/* An adopted attachment is evidence the review may cite, so it reads like the
+   confirmed half of the queue rather than like the proposed half. */
+.event-attachments li.adopted {
+  border-left: 3px solid rgba(80, 190, 130, 0.7);
+}
+
+.attachment-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.attachment-adoption {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+}
+
+.attachment-adoption p {
+  margin: 0;
+  flex: 1 1 260px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.attachment-adoption input {
+  flex: 1 1 260px;
+  min-width: 200px;
+  padding: 7px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--panel-border);
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.attachment-adopt,
+.attachment-withdraw {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--panel-border);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.attachment-adopt { border-color: rgba(80, 190, 130, 0.5); }
+
+.attachment-adopt:disabled,
+.attachment-withdraw:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* --- the connected mailbox --- */
+
+.mailbox {
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 18px;
+}
+
+.mailbox h4 {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.mailbox > p {
+  margin: 0 0 12px;
+  line-height: 1.6;
+  max-width: 78ch;
+}
+
+.mailbox-absent {
+  margin: 0 0 18px;
+  line-height: 1.6;
+  max-width: 78ch;
+}
+
+.mailbox-controls {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.mailbox-controls label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.mailbox-controls button,
+.mailbox-list button {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--accent, #6384ff);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.mailbox-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.mailbox-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  flex-wrap: wrap;
+}
+
+.mailbox-message {
+  display: grid;
+  gap: 3px;
+  flex: 1 1 320px;
+  font-size: 13px;
+}
+
+.mailbox-preview {
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* --- invoice source --- */
+
+.source-picker {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.source-picker label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+.source-picker label.disabled {
+  color: var(--text-secondary);
+  cursor: not-allowed;
+}
+
+.available-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.available-invoices button.secondary {
+  border-color: var(--panel-border);
+  color: var(--text-secondary);
+}
+
+/* --- the anchor --- */
+
+/* Strong and weak must not be two shades of the same block. A weak anchor is
+   the one thing that turns a verified number into a possibly irrelevant one,
+   so it is tinted like uncertainty and says so in words as well. */
+.finding-anchor {
+  margin-bottom: 12px;
+  padding: 10px 13px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+}
+
+.finding-anchor h5 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.finding-anchor p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+.finding-anchor.strong {
+  background: rgba(80, 190, 130, 0.08);
+  border-color: rgba(80, 190, 130, 0.3);
+}
+
+.finding-anchor.weak {
+  background: rgba(230, 180, 70, 0.12);
+  border-color: rgba(230, 180, 70, 0.45);
+  border-left-width: 3px;
+}
+
+.anchor-basis {
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--text-secondary);
+}
+
+.anchor-warning {
+  margin-top: 6px !important;
+  font-weight: 600;
+  color: rgb(235, 190, 95) !important;
+}
+
+/* --- alias --- */
+
+.alias-proposal {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px dashed rgba(99, 132, 255, 0.4);
+  background: rgba(99, 132, 255, 0.07);
+}
+
+.alias-proposal h5 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.alias-proposal p {
+  margin: 0 0 8px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+.alias-actions {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.alias-actions input {
+  flex: 1 1 220px;
+  padding: 7px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--panel-border);
+  background: rgba(0, 0, 0, 0.2);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.alias-confirm,
+.alias-rerun {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 13px;
+  border-radius: 9px;
+  border: 1px solid var(--accent, #6384ff);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.alias-confirm:disabled,
+.alias-rerun:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.alias-list {
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-top: 18px;
+}
+
+.alias-list h4 {
+  margin: 0 0 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.alias-list > p {
+  margin: 0 0 10px;
+  line-height: 1.6;
+  max-width: 78ch;
+}
+
+.alias-list ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.alias-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  font-size: 13px;
+  flex-wrap: wrap;
+}
+
+.alias-list button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 11px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+}
+
 @media (max-width: 720px) {
   .event-provenance dl > div,
   .invoice-provenance dl > div,

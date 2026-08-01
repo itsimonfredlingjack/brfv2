@@ -6,6 +6,13 @@ const dayTime = new Intl.DateTimeFormat('sv-SE', {
   minute: '2-digit',
 })
 const day = new Intl.DateTimeFormat('sv-SE', { day: 'numeric', month: 'long', year: 'numeric' })
+const stamp = new Intl.DateTimeFormat('sv-SE', {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+  hour: '2-digit',
+  minute: '2-digit',
+})
 
 /** "14:32" today, "3 mars 14:32" otherwise. */
 export function formatMoment(timestamp: number): string {
@@ -21,6 +28,13 @@ export function formatMoment(timestamp: number): string {
 export function formatDate(iso: string): string {
   const date = new Date(iso)
   return Number.isNaN(date.getTime()) ? '—' : day.format(date)
+}
+
+/** "12 maj 2026 14:32". For a record of what a person decided, where the hour
+ * is part of the record and not decoration. */
+export function formatTimestamp(iso: string): string {
+  const date = new Date(iso)
+  return Number.isNaN(date.getTime()) ? '—' : stamp.format(date)
 }
 
 /** "Gemma 4 12B (självhostad)" — provenance, not decoration. */

@@ -10,6 +10,82 @@ import type { Page } from '@playwright/test'
 const ANSWERABLE = 'Vad krävs för att hyra ut sin lägenhet i andra hand?'
 const BO = { email: 'bo@gjutformen12.se', password: 'gjutformen-medlem-2026' }
 
+/** Two findings that between them light up every block on the card: verified
+ * facts, the suggestion, the uncertainty, a weak anchor with an alias waiting
+ * on someone at a desk, and a decision already taken. */
+const FINDINGS = [
+  {
+    id: 'f-1',
+    tenant_id: 'gjutformen-12',
+    finding_type: 'invoice_contract_amount',
+    created_at: '2026-05-20T09:15:00+00:00',
+    invoice_id: 'inv-1',
+    source_event_id: null,
+    verdict: 'possible_deviation',
+    verdict_label: 'möjlig avvikelse',
+    verified_facts: [
+      { label: 'Leverantör enligt fakturan', value: 'Snösvängen AB', source: 'invoice', citation_index: null },
+      { label: 'Fakturabelopp', value: '6 250,00 SEK', source: 'invoice', citation_index: null },
+      { label: 'Belopp i citerat villkor', value: '1 250,00 SEK', source: 'document', citation_index: 0 },
+    ],
+    suggestion: 'Stäm av fakturans belopp mot avtalets timtaxa innan den attesteras.',
+    suggested_by: 'regelmotor',
+    uncertainty: 'Avtalet anger ingen mängd, så antalet timmar går inte att fastställa.',
+    citations: [
+      {
+        document_id: 'doc-1',
+        document_name: 'Snöröjningsavtal 2026',
+        page: 2,
+        quote: 'Ersättning utgår med 1 250 kronor per timme.',
+        quotes: ['Ersättning utgår med 1 250 kronor per timme.'],
+        chunk_id: 'c-1',
+        rects: [[72, 320, 380, 334]],
+        score: 0.82,
+        approximate: false,
+        corpus_origin: 'synthetic',
+      },
+    ],
+    anchor_strength: 'partial',
+    anchor_note:
+      'Snöröjningsavtal 2026 skriver "Snösvängen Entreprenad AB", fakturan säger "Snösvängen AB".',
+    alias_proposal: {
+      invoice_name: 'Snösvängen AB',
+      document_name: 'Snösvängen Entreprenad AB',
+      document_id: 'doc-1',
+      basis: 'Den särskiljande delen "Snösvängen" står ordagrant i Snöröjningsavtal 2026.',
+    },
+    status: 'open',
+    decided_by: null,
+    decided_at: null,
+    decision_note: null,
+  },
+  {
+    id: 'f-2',
+    tenant_id: 'gjutformen-12',
+    finding_type: 'invoice_contract_amount',
+    created_at: '2026-05-02T09:15:00+00:00',
+    invoice_id: 'inv-2',
+    source_event_id: null,
+    verdict: 'matches',
+    verdict_label: 'överensstämmer',
+    verified_facts: [
+      { label: 'Fakturabelopp', value: '12 500,00 SEK', source: 'invoice', citation_index: null },
+      { label: 'Belopp i citerat villkor', value: '12 500,00 SEK', source: 'document', citation_index: null },
+    ],
+    suggestion: 'Beloppet motsvarar avtalets månadsersättning.',
+    suggested_by: 'regelmotor',
+    uncertainty: null,
+    citations: [],
+    anchor_strength: 'org_number',
+    anchor_note: 'Kopplingen är gjord på organisationsnummer (556677-8899), som är entydigt.',
+    alias_proposal: null,
+    status: 'approved',
+    decided_by: 'bo@gjutformen12.se',
+    decided_at: '2026-05-03T07:40:00+00:00',
+    decision_note: 'Stämmer mot avtalet.',
+  },
+]
+
 const scan = (page: Page) =>
   new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
 
@@ -41,6 +117,28 @@ test.describe('Tillgänglighet', () => {
 
     await page.getByRole('link', { name: 'Bibliotek' }).click()
     await expect(page.getByRole('heading', { name: 'Bibliotek' })).toBeVisible()
+    expect((await scan(page).analyze()).violations).toEqual([])
+  })
+
+  /* The e2e backend seeds documents and users, not an imported invoice, so a
+   * populated findings screen only exists behind a stub. What is under test
+   * here is this client's rendering of a finding — contrast, structure, names
+   * — and a stub carries that honestly. The real endpoint is exercised
+   * against the real backend in the acceptance suite. */
+  test('granskningen är ren med fynd på skärmen', async ({ page }) => {
+    await page.route('**/integrations/findings', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(FINDINGS),
+      }),
+    )
+
+    await login(page)
+    await page.getByRole('link', { name: 'Granskning' }).click()
+    await expect(page.getByRole('heading', { name: 'Granskning' })).toBeVisible()
+    await expect(page.getByTestId('finding')).toHaveCount(2)
+
     expect((await scan(page).analyze()).violations).toEqual([])
   })
 

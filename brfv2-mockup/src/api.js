@@ -64,6 +64,47 @@ export const api = {
 export const integrationsApi = {
   format: (brfId) => request(`/api/brf/${brfId}/integrations/format`),
 
+  // Live connections. Configuring where to read and signing in to it are two
+  // separate calls because they are two separate human acts — an administrator
+  // may point the installation at a mailbox today and sign in tomorrow.
+  connections: (brfId) => request(`/api/brf/${brfId}/integrations/connections`),
+  configureGraph: (brfId, config) => request(
+    `/api/brf/${brfId}/integrations/connections/microsoft-graph`,
+    jsonBody('PUT', config),
+  ),
+  configureFortnox: (brfId, config) => request(
+    `/api/brf/${brfId}/integrations/connections/fortnox`,
+    jsonBody('PUT', config),
+  ),
+  beginLogin: (brfId, provider) => request(
+    `/api/brf/${brfId}/integrations/connections/${provider}/login`,
+    { method: 'POST' },
+  ),
+  pollLogin: (brfId, provider) => request(
+    `/api/brf/${brfId}/integrations/connections/${provider}/login/poll`,
+    { method: 'POST' },
+  ),
+  // An operator pastes the bare code as often as the whole redirect address.
+  // The backend pulls `code` and `state` out of either, so whatever was pasted
+  // goes in as `code` and nothing is parsed here.
+  completeLogin: (brfId, provider, pasted) => request(
+    `/api/brf/${brfId}/integrations/connections/${provider}/login/complete`,
+    jsonBody('POST', { code: pasted, state: '' }),
+  ),
+  disconnect: (brfId, provider) => request(
+    `/api/brf/${brfId}/integrations/connections/${provider}`,
+    { method: 'DELETE' },
+  ),
+
+  listMailboxMessages: (brfId, { limit = 25, onlyWithAttachments = true } = {}) => request(
+    `/api/brf/${brfId}/integrations/mailbox/messages`
+    + `?limit=${limit}&onlyWithAttachments=${onlyWithAttachments}`,
+  ),
+  importMailboxMessage: (brfId, messageId) => request(
+    `/api/brf/${brfId}/integrations/mailbox/messages/${encodeURIComponent(messageId)}/import`,
+    { method: 'POST' },
+  ),
+
   listSourceEvents: (brfId) => request(`/api/brf/${brfId}/integrations/source-events`),
   importSourceEvent: (brfId, file) => {
     const form = new FormData();
@@ -82,11 +123,31 @@ export const integrationsApi = {
     { method: 'DELETE' },
   ),
 
-  availableInvoices: (brfId) => request(`/api/brf/${brfId}/integrations/available-invoices`),
+  // Adoption: the attachment stays exactly where it is, and stops being
+  // excluded from the evidence the review may cite. The note is required by
+  // the route, so the form asks for it rather than sending something invented.
+  archiveAttachment: (brfId, eventId, attachmentId, note) => request(
+    `/api/brf/${brfId}/integrations/source-events/${eventId}`
+    + `/attachments/${attachmentId}/archive`,
+    jsonBody('POST', { note }),
+  ),
+  withdrawAttachment: (brfId, eventId, attachmentId) => request(
+    `/api/brf/${brfId}/integrations/source-events/${eventId}`
+    + `/attachments/${attachmentId}/archive`,
+    { method: 'DELETE' },
+  ),
+
+  availableInvoices: (brfId, source = 'fixture') => request(
+    `/api/brf/${brfId}/integrations/available-invoices?source=${encodeURIComponent(source)}`,
+  ),
   listInvoices: (brfId) => request(`/api/brf/${brfId}/integrations/invoices`),
-  importInvoice: (brfId, externalRef) => request(
+  importInvoice: (brfId, externalRef, source = 'fixture') => request(
     `/api/brf/${brfId}/integrations/invoices`,
-    jsonBody('POST', { external_ref: externalRef }),
+    jsonBody('POST', { external_ref: externalRef, source }),
+  ),
+  mappingPreview: (brfId, externalRef) => request(
+    `/api/brf/${brfId}/integrations/invoices/mapping-preview`
+    + `?external_ref=${encodeURIComponent(externalRef)}`,
   ),
   reviewInvoice: (brfId, invoiceId) => request(
     `/api/brf/${brfId}/integrations/invoices/${invoiceId}/review`,
@@ -97,6 +158,16 @@ export const integrationsApi = {
   decideFinding: (brfId, findingId, decision) => request(
     `/api/brf/${brfId}/integrations/findings/${findingId}/decision`,
     jsonBody('POST', decision),
+  ),
+
+  listSupplierAliases: (brfId) => request(`/api/brf/${brfId}/integrations/supplier-aliases`),
+  addSupplierAlias: (brfId, alias) => request(
+    `/api/brf/${brfId}/integrations/supplier-aliases`,
+    jsonBody('POST', alias),
+  ),
+  deleteSupplierAlias: (brfId, aliasId) => request(
+    `/api/brf/${brfId}/integrations/supplier-aliases/${aliasId}`,
+    { method: 'DELETE' },
   ),
 };
 

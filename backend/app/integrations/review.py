@@ -24,10 +24,17 @@ failure this product exists to avoid. The ``suggestion`` field says what to look
 at in plain Swedish and is labelled ``regelmotor``, because that is what wrote
 it.
 
-**Where it fails.** It reads amounts and ISO date ranges. A contract that
-expresses its price as "index enligt SCB:s entreprenadindex" carries no
-comparable value, and this returns *kan inte verifieras* rather than guessing —
-which is the correct answer, and the one a reviewer can act on.
+**What it reads.** Amounts, and periods written as ISO dates or in Swedish
+("från den 1 november 2026 och tills vidare"). Terms it can read but cannot
+compare — an index-regulated price, "tolv (12) månader från undertecknande", a
+notice period — are cited as facts and answered *kan inte verifieras* with the
+clause quoted, which is different information from having found nothing. See
+:mod:`app.integrations.terms`.
+
+**What anchors it.** The supplier's name or organisation number, verified
+verbatim in a document, with a recorded strength
+(:mod:`app.integrations.supplier`). A weak anchor still produces a finding, and
+that finding says the names differ and offers the alias for a human to confirm.
 """
 
 from __future__ import annotations
@@ -35,14 +42,18 @@ from __future__ import annotations
 import logging
 import re
 import uuid
+from dataclasses import dataclass
 from decimal import Decimal
 from typing import Iterable
 
 from ..citations import Rejected, Resolved, resolve_citation
 from ..schemas import CitationOut, Chunk
 from ..store import Store
+from . import supplier as supplier_mod
+from . import terms as terms_mod
 from .models import (
     VERDICT_LABELS,
+    AliasProposal,
     InvoiceSnapshot,
     ReviewFinding,
     Verdict,
@@ -85,7 +96,6 @@ _THOUSANDS_GROUP = re.compile(r"^\d{3}$")
 _NUMERIC_HEAD = re.compile(r"^\d{1,3}$")
 _PLAIN_NUMBER = re.compile(r"^\d+(?:[.,]\d{1,2})?$")
 _DECIMAL_TAIL = re.compile(r"^[.,]\d{1,2}$")
-_ISO_DATE = re.compile(r"\d{4}-\d{2}-\d{2}")
 
 # Terms that make a passage worth reading for a price. Used only to build the
 # retrieval query — never to decide anything.
@@ -94,34 +104,13 @@ _CONTRACT_TERMS = (
     "giltighetstid uppsägning indexreglering"
 )
 
-# A date range only counts as a *period* when one of these stands shortly
-# before it. Without the requirement, an invoice header's issue and due dates
-# read as an agreement period — which is what the first run of this engine did.
-_PERIOD_KEYWORDS = {
-    "period",
-    "perioden",
-    "avtalsperiod",
-    "avtalsperioden",
-    "avtalstid",
-    "avtalstiden",
-    "giltighetstid",
-    "gäller",
-    "löper",
-    "från",
-    "fr.o.m",
-    "t.o.m",
-    "avser",
-    "mellan",
-}
-_PERIOD_CONTEXT = 4
-
 
 # ---------------------------------------------------------------------------
 # Reading values out of page words
 # ---------------------------------------------------------------------------
 
 
-_EDGE_PUNCT = " \t()[]{}.,;:!?\"'§•·\u00a0"
+_EDGE_PUNCT = " \t()[]{}.,;:!?\"'§•· "
 
 # A number preceded by one of these is a year, a clause number or a page
 # reference, whatever happens to stand near it. "År 2030 utförs omputsning" sits
@@ -214,35 +203,17 @@ def amount_unit(words: list[str], end_index: int) -> AmountUnit:
 
 
 def scan_iso_periods(words: list[str]) -> list[tuple[int, int, str, str]]:
-    """Date ranges as ``(start, end_inclusive, from_iso, to_iso)``.
+    """Closed date ranges, kept for callers that only want the old shape.
 
-    Two dates near each other are not automatically a period. An invoice header
-    reading "Fakturadatum: 2026-02-03  Förfallodatum: 2026-03-05" produced a
-    confident "citerad period 2026-02-03 – 2026-03-05" in the first run of this
-    engine, which was simply false. So a period keyword has to stand within a
-    few tokens before the first date, and the two dates must be adjacent or
-    separated by one dash-like token.
-
-    Handles both shapes extraction produces: two separate date tokens, and one
-    token carrying both because the PDF had no space around the dash.
+    :func:`app.integrations.terms.scan_periods` is what the review uses now: it
+    reads Swedish month names and open-ended agreements as well, and returns
+    them as :class:`~app.integrations.terms.PeriodTerm`.
     """
-    found: list[tuple[int, int, str, str]] = []
-    for i, word in enumerate(words):
-        dates = _ISO_DATE.findall(_clean(word))
-        if not dates:
-            continue
-        context = {_clean(w).lower() for w in words[max(0, i - _PERIOD_CONTEXT) : i]}
-        if not (context & _PERIOD_KEYWORDS):
-            continue
-        if len(dates) >= 2:
-            found.append((i, i, dates[0], dates[1]))
-            continue
-        for j in range(i + 1, min(len(words), i + 3)):
-            ahead = _ISO_DATE.findall(_clean(words[j]))
-            if ahead:
-                found.append((i, j, dates[0], ahead[0]))
-                break
-    return found
+    return [
+        (p.span.start, p.span.end, p.start_iso, p.end_iso)
+        for p in terms_mod.scan_periods(words)
+        if p.end_iso is not None
+    ]
 
 
 # ---------------------------------------------------------------------------
@@ -308,25 +279,7 @@ def _citation(
 
 
 def incoming_document_ids(store: Store) -> set[str]:
-    """Documents that arrived as attachments in the integration queue.
-
-    These are excluded from being cited as evidence, and the reason is the most
-    important rule in this module.
-
-    An invoice PDF that was imported from a `.eml` becomes an ordinary document:
-    indexed, retrievable, citable. Left in the candidate pool, the review then
-    found "5 000 kronor" *in the invoice itself* and reported that the invoice
-    agrees with the invoice — a verified citation, a confident verdict, and no
-    information whatsoever. The first end-to-end run of this engine did exactly
-    that.
-
-    The rule that fixes it is not a filename check. It is that an incoming
-    attachment is the material *being reviewed*, and the association's own
-    archive is what carries authority to review it against. A contract that
-    arrived by mail therefore does not count as evidence until someone uploads
-    it to the archive deliberately — a real limitation, and the conservative
-    direction to be wrong in.
-    """
+    """Every document that arrived as an attachment in the integration queue."""
     incoming: set[str] = set()
     try:
         events = store.integrations.list_source_events()
@@ -340,11 +293,66 @@ def incoming_document_ids(store: Store) -> set[str]:
     return incoming
 
 
+def unadopted_incoming_document_ids(store: Store) -> set[str]:
+    """Queue attachments **nobody has put in the archive**, which are not evidence.
+
+    This is the most important rule in this module, and the adoption step is
+    what makes it liveable.
+
+    An invoice PDF imported from a `.eml` becomes an ordinary document:
+    indexed, retrievable, citable. Left in the candidate pool, the review then
+    found "5 000 kronor" *in the invoice itself* and reported that the invoice
+    agrees with the invoice — a verified citation, a confident verdict, and no
+    information whatsoever. The first end-to-end run of this engine did exactly
+    that.
+
+    The rule that fixes it is not a filename check. It is that an incoming
+    attachment is the material *being reviewed*, and the association's own
+    archive is what carries authority to review it against. Until this block
+    shipped adoption, that meant a contract received by mail could never become
+    evidence at all — conservative, and a real gap: the board had the contract,
+    the product could see it, and it refused to use it.
+
+    Now a named administrator can adopt one — an explicit act, recorded with
+    who and when and why (``Attachment.archived*``). An adopted attachment is a
+    document of the association's, and behaves like any other. An unadopted one
+    is still only material, and is excluded here.
+    """
+    excluded: set[str] = set()
+    try:
+        events = store.integrations.list_source_events()
+    except Exception as exc:
+        logger.error("Kunde inte läsa källhändelser för uteslutning: %s", exc)
+        raise
+    for event in events:
+        for attachment in event.attachments:
+            if attachment.document_id and not attachment.archived:
+                excluded.add(attachment.document_id)
+    return excluded
+
+
+def evidence_excluded_document_ids(store: Store, invoice: InvoiceSnapshot) -> set[str]:
+    """What may not be cited as evidence about *this* invoice.
+
+    Two rules, and the second is not implied by the first: every unadopted
+    queue attachment, **plus** every attachment of the source event this
+    invoice came in on — adopted or not. Adopting the PDF of an invoice is a
+    perfectly reasonable thing for a board to do; letting that invoice then
+    corroborate itself is not.
+    """
+    excluded = unadopted_incoming_document_ids(store)
+    if invoice.source_event_id:
+        event = store.integrations.get_source_event(invoice.source_event_id)
+        if event is not None:
+            excluded |= {a.document_id for a in event.attachments if a.document_id}
+    return excluded
+
+
 def _candidates(store: Store, invoice: InvoiceSnapshot) -> list[tuple[_Candidate, float]]:
     """Chunks worth reading for this invoice, best first."""
     query = f"{invoice.supplier_name} {_CONTRACT_TERMS}".strip()
     settings = store.settings
-    excluded = incoming_document_ids(store)
+    excluded = evidence_excluded_document_ids(store, invoice)
     try:
         hits = store.index.search(
             query,
@@ -375,6 +383,181 @@ def _candidates(store: Store, invoice: InvoiceSnapshot) -> list[tuple[_Candidate
 
 
 # ---------------------------------------------------------------------------
+# The anchor
+# ---------------------------------------------------------------------------
+
+
+@dataclass
+class Anchor:
+    """The verified fact that a document is about this invoice's supplier."""
+
+    citation: CitationOut
+    document_id: str
+    document_name: str
+    strength: str
+    matched_text: str
+    confirmed_by: str = ""
+
+    @property
+    def weak(self) -> bool:
+        return self.strength in supplier_mod.WEAK_STRENGTHS
+
+    def note(self, invoice: InvoiceSnapshot) -> str:
+        if self.strength == "org_number":
+            return (
+                f"Kopplingen är gjord på organisationsnummer ({self.matched_text}), "
+                "som är entydigt."
+            )
+        if self.strength == "exact":
+            return f"{self.document_name} namnger {invoice.supplier_name} ordagrant."
+        if self.strength == "alias":
+            who = f" ({self.confirmed_by})" if self.confirmed_by else ""
+            return (
+                f"{self.document_name} skriver \"{self.matched_text}\". En person här har "
+                f"bekräftat att det är samma leverantör som {invoice.supplier_name}{who}."
+            )
+        if self.strength == "legal_form":
+            return (
+                f"{self.document_name} skriver \"{self.matched_text}\" — samma namn som på "
+                "fakturan, med annan bolagsform."
+            )
+        return (
+            f"{self.document_name} skriver \"{self.matched_text}\", fakturan säger "
+            f"\"{invoice.supplier_name}\". Namnen är inte identiska; kopplingen bygger på "
+            "att den särskiljande delen är densamma."
+        )
+
+    def proposal(self, invoice: InvoiceSnapshot) -> AliasProposal | None:
+        if not self.weak:
+            return None
+        return AliasProposal(
+            invoice_name=invoice.supplier_name,
+            document_name=self.matched_text,
+            document_id=self.document_id,
+            basis=(
+                f"Den särskiljande delen \"{self.matched_text}\" står ordagrant i "
+                f"{self.document_name}."
+            ),
+        )
+
+
+def _full_name_at(words: list[str], start: int, size: int) -> tuple[str, bool]:
+    """The company name the document actually writes, and whether we matched all of it.
+
+    A needle can match a *prefix* of a longer name: the invoice says
+    "Snösvängen AB", its core is the single token "snösvängen", and that token
+    appears inside "Snösvängen Entreprenad AB". Treating that as "same name,
+    different legal form" would overstate it — the document names something
+    longer, and only a person can say the two are one company.
+
+    So the match is extended rightwards across further capitalised tokens and a
+    trailing legal form, and the caller is told whether anything was added. The
+    extended text is also what an alias proposal should carry: a human asked to
+    confirm "Snösvängen AB = Snösvängen Entreprenad AB" is being asked the real
+    question, where "Snösvängen AB = Snösvängen" is asking about a fragment.
+    """
+    end = start + size - 1
+    extended = end
+    while extended + 1 < len(words):
+        # A name cannot continue past the end of its own sentence or clause.
+        # "…Snösvängen Entreprenad AB. Entreprenören ska…" would otherwise
+        # swallow the next sentence's first word, and a match that reached that
+        # far would be judged a prefix of a longer name that does not exist.
+        if words[extended].rstrip().endswith((".", ",", ";", ":", ")", "!", "?")):
+            break
+        nxt = _clean(words[extended + 1])
+        if not nxt:
+            break
+        lowered = supplier_mod.tokens_of(nxt)
+        if not lowered:
+            break
+        if lowered[0] in supplier_mod.LEGAL_FORM_TOKENS:
+            extended += 1
+            continue
+        # A capitalised word directly after a company name is part of it.
+        # Anything else — a verb, a comma, "org.nr" — ends the name.
+        if nxt[:1].isupper() and nxt.isalpha():
+            extended += 1
+            continue
+        break
+    # Trailing legal-form tokens are part of the name but do not make the match
+    # a prefix: "Snösvängen Entreprenad" against "Snösvängen Entreprenad AB" is
+    # the same name.
+    real_end = extended
+    while real_end > end and supplier_mod.tokens_of(_clean(words[real_end]))[:1] and supplier_mod.tokens_of(
+        _clean(words[real_end])
+    )[0] in supplier_mod.LEGAL_FORM_TOKENS:
+        real_end -= 1
+    return " ".join(_clean(w) for w in words[start : extended + 1]).strip(), real_end > end
+
+
+def _find_anchor(
+    store: Store, invoice: InvoiceSnapshot, candidates: list[tuple[_Candidate, float]]
+) -> Anchor | None:
+    """The strongest verified mention of this supplier, or None.
+
+    Strongest, not first: a document that carries the organisation number
+    outranks one that carries a partially matching name, however the retrieval
+    happened to order them. Ranking is not evidence — see
+    :func:`review_invoice`.
+    """
+    aliases = [
+        (a.document_name, a.created_by) for a in store.integrations.aliases_for(invoice.supplier_name)
+    ]
+    needles = supplier_mod.needles_for(
+        invoice.supplier_name,
+        org_number=invoice.supplier_ref or "",
+        aliases=aliases,
+    )
+    if not needles:
+        return None
+
+    best: Anchor | None = None
+    for candidate, score in candidates:
+        words = candidate.slice()
+        lowered = [supplier_mod.tokens_of(_clean(w)) for w in words]
+        # One token per word after normalisation; a word that normalises to
+        # nothing (a bullet, a rule) can never start a match.
+        flat = [parts[0] if parts else "" for parts in lowered]
+        for needle in needles:
+            if best is not None and supplier_mod.strength_rank(
+                needle.strength
+            ) >= supplier_mod.strength_rank(best.strength):
+                continue
+            size = len(needle.tokens)
+            for i in range(len(flat) - size + 1):
+                if tuple(flat[i : i + size]) != needle.tokens:
+                    continue
+                written, is_prefix = _full_name_at(words, i, size)
+                strength = needle.strength
+                if is_prefix and strength in ("exact", "legal_form"):
+                    # We matched part of a longer name. That is a candidate, not
+                    # an identity — a person has to say so, which is what the
+                    # weak strength and its alias proposal ask for.
+                    strength = "partial"
+                if best is not None and supplier_mod.strength_rank(
+                    strength
+                ) >= supplier_mod.strength_rank(best.strength):
+                    continue
+                quote = candidate.quote_for(i, i + size - 1)
+                citation = _citation(store, candidate.chunk, quote, score)
+                if citation is None:
+                    continue
+                best = Anchor(
+                    citation=citation,
+                    document_id=candidate.chunk.document_id,
+                    document_name=citation.document_name,
+                    strength=strength,
+                    matched_text=written or " ".join(_clean(w) for w in words[i : i + size]),
+                    confirmed_by=needle.confirmed_by,
+                )
+                break
+            if best is not None and best.strength == supplier_mod.STRENGTH_ORDER[0]:
+                return best
+    return best
+
+
+# ---------------------------------------------------------------------------
 # The review
 # ---------------------------------------------------------------------------
 
@@ -388,6 +571,7 @@ def _finding(
     citations: Iterable[CitationOut] = (),
     suggestion: str,
     uncertainty: str | None,
+    anchor: Anchor | None = None,
 ) -> ReviewFinding:
     return ReviewFinding(
         id=uuid.uuid4().hex[:12],
@@ -402,6 +586,9 @@ def _finding(
         citations=list(citations),
         suggestion=suggestion,
         uncertainty=uncertainty,
+        anchor_strength=anchor.strength if anchor else None,
+        anchor_note=anchor.note(invoice) if anchor else None,
+        alias_proposal=anchor.proposal(invoice) if anchor else None,
     ).with_label()
 
 
@@ -411,38 +598,13 @@ def _money(value: Decimal | None, currency: str) -> str:
     return f"{value:,.2f} {currency}".replace(",", " ").replace(".", ",", 1)
 
 
-def _supplier_mention(
-    store: Store, invoice: InvoiceSnapshot, candidates: list[tuple[_Candidate, float]]
-) -> tuple[CitationOut, str] | None:
-    """A verified citation of the supplier's name, when a document carries it.
-
-    This is what turns "retrieval ranked this document first" into "this
-    document names the supplier on this page" — a fact rather than a ranking,
-    and the anchor the whole review hangs on (see :func:`review_invoice`).
-    """
-    name_words = [w for w in invoice.supplier_name.split() if len(w) > 2]
-    if not name_words:
-        return None
-    needle = [w.casefold() for w in name_words]
-    for candidate, score in candidates:
-        words = candidate.slice()
-        lowered = [_clean(w).casefold() for w in words]
-        for i in range(len(lowered) - len(needle) + 1):
-            if lowered[i : i + len(needle)] == needle:
-                quote = candidate.quote_for(i, i + len(needle) - 1)
-                citation = _citation(store, candidate.chunk, quote, score)
-                if citation is not None:
-                    return citation, candidate.chunk.document_id
-    return None
-
-
 def review_invoice(store: Store, invoice: InvoiceSnapshot) -> list[ReviewFinding]:
     """Compare one invoice against the tenant's own documents.
 
-    The review is anchored on the supplier's name. Unless some document names
-    the supplier — verified verbatim, not merely ranked highly by retrieval —
-    nothing in the archive is evidence about this invoice, and the only honest
-    answer is *kan inte verifieras*.
+    The review is anchored on the supplier's identity. Unless some document
+    names the supplier — verified verbatim, not merely ranked highly by
+    retrieval — nothing in the archive is evidence about this invoice, and the
+    only honest answer is *kan inte verifieras*.
 
     Without that anchor the engine compared an elevator company's call-out fee
     against the snow-clearing contract's hourly rate and reported a "möjlig
@@ -456,9 +618,9 @@ def review_invoice(store: Store, invoice: InvoiceSnapshot) -> list[ReviewFinding
 
     currency = invoice.currency or "SEK"
     candidates = _candidates(store, invoice)
-    supplier = _supplier_mention(store, invoice, candidates)
+    anchor = _find_anchor(store, invoice, candidates)
 
-    if supplier is None:
+    if anchor is None:
         return [
             _finding(
                 invoice,
@@ -478,31 +640,32 @@ def review_invoice(store: Store, invoice: InvoiceSnapshot) -> list[ReviewFinding
                 ],
                 suggestion=(
                     f"Inget dokument i föreningens arkiv namnger {invoice.supplier_name}. "
-                    "Ladda upp avtalet, eller granska fakturan mot underlag utanför appen."
+                    "Ladda upp avtalet, arkivera det om det kommit per mejl, eller granska "
+                    "fakturan mot underlag utanför appen."
                 ),
                 uncertainty=(
                     "Utan ett dokument som namnger leverantören finns ingenting att "
                     "jämföra mot. Belopp i andra avtal är inte jämförbara med den här "
                     "fakturan, hur nära de än ligger i siffror. Observera att en bilaga "
-                    "som kommit in i granskningskön inte räknas som underlag — den är "
-                    "det som granskas, inte det som granskas mot."
+                    "som ligger kvar i granskningskön inte räknas som underlag — den är "
+                    "det som granskas, inte det som granskas mot, förrän någon "
+                    "uttryckligen arkiverar den."
                 ),
             )
         ]
 
-    # Only documents that name the supplier may carry evidence about this
+    # Only documents that identify the supplier may carry evidence about this
     # invoice. Everything else in the archive is about something else.
-    anchor_documents = {supplier[1]}
-    anchored = [c for c in candidates if c[0].chunk.document_id in anchor_documents]
+    anchored = [c for c in candidates if c[0].chunk.document_id == anchor.document_id]
 
     findings: list[ReviewFinding] = []
 
-    amount_finding = _review_amount(store, invoice, anchored, supplier, currency)
+    amount_finding = _review_amount(store, invoice, anchored, anchor, currency)
     if amount_finding is not None:
         findings.append(amount_finding)
 
     if invoice.period_start and invoice.period_end:
-        period_finding = _review_period(store, invoice, anchored, supplier)
+        period_finding = _review_period(store, invoice, anchored, anchor)
         if period_finding is not None:
             findings.append(period_finding)
 
@@ -520,19 +683,20 @@ def review_invoice(store: Store, invoice: InvoiceSnapshot) -> list[ReviewFinding
                     ),
                     VerifiedFact(
                         label="Leverantören namnges i dokumentet",
-                        value=invoice.supplier_name,
+                        value=anchor.matched_text,
                         source="document",
                         citation_index=0,
                     ),
                 ],
-                citations=[supplier[0]],
+                citations=[anchor.citation],
                 suggestion=(
-                    f"{supplier[0].document_name} namnger {invoice.supplier_name}, men "
+                    f"{anchor.document_name} namnger {invoice.supplier_name}, men "
                     "fakturan bär inget belopp och ingen period att jämföra."
                 ),
                 uncertainty=(
                     "Fakturan saknar de fält som den här granskningen kan jämföra."
                 ),
+                anchor=anchor,
             )
         )
     return findings
@@ -575,11 +739,35 @@ def _comparison_targets(invoice: InvoiceSnapshot) -> list[tuple[str, str, Decima
     return targets
 
 
+def _index_clause(
+    store: Store, candidates: list[tuple[_Candidate, float]]
+) -> tuple[CitationOut, terms_mod.IndexTerm] | None:
+    """A verified clause saying the price follows an index, if the contract has one."""
+    for candidate, score in candidates:
+        words = candidate.slice()
+        for clause in terms_mod.scan_index_clauses(words):
+            quote = candidate.quote_for(clause.span.start, clause.span.end)
+            citation = _citation(store, candidate.chunk, quote, score)
+            if citation is not None:
+                return citation, clause
+    return None
+
+
+def _weak_anchor_caveat(anchor: Anchor, invoice: InvoiceSnapshot) -> str:
+    if not anchor.weak:
+        return ""
+    return (
+        f" Kopplingen mellan fakturans \"{invoice.supplier_name}\" och dokumentets "
+        f"\"{anchor.matched_text}\" är inte bekräftad av någon här — bekräfta att det är "
+        "samma leverantör innan fyndet används."
+    )
+
+
 def _review_amount(
     store: Store,
     invoice: InvoiceSnapshot,
     candidates: list[tuple[_Candidate, float]],
-    supplier: tuple[CitationOut, str] | None,
+    anchor: Anchor,
     currency: str,
 ) -> ReviewFinding | None:
     targets = _comparison_targets(invoice)
@@ -613,17 +801,15 @@ def _review_amount(
                 )
             )
 
-    citations: list[CitationOut] = []
-    if supplier is not None:
-        citations.append(supplier[0])
-        invoice_facts.append(
-            VerifiedFact(
-                label="Leverantören namnges i dokumentet",
-                value=invoice.supplier_name,
-                source="document",
-                citation_index=0,
-            )
+    citations: list[CitationOut] = [anchor.citation]
+    invoice_facts.append(
+        VerifiedFact(
+            label="Leverantören namnges i dokumentet",
+            value=anchor.matched_text,
+            source="document",
+            citation_index=0,
         )
+    )
 
     # value, unit, citation, target label, target value
     match: tuple[Decimal, str, CitationOut, str, Decimal] | None = None
@@ -668,6 +854,18 @@ def _review_amount(
                 citation_index=len(citations) - 1,
             )
         )
+        index = _index_clause(store, candidates)
+        index_note = ""
+        if index is not None:
+            # Equal amounts and an index clause is still a match — the printed
+            # price and the invoice agree, which is exactly what an index that
+            # has not yet been applied looks like. Worth saying, not worth
+            # downgrading.
+            citations.append(index[0])
+            index_note = (
+                f" Avtalet har ett {index[1].human()}; att beloppen är lika betyder att "
+                "ingen uppräkning slagit igenom på den här fakturan."
+            )
         return _finding(
             invoice,
             "invoice_contract_amount",
@@ -677,12 +875,14 @@ def _review_amount(
             suggestion=(
                 f"{label.capitalize()} ({_money(target_value, currency)}) motsvarar det "
                 f"citerade villkoret i {citation.document_name} s. {citation.page}."
+                + index_note
             ),
             uncertainty=(
                 "Jämförelsen gäller det citerade villkoret och ingenting annat. "
                 "Antal timmar, mängder, indexuppräkning, tillägg och senare ändringar "
-                "är inte kontrollerade."
+                "är inte kontrollerade." + _weak_anchor_caveat(anchor, invoice)
             ),
+            anchor=anchor,
         )
 
     if nearest is not None:
@@ -696,6 +896,44 @@ def _review_amount(
                 citation_index=len(citations) - 1,
             )
         )
+        index = _index_clause(store, candidates)
+        if index is not None:
+            # An index-regulated price makes a difference between the printed
+            # amount and the invoice uninformative: the printed amount is a
+            # base, not the current price. Reporting "möjlig avvikelse" here
+            # would hand a reviewer a number to disprove rather than a fact to
+            # act on. The honest verdict is that this cannot be verified, and
+            # the useful part is *why*, with both clauses cited.
+            citations.append(index[0])
+            invoice_facts.append(
+                VerifiedFact(
+                    label="Prisvillkoret är indexreglerat",
+                    value=index[1].human(),
+                    source="document",
+                    citation_index=len(citations) - 1,
+                )
+            )
+            return _finding(
+                invoice,
+                "contract_term_not_comparable",
+                "cannot_be_verified",
+                facts=invoice_facts,
+                citations=citations,
+                suggestion=(
+                    f"{label.capitalize()} är {_money(target_value, currency)} och det citerade "
+                    f"villkoret i {citation.document_name} s. {citation.page} anger "
+                    f"{_money(value, currency)}. Skillnaden går inte att tolka som en avvikelse: "
+                    f"priset är {index[1].human()}. Räkna upp grundbeloppet enligt indexvillkoret "
+                    "innan fakturan bedöms."
+                ),
+                uncertainty=(
+                    "Det citerade beloppet är en grundnivå, inte det pris som gäller idag. "
+                    "Vilket indextal som ska tillämpas, från vilken basmånad och för vilken "
+                    "period framgår inte av den här jämförelsen."
+                    + _weak_anchor_caveat(anchor, invoice)
+                ),
+                anchor=anchor,
+            )
         return _finding(
             invoice,
             "invoice_contract_amount",
@@ -714,7 +952,9 @@ def _review_amount(
                 "det enda jämförbara som gick att verifiera; villkoret kan avse en annan "
                 "period eller tjänst, ett belopp före indexuppräkning, eller ha ändrats "
                 "genom ett tillägg som inte finns i den citerade passagen."
+                + _weak_anchor_caveat(anchor, invoice)
             ),
+            anchor=anchor,
         )
 
     return _finding(
@@ -728,20 +968,63 @@ def _review_amount(
             "fakturan. Granska manuellt."
         ),
         uncertainty=(
-            "Inga belopp kunde citeras ordagrant som jämförbara med fakturan."
-            if not verified_any_amount
-            else "Belopp gick att verifiera i dokumenten, men inget av dem avser samma "
-            "sorts kvantitet som fakturan — ett à-pris kan inte jämföras med ett "
-            "totalbelopp utan att antal och mängder är kända."
+            (
+                "Inga belopp kunde citeras ordagrant som jämförbara med fakturan."
+                if not verified_any_amount
+                else "Belopp gick att verifiera i dokumenten, men inget av dem avser samma "
+                "sorts kvantitet som fakturan — ett à-pris kan inte jämföras med ett "
+                "totalbelopp utan att antal och mängder är kända."
+            )
+            + _weak_anchor_caveat(anchor, invoice)
         ),
+        anchor=anchor,
     )
+
+
+def _uncomparable_period_terms(
+    store: Store, candidates: list[tuple[_Candidate, float]]
+) -> tuple[list[CitationOut], list[VerifiedFact], list[str]]:
+    """Terms about time that were read and cited but cannot be compared.
+
+    A duration counted from a signing date the product does not have, and a
+    notice period. Both are real answers to "what does the agreement say about
+    time", and both are invisible to a date comparison.
+    """
+    citations: list[CitationOut] = []
+    facts: list[VerifiedFact] = []
+    descriptions: list[str] = []
+    for candidate, score in candidates:
+        words = candidate.slice()
+        found: list[tuple[terms_mod.Span, str, str]] = []
+        for duration in terms_mod.scan_durations(words):
+            found.append((duration.span, "Avtalstid i citerat villkor", duration.human()))
+        for notice in terms_mod.scan_notice_periods(words):
+            found.append((notice.span, "Uppsägningstid i citerat villkor", notice.human()))
+        for span, label, human in found:
+            quote = candidate.quote_for(span.start, span.end)
+            citation = _citation(store, candidate.chunk, quote, score)
+            if citation is None:
+                continue
+            citations.append(citation)
+            facts.append(
+                VerifiedFact(
+                    label=label,
+                    value=human,
+                    source="document",
+                    citation_index=len(citations) - 1,
+                )
+            )
+            descriptions.append(f"{human} ({citation.document_name} s. {citation.page})")
+            if len(citations) >= 2:
+                return citations, facts, descriptions
+    return citations, facts, descriptions
 
 
 def _review_period(
     store: Store,
     invoice: InvoiceSnapshot,
     candidates: list[tuple[_Candidate, float]],
-    supplier: tuple[CitationOut, str] | None,
+    anchor: Anchor,
 ) -> ReviewFinding | None:
     assert invoice.period_start and invoice.period_end
 
@@ -752,28 +1035,31 @@ def _review_period(
             source="invoice",
         )
     ]
-    citations: list[CitationOut] = []
-    if supplier is not None:
-        citations.append(supplier[0])
+    citations: list[CitationOut] = [anchor.citation]
 
     for candidate, score in candidates:
         words = candidate.slice()
-        for local_start, local_end, start_iso, end_iso in scan_iso_periods(words):
-            quote = candidate.quote_for(local_start, local_end)
+        for period in terms_mod.scan_periods(words):
+            quote = candidate.quote_for(period.span.start, period.span.end)
             citation = _citation(store, candidate.chunk, quote, score)
             if citation is None:
                 continue
             citations.append(citation)
             facts.append(
                 VerifiedFact(
-                    label="Period i citerat villkor",
-                    value=f"{start_iso} – {end_iso}",
+                    label="Avtalstid i citerat villkor",
+                    value=period.human(),
                     source="document",
                     citation_index=len(citations) - 1,
                 )
             )
-            inside = start_iso <= invoice.period_start and invoice.period_end <= end_iso
-            if inside:
+            if period.covers(invoice.period_start, invoice.period_end):
+                open_note = (
+                    " Avtalet löper tills vidare, så slutdatum finns inte att jämföra mot — "
+                    "kontrollera att det inte är uppsagt."
+                    if period.open_ended
+                    else ""
+                )
                 return _finding(
                     invoice,
                     "invoice_contract_period",
@@ -781,13 +1067,16 @@ def _review_period(
                     facts=facts,
                     citations=citations,
                     suggestion=(
-                        f"Fakturaperioden ligger inom den citerade avtalsperioden "
-                        f"{start_iso} – {end_iso} i {citation.document_name} s. {citation.page}."
+                        f"Fakturaperioden ligger inom den citerade avtalstiden "
+                        f"{period.human()} i {citation.document_name} s. {citation.page}."
+                        + open_note
                     ),
                     uncertainty=(
                         "Att perioden ryms i avtalstiden säger ingenting om att just "
                         "den här tjänsten är beställd för perioden."
+                        + _weak_anchor_caveat(anchor, invoice)
                     ),
+                    anchor=anchor,
                 )
             return _finding(
                 invoice,
@@ -797,15 +1086,53 @@ def _review_period(
                 citations=citations,
                 suggestion=(
                     f"Fakturaperioden {invoice.period_start} – {invoice.period_end} ligger "
-                    f"helt eller delvis utanför den citerade perioden {start_iso} – {end_iso} "
+                    f"helt eller delvis utanför den citerade avtalstiden {period.human()} "
                     f"i {citation.document_name} s. {citation.page}. Kontrollera om avtalet "
                     "är förlängt eller om fakturan avser något annat."
                 ),
                 uncertainty=(
                     "Perioden kan vara förlängd genom ett tillägg eller en automatisk "
                     "förlängningsklausul som inte finns i den citerade passagen."
+                    + _weak_anchor_caveat(anchor, invoice)
                 ),
+                anchor=anchor,
             )
+
+    # No dated period. Before answering "nothing found", look for the terms
+    # that describe time without dates — they are usually the reason.
+    term_citations, term_facts, descriptions = _uncomparable_period_terms(store, candidates)
+    if term_citations:
+        base = len(citations)
+        citations.extend(term_citations)
+        facts.extend(
+            fact.model_copy(
+                update={
+                    "citation_index": base + (fact.citation_index or 0),
+                }
+            )
+            for fact in term_facts
+        )
+        return _finding(
+            invoice,
+            "contract_term_not_comparable",
+            "cannot_be_verified",
+            facts=facts,
+            citations=citations,
+            suggestion=(
+                "Avtalet anger sin tid utan datum: "
+                + "; ".join(descriptions)
+                + ". Fakturaperioden "
+                f"{invoice.period_start} – {invoice.period_end} går därför inte att jämföra "
+                "maskinellt. Stäm av mot undertecknandedatum eller senaste förlängning."
+            ),
+            uncertainty=(
+                "En löptid räknad från undertecknande kräver undertecknandedatumet, och det "
+                "finns inte i den citerade passagen. Villkoret är läst och citerat, men det "
+                "besvarar inte om just den här perioden är avtalad."
+                + _weak_anchor_caveat(anchor, invoice)
+            ),
+            anchor=anchor,
+        )
 
     return _finding(
         invoice,
@@ -818,8 +1145,8 @@ def _review_period(
             "Granska fakturaperioden manuellt."
         ),
         uncertainty=(
-            "Ingen daterad period kunde citeras ordagrant. Avtalstiden kan vara "
-            "uttryckt i löptid ('tolv månader från undertecknande') i stället för "
-            "med datum."
+            "Ingen daterad period och inget läsbart tidsvillkor kunde citeras ordagrant."
+            + _weak_anchor_caveat(anchor, invoice)
         ),
+        anchor=anchor,
     )

@@ -52,6 +52,11 @@ MAIL = FIXTURES / "mail"
 INVOICE_MATCHING = "SI-2026-114"
 INVOICE_DEVIATING = "SI-2026-131"
 INVOICE_NO_CONTRACT = "SI-2026-207"
+# Inside the seeded agreement's open-ended period.
+INVOICE_IN_CONTRACT_PERIOD = "SI-2026-402"
+# Same supplier, written without "Entreprenad" and with no organisation number:
+# the case where the anchor is weak and wants a human to confirm an alias.
+INVOICE_SHORT_NAME = "SI-2027-018"
 
 
 # ---------------------------------------------------------------------------
@@ -365,13 +370,49 @@ class TestAccountingAdapter:
             FixtureAccountingAdapter(tmp_path).list_invoices("x")
 
     def test_the_core_domain_names_no_vendor(self):
-        """Fortnox, Outlook and Graph may exist in an adapter. Not in the domain."""
+        """A vendor may exist in an adapter or in the wiring. Not in the domain.
+
+        The line moved when the live integrations arrived, and it is worth
+        saying where it now runs. ``egress.py`` has to name the hosts it will
+        talk to, ``credentials.py`` the providers it stores tokens for, and
+        ``routes.py`` the adapters it wires — naming them is what those modules
+        are *for*, and a policy that could not say "api.fortnox.se" would not
+        be a policy.
+
+        What must stay vendor-free is the part that decides things: the record
+        types, their persistence, the adapter contract, the importer and the
+        review engine. A verdict must never depend on who supplied the invoice.
+        """
         package = Path(__file__).resolve().parent.parent / "app" / "integrations"
-        core = ["models.py", "store.py", "protocols.py", "review.py", "intake.py", "routes.py"]
-        for name in core:
+        domain = [
+            "models.py",
+            "store.py",
+            "protocols.py",
+            "review.py",
+            "intake.py",
+            "terms.py",
+            "supplier.py",
+        ]
+        for name in domain:
             text = (package / name).read_text(encoding="utf-8").lower()
             for vendor in ("fortnox", "outlook", "graph.microsoft", "msgraph"):
                 assert vendor not in text, f"{name} nämner {vendor}"
+
+    def test_no_domain_record_has_a_field_named_after_a_vendor(self):
+        """The stronger version of the same rule, over the types themselves."""
+        from app.integrations.credentials import Connection
+        from app.integrations.models import (
+            InvoiceSnapshot,
+            ReviewFinding,
+            SourceEvent,
+            SupplierAlias,
+        )
+
+        for model in (SourceEvent, InvoiceSnapshot, ReviewFinding, SupplierAlias, Connection):
+            for field in model.model_fields:
+                lowered = field.lower()
+                for vendor in ("fortnox", "outlook", "graph", "microsoft", "msgraph"):
+                    assert vendor not in lowered, f"{model.__name__}.{field}"
 
 
 # ---------------------------------------------------------------------------
@@ -465,17 +506,41 @@ class TestReview:
         assert finding.citations == []
         assert "Nordisk Hissteknik AB" in finding.suggestion
 
-    def test_an_unstated_period_is_not_invented(self, integration_env):
+    def test_an_open_ended_period_is_read_and_bounds_the_invoice(self, integration_env):
         """The snow contract says 'från den 1 november 2026 och tills vidare'.
-        There is no date range to verify, and the review must say so."""
+
+        The first version of this engine read ISO dates only, could not see
+        that sentence at all, and answered *kan inte verifieras*. It now reads
+        the Swedish date and the open end — and the January 2026 invoice turns
+        out to fall *before* the agreement it is being checked against, which
+        is a real finding about real data and exactly what a reviewer should be
+        shown.
+        """
         env = integration_env
         invoice = env.import_invoice(INVOICE_MATCHING)
         period = next(
             f for f in review_invoice(env.store, invoice)
             if f.finding_type == "invoice_contract_period"
         )
-        assert period.verdict == "cannot_be_verified"
+        assert period.verdict == "possible_deviation"
         assert period.uncertainty
+        # The cited term, in the document's own words.
+        cited = [f.value for f in period.verified_facts if f.label.startswith("Avtalstid")]
+        assert cited == ["2026-11-01 och tills vidare"]
+
+    def test_an_invoice_inside_an_open_ended_period_matches(self, integration_env):
+        """The same clause, an invoice from the season it actually covers."""
+        env = integration_env
+        invoice = env.import_invoice(INVOICE_IN_CONTRACT_PERIOD)
+        period = next(
+            f for f in review_invoice(env.store, invoice)
+            if f.finding_type == "invoice_contract_period"
+        )
+        assert period.verdict == "matches"
+        # An open end is not a closed one, and the finding says so rather than
+        # implying the agreement is known to still be running.
+        assert "tills vidare" in period.suggestion
+        assert "uppsagt" in period.suggestion
 
     def test_an_imported_attachment_is_never_cited_as_its_own_evidence(self, integration_env):
         """The invoice PDF agreeing with the invoice is not a finding."""

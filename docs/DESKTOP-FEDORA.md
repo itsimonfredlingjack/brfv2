@@ -34,6 +34,28 @@ och dokumentvisning som vanligt, men AI-chatten kan inte generera svar — och
 säger det rakt ut i stället för att gissa. Adressen kan anges senare under
 **Appinställningar**.
 
+### Vad talar applikationen med?
+
+En nyinstallerad applikation når **ingenting** utanför datorn. Utgående trafik
+uppstår bara av att någon konfigurerar den, och det finns exakt tre saker att
+konfigurera:
+
+| Vad | Vart | När |
+| -- | -- | -- |
+| Modelltjänsten | den adress du själv anger, prövad mot policyn i [ADR 0002](adr/0002-model-endpoint-boundary.md) | om AI-svar ska fungera |
+| Brevlådan | `login.microsoftonline.com`, `graph.microsoft.com` | bara om en brevlåda ansluts |
+| Ekonomisystemet | `apps.fortnox.se`, `api.fortnox.se` | bara om Fortnox ansluts |
+
+Värdlistorna är slutna och ligger i koden, inte i en inställning. Allt utom
+själva inloggningsanropen är GET — det finns ingen metod i programmet som kan
+skriva till ett främmande system. Se
+[ADR 0004](adr/0004-utgaende-integrationsgrans.md),
+[INTEGRATION-OUTLOOK.md](INTEGRATION-OUTLOOK.md) och
+[INTEGRATION-FORTNOX.md](INTEGRATION-FORTNOX.md).
+
+Anslutningarnas status i appen visar värdarna och behörigheterna direkt ur
+koden, så du kan se vad installationen får göra utan att fråga någon.
+
 ### Var ligger mina data?
 
 ```

@@ -39,16 +39,25 @@ from typing import Iterable, TypeVar
 
 from pydantic import BaseModel, ValidationError
 
-from .models import InvoiceSnapshot, ReviewFinding, SourceEvent
+from .models import InvoiceSnapshot, ReviewFinding, SourceEvent, SupplierAlias
 
 logger = logging.getLogger("brf.integrations")
 
-SCHEMA_VERSION = 1
+# 2 adds three things a version-1 build does not know about: an attachment's
+# adoption into the archive, a finding's anchor strength, and the supplier
+# alias file. All three are additive and load fine here — but a version-1
+# build that opened this directory would read a source event, drop
+# `archived`/`archived_by`/`archived_at` as unknown fields, and write it back
+# without them. An adopted document would silently stop being evidence and
+# nobody would see it happen. That is precisely what the version refusal is
+# for, so the number goes up.
+SCHEMA_VERSION = 2
 
 META_FILE = "meta.json"
 SOURCE_EVENTS_FILE = "source-events.json"
 INVOICES_FILE = "invoices.json"
 FINDINGS_FILE = "findings.json"
+SUPPLIER_ALIASES_FILE = "supplier-aliases.json"
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -92,6 +101,7 @@ class IntegrationStore:
         except OSError:  # a filesystem that will not take the mode is not a reason to fail
             logger.debug("Kunde inte sätta 0700 på %s", self.dir)
         self.lock = threading.RLock()
+        self._credentials = None
         self._check_schema()
 
     # ---------- schema ----------
@@ -122,12 +132,16 @@ class IntegrationStore:
         )
 
     def _migrate(self, from_version: int) -> None:
-        """Bring an older layout forward. No older version exists yet.
+        """Bring an older layout forward.
 
-        The branch is here rather than added later on purpose: the first
-        migration is written when there is nothing at stake, and the shape it
-        establishes — read all, transform, write all, then bump — is the shape
-        the second one copies.
+        1 → 2 is additive: every new field has a default that means "this never
+        happened" — an attachment that was never adopted, a finding whose
+        anchor was not recorded, an empty alias file. So the transformation is
+        the identity and the work is re-writing each file through the current
+        models, which is what makes the new fields present on disk rather than
+        implied. Doing it eagerly matters: a half-migrated directory where some
+        events have the field and some do not is the state that makes the next
+        migration hard to reason about.
         """
         logger.info(
             "Migrerar integrationsdata för %s från schemaVersion %d till %d.",
@@ -135,6 +149,14 @@ class IntegrationStore:
             from_version,
             SCHEMA_VERSION,
         )
+        if from_version < 2:
+            for filename, model in (
+                (SOURCE_EVENTS_FILE, SourceEvent),
+                (INVOICES_FILE, InvoiceSnapshot),
+                (FINDINGS_FILE, ReviewFinding),
+            ):
+                if (self.dir / filename).exists():
+                    self._write(filename, self._read(filename, model))
 
     # ---------- generic io ----------
 
@@ -285,6 +307,69 @@ class IntegrationStore:
             fresh = [self._stamp(f) for f in findings]
             self._write(FINDINGS_FILE, kept + fresh)
         return fresh
+
+    # ---------- supplier aliases ----------
+
+    def list_supplier_aliases(self) -> list[SupplierAlias]:
+        with self.lock:
+            rows = self._read(SUPPLIER_ALIASES_FILE, SupplierAlias)
+        return sorted(rows, key=lambda a: (a.normalized_key, a.document_name))
+
+    def aliases_for(self, invoice_supplier_name: str) -> list[SupplierAlias]:
+        """Aliases a human recorded for this supplier, by normalised name.
+
+        Matching on the normalised key rather than the literal string is what
+        makes an alias survive the invoice being written "Snösvängen AB" one
+        month and "Snösvängen  AB." the next.
+        """
+        from .supplier import normalize
+
+        key = normalize(invoice_supplier_name)
+        if not key:
+            return []
+        return [a for a in self.list_supplier_aliases() if a.normalized_key == key]
+
+    def add_supplier_alias(self, alias: SupplierAlias) -> SupplierAlias:
+        with self.lock:
+            rows = self._read(SUPPLIER_ALIASES_FILE, SupplierAlias)
+            record = self._stamp(alias)
+            from .supplier import normalize
+
+            duplicate = normalize(record.document_name)
+            for existing in rows:
+                if (
+                    existing.normalized_key == record.normalized_key
+                    and normalize(existing.document_name) == duplicate
+                ):
+                    return existing
+            rows.append(record)
+            self._write(SUPPLIER_ALIASES_FILE, rows)
+        return record
+
+    def delete_supplier_alias(self, alias_id: str) -> bool:
+        with self.lock:
+            rows = self._read(SUPPLIER_ALIASES_FILE, SupplierAlias)
+            remaining = [a for a in rows if a.id != alias_id]
+            if len(remaining) == len(rows):
+                return False
+            self._write(SUPPLIER_ALIASES_FILE, remaining)
+        return True
+
+    # ---------- credentials ----------
+
+    @property
+    def credentials(self):
+        """Live-integration connections and secrets, in this tenant's directory.
+
+        Lazy and cached for the same reason ``Store.integrations`` is: building
+        it touches the filesystem, and a tenant that never connects anything
+        should never grow the directory.
+        """
+        if getattr(self, "_credentials", None) is None:
+            from .credentials import CredentialStore
+
+            self._credentials = CredentialStore(self.dir, tenant_id=self.tenant_id)
+        return self._credentials
 
     def update_finding(self, finding: ReviewFinding) -> ReviewFinding:
         with self.lock:
