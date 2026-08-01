@@ -385,18 +385,22 @@ class TestAccountingAdapter:
         """
         package = Path(__file__).resolve().parent.parent / "app" / "integrations"
         domain = [
-            "models.py",
-            "store.py",
-            "protocols.py",
-            "review.py",
-            "intake.py",
-            "terms.py",
-            "supplier.py",
+            package / "models.py",
+            package / "store.py",
+            package / "protocols.py",
+            package / "review.py",
+            package / "intake.py",
+            package / "supplier.py",
+            # Reading what a contract says about time is a document concern, not
+            # an integration one, so it lives beside the rest of the document
+            # code — and the watch engine reads it without importing anything
+            # from this package.
+            package.parent / "terms.py",
         ]
-        for name in domain:
-            text = (package / name).read_text(encoding="utf-8").lower()
+        for path in domain:
+            text = path.read_text(encoding="utf-8").lower()
             for vendor in ("fortnox", "outlook", "graph.microsoft", "msgraph"):
-                assert vendor not in text, f"{name} nämner {vendor}"
+                assert vendor not in text, f"{path.name} nämner {vendor}"
 
     def test_no_domain_record_has_a_field_named_after_a_vendor(self):
         """The stronger version of the same rule, over the types themselves."""

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 
 import { AppFrame } from '../components/AppFrame'
+import { Bevakningar } from '../screens/Bevakningar'
 import { Bibliotek } from '../screens/Bibliotek'
 import { Dokument } from '../screens/Dokument'
 import { Fraga } from '../screens/Fraga'
@@ -34,6 +35,7 @@ function Routes({ brfId }: { brfId: string }) {
   if (path === '/') return <Fraga brfId={brfId} />
   if (path === '/bibliotek') return <Bibliotek brfId={brfId} />
   if (path === '/granskning') return <Granskning brfId={brfId} />
+  if (path === '/bevakningar') return <Bevakningar brfId={brfId} />
   if (path === '/konto') return <Konto brfId={brfId} />
   if (path === '/valj') return <ValjForening />
 

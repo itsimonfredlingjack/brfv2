@@ -86,6 +86,149 @@ const FINDINGS = [
   },
 ]
 
+/** A board with every state on it at once: something late, something close,
+ * something far off, a rhythm, a proposal nobody has approved, and a time
+ * limit that could not be dated. */
+const WATCH_BASE = {
+  tenant_id: 'gjutformen-12',
+  derivation: 'Avtalet löper till 2026-12-31, med tre månaders uppsägningstid.',
+  recurrence: 'none',
+  responsible: 'Anna Ek',
+  remind_lead_days: 30,
+  citations: [
+    {
+      document_id: 'doc-1',
+      document_name: 'Städavtal 2024',
+      page: 2,
+      quote: 'Uppsägning ska ske skriftligen senast tre månader före avtalstidens utgång.',
+      quotes: ['Uppsägning ska ske skriftligen senast tre månader före avtalstidens utgång.'],
+      chunk_id: 'c-1',
+      rects: [[72, 320, 380, 334]],
+      score: 0.86,
+      approximate: false,
+      corpus_origin: 'synthetic',
+    },
+  ],
+  source_document_id: 'doc-1',
+  source_document_name: 'Städavtal 2024',
+  created_at: '2026-07-01T09:00:00+00:00',
+  decided_by: 'bo@gjutformen12.se',
+  decided_at: '2026-07-02T07:40:00+00:00',
+  decision_note: null,
+  succeeded_by: null,
+  status_label: 'bevakas',
+  remind_at: '2026-08-31',
+  next_due_after: null,
+}
+
+const WATCHES = {
+  today: '2026-08-01',
+  proposed: [
+    {
+      ...WATCH_BASE,
+      id: 'w-proposed',
+      kind: 'warranty',
+      kind_label: 'Garanti',
+      status: 'proposed',
+      status_label: 'väntar på godkännande',
+      title: 'Garantin på takarbetet går ut 2027-04-14',
+      due_date: '2027-04-14',
+      derived_due_date: '2027-04-14',
+      responsible: '',
+      bucket: 'later',
+      days_left: 256,
+    },
+  ],
+  buckets: {
+    overdue: [
+      {
+        ...WATCH_BASE,
+        id: 'w-overdue',
+        kind: 'inspection',
+        kind_label: 'Besiktning eller kontroll',
+        status: 'approved',
+        title: 'Beställ OVK-besiktning, senast 2026-07-20',
+        due_date: '2026-07-20',
+        derived_due_date: '2026-07-20',
+        responsible: '',
+        bucket: 'overdue',
+        days_left: -12,
+      },
+    ],
+    soon: [
+      {
+        ...WATCH_BASE,
+        id: 'w-soon',
+        kind: 'notice_deadline',
+        kind_label: 'Uppsägning',
+        status: 'approved',
+        title: 'Säg upp eller ompröva städavtalet senast 2026-08-20',
+        due_date: '2026-08-20',
+        derived_due_date: '2026-09-30',
+        bucket: 'soon',
+        days_left: 19,
+      },
+    ],
+    later: [
+      {
+        ...WATCH_BASE,
+        id: 'w-later',
+        kind: 'expiry',
+        kind_label: 'Avtalet upphör',
+        status: 'approved',
+        title: 'Hissavtalet upphör 2026-12-31',
+        due_date: '2026-12-31',
+        derived_due_date: '2026-12-31',
+        bucket: 'later',
+        days_left: 152,
+      },
+    ],
+    recurring: [
+      {
+        ...WATCH_BASE,
+        id: 'w-recurring',
+        kind: 'recurring_obligation',
+        kind_label: 'Återkommande skyldighet',
+        status: 'approved',
+        title: 'Lämna in brandskyddskontrollen senast 2026-11-01',
+        due_date: '2026-11-01',
+        derived_due_date: '2026-11-01',
+        recurrence: 'yearly',
+        bucket: 'recurring',
+        days_left: 92,
+        next_due_after: '2027-11-01',
+      },
+    ],
+  },
+  bucketLabels: { overdue: 'Försenat', soon: 'Snart', later: 'Senare', recurring: 'Återkommande' },
+  kindLabels: {
+    notice_deadline: 'Uppsägning',
+    expiry: 'Avtalet upphör',
+    warranty: 'Garanti',
+    inspection: 'Besiktning eller kontroll',
+    recurring_obligation: 'Återkommande skyldighet',
+  },
+  statusLabels: {
+    proposed: 'väntar på godkännande',
+    approved: 'bevakas',
+    dismissed: 'avfärdad',
+    done: 'avklarad',
+  },
+  settled: [],
+  unresolved: [
+    {
+      id: 'u-1',
+      tenant_id: 'gjutformen-12',
+      what: 'Garantitiden är fem år från slutbesiktningen.',
+      why: 'Slutbesiktningens datum står inte i handlingen, så garantins slut går inte att räkna fram.',
+      citations: WATCH_BASE.citations,
+      source_document_id: 'doc-1',
+      source_document_name: 'Städavtal 2024',
+      created_at: '2026-07-01T09:00:00+00:00',
+    },
+  ],
+}
+
 const scan = (page: Page) =>
   new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
 
@@ -140,6 +283,49 @@ test.describe('Tillgänglighet', () => {
     await expect(page.getByTestId('finding')).toHaveCount(2)
 
     expect((await scan(page).analyze()).violations).toEqual([])
+  })
+
+  /* Same reasoning as the findings screen: the e2e backend seeds documents,
+   * not a scanned archive of dated obligations, so a populated board only
+   * exists behind a stub. What is under test is this client's rendering of
+   * one — contrast, heading structure, and that "late" survives greyscale. */
+  test('bevakningarna är rena med hela tavlan på skärmen', async ({ page }) => {
+    await page.route('**/watches', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(WATCHES),
+      }),
+    )
+
+    await login(page)
+    await page.getByRole('link', { name: 'Bevakningar' }).click()
+    await expect(page.getByRole('heading', { name: 'Bevakningar', level: 1 })).toBeVisible()
+    await expect(page.getByTestId('watch')).toHaveCount(5)
+    await expect(page.getByTestId('unresolved')).toHaveCount(1)
+
+    expect((await scan(page).analyze()).violations).toEqual([])
+  })
+
+  test('en försenad bevakning läses som försenad utan färg', async ({ page }) => {
+    await page.route('**/watches', (route) =>
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify(WATCHES),
+      }),
+    )
+
+    await login(page)
+    await page.getByRole('link', { name: 'Bevakningar' }).click()
+
+    // Greyscale: whatever is left has to carry the state on its own.
+    await page.emulateMedia({ forcedColors: 'active' })
+    const late = page.locator('[data-bucket="overdue"]')
+    await expect(late.getByText('Försenat')).toBeVisible()
+    await expect(late.getByText(/12 dagar sedan/)).toBeVisible()
+    // …and nobody is named, which is a fact, not an empty cell.
+    await expect(late.getByTestId('watch-responsible')).toHaveText('ej utsedd')
   })
 
   test('svaret och källan är rena', async ({ page }) => {

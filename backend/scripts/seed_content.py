@@ -88,7 +88,7 @@ DOCUMENTS: list[dict] = [
                 "# § 2 Fasadmålning",
                 "Styrelsen beslutade att genomföra fasadmålning av gårdsfasaden under sommaren 2026. Uppdraget tilldelas Måleri Väst AB enligt offert om 450 000 kronor inklusive ställning och materiel. Jonas Berg fick i uppdrag att teckna avtalet.",
                 "# § 3 OVK-besiktning",
-                "Obligatorisk ventilationskontroll skall genomföras i maj 2026. Driftia Fastighetsservice AB samordnar tillträde till samtliga lägenheter.",
+                "Obligatorisk ventilationskontroll skall genomföras i maj 2026. Driftia Fastighetsservice AB samordnar tillträde till samtliga lägenheter. Besiktningen skall vara genomförd och protokollförd senast den 31 maj 2026, och återkommer därefter vart tredje år.",
             ],
             [
                 "# § 4 Laddstolpar",

@@ -1,0 +1,572 @@
+/* Bevakningar.
+ *
+ * The visual hierarchy carries the same distinction the data does: what the
+ * association has committed to reads as solid — filled cards, a firm border,
+ * a status word. What the engine merely proposes reads as provisional — a
+ * dashed border, a tinted block, a badge that says so in words. If the two ever
+ * look alike, the screen starts committing a board to obligations a rule engine
+ * invented, which is the one failure this feature cannot survive. */
+
+.watches {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 4px 48px;
+}
+
+.watches-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+}
+
+.watches-header h2 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 6px;
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.watches .muted,
+.watches .empty {
+  color: var(--text-secondary);
+  font-size: 14px;
+  line-height: 1.6;
+  max-width: 78ch;
+}
+
+.watches-header p {
+  margin: 0;
+}
+
+.watches-header-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.watches-scan,
+.watches-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.watches-scan {
+  border-color: var(--accent, #6384ff);
+  color: var(--text-primary);
+}
+
+.watches-scan:disabled,
+.watches-refresh:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.watches-banner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  margin-bottom: 14px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.watches-banner.error {
+  background: rgba(220, 90, 90, 0.14);
+  border: 1px solid rgba(220, 90, 90, 0.4);
+  color: var(--text-primary);
+}
+
+.watches-banner.ok {
+  background: rgba(80, 190, 130, 0.13);
+  border: 1px solid rgba(80, 190, 130, 0.35);
+  color: var(--text-primary);
+}
+
+.watches-banner-dismiss {
+  background: transparent;
+  border: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 2px;
+  display: flex;
+}
+
+.watches-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.watches .spin { animation: watches-spin 1s linear infinite; }
+
+@keyframes watches-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .watches .spin { animation: none; }
+}
+
+.watches-summary {
+  margin: 0 0 20px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.watches-summary strong {
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+}
+
+.watches-board,
+.watches-proposals,
+.watches-unresolved {
+  margin-bottom: 28px;
+}
+
+.watches h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 4px;
+  font-size: 17px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.watches h3 + p { margin: 0 0 14px; }
+
+/* --- the four buckets --- */
+
+.watch-buckets {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 14px;
+  align-items: start;
+}
+
+.watch-bucket {
+  border: 1px solid var(--panel-border);
+  border-top-width: 3px;
+  border-radius: 12px;
+  padding: 12px 13px 14px;
+  background: var(--panel-bg, rgba(255, 255, 255, 0.02));
+}
+
+.watch-bucket.overdue { border-top-color: rgba(220, 90, 90, 0.75); }
+.watch-bucket.soon { border-top-color: rgba(230, 180, 70, 0.8); }
+.watch-bucket.later { border-top-color: rgba(150, 155, 170, 0.7); }
+.watch-bucket.recurring { border-top-color: rgba(99, 132, 255, 0.75); }
+
+.watch-bucket h4 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0 0 10px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.bucket-count {
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+/* --- one card --- */
+
+.watch {
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 13px 14px;
+  margin-bottom: 10px;
+  background: rgba(0, 0, 0, 0.16);
+}
+
+.watch:last-child { margin-bottom: 0; }
+
+/* A proposal is not a watch, and must never be mistaken for one at a glance. */
+.watch.proposal {
+  border-style: dashed;
+  border-color: rgba(99, 132, 255, 0.45);
+  background: rgba(99, 132, 255, 0.06);
+  margin-bottom: 14px;
+  padding: 16px 18px;
+}
+
+.watch.unresolved {
+  border-color: rgba(230, 180, 70, 0.3);
+  background: rgba(230, 180, 70, 0.07);
+  margin-bottom: 12px;
+  padding: 14px 16px;
+}
+
+.watch-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 6px;
+}
+
+.watch-kind {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.watch-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--panel-border);
+  color: var(--text-secondary);
+}
+
+.watch-badge.proposed {
+  background: rgba(230, 180, 70, 0.12);
+  border-color: rgba(230, 180, 70, 0.4);
+}
+
+.watch-badge.approved {
+  background: rgba(80, 190, 130, 0.14);
+  border-color: rgba(80, 190, 130, 0.4);
+}
+
+.watch-title {
+  margin: 0 0 10px;
+  font-size: 15px;
+  font-weight: 600;
+  line-height: 1.45;
+  color: var(--text-primary);
+}
+
+.watch-facts,
+.watch-derivation {
+  margin: 0 0 10px;
+  display: grid;
+  gap: 4px;
+}
+
+.watch-facts > div,
+.watch-derivation > div {
+  display: grid;
+  grid-template-columns: minmax(110px, 34%) 1fr;
+  gap: 10px;
+}
+
+.watch-facts dt,
+.watch-derivation dt {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.watch-facts dd,
+.watch-derivation dd {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-primary);
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.watch-facts dd svg { vertical-align: -2px; }
+
+.watch-days { color: var(--text-secondary); }
+
+/* Nobody named is a fact about the obligation, not a blank field. */
+.watch-unassigned {
+  color: rgb(235, 190, 95);
+  font-weight: 600;
+}
+
+/* The derivation is arithmetic, so it is set as arithmetic. */
+.watch-derivation dd { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+
+.watch-moved,
+.watch-kept {
+  margin: 0 0 10px;
+  padding: 9px 12px;
+  border-radius: 9px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+/* A moved date is the one place where the engine and a human disagreed. Both
+   dates stay on the card, and the block says which is which. */
+.watch-moved {
+  background: rgba(230, 180, 70, 0.11);
+  border: 1px solid rgba(230, 180, 70, 0.32);
+}
+
+.watch-kept {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--panel-border);
+  color: var(--text-secondary);
+}
+
+.watch-why {
+  margin: 0 0 10px;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+.watch-note {
+  margin: 8px 0 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* --- citations --- */
+
+.watch-citations {
+  display: grid;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.watch-citation {
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  text-align: left;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-primary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.watch-citation:hover,
+.watch-citation:focus-visible {
+  border-color: var(--accent, #6384ff);
+}
+
+.watch-citation-source {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.watch-citation-approx { font-weight: 500; font-style: italic; }
+
+.watch-citation-quote {
+  display: block;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-primary);
+}
+
+/* --- decisions --- */
+
+.watch-approve,
+.watch-dismiss,
+.watch-remove,
+.watch-decision {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--panel-border);
+}
+
+.watch-approve h5 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.watch-fields {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.watches label {
+  display: grid;
+  gap: 4px;
+  flex: 1 1 160px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.watches input {
+  padding: 7px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--panel-border);
+  background: rgba(0, 0, 0, 0.22);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.watches input:disabled { opacity: 0.6; }
+
+.watch-invalid {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: rgb(235, 190, 95);
+}
+
+.watch-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 13px;
+  border-radius: 9px;
+  border: 1px solid var(--panel-border);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.watch-action:disabled { opacity: 0.5; cursor: not-allowed; }
+.watch-action.approve,
+.watch-action.complete { border-color: rgba(80, 190, 130, 0.5); }
+.watch-action.dismiss { border-color: rgba(220, 90, 90, 0.45); }
+.watch-action.remove { border-color: var(--panel-border); color: var(--text-secondary); }
+
+.watch-dismiss,
+.watch-decision {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.watch-remove {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.watch-remove .muted { flex: 1 1 240px; font-size: 12px; }
+
+/* --- the twelve-month strip --- */
+
+.watch-strip {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 2px;
+  margin: 0 0 12px;
+  padding: 0;
+}
+
+.watch-strip li {
+  display: grid;
+  gap: 1px;
+  justify-items: center;
+  padding: 4px 0;
+  border-radius: 6px;
+  border: 1px solid var(--panel-border);
+  font-size: 9px;
+  color: var(--text-secondary);
+}
+
+.watch-strip li.loaded {
+  background: rgba(99, 132, 255, 0.18);
+  border-color: rgba(99, 132, 255, 0.45);
+  color: var(--text-primary);
+}
+
+.strip-count {
+  font-size: 10px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  min-height: 12px;
+}
+
+/* --- settled --- */
+
+.watches-settled {
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.watches-settled summary {
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.watches-settled ul {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+
+.watches-settled li {
+  display: grid;
+  gap: 3px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+}
+
+.settled-title { font-size: 14px; color: var(--text-primary); }
+
+.settled-meta,
+.settled-note {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 720px) {
+  .watch-facts > div,
+  .watch-derivation > div {
+    grid-template-columns: 1fr;
+    gap: 2px;
+  }
+}

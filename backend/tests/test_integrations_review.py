@@ -25,7 +25,8 @@ from pathlib import Path
 
 import pytest
 
-from app.integrations import supplier, terms
+from app import terms
+from app.integrations import supplier
 from app.integrations.intake import AdoptionError, adopt_attachment, import_eml, withdraw_attachment
 from app.integrations.models import SupplierAlias
 from app.integrations.review import (

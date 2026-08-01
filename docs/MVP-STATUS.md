@@ -252,6 +252,31 @@ Detaljer: [INTEGRATIONSDOMAN.md](INTEGRATIONSDOMAN.md),
 [INTEGRATION-FORTNOX.md](INTEGRATION-FORTNOX.md),
 [adr/0004-utgaende-integrationsgrans.md](adr/0004-utgaende-integrationsgrans.md).
 
+## Källstyrda bevakningar (2026-08-01)
+
+Den tidigare spärrade Bevakningar-fliken är nu en verklig funktion. Motorn läser
+föreningens egna dokument och föreslår **daterade åtaganden** — uppsägningsdatum,
+avtalsslut, garantitider, besiktningar och återkommande skyldigheter — var och en
+med den passage datumet räknades fram ur och räkningen utskriven
+(`2026-12-31 minus 3 månader`). En namngiven person godkänner, justerar datumet,
+utser ansvarig och väljer påminnelsens framförhållning; inget förslag är ett
+åtagande innan dess.
+
+Årshjulet räknas ut på servern — **försenat, snart, senare, återkommande** — så
+att desktopvyn och telefonen inte kan vara oense om vad *snart* betyder. Mobilen
+visar bevakningarna read-only.
+
+En tidsfrist som inte går att räkna ut blir aldrig en kalenderpost på en gissning.
+Den seedade snöröjningsklausulen ("senast tre månader före avtalstidens utgång")
+är exakt det fallet och redovisas som odaterbar med skälet utskrivet. Under
+utvecklingen daterade en tidigare version av ankarregeln den klausulen från
+avtalets *början* och föreslog 2026-08-01 — verifierbart, självsäkert och fel.
+Regeln som stänger det, och de tre villkoren den ställer, står i
+[BEVAKNINGAR.md](BEVAKNINGAR.md).
+
+Ingen kalenderintegration, inget utskick och ingen bakgrundssynk. `remind_at` är
+ett datum vyn sorterar på, inte en påminnelse som skickas någonstans.
+
 ## Återstående blockerare och begränsningar
 
 1. q01:s prose-control kan fortfarande ge ett icke-ordagrant citat; dagens
@@ -277,6 +302,12 @@ Detaljer: [INTEGRATIONSDOMAN.md](INTEGRATIONSDOMAN.md),
    undertecknandedatum som inte står i en citerad passage. Båda fallen ger
    *kan inte verifieras* med klausulen citerad, vilket är rätt svar men inte
    ett svar på frågan.
+9. Bevakningsmotorn läser datum, löptider, cykler och de fem åtagandesorterna
+   den känner till. Ett åtagande formulerat på ett sätt den inte känner igen
+   syns inte alls — den redovisar vad den läste, inte vad den missade, och en
+   tom lista betyder därför inte att arkivet saknar frister.
+10. Det finns ingen påminnelse som skickas någonstans. `remind_at` styr var en
+    bevakning hamnar i vyn; någon måste öppna vyn.
 
 ## Omtag av livegaten
 

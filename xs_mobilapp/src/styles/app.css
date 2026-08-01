@@ -758,6 +758,154 @@
   color: var(--ink-2);
 }
 
+/* ------------------------------------------------------------ bevakningar
+ *
+ * A calmer card than a finding, because there is less to weigh: what, when,
+ * who, and where it is written. The one state that must never be missed —
+ * late — is said in words inside the card, so the coloured edge is a second
+ * signal rather than the only one.
+ */
+
+.watch-asof {
+  margin-top: var(--s4);
+  font-size: var(--t-meta);
+  color: var(--ink-3);
+}
+
+.watch-group {
+  margin-top: var(--s6);
+}
+
+.watch-group__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s3);
+}
+
+.watch-group__title {
+  font-size: var(--t-body);
+  font-weight: 660;
+  letter-spacing: -0.01em;
+}
+
+.watch-group__count {
+  flex: none;
+  font-size: var(--t-meta);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-3);
+}
+
+.watch-group__note {
+  margin-top: var(--s2);
+  font-size: var(--t-meta);
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+
+.watch,
+.unresolved {
+  padding: var(--s4);
+  background: var(--surface);
+  border: 1px solid var(--hairline);
+  border-left: 3px solid var(--hairline-strong);
+  border-radius: var(--r-card);
+}
+
+.watch--overdue {
+  border-left-color: var(--refusal);
+}
+
+.watch--soon {
+  border-left-color: var(--action);
+}
+
+/* A rhythm rather than a deadline, and nothing to hurry about: dashed, so the
+ * difference survives greyscale. */
+.watch--recurring {
+  border-left-style: dashed;
+}
+
+/* Nothing to be late for — there is no date. The dashed edge says the same
+ * thing the heading above it says. */
+.unresolved {
+  border-left-style: dashed;
+}
+
+.watch__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+
+.watch__title,
+.unresolved__what {
+  font-size: var(--t-body);
+  font-weight: 640;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+}
+
+.watch__status {
+  flex: none;
+}
+
+.watch__due {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  margin-top: var(--s2);
+  font-size: var(--t-meta);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+}
+
+.chip--overdue {
+  background: var(--refusal-wash);
+  color: var(--refusal);
+}
+
+.watch__meta {
+  margin-top: var(--s3);
+}
+
+/* Nobody is named. Set apart from a name rather than styled like one — a
+ * blank, or the same weight as "Anna Ek", both read as "someone has it". */
+.watch__unassigned {
+  font-weight: 560;
+  font-style: italic;
+  color: var(--ink-3);
+}
+
+.watch__derivation {
+  margin-top: var(--s3);
+  font-size: var(--t-meta);
+  line-height: 1.45;
+  color: var(--ink-3);
+}
+
+.watch__derivation-label {
+  font-weight: 620;
+  color: var(--ink-2);
+}
+
+.unresolved__why {
+  margin-top: var(--s2);
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+.watch__citations {
+  margin-top: var(--s4);
+}
+
+.watch__citations .cite {
+  margin-top: var(--s2);
+}
+
 /* --------------------------------------------------------------- states */
 
 .empty {

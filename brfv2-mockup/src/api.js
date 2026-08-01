@@ -171,6 +171,28 @@ export const integrationsApi = {
   ),
 };
 
+// Dated obligations read out of the association's own contracts.
+//
+// Reading is open to any member; scanning and every decision needs admin,
+// because approving a watch is the association taking on an obligation. The
+// split matters here more than elsewhere: `board` returns proposals and watches
+// in two separate fields, and nothing in this client merges them.
+export const watchesApi = {
+  board: (brfId) => request(`/api/brf/${brfId}/watches`),
+  scan: (brfId) => request(`/api/brf/${brfId}/watches/scan`, { method: 'POST' }),
+  decide: (brfId, watchId, decision) => request(
+    `/api/brf/${brfId}/watches/${watchId}/decision`,
+    jsonBody('POST', decision),
+  ),
+  // 200 for a proposal, 409 for one somebody has already decided on. The
+  // refusal carries the sentence that says what to do instead, so callers show
+  // it rather than a generic failure.
+  remove: (brfId, watchId) => request(
+    `/api/brf/${brfId}/watches/${watchId}`,
+    { method: 'DELETE' },
+  ),
+};
+
 // Routes that only the installed desktop application serves. On the web these
 // 404, which is exactly how the UI detects which delivery it is running in —
 // there is no build flag and no second bundle.

@@ -30,6 +30,21 @@ export function formatDate(iso: string): string {
   return Number.isNaN(date.getTime()) ? '—' : day.format(date)
 }
 
+/**
+ * "30 september 2026" out of a bare `YYYY-MM-DD`.
+ *
+ * Separate from formatDate because a deadline is a calendar day, not an
+ * instant. `new Date('2026-09-30')` is parsed as UTC midnight, which renders
+ * as the 29th on any phone west of London — a day the contract never mentions.
+ * The parts are read out and rebuilt in local time instead.
+ */
+export function formatDay(iso: string): string {
+  const parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso)
+  if (!parts) return formatDate(iso)
+  const date = new Date(Number(parts[1]), Number(parts[2]) - 1, Number(parts[3]))
+  return Number.isNaN(date.getTime()) ? '—' : day.format(date)
+}
+
 /** "12 maj 2026 14:32". For a record of what a person decided, where the hour
  * is part of the record and not decoration. */
 export function formatTimestamp(iso: string): string {

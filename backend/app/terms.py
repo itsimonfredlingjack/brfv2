@@ -43,7 +43,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from datetime import date
+from datetime import date, timedelta
 
 # ---------------------------------------------------------------------------
 # Swedish dates
@@ -100,7 +100,34 @@ DURATION_ANCHORS: dict[str, str] = {
     "ikrafttradande": "ikraftträdande",
 }
 
-NOTICE_WORDS = frozenset({"uppsägningstid", "uppsagningstid", "uppsägningstiden", "uppsagningstiden", "uppsägning", "uppsagning", "säga", "saga"})
+# Every inflection a Swedish agreement actually uses. The first version had
+# "säga" but neither "sägas" nor "sägs", so "Avtalet får sägas upp skriftligen
+# senast sex månader före avtalstidens utgång" — the commonest phrasing there
+# is — read as no notice period at all.
+NOTICE_WORDS = frozenset(
+    {
+        "uppsägning",
+        "uppsagning",
+        "uppsägningen",
+        "uppsagningen",
+        "uppsägningstid",
+        "uppsagningstid",
+        "uppsägningstiden",
+        "uppsagningstiden",
+        "uppsäga",
+        "uppsaga",
+        "uppsägas",
+        "uppsagas",
+        "säga",
+        "saga",
+        "sägas",
+        "sagas",
+        "sägs",
+        "sags",
+        "säges",
+        "sages",
+    }
+)
 
 # An index clause is a claim that the printed price is not the current price.
 INDEX_WORDS = frozenset(
@@ -153,6 +180,66 @@ class Span:
 
     start: int
     end: int
+
+    def merged_with(self, other: "Span") -> "Span":
+        return Span(min(self.start, other.start), max(self.end, other.end))
+
+    def distance_to(self, other: "Span") -> int:
+        """Words between the two spans, 0 when they touch or overlap."""
+        if self.end < other.start:
+            return other.start - self.end - 1
+        if other.end < self.start:
+            return self.start - other.end - 1
+        return 0
+
+
+# ---------------------------------------------------------------------------
+# Date arithmetic
+# ---------------------------------------------------------------------------
+
+# Deliberately here rather than in the watch engine. "tre månader före den 31
+# december" is a *reading* of the contract, and the arithmetic that turns it
+# into 30 september is part of that reading — including the clamping rule,
+# which is the only place this could quietly be wrong.
+
+
+def shift_months(day: date, months: int) -> date:
+    """Move a date by whole months, clamping the day to the target month.
+
+    31 december minus three months is 30 september, not "31 september" and not
+    1 oktober. Clamping down is what a Swedish contract means by "tre månader
+    före": the deadline falls inside the month, and a deadline that silently
+    moved to the 1st of the next month would be a day late in the only
+    direction that matters.
+    """
+    total = (day.year * 12 + (day.month - 1)) + months
+    year, month = divmod(total, 12)
+    month += 1
+    if month == 12:
+        last = 31
+    else:
+        last = (date(year + (month // 12), (month % 12) + 1, 1) - timedelta(days=1)).day
+    return date(year, month, min(day.day, last))
+
+
+def shift(day: date, count: int, unit: str) -> date:
+    """Move a date by ``count`` of ``unit`` ("month" | "year" | "week" | "day")."""
+    if unit == "month":
+        return shift_months(day, count)
+    if unit == "year":
+        return shift_months(day, count * 12)
+    if unit == "week":
+        return day + timedelta(weeks=count)
+    if unit == "day":
+        return day + timedelta(days=count)
+    raise ValueError(f"okänd tidsenhet: {unit!r}")
+
+
+def parse_iso(value: str) -> date | None:
+    try:
+        return date.fromisoformat(value)
+    except (TypeError, ValueError):
+        return None
 
 
 @dataclass(frozen=True)
@@ -378,28 +465,222 @@ def scan_durations(words: list[str]) -> list[DurationTerm]:
     return out
 
 
+# Verbs that mean the duration next to them is how long the agreement *renews*
+# for, not how much notice is required. "Om avtalet inte sägs upp förlängs det
+# med tolv månader i taget. Avtalet får sägas upp senast sex månader före
+# avtalstidens utgång" states both, and an earlier version of this scanner read
+# the first number — reporting a twelve-month notice period on a contract whose
+# notice period is six.
+_RENEWAL_VERBS = frozenset(
+    {"förlängs", "forlangs", "förlängas", "forlangas", "förlängning", "forlangning", "förnyas", "fornyas", "löper", "loper"}
+)
+
+
 def scan_notice_periods(words: list[str]) -> list[NoticeTerm]:
-    """A notice period, when one is stated near a duration."""
+    """How much notice the agreement requires, when it says so.
+
+    The duration has to belong to the notice, which means two things beyond
+    standing near it: no sentence may end in between, and no renewal verb may
+    stand in between. Both guards exist because a contract that states its
+    renewal length and its notice period in adjacent clauses is the normal
+    case, not the awkward one.
+    """
     out: list[NoticeTerm] = []
     n = len(words)
     for i, word in enumerate(words):
         if _lower(word) not in NOTICE_WORDS:
             continue
-        window = range(max(0, i - 6), min(n, i + 7))
-        for j in window:
+        for j in sorted(range(max(0, i - 6), min(n, i + 7)), key=lambda k: abs(k - i)):
             count = _count_at(words, j)
             if count is None:
                 continue
+            lo, hi = (i, j) if i < j else (j, i)
+            between = words[lo + 1 : hi]
+            if any(_lower(w) in _RENEWAL_VERBS for w in between):
+                continue
+            if any(
+                _clean(w).endswith((".", "!", "?")) and _clean(w).casefold() not in _ABBREVIATIONS
+                for w in between
+            ):
+                continue
+            unit = None
             for k in range(j + 1, min(n, j + 4)):
                 unit = DURATION_UNITS.get(_lower(words[k]))
                 if unit is not None:
-                    out.append(
-                        NoticeTerm(span=Span(min(i, j), max(i, k)), count=count, unit=unit)
-                    )
+                    out.append(NoticeTerm(span=Span(min(i, j), max(i, k)), count=count, unit=unit))
                     break
-            else:
+            if unit is not None:
+                break
+    return out
+
+
+@dataclass(frozen=True)
+class RelativeDeadline:
+    """"senast tre månader före den 31 december 2026" — a date you can compute.
+
+    This is the shape that actually makes a deadline actionable: a duration, a
+    direction and an anchor date that is *in the text*. Without the anchor
+    there is nothing to compute from, and this scanner returns nothing rather
+    than something plausible — see :mod:`app.watches.derive` for what happens
+    to the clause then.
+    """
+
+    span: Span
+    count: int
+    unit: str
+    before: bool  # "före" vs "efter"
+    anchor_iso: str
+
+    def resolve(self) -> str:
+        anchor = parse_iso(self.anchor_iso)
+        assert anchor is not None  # only built from a parsed date
+        return shift(anchor, -self.count if self.before else self.count, self.unit).isoformat()
+
+    def human(self) -> str:
+        unit = {"month": "månader", "year": "år", "week": "veckor", "day": "dagar"}[self.unit]
+        direction = "före" if self.before else "efter"
+        return f"{self.count} {unit} {direction} {self.anchor_iso}"
+
+
+@dataclass(frozen=True)
+class RecurrenceTerm:
+    span: Span
+    every: str  # "monthly" | "quarterly" | "yearly" | "biennial" | "triennial"
+
+    def human(self) -> str:
+        return {
+            "monthly": "varje månad",
+            "quarterly": "varje kvartal",
+            "yearly": "varje år",
+            "biennial": "vartannat år",
+            "triennial": "vart tredje år",
+        }[self.every]
+
+
+# Words that say a date is the far end of a countdown rather than the deadline
+# itself. Both directions, because "sex månader efter slutbesiktning" is as
+# common as "tre månader före avtalstidens utgång".
+_BEFORE_WORDS = frozenset({"före", "fore", "innan", "senast"})
+_AFTER_WORDS = frozenset({"efter", "från", "fran", "räknat", "raknat"})
+
+RECURRENCE_PHRASES: tuple[tuple[tuple[str, ...], str], ...] = (
+    (("varje", "månad"), "monthly"),
+    (("varje", "manad"), "monthly"),
+    (("månadsvis",), "monthly"),
+    (("manadsvis",), "monthly"),
+    (("varje", "kvartal"), "quarterly"),
+    (("kvartalsvis",), "quarterly"),
+    (("varje", "år"), "yearly"),
+    (("varje", "ar"), "yearly"),
+    (("årligen",), "yearly"),
+    (("arligen",), "yearly"),
+    (("årlig",), "yearly"),
+    (("arlig",), "yearly"),
+    (("vartannat", "år"), "biennial"),
+    (("vartannat", "ar"), "biennial"),
+    (("vart", "tredje", "år"), "triennial"),
+    (("vart", "tredje", "ar"), "triennial"),
+)
+
+
+def scan_relative_deadlines(words: list[str], *, reach: int = 12) -> list[RelativeDeadline]:
+    """Deadlines expressed as a distance from a date the text actually points at.
+
+    Three conditions, and the first version of this function had only a weak
+    form of the third — which produced a confidently wrong deadline out of the
+    seeded snow-clearing contract:
+
+        "Avtalet gäller från den 1 november 2026 och tills vidare.
+         Uppsägning skall ske skriftligen senast tre månader före
+         avtalstidens utgång."
+
+    Taking the *nearest* date made "tre månader före" count from the contract's
+    **start**, and reported that notice had to be given by 2026-08-01. Every
+    part of that was verifiable and all of it was nonsense: the clause counts
+    from a date the document never states.
+
+    So the anchor must satisfy all three:
+
+    1. **A direction word follows the duration** — "tre månader *före* …",
+       "fem år *från* …". A "senast" standing in front of the duration is a
+       qualifier on the obligation, not the operator on the date.
+    2. **The date comes after that direction word**, within ``reach``. A date
+       earlier in the text is something else being talked about.
+    3. **No sentence ends in between.** A deadline does not count from a date
+       in the previous sentence, which is exactly what went wrong.
+
+    A duration with no anchor stays a :class:`NoticeTerm` and nothing more,
+    because the only way to turn it into a date would be to assume which date
+    it counts from.
+    """
+    out: list[RelativeDeadline] = []
+    dates = scan_dates(words)
+    n = len(words)
+    for duration in scan_durations(words):
+        direction: bool | None = None
+        operator_at = -1
+        for i in range(duration.span.end + 1, min(n, duration.span.end + 4)):
+            token = _lower(words[i])
+            if token in _BEFORE_WORDS:
+                direction, operator_at = True, i
+                break
+            if token in _AFTER_WORDS:
+                direction, operator_at = False, i
+                break
+        if direction is None:
+            continue
+        anchor: DateHit | None = None
+        for hit in dates:
+            if hit.span.start <= operator_at:
                 continue
+            if hit.span.start - operator_at > reach:
+                continue
+            # A sentence boundary between the operator and the date means the
+            # date belongs to a different statement.
+            if any(
+                _clean(words[j]).endswith((".", "!", "?")) and not _is_abbreviation(words[j])
+                for j in range(operator_at, hit.span.start)
+            ):
+                continue
+            anchor = hit
             break
+        if anchor is None:
+            continue
+        out.append(
+            RelativeDeadline(
+                span=duration.span.merged_with(anchor.span),
+                count=duration.count,
+                unit=duration.unit,
+                before=direction,
+                anchor_iso=anchor.iso,
+            )
+        )
+    return out
+
+
+# Tokens that end in a full stop without ending a sentence. Short list on
+# purpose: a false positive here re-opens the bug this guard exists to close,
+# so anything not listed is treated as a sentence end.
+_ABBREVIATIONS = frozenset({"t.o.m.", "fr.o.m.", "bl.a.", "dvs.", "resp.", "nr.", "ca.", "s.k."})
+
+
+def _is_abbreviation(token: str) -> bool:
+    return token.strip().casefold() in _ABBREVIATIONS
+
+
+def scan_recurrence(words: list[str]) -> list[RecurrenceTerm]:
+    """How often something repeats, when the text says so in as many words."""
+    out: list[RecurrenceTerm] = []
+    last_end = -1
+    for i in range(len(words)):
+        if i <= last_end:
+            continue
+        for phrase, every in RECURRENCE_PHRASES:
+            if _phrase_at(words, i, phrase):
+                span = Span(i, i + len(phrase) - 1)
+                out.append(RecurrenceTerm(span=span, every=every))
+                last_end = span.end
+                break
     return out
 
 
@@ -450,13 +731,21 @@ __all__ = [
     "NoticeTerm",
     "OPEN_ENDED_PHRASES",
     "PERIOD_START_WORDS",
+    "RECURRENCE_PHRASES",
     "PeriodTerm",
+    "RecurrenceTerm",
+    "RelativeDeadline",
     "SWEDISH_MONTHS",
     "SWEDISH_NUMBERS",
     "Span",
+    "parse_iso",
     "scan_dates",
     "scan_durations",
     "scan_index_clauses",
     "scan_notice_periods",
     "scan_periods",
+    "scan_recurrence",
+    "scan_relative_deadlines",
+    "shift",
+    "shift_months",
 ]
