@@ -380,6 +380,18 @@ def create_app(
         )
     )
 
+    # ---------- watches (dated obligations out of the tenant's own documents) ----------
+
+    from .watches.routes import build_router as _build_watch_router
+
+    app.include_router(
+        _build_watch_router(
+            tenant_store=tenant_store,
+            require_admin=require_admin,
+            current_user=current_user,
+        )
+    )
+
     # ---------- dev only ----------
 
     @app.post("/api/reset")

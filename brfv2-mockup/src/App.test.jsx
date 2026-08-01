@@ -39,6 +39,12 @@ vi.mock('./api', () => ({
     listFindings: vi.fn(),
     decideFinding: vi.fn(),
   },
+  watchesApi: {
+    board: vi.fn(),
+    scan: vi.fn(),
+    decide: vi.fn(),
+    remove: vi.fn(),
+  },
   desktopApi: {
     state: vi.fn(),
     setup: vi.fn(),

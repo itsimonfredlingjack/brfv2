@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { MessageSquare, Folders, Inbox, Search as SearchIcon, FileText, ArrowRight, Loader2, Sparkles, AlertCircle, Upload, CheckCircle2, AlertTriangle, X, ChevronRight, ChevronDown, CornerDownRight, ArrowLeft, ZoomIn, ZoomOut, ThumbsDown, MessageCircle, Info, Menu, ChevronUp, LogOut, Trash2, Settings } from 'lucide-react';
+import { MessageSquare, Folders, Inbox, CalendarClock, Search as SearchIcon, FileText, ArrowRight, Loader2, Sparkles, AlertCircle, Upload, CheckCircle2, AlertTriangle, X, ChevronRight, ChevronDown, CornerDownRight, ArrowLeft, ZoomIn, ZoomOut, ThumbsDown, MessageCircle, Info, Menu, ChevronUp, LogOut, Trash2, Settings } from 'lucide-react';
 import Login from './components/Login';
 import PdfPane from './components/PdfPane';
 import Setup from './components/Setup';
 import DesktopSettings from './components/DesktopSettings';
 import Integrations from './components/Integrations';
+import Watches from './components/Watches';
 import { api, desktopApi } from './api';
 import { displayNameForModel, displayNameForProvider } from './modelDisplay';
 import './App.css';
@@ -765,7 +766,7 @@ function App() {
 
       <div className="mock-banner-compact">
         <span className="mock-badge-inline">PILOT</span>
-        Verifierad pilotslinga: förening, dokument, uppladdning, AI-svar, källor och PDF-markering använder den riktiga backenden. Sök, dokumentchatt, kvalitetskontroll, bevakningar och inställningar ingår inte i piloten.
+        Verifierad pilotslinga: förening, dokument, uppladdning, AI-svar, källor och PDF-markering använder den riktiga backenden. Sök, dokumentchatt, kvalitetskontroll och inställningar ingår inte i piloten.
       </div>
 
       {/* MOBILE TOP NAVIGATION */}
@@ -809,6 +810,11 @@ function App() {
               {desktopState && (
                 <button className={`nav-item ${currentTab === 'integrations' ? 'active' : ''}`} onClick={() => { setCurrentTab('integrations'); setIsMobileMenuOpen(false); }}>
                   <Inbox size={20} /> Inkommande
+                </button>
+              )}
+              {desktopState && (
+                <button className={`nav-item ${currentTab === 'watches' ? 'active' : ''}`} onClick={() => { setCurrentTab('watches'); setIsMobileMenuOpen(false); }}>
+                  <CalendarClock size={20} /> Bevakningar
                 </button>
               )}
 
@@ -968,7 +974,7 @@ function App() {
 
                     <div className="panel-section pilot-unavailable-note">
                       <h3>Utanför pilotens omfattning</h3>
-                      <p>Kvalitetskontroll och bevakningar är inte tillgängliga i den verifierade pilotvyn.</p>
+                      <p>Kvalitetskontroll är inte tillgänglig i den verifierade pilotvyn. Bevakningar finns i den installerade applikationen, under Bevakningar i menyn.</p>
                     </div>
                   </div>
                 </div>
@@ -1551,6 +1557,16 @@ function App() {
                   brfId={activeBrfId}
                   documents={documents}
                   onOpenDocument={openDocument}
+                  onOpenCitation={openDocumentFromCitation}
+                />
+              </div>
+            )}
+
+            {currentTab === 'watches' && desktopState && activeBrfId && (
+              <div className="tab-content">
+                <Watches
+                  brfId={activeBrfId}
+                  isAdmin={isAdmin}
                   onOpenCitation={openDocumentFromCitation}
                 />
               </div>

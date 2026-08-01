@@ -130,10 +130,12 @@ förening B, och en odelad klientcache skulle lämna tillbaka precis den läckan
 src/
   api/          typad klient mot backendens HTTP-kontrakt
   app/          router (~60 rader) och skärmsammansättning
-  components/   AppFrame, CitationChip, Finding, KallaSheet, Notice, ikoner
-  lib/          rects (transformen), refusals (vägranstexter), findings, format
+  components/   AppFrame, CitationChip, Finding, Watch, KallaSheet, Notice,
+                ikoner
+  lib/          rects (transformen), refusals (vägranstexter), findings,
+                watches, format
   screens/      Login, ValjForening, Fraga, Svar, Bibliotek, Dokument,
-                Granskning, Konto, Lock
+                Granskning, Bevakningar, Konto, Lock
   state/        session, localStore (IndexedDB), usePageImage, useOnline, lock
   styles/       tokens.css (designsystem), app.css (komponenter)
 e2e/            browseracceptans + tillgänglighet
@@ -161,6 +163,14 @@ aldrig, den är bevismaterialet.
   leverantörsalias är ett ställningstagande med en person bakom sig och görs i
   webbappen. Fynden cachas inte heller på telefonen — det som ligger kvar där
   är de två raderna i tabellen ovan, ingenting mer.
+- **Bevakningarna är också en läsvy.** De daterade skyldigheterna visas
+  grupperade som servern grupperat dem — hinkarna, etiketterna och
+  dagräkningen är backendens, så telefonen och webbappen aldrig kan vara oense
+  om vad ”snart” betyder. Klienten känner varken till `scan`, beslutet eller
+  raderingen: att godkänna en bevakning är att föreningen åtar sig något.
+  Förslag ligger under en egen rubrik som säger att ingen tagit ställning till
+  dem ännu. Inte heller bevakningarna cachas på telefonen — tabellen ovan är
+  fortfarande hela sanningen om vad som ligger kvar där.
 - **Ingen uppladdning eller kamera.** Väntar på OCR-gaten (`docs/SLUTRAPPORT.md` §5).
   Administration sker i webbappen.
 - **Ingen strömning** av svar (XS-21, parkerad). Väntetiden beskrivs i stället

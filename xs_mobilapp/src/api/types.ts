@@ -163,6 +163,98 @@ export interface ReviewFinding {
   decision_note: string | null
 }
 
+/* ---------------------------------------------------------- bevakningar
+ *
+ * Mirrors backend/app/watches/models.py. A watch is a dated obligation the
+ * engine proposes and a human takes on; this client only ever renders one.
+ * There is deliberately no type for a decision payload and none for a scan —
+ * see api/client.ts.
+ */
+
+export type WatchKind =
+  | 'notice_deadline'
+  | 'expiry'
+  | 'warranty'
+  | 'inspection'
+  | 'recurring_obligation'
+
+export type WatchStatus = 'proposed' | 'approved' | 'dismissed' | 'done'
+
+export type Recurrence = 'none' | 'monthly' | 'quarterly' | 'yearly' | 'biennial' | 'triennial'
+
+/** Where a watch sits relative to the server's today. */
+export type WatchBucket = 'overdue' | 'soon' | 'later' | 'recurring'
+
+export interface Watch {
+  id: string
+  tenant_id: string
+  kind: WatchKind
+  status: WatchStatus
+
+  /** Already written as an instruction, not as a category. Rendered as-is. */
+  title: string
+  /** `YYYY-MM-DD`. A calendar day, not an instant — see lib/format. */
+  due_date: string
+
+  /** What the contract's own arithmetic produced. Kept even after a human
+   * moves the date; the two together are the audit trail. */
+  derived_due_date: string
+  derivation: string
+
+  recurrence: Recurrence
+  /** Empty means nobody is named yet. The view says "ej utsedd" — never blank,
+   * and never in a way that suggests somebody has it. */
+  responsible: string
+  remind_lead_days: number
+
+  /** Same type, same verbatim verification and same rects as an answer's. */
+  citations: Citation[]
+  source_document_id: string
+  source_document_name: string
+
+  created_at: string
+  decided_by: string | null
+  decided_at: string | null
+  decision_note: string | null
+  succeeded_by: string | null
+
+  /* Computed server-side, so the desktop and the phone cannot disagree about
+   * what "snart" means — it is a function of each watch's own reminder lead
+   * time, not of a window this client invents. */
+  kind_label: string
+  status_label: string
+  remind_at: string
+  bucket: WatchBucket
+  days_left: number | null
+  next_due_after: string | null
+}
+
+/** A time limit that was read but could not be dated. Not a watch: giving it a
+ * date would mean inventing one. It is a real answer, and the missing fact is
+ * usually one only a person has. */
+export interface UnresolvedObligation {
+  id: string
+  tenant_id: string
+  what: string
+  why: string
+  citations: Citation[]
+  source_document_id: string
+  source_document_name: string
+  created_at: string
+}
+
+export interface WatchBoard {
+  /** The day the buckets and `days_left` were computed against. */
+  today: string
+  proposed: Watch[]
+  buckets: Record<WatchBucket, Watch[]>
+  bucketLabels: Record<WatchBucket, string>
+  kindLabels: Record<string, string>
+  statusLabels: Record<string, string>
+  settled: Watch[]
+  unresolved: UnresolvedObligation[]
+}
+
 export interface Health {
   status: string
   mode: string

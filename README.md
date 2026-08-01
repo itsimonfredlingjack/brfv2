@@ -18,6 +18,7 @@ föreningens dokument ska avvisas i stället för att gissas.
   read-only fakturagranskning
 - [Ansluta en brevlåda](docs/INTEGRATION-OUTLOOK.md) ·
   [Ansluta Fortnox](docs/INTEGRATION-FORTNOX.md)
+- [Källstyrda bevakningar och årshjul](docs/BEVAKNINGAR.md)
 
 ## Ett repo, en produkt
 
@@ -93,6 +94,12 @@ jämförelsen mot föreningens egna avtal läggs fram som ett *fynd* med exakta
 citat, uttalad osäkerhet och tre möjliga domar. En människa avgör; produkten
 skriver aldrig tillbaka någonstans. Se
 [docs/INTEGRATIONSDOMAN.md](docs/INTEGRATIONSDOMAN.md).
+
+Samma dokumentläsning driver **bevakningarna**: uppsägningstider, avtalsslut,
+garantier och besiktningar blir daterade åtaganden med citatet de räknades fram
+ur, sorterade i ett årshjul — försenat, snart, senare, återkommande. En tidsfrist
+som inte går att datera blir aldrig en kalenderpost på en gissning, utan säger
+vad som saknas. Se [docs/BEVAKNINGAR.md](docs/BEVAKNINGAR.md).
 
 ## Lokal verifiering
 

@@ -101,6 +101,7 @@ class Store:
         # corpus_origin honest in add_document().
         self.tenant_id = tenant_id or self.data_dir.name
         self._integrations = None
+        self._watches = None
 
     @property
     def integrations(self):
@@ -122,6 +123,20 @@ class Store:
         return self._integrations
 
     # ---------- persistence helpers ----------
+
+    @property
+    def watches(self):
+        """Dated obligations read out of this tenant's own documents.
+
+        Lazy and cached for the same reason ``integrations`` is: building it
+        touches the filesystem, and a tenant nobody has scanned should not grow
+        a directory for it.
+        """
+        if getattr(self, "_watches", None) is None:
+            from .watches.store import WatchStore
+
+            self._watches = WatchStore(self.data_dir / "watches", tenant_id=self.tenant_id)
+        return self._watches
 
     def _load_or_init_corpus_origin(self, corpus_origin: CorpusOrigin | None) -> CorpusOrigin:
         """tenant_meta.json — a sibling record to documents.json/settings.json

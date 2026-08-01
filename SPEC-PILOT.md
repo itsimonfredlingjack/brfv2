@@ -43,6 +43,14 @@ Evidence in `docs/evidence/`.
 GraphRAG / corpus-wide questions, formal DPIA, audit dashboards, the unwired
 Granskning/Bevakningar tabs, scaling beyond a handful of tenants.
 
+> **Bevakningar passed that gate on 2026-08-01** and is now a real feature, not
+> a blocked tab: dated obligations read out of the association's own documents,
+> each carrying the passage its date came from, proposed by the engine and owned
+> by a human. See [docs/BEVAKNINGAR.md](docs/BEVAKNINGAR.md). The rest of this
+> list stands. Granskning here meant the *quality-control* tab, which is still
+> out of scope and still blocked — the invoice review that shipped in the
+> integration block is a different surface with a different name.
+
 ## Post-BP6 narrowing: session transport (2026-07-29)
 
 Recorded here because it changes behavior this contract's §3 covers. It is a

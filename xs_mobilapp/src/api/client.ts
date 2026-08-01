@@ -7,6 +7,7 @@ import type {
   MeResponse,
   PageWidth,
   ReviewFinding,
+  WatchBoard,
 } from './types'
 
 export class ApiError extends Error {
@@ -106,6 +107,18 @@ export const api = {
    * code-review note. */
   listFindings: (brfId: string) =>
     request<ReviewFinding[]>(`/api/brf/${seg(brfId)}/integrations/findings`),
+
+  /* The board of dated obligations. Reading needs membership; the buckets
+   * arrive grouped and labelled, and this client re-derives none of it.
+   *
+   * The backend also exposes POST .../watches/scan, POST
+   * .../watches/{id}/decision and DELETE .../watches/{id}. None of the three
+   * is declared here, and that is the whole point: approving a watch is the
+   * association taking on an obligation and dismissing one is the association
+   * deciding not to. Both are acts with a named person behind them, done at a
+   * desk. Leaving the methods off makes a write from the phone a compile
+   * error instead of a code-review note. */
+  listWatches: (brfId: string) => request<WatchBoard>(`/api/brf/${seg(brfId)}/watches`),
 
   pageImageUrl: (brfId: string, docId: string, page: number, width: PageWidth) =>
     `/api/brf/${seg(brfId)}/documents/${seg(docId)}/page/${seg(page)}?w=${seg(width)}`,

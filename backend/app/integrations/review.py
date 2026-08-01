@@ -29,7 +29,7 @@ it.
 compare — an index-regulated price, "tolv (12) månader från undertecknande", a
 notice period — are cited as facts and answered *kan inte verifieras* with the
 clause quoted, which is different information from having found nothing. See
-:mod:`app.integrations.terms`.
+:mod:`app.terms`.
 
 **What anchors it.** The supplier's name or organisation number, verified
 verbatim in a document, with a recorded strength
@@ -50,7 +50,7 @@ from ..citations import Rejected, Resolved, resolve_citation
 from ..schemas import CitationOut, Chunk
 from ..store import Store
 from . import supplier as supplier_mod
-from . import terms as terms_mod
+from .. import terms as terms_mod
 from .models import (
     VERDICT_LABELS,
     AliasProposal,
@@ -205,9 +205,9 @@ def amount_unit(words: list[str], end_index: int) -> AmountUnit:
 def scan_iso_periods(words: list[str]) -> list[tuple[int, int, str, str]]:
     """Closed date ranges, kept for callers that only want the old shape.
 
-    :func:`app.integrations.terms.scan_periods` is what the review uses now: it
+    :func:`app.terms.scan_periods` is what the review uses now: it
     reads Swedish month names and open-ended agreements as well, and returns
-    them as :class:`~app.integrations.terms.PeriodTerm`.
+    them as :class:`~app.terms.PeriodTerm`.
     """
     return [
         (p.span.start, p.span.end, p.start_iso, p.end_iso)

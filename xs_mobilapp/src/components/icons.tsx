@@ -92,6 +92,17 @@ export const ReviewIcon = ({ size = 22, className }: IconProps) => (
   </svg>
 )
 
+/* Dated obligations: a calendar with a clock on it. Not a bell — a reminder
+ * is something the app would send, and this one only reads. */
+export const WatchIcon = ({ size = 22, className }: IconProps) => (
+  <svg {...base(size)} className={className}>
+    <path d="M20 11V6.5A1.5 1.5 0 0 0 18.5 5h-13A1.5 1.5 0 0 0 4 6.5v12A1.5 1.5 0 0 0 5.5 20H11" />
+    <path d="M8 3v4M16 3v4M4 9.5h16" />
+    <circle cx="17" cy="16.5" r="4" />
+    <path d="M17 14.9v1.8l1.2.8" />
+  </svg>
+)
+
 export const DocIcon = ({ size = 20, className }: IconProps) => (
   <svg {...base(size)} className={className}>
     <path d="M14 3H7a1.5 1.5 0 0 0-1.5 1.5v15A1.5 1.5 0 0 0 7 21h10a1.5 1.5 0 0 0 1.5-1.5V7.5Z" />

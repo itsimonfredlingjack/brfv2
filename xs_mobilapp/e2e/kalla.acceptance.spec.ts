@@ -347,6 +347,33 @@ test.describe('Granskning', () => {
   })
 })
 
+test.describe('Bevakningar', () => {
+  /* Against the real endpoint, with a member's session cookie as the whole
+   * credential — reading the board needs membership and nothing more. A
+   * förening whose archive has never been scanned has no dated obligations,
+   * and that is an answer the screen owes rather than a spinner. */
+  test('a member with no watches is told so, and is offered no way to decide', async ({ page }) => {
+    await login(page)
+    await expect(page.getByRole('heading', { name: 'Fråga' })).toBeVisible()
+
+    const response = page.waitForResponse((r) => r.url().endsWith('/watches'))
+    await page.getByRole('link', { name: 'Bevakningar' }).click()
+    const board = await response
+    expect(board.status()).toBe(200)
+    // The buckets are the server's, labels and all — the client groups nothing.
+    expect(Object.keys((await board.json()).bucketLabels)).toEqual([
+      'overdue',
+      'soon',
+      'later',
+      'recurring',
+    ])
+
+    await expect(page.getByRole('heading', { name: 'Bevakningar', level: 1 })).toBeVisible()
+    await expect(page.getByText('Inga bevakningar ännu')).toBeVisible()
+    await expect(page.getByTestId('readonly-note')).toContainText('görs i webbappen')
+  })
+})
+
 test.describe('Offline', () => {
   test('asking is refused up front, and an already-seen page still renders', async ({
     page,
