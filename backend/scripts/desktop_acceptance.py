@@ -69,6 +69,25 @@ BRF_NAME = "Brf Gjutformen 12"
 SECOND_BRF_NAME = "Brf Sjöutsikten 7"
 SOURCE_DOCUMENT = "Stadgar Brf Gjutformen 12.pdf"
 
+# A second upload, written here rather than lifted from the seed corpus,
+# because the watch journey needs a clause whose deadline is *computable* and
+# the seeded contracts deliberately include the case that is not. The
+# arithmetic is the assertion: the agreement ends 2028-01-31, notice is six
+# months, so the date the board must act by is 2027-07-31. An installed
+# package that renders anything else has a real defect, and one that renders
+# nothing has shipped the feature only in name.
+WATCH_DOCUMENT = "Serviceavtal hiss 2026.pdf"
+WATCH_CONTRACT_LINES = (
+    "Serviceavtal hiss 2026",
+    "Mellan Bostadsrattsforeningen Gjutformen 12 och Nordisk Hissteknik AB,",
+    "org.nr 556433-9911, har traffats foljande avtal om service och jour.",
+    "Avtalet galler fran och med den 1 februari 2026 till och med den 31 januari 2028.",
+    "Om avtalet inte sags upp forlangs det med tolv manader i taget.",
+    "Avtalet far sagas upp skriftligen senast sex manader fore avtalstidens utgang.",
+)
+WATCH_EXPECTED_DUE = "2027-07-31"
+WATCH_RESPONSIBLE = "Karin Lindqvist"
+
 SUPPORTED_QUESTION = "Var har styrelsen sitt säte?"
 UNSUPPORTED_QUESTION = "Vilka öppettider har föreningens planetarium?"
 
@@ -364,6 +383,20 @@ def build_source_pdf() -> bytes:
     raise AcceptanceError(f"Fixture {SOURCE_DOCUMENT!r} missing from the seed corpus")
 
 
+def build_watch_contract_pdf() -> bytes:
+    """A service agreement whose notice deadline is computable.
+
+    Rendered through the product's own PDF path so the text layer, the word
+    boxes and the citation rects are the real ones — a hand-built PDF with a
+    different text layer would test the watch engine against something the
+    installed application never sees.
+    """
+
+    from scripts.seed import render_pdf
+
+    return render_pdf({"name": WATCH_DOCUMENT, "pages": [list(WATCH_CONTRACT_LINES)]})
+
+
 def isolated_environment(root: Path) -> dict[str, str]:
     """A pristine XDG home so every run starts unprovisioned and the
     operator's real installation is never touched."""
@@ -398,7 +431,7 @@ def app_data_dir(environment: dict[str, str]) -> Path:
 # Where a run leaves its evidence
 # ---------------------------------------------------------------------------
 
-UI_SCREENSHOTS = ("setup", "documents", "answer-highlight", "refusal", "settings")
+UI_SCREENSHOTS = ("setup", "documents", "answer-highlight", "refusal", "watches", "settings")
 FAILURE_SCREENSHOTS = ("startup-failure",)
 LABEL_PATTERN = re.compile(r"\A[a-z0-9][a-z0-9._-]*\Z")
 
@@ -797,6 +830,117 @@ def ui_journey(
             raise AcceptanceError(f"Refusal unexpectedly carried citations: {refusal!r}")
         driver.screenshot(evidence.path("refusal"))
 
+        # -- watches: read a contract, propose a date, approve it -------------
+        #
+        # The point of doing this through the installed application rather than
+        # against the source tree is that "the package contains the feature" and
+        # "the feature works in the package" are different claims. This uploads
+        # a real contract, makes the shipped engine read it, and checks the date
+        # it computes — 2028-01-31 minus six months — before a human approves it
+        # and it lands on the board.
+        driver.click_text("Dokument")
+        wait_until(
+            "documents view for the contract upload",
+            lambda: driver.execute("return Boolean(document.querySelector('input[type=file]'));"),
+        )
+        contract_b64 = base64.b64encode(build_watch_contract_pdf()).decode()
+        accepted = driver.execute(
+            """
+            const bytes = Uint8Array.from(atob(arguments[0]), (c) => c.charCodeAt(0));
+            const file = new File([bytes], arguments[1], { type: 'application/pdf' });
+            const input = document.querySelector('input[type=file]');
+            if (!input) return false;
+            const transfer = new DataTransfer();
+            transfer.items.add(file);
+            input.files = transfer.files;
+            input.dispatchEvent(new Event('change', { bubbles: true }));
+            return input.files.length === 1;
+            """,
+            [contract_b64, WATCH_DOCUMENT],
+        )
+        if not accepted:
+            raise AcceptanceError("The document view did not accept the contract upload")
+        wait_until(
+            "contract ingested",
+            lambda: driver.execute(
+                "return document.body.innerText.includes(arguments[0]) "
+                "&& !document.body.innerText.includes('Laddar upp…');",
+                [WATCH_DOCUMENT],
+            ),
+            timeout=180,
+        )
+
+        driver.click_text("Bevakningar")
+        wait_until(
+            "watch view",
+            lambda: driver.execute("return Boolean(document.querySelector('.watches-scan'));"),
+        )
+        driver.click_text("Läs om arkivet")
+        proposal = wait_until(
+            "a dated proposal from the shipped engine",
+            lambda: driver.execute(
+                """
+                const cards = [...document.querySelectorAll('.watches-proposals .watch.proposal')];
+                const card = cards.find((c) => c.innerText.includes(arguments[0]));
+                if (!card) return false;
+                return {
+                  proposals: cards.length,
+                  title: card.querySelector('.watch-title')?.textContent.trim() || '',
+                  text: card.innerText.replace(/\\n/g, ' '),
+                  citations: card.querySelectorAll('.watch-citation').length,
+                };
+                """,
+                [WATCH_EXPECTED_DUE],
+            ),
+            timeout=180,
+        )
+        if proposal["citations"] < 1:
+            raise AcceptanceError(f"The proposal carried no citation: {proposal!r}")
+        if WATCH_EXPECTED_DUE not in proposal["title"]:
+            raise AcceptanceError(f"Unexpected proposal title: {proposal!r}")
+        # The arithmetic has to be on screen, not merely correct underneath.
+        if "2028-01-31" not in proposal["text"]:
+            raise AcceptanceError(f"The derivation did not name its anchor date: {proposal!r}")
+
+        driver.type_labelled("Ansvarig", WATCH_RESPONSIBLE)
+        driver.click_text("Godkänn")
+        watch_board = wait_until(
+            "the approved watch on the board",
+            lambda: driver.execute(
+                """
+                const buckets = [...document.querySelectorAll('.watches-board .watch-bucket')];
+                const cards = buckets.flatMap((b) =>
+                  [...b.querySelectorAll('.watch.board')].map((c) => ({
+                    bucket: b.getAttribute('aria-label'),
+                    text: c.innerText.replace(/\\n/g, ' '),
+                  })));
+                const found = cards.find((c) => c.text.includes(arguments[0]));
+                if (!found) return false;
+                return {
+                  onBoard: cards.length,
+                  stillProposed:
+                    document.querySelectorAll('.watches-proposals .watch.proposal').length,
+                  bucket: found.bucket,
+                  text: found.text,
+                };
+                """,
+                [WATCH_EXPECTED_DUE],
+            ),
+            timeout=60,
+        )
+        if WATCH_RESPONSIBLE not in watch_board["text"]:
+            raise AcceptanceError(f"The approved watch lost its owner: {watch_board!r}")
+        driver.screenshot(evidence.path("watches"))
+        watches = {
+            "document": WATCH_DOCUMENT,
+            "proposalTitle": proposal["title"],
+            "expectedDue": WATCH_EXPECTED_DUE,
+            "proposalsBeforeApproval": proposal["proposals"],
+            "bucketAfterApproval": watch_board["bucket"],
+            "responsible": WATCH_RESPONSIBLE,
+            "proposalsAfterApproval": watch_board["stillProposed"],
+        }
+
         # -- backup from the UI ----------------------------------------------
         driver.click(".user-profile")
         driver.click_text("Appinställningar")
@@ -963,6 +1107,7 @@ def ui_journey(
             },
             "pdfZoom": {"before": zoom_before, "after": zoom_after},
             "refusal": {"question": UNSUPPORTED_QUESTION, **refusal},
+            "watches": watches,
             "backup": backup,
             "compactWindow": {"rect": compact_rect, "layout": compact_layout},
             "security": {
