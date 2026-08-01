@@ -13,6 +13,7 @@ import {
   X,
 } from 'lucide-react';
 import { watchesApi } from '../api';
+import CreateTask from './CreateTask';
 import './Watches.css';
 
 /**
@@ -270,7 +271,9 @@ function Proposal({ watch, busy, canDecide, onApprove, onDismiss, onDelete, onOp
 }
 
 /** One obligation the association has taken on. */
-function BoardWatch({ watch, busy, canDecide, onComplete, onDismiss, onOpenCitation }) {
+function BoardWatch({
+  watch, brfId, busy, canDecide, onComplete, onDismiss, onOpenCitation, onTaskCreated,
+}) {
   const [note, setNote] = useState('');
   const moved = watch.due_date !== watch.derived_due_date;
 
@@ -363,6 +366,20 @@ function BoardWatch({ watch, busy, canDecide, onComplete, onDismiss, onOpenCitat
           </button>
         </div>
       )}
+
+      {/* A date is not work. Turning this obligation into somebody's job is a
+          separate decision, taken here and recorded as one — the watch itself
+          is unchanged by it. */}
+      <CreateTask
+        brfId={brfId}
+        canCreate={canDecide}
+        originKind="watch"
+        originRef={watch.id}
+        suggestedTitle={watch.title}
+        suggestedResponsible={watch.responsible || ''}
+        suggestedDue={watch.due_date || ''}
+        onCreated={onTaskCreated}
+      />
     </article>
   );
 }
@@ -494,6 +511,16 @@ export default function Watches({ brfId, isAdmin = false, onOpenCitation }) {
     }
   }
 
+  // The watch is untouched by this: a task is a separate record, and the board
+  // is told where it went rather than left to guess.
+  const taskCreated = useCallback((task) => {
+    setError('');
+    setNotice(
+      `Uppgift skapad: ${task.title}. Ansvarig: ${task.responsible || 'ej utsedd'}.`
+      + ' Den ligger under Uppgifter. Bevakningen är oförändrad.',
+    );
+  }, []);
+
   async function scan() {
     setBusy(true);
     setScanning(true);
@@ -583,11 +610,13 @@ export default function Watches({ brfId, isAdmin = false, onOpenCitation }) {
                       <BoardWatch
                         key={watch.id}
                         watch={watch}
+                        brfId={brfId}
                         busy={busy}
                         canDecide={isAdmin}
                         onComplete={complete}
                         onDismiss={dismiss}
                         onOpenCitation={openCitation}
+                        onTaskCreated={taskCreated}
                       />
                     ))}
                   </section>

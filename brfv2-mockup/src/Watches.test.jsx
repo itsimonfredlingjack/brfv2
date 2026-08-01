@@ -16,6 +16,15 @@ vi.mock('./api', () => ({
     decide: vi.fn(),
     remove: vi.fn(),
   },
+  // A watch card offers to turn the obligation into work; the panel is only
+  // opened by a click, so nothing here is called unless a test asks for it.
+  tasksApi: {
+    list: vi.fn(),
+    forOrigin: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    comment: vi.fn(),
+  },
 }));
 
 const CITATION = {

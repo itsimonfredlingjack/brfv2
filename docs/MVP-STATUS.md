@@ -277,6 +277,25 @@ Regeln som stänger det, och de tre villkoren den ställer, står i
 Ingen kalenderintegration, inget utskick och ingen bakgrundssynk. `remind_at` är
 ett datum vyn sorterar på, inte en påminnelse som skickas någonstans.
 
+## Uppgifter och ansvar (2026-08-02)
+
+Sista ledet i kedjan: ett fynd, en bevakning eller ett inkommande mejl blir
+**arbete** med ansvarig, datum, status och en append-only historik — med
+ursprungets citat kopierade så att passagen bakom arbetet öppnas även långt
+efteråt.
+
+Det är den enda domänen motorn inte kan skapa något i, och asymmetrin är
+avsikten: en regelmotor kan läsa ett dokument, men ingens skyldigheter följer av
+det förrän en person tar på sig dem. Att skapa en uppgift *är* beslutet.
+
+Blockering och avbrytande kräver ett angivet skäl; att markera klart gör det
+inte. En avslutad uppgift är aldrig försenad. Uppgifter raderas aldrig — arbete
+som visade sig onödigt avbryts och ligger kvar synligt. Ansvarig är ett namn i
+fritext, inte ett användarkonto, så att en entreprenör eller en revisor kan stå
+som ansvarig utan att först bli användare i systemet.
+
+Mobilen visar uppgifterna read-only. Detaljer: [UPPGIFTER.md](UPPGIFTER.md).
+
 ## Återstående blockerare och begränsningar
 
 1. q01:s prose-control kan fortfarande ge ett icke-ordagrant citat; dagens

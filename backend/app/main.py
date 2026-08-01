@@ -392,6 +392,18 @@ def create_app(
         )
     )
 
+    # ---------- tasks (what the board decided to do about any of it) ----------
+
+    from .tasks.routes import build_router as _build_task_router
+
+    app.include_router(
+        _build_task_router(
+            tenant_store=tenant_store,
+            require_admin=require_admin,
+            current_user=current_user,
+        )
+    )
+
     # ---------- dev only ----------
 
     @app.post("/api/reset")

@@ -21,6 +21,7 @@ import {
 import { integrationsApi } from '../api';
 import IntegrationConnections from './IntegrationConnections';
 import MappingPreview from './MappingPreview';
+import CreateTask from './CreateTask';
 import './Integrations.css';
 
 /**
@@ -245,7 +246,10 @@ function AliasProposal({ proposal, busy, confirmed, onConfirm, onRerun }) {
   );
 }
 
-function Finding({ finding, busy, aliasConfirmed, onDecide, onOpenCitation, onConfirmAlias, onRerun }) {
+function Finding({
+  finding, brfId, busy, canCreateTask, aliasConfirmed,
+  onDecide, onOpenCitation, onConfirmAlias, onRerun, onTaskCreated,
+}) {
   const tone = VERDICT_TONE[finding.verdict] || 'unknown';
   const Icon = VERDICT_ICON[finding.verdict] || HelpCircle;
   const invoiceFacts = finding.verified_facts.filter((f) => f.source === 'invoice');
@@ -340,6 +344,19 @@ function Finding({ finding, busy, aliasConfirmed, onDecide, onOpenCitation, onCo
         busy={busy}
         onDecide={(status, note) => onDecide(finding.id, status, note)}
         requireNoteFor={['corrected']}
+      />
+
+      {/* Deciding what a finding *is* and deciding to do something about it are
+          two acts. The second one is taken here, and the finding's citations go
+          with the task so the passage still opens after the invoice has been
+          re-read and the review re-run. */}
+      <CreateTask
+        brfId={brfId}
+        canCreate={canCreateTask}
+        originKind="finding"
+        originRef={finding.id}
+        suggestedTitle={(finding.suggestion || finding.verdict_label || '').slice(0, 200)}
+        onCreated={onTaskCreated}
       />
     </article>
   );
@@ -510,7 +527,9 @@ function MailboxBrowser({ brfId, connection, onImported, onError }) {
   );
 }
 
-export default function Integrations({ brfId, documents, onOpenDocument, onOpenCitation }) {
+export default function Integrations({
+  brfId, documents, isAdmin = false, onOpenDocument, onOpenCitation,
+}) {
   const [pane, setPane] = useState('inbox');
 
   const [events, setEvents] = useState([]);
@@ -757,6 +776,16 @@ export default function Integrations({ brfId, documents, onOpenDocument, onOpenC
       setBusy(false);
     }
   }
+
+  // Nothing about the finding changes when work is taken on: the task is its
+  // own record, and the queue says where it went.
+  const taskCreated = useCallback((task) => {
+    setError('');
+    setNotice(
+      `Uppgift skapad: ${task.title}. Ansvarig: ${task.responsible || 'ej utsedd'}.`
+      + ' Den ligger under Uppgifter. Fyndet är oförändrat.',
+    );
+  }, []);
 
   async function removeAlias(aliasId) {
     setBusy(true);
@@ -1124,12 +1153,15 @@ export default function Integrations({ brfId, documents, onOpenDocument, onOpenC
                   <Finding
                     key={finding.id}
                     finding={finding}
+                    brfId={brfId}
                     busy={busy}
+                    canCreateTask={isAdmin}
                     aliasConfirmed={Boolean(aliasConfirmed[finding.id])}
                     onDecide={decideFinding}
                     onOpenCitation={openCitation}
                     onConfirmAlias={confirmAlias}
                     onRerun={rerunReview}
+                    onTaskCreated={taskCreated}
                   />
                 ))}
                 {!findingsByInvoice.get(invoice.id) && (

@@ -45,6 +45,13 @@ vi.mock('./api', () => ({
     decide: vi.fn(),
     remove: vi.fn(),
   },
+  tasksApi: {
+    list: vi.fn(),
+    forOrigin: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    comment: vi.fn(),
+  },
   desktopApi: {
     state: vi.fn(),
     setup: vi.fn(),

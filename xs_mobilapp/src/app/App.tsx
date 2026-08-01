@@ -10,6 +10,7 @@ import { Konto } from '../screens/Konto'
 import { LockScreen } from '../screens/LockScreen'
 import { Login } from '../screens/Login'
 import { Svar } from '../screens/Svar'
+import { Uppgifter } from '../screens/Uppgifter'
 import { ValjForening } from '../screens/ValjForening'
 import { hasPin, shouldLock } from '../state/lock'
 import { useSession } from '../state/session'
@@ -36,6 +37,7 @@ function Routes({ brfId }: { brfId: string }) {
   if (path === '/bibliotek') return <Bibliotek brfId={brfId} />
   if (path === '/granskning') return <Granskning brfId={brfId} />
   if (path === '/bevakningar') return <Bevakningar brfId={brfId} />
+  if (path === '/uppgifter') return <Uppgifter brfId={brfId} />
   if (path === '/konto') return <Konto brfId={brfId} />
   if (path === '/valj') return <ValjForening />
 

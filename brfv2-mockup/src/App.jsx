@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { MessageSquare, Folders, Inbox, CalendarClock, Search as SearchIcon, FileText, ArrowRight, Loader2, Sparkles, AlertCircle, Upload, CheckCircle2, AlertTriangle, X, ChevronRight, ChevronDown, CornerDownRight, ArrowLeft, ZoomIn, ZoomOut, ThumbsDown, MessageCircle, Info, Menu, ChevronUp, LogOut, Trash2, Settings } from 'lucide-react';
+import { MessageSquare, Folders, Inbox, CalendarClock, ClipboardList, Search as SearchIcon, FileText, ArrowRight, Loader2, Sparkles, AlertCircle, Upload, CheckCircle2, AlertTriangle, X, ChevronRight, ChevronDown, CornerDownRight, ArrowLeft, ZoomIn, ZoomOut, ThumbsDown, MessageCircle, Info, Menu, ChevronUp, LogOut, Trash2, Settings } from 'lucide-react';
 import Login from './components/Login';
 import PdfPane from './components/PdfPane';
 import Setup from './components/Setup';
 import DesktopSettings from './components/DesktopSettings';
 import Integrations from './components/Integrations';
 import Watches from './components/Watches';
+import Tasks from './components/Tasks';
 import { api, desktopApi } from './api';
 import { displayNameForModel, displayNameForProvider } from './modelDisplay';
 import './App.css';
@@ -817,6 +818,11 @@ function App() {
                   <CalendarClock size={20} /> Bevakningar
                 </button>
               )}
+              {desktopState && (
+                <button className={`nav-item ${currentTab === 'tasks' ? 'active' : ''}`} onClick={() => { setCurrentTab('tasks'); setIsMobileMenuOpen(false); }}>
+                  <ClipboardList size={20} /> Uppgifter
+                </button>
+              )}
 
             </div>
 
@@ -1556,6 +1562,7 @@ function App() {
                 <Integrations
                   brfId={activeBrfId}
                   documents={documents}
+                  isAdmin={isAdmin}
                   onOpenDocument={openDocument}
                   onOpenCitation={openDocumentFromCitation}
                 />
@@ -1565,6 +1572,16 @@ function App() {
             {currentTab === 'watches' && desktopState && activeBrfId && (
               <div className="tab-content">
                 <Watches
+                  brfId={activeBrfId}
+                  isAdmin={isAdmin}
+                  onOpenCitation={openDocumentFromCitation}
+                />
+              </div>
+            )}
+
+            {currentTab === 'tasks' && desktopState && activeBrfId && (
+              <div className="tab-content">
+                <Tasks
                   brfId={activeBrfId}
                   isAdmin={isAdmin}
                   onOpenCitation={openDocumentFromCitation}

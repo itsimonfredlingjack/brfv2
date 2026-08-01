@@ -3,7 +3,7 @@ import type { ReactNode } from 'react'
 import { Link, useRouter } from '../app/router'
 import { useSession } from '../state/session'
 import { useOnline } from '../state/useOnline'
-import { AskIcon, LibraryIcon, ReviewIcon, WatchIcon } from './icons'
+import { AskIcon, LibraryIcon, ReviewIcon, TaskIcon, WatchIcon } from './icons'
 
 function initials(name: string | undefined, email: string): string {
   const source = (name ?? '').trim() || email
@@ -22,6 +22,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const onLibrary = path.startsWith('/bibliotek') || path.startsWith('/dokument')
   const onReview = path.startsWith('/granskning')
   const onWatches = path.startsWith('/bevakningar')
+  const onTasks = path.startsWith('/uppgifter')
 
   return (
     <div className="frame">
@@ -63,6 +64,10 @@ export function AppFrame({ children }: { children: ReactNode }) {
         <Link to="/bevakningar" className="tabbar__item" aria-current={onWatches ? 'page' : undefined}>
           <WatchIcon className="tabbar__icon" />
           Bevakningar
+        </Link>
+        <Link to="/uppgifter" className="tabbar__item" aria-current={onTasks ? 'page' : undefined}>
+          <TaskIcon className="tabbar__icon" />
+          Uppgifter
         </Link>
       </nav>
     </div>

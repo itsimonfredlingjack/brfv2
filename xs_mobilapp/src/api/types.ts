@@ -255,6 +255,106 @@ export interface WatchBoard {
   unresolved: UnresolvedObligation[]
 }
 
+/* ------------------------------------------------------------- uppgifter
+ *
+ * Mirrors backend/app/tasks/models.py. A task is where a human turned a
+ * finding, a watch or a piece of incoming post into work: owner, deadline,
+ * status, an append-only history, and the original evidence carried along.
+ *
+ * There is deliberately no type for a create, an update or a comment payload.
+ * The engine cannot create a task — creating one *is* the decision — and
+ * neither can this client: see api/client.ts.
+ */
+
+export type TaskStatus = 'open' | 'in_progress' | 'blocked' | 'done' | 'cancelled'
+
+export type TaskOriginKind = 'finding' | 'watch' | 'source_event' | 'manual'
+
+export type TaskEventKind =
+  | 'created'
+  | 'status_changed'
+  | 'assigned'
+  | 'due_changed'
+  | 'noted'
+  | 'edited'
+
+export interface TaskOrigin {
+  kind: TaskOriginKind
+  /** The finding, watch or source event this came out of. Empty for work that
+   * started in a meeting rather than in a document. */
+  ref_id: string
+  /** What that thing said at the time — a copy, so a re-run finding or a
+   * re-dated watch cannot silently re-describe work already taken on. */
+  label: string
+  kind_label: string
+}
+
+/** One thing that happened to a task. Written once, never edited. */
+export interface TaskEvent {
+  id: string
+  at: string
+  by: string
+  kind: TaskEventKind
+  /** The change in plain values rather than two snapshots to diff. Both empty
+   * for a plain comment. */
+  from_value: string
+  to_value: string
+  note: string
+  kind_label: string
+}
+
+export interface Task {
+  id: string
+  tenant_id: string
+
+  title: string
+  description: string
+  status: TaskStatus
+  /** Empty means nobody is named yet. The view says "ej utsedd" — never blank,
+   * and never in a way that suggests somebody has it. */
+  responsible: string
+  /** `YYYY-MM-DD`, or null for work nobody has scheduled. Unscheduled is not
+   * the same as urgent, and not the same as late. */
+  due_date: string | null
+
+  origin: TaskOrigin
+  /** Carried from the origin when the task was created, so the passage behind
+   * the work still opens at the right page months later. */
+  citations: Citation[]
+  source_document_id: string
+  source_document_name: string
+
+  created_by: string
+  created_at: string
+  /** Append-only, oldest first. The audit trail and the activity feed at once;
+   * there is no second log to keep in step with it. */
+  activity: TaskEvent[]
+
+  /* Computed server-side, for the same reason the watch board's buckets are:
+   * the desktop and the phone must not be able to disagree about what counts
+   * as overdue. */
+  status_label: string
+  active: boolean
+  overdue: boolean
+  days_left: number | null
+  last_activity_at: string
+}
+
+export interface TaskBoard {
+  /** The day `overdue` and `days_left` were computed against. */
+  today: string
+  /** Already ordered by the server: overdue first, then by date, undated last.
+   * This client renders that order and never re-sorts it. */
+  active: Task[]
+  done: Task[]
+  cancelled: Task[]
+  statusLabels: Record<string, string>
+  originLabels: Record<string, string>
+  /** `unassigned` is the number that quietly grows: work taken on that nobody
+   * has been named for. */
+  counts: { active: number; overdue: number; unassigned: number }
+}
+
 export interface Health {
   status: string
   mode: string

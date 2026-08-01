@@ -229,6 +229,202 @@ const WATCHES = {
   ],
 }
 
+/** Work in every state a board meets it in: late and running, unassigned,
+ * blocked with a reason, unscheduled, finished, and abandoned with a reason —
+ * plus one trail long enough to be folded. */
+const TASK_BASE = {
+  tenant_id: 'gjutformen-12',
+  description: '',
+  citations: WATCH_BASE.citations,
+  source_document_id: 'doc-1',
+  source_document_name: 'Städavtal 2024',
+  created_by: 'bo@gjutformen12.se',
+  created_at: '2026-07-02T07:40:00+00:00',
+  active: true,
+  overdue: false,
+  last_activity_at: '2026-07-02T07:40:00+00:00',
+}
+
+const CREATED = {
+  id: 'e-created',
+  at: '2026-07-02T07:40:00+00:00',
+  by: 'bo@gjutformen12.se',
+  kind: 'created',
+  from_value: '',
+  to_value: '',
+  note: '',
+  kind_label: 'skapad',
+}
+
+const TASKS = {
+  today: '2026-08-02',
+  active: [
+    {
+      ...TASK_BASE,
+      id: 't-overdue',
+      title: 'Beställ OVK-besiktning',
+      status: 'in_progress',
+      status_label: 'pågår',
+      responsible: 'Anna Ek',
+      due_date: '2026-07-20',
+      days_left: -13,
+      overdue: true,
+      origin: { kind: 'watch', ref_id: 'w-overdue', label: 'Beställ OVK-besiktning, senast 2026-07-20', kind_label: 'Bevakning' },
+      activity: [
+        CREATED,
+        {
+          id: 'e-assigned',
+          at: '2026-07-03T09:00:00+00:00',
+          by: 'bo@gjutformen12.se',
+          kind: 'assigned',
+          from_value: '',
+          to_value: 'Anna Ek',
+          note: '',
+          kind_label: 'ansvarig ändrad',
+        },
+        {
+          id: 'e-status',
+          at: '2026-07-15T08:05:00+00:00',
+          by: 'anna@gjutformen12.se',
+          kind: 'status_changed',
+          from_value: 'open',
+          to_value: 'in_progress',
+          note: '',
+          kind_label: 'status ändrad',
+        },
+        {
+          id: 'e-noted',
+          at: '2026-07-28T16:00:00+00:00',
+          by: 'anna@gjutformen12.se',
+          kind: 'noted',
+          from_value: '',
+          to_value: '',
+          note: 'Ringde besiktningsfirman, de återkommer med tid.',
+          kind_label: 'kommentar',
+        },
+      ],
+    },
+    {
+      ...TASK_BASE,
+      id: 't-unassigned',
+      title: 'Stäm av snöröjningsfakturan mot avtalets timtaxa',
+      status: 'open',
+      status_label: 'att göra',
+      responsible: '',
+      due_date: '2026-08-20',
+      days_left: 18,
+      origin: { kind: 'finding', ref_id: 'f-1', label: 'möjlig avvikelse — Snösvängen AB', kind_label: 'Fakturagranskning' },
+      activity: [CREATED],
+    },
+    {
+      ...TASK_BASE,
+      id: 't-blocked',
+      title: 'Byt ut portkoden',
+      status: 'blocked',
+      status_label: 'blockerad',
+      responsible: 'Bo Ek',
+      due_date: '2026-09-30',
+      days_left: 59,
+      origin: { kind: 'manual', ref_id: '', label: '', kind_label: 'Skapad för hand' },
+      activity: [
+        CREATED,
+        {
+          id: 'e-blocked',
+          at: '2026-07-20T10:00:00+00:00',
+          by: 'bo@gjutformen12.se',
+          kind: 'status_changed',
+          from_value: 'open',
+          to_value: 'blocked',
+          note: 'Väntar på offert från låssmeden.',
+          kind_label: 'status ändrad',
+        },
+      ],
+    },
+    {
+      ...TASK_BASE,
+      id: 't-undated',
+      title: 'Se över städrutinerna i trapphuset',
+      status: 'open',
+      status_label: 'att göra',
+      responsible: 'Anna Ek',
+      due_date: null,
+      days_left: null,
+      citations: [],
+      origin: { kind: 'source_event', ref_id: 's-9', label: 'Klagomål från lägenhet 12', kind_label: 'Inkommande post' },
+      activity: [CREATED],
+    },
+  ],
+  done: [
+    {
+      ...TASK_BASE,
+      id: 't-done',
+      title: 'Teckna nytt hissavtal',
+      status: 'done',
+      status_label: 'klar',
+      responsible: 'Bo Ek',
+      due_date: '2026-06-30',
+      days_left: -33,
+      active: false,
+      origin: { kind: 'watch', ref_id: 'w-later', label: 'Hissavtalet upphör 2026-12-31', kind_label: 'Bevakning' },
+      activity: [
+        CREATED,
+        {
+          id: 'e-done',
+          at: '2026-06-28T13:00:00+00:00',
+          by: 'bo@gjutformen12.se',
+          kind: 'status_changed',
+          from_value: 'in_progress',
+          to_value: 'done',
+          note: '',
+          kind_label: 'status ändrad',
+        },
+      ],
+    },
+  ],
+  cancelled: [
+    {
+      ...TASK_BASE,
+      id: 't-cancelled',
+      title: 'Byt ut cykelställen',
+      status: 'cancelled',
+      status_label: 'avbruten',
+      responsible: '',
+      due_date: '2026-10-01',
+      days_left: 60,
+      active: false,
+      citations: [],
+      origin: { kind: 'manual', ref_id: '', label: '', kind_label: 'Skapad för hand' },
+      activity: [
+        CREATED,
+        {
+          id: 'e-cancelled',
+          at: '2026-07-25T09:30:00+00:00',
+          by: 'bo@gjutformen12.se',
+          kind: 'status_changed',
+          from_value: 'open',
+          to_value: 'cancelled',
+          note: 'Stämman beslutade att skjuta upp till nästa år.',
+          kind_label: 'status ändrad',
+        },
+      ],
+    },
+  ],
+  statusLabels: {
+    open: 'att göra',
+    in_progress: 'pågår',
+    blocked: 'blockerad',
+    done: 'klar',
+    cancelled: 'avbruten',
+  },
+  originLabels: {
+    finding: 'Fakturagranskning',
+    watch: 'Bevakning',
+    source_event: 'Inkommande post',
+    manual: 'Skapad för hand',
+  },
+  counts: { active: 4, overdue: 1, unassigned: 1 },
+}
+
 const scan = (page: Page) =>
   new AxeBuilder({ page }).withTags(['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa', 'wcag22aa'])
 
@@ -326,6 +522,50 @@ test.describe('Tillgänglighet', () => {
     await expect(late.getByText(/12 dagar sedan/)).toBeVisible()
     // …and nobody is named, which is a fact, not an empty cell.
     await expect(late.getByTestId('watch-responsible')).toHaveText('ej utsedd')
+  })
+
+  /* Same reasoning again: the e2e backend seeds documents, not a board's
+   * worth of taken-on work, so a populated task list only exists behind a
+   * stub. Everything is unfolded before the scan — the older half of a trail
+   * and the closed groups are content, not decoration. */
+  test('uppgifterna är rena med allt arbete utfällt', async ({ page }) => {
+    await page.route('**/tasks', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(TASKS) }),
+    )
+
+    await login(page)
+    await page.getByRole('link', { name: 'Uppgifter' }).click()
+    await expect(page.getByRole('heading', { name: 'Uppgifter', level: 1 })).toBeVisible()
+    // All six are on the page; the closed groups are folded, not dropped.
+    await expect(page.getByTestId('task')).toHaveCount(6)
+    await expect(page.getByTestId('task').filter({ visible: true })).toHaveCount(4)
+
+    await page.getByTestId('trail-more').first().click()
+    await page.getByTestId('task-group-done').getByRole('heading', { name: 'Klara' }).click()
+    await page.getByTestId('task-group-cancelled').getByRole('heading', { name: 'Avbrutna' }).click()
+    await expect(page.getByTestId('task').filter({ visible: true })).toHaveCount(6)
+
+    expect((await scan(page).analyze()).violations).toEqual([])
+  })
+
+  test('en försenad uppgift läses som försenad utan färg', async ({ page }) => {
+    await page.route('**/tasks', (route) =>
+      route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(TASKS) }),
+    )
+
+    await login(page)
+    await page.getByRole('link', { name: 'Uppgifter' }).click()
+
+    // Greyscale: whatever is left has to carry the state on its own.
+    await page.emulateMedia({ forcedColors: 'active' })
+    const late = page.locator('[data-overdue="true"]')
+    await expect(late.getByText('Försenad')).toBeVisible()
+    await expect(late.getByText(/13 dagar sedan/)).toBeVisible()
+
+    // …and the one nobody has taken on says so, in the card and in the count.
+    const unassigned = page.locator('[data-status="open"]').first()
+    await expect(unassigned.getByTestId('task-responsible')).toHaveText('ej utsedd')
+    await expect(page.getByTestId('task-counts')).toContainText('1 saknar ansvarig')
   })
 
   test('svaret och källan är rena', async ({ page }) => {
