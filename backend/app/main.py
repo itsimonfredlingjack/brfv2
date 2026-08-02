@@ -380,6 +380,25 @@ def create_app(
         )
     )
 
+    # ---------- invoices (one invoice as one case, on top of the same reads) ----------
+    #
+    # A separate router rather than more routes on the integrations one,
+    # because it is a different product area: the integrations block is about
+    # material arriving, and this is about an invoice being worked. It shares
+    # the store, the adapters and the review engine, and adds no second way to
+    # reach any of them.
+
+    from .invoices.routes import build_router as _build_invoice_router
+
+    app.include_router(
+        _build_invoice_router(
+            tenant_store=tenant_store,
+            require_admin=require_admin,
+            current_user=current_user,
+            transport=integration_transport,
+        )
+    )
+
     # ---------- watches (dated obligations out of the tenant's own documents) ----------
 
     from .watches.routes import build_router as _build_watch_router

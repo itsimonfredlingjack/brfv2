@@ -114,6 +114,36 @@ def build_router(
                 watch.source_document_id,
                 watch.source_document_name,
             )
+        if kind == "invoice_case":
+            case = store.integrations.get_invoice_case(ref_id)
+            if case is None:
+                raise HTTPException(status_code=404, detail="Okänt fakturaärende.")
+            label = (
+                f"{case.supplier_name} {case.invoice_number or ''}".strip()
+                + (f" — {case.total_amount} {case.currency}" if case.total_amount is not None else "")
+            )
+            # The evidence travels here too: the first finding on the case that
+            # has citations lends them to the task, so the passage behind the
+            # work still opens after the invoice has been re-read.
+            from ..invoices.cases import findings_for_invoice
+
+            cited = next(
+                (
+                    f
+                    for f in findings_for_invoice(store, case.primary_invoice_id)
+                    if f.citations
+                ),
+                None,
+            )
+            citations = list(cited.citations) if cited else []
+            doc = citations[0].document_id if citations else ""
+            name = citations[0].document_name if citations else ""
+            return (
+                TaskOrigin(kind="invoice_case", ref_id=ref_id, label=label),
+                citations,
+                doc,
+                name,
+            )
         if kind == "source_event":
             event = store.integrations.get_source_event(ref_id)
             if event is None:
@@ -223,7 +253,17 @@ def build_router(
                 ]
             }
         )
-        return store.tasks.add_task(task).public(now)
+        stored = store.tasks.add_task(task)
+        if origin.kind == "invoice_case":
+            # The case's timeline is the one place a reviewer looks for "what
+            # has happened to this invoice", so work taken on from it belongs
+            # there. The task itself is still the record; this is a pointer.
+            from ..invoices.cases import note_task
+
+            case = store.integrations.get_invoice_case(origin.ref_id)
+            if case is not None:
+                note_task(store, case, task=stored, user_id=user["id"])
+        return stored.public(now)
 
     @router.post("/api/brf/{brf_id}/tasks/{task_id}")
     def update_task(

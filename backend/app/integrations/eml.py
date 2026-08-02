@@ -42,6 +42,10 @@ MAX_MESSAGE_BYTES = 25 * 1024 * 1024
 MAX_ATTACHMENT_BYTES = 20 * 1024 * 1024
 MAX_ATTACHMENTS = 10
 MAX_BODY_CHARS = 200_000
+# A long-running thread legitimately accumulates references, but the header is
+# sender-controlled text that is only ever used for grouping — so it is bounded
+# rather than trusted to be reasonable.
+MAX_REFERENCES = 50
 
 ACCEPTED_ATTACHMENT_TYPES = ("application/pdf",)
 ACCEPTED_BODY_TYPES = ("text/plain", "text/html")
@@ -52,6 +56,8 @@ _SCRIPT_OR_STYLE = re.compile(r"<(script|style)\b.*?</\1>", re.IGNORECASE | re.D
 _BREAKING_TAG = re.compile(r"</?(br|p|div|tr|li|h[1-6]|table)\b[^>]*>", re.IGNORECASE)
 _ANY_TAG = re.compile(r"<[^>]+>")
 _BLANK_RUN = re.compile(r"\n{3,}")
+# One ``<local@domain>`` identifier in a References/In-Reply-To header.
+_REFERENCE_ID = re.compile(r"<[^<>\s]+>")
 
 
 class EmlRejected(ValueError):
@@ -90,6 +96,11 @@ class NormalizedMessage:
     sent_at: str | None
     body_text: str
     attachments: list[ParsedAttachment] = field(default_factory=list)
+    # The reply chain, straight out of the headers. Read for grouping only —
+    # a sender writes these, so they are treated exactly like ``message_id``:
+    # useful, never trusted. See app.integrations.threads.
+    in_reply_to: str | None = None
+    references: list[str] = field(default_factory=list)
 
 
 def accepted_format() -> dict:
@@ -284,7 +295,24 @@ def parse_eml(raw: bytes, *, filename: str = "meddelande.eml") -> NormalizedMess
         sent_at=sent_at,
         body_text=body,
         attachments=attachments,
+        in_reply_to=_decode_header(message.get("In-Reply-To")) or None,
+        references=_message_ids(_decode_header(message.get("References"))),
     )
+
+
+def _message_ids(header: str) -> list[str]:
+    """The ``<...>`` tokens in a References header, in order, deduplicated.
+
+    Whitespace-splitting is not enough: the header is folded across lines by
+    every mail system that touches it, and a malformed one is common enough
+    that refusing a message over it would be refusing ordinary mail. Anything
+    that is not a bracketed identifier is simply not a reference.
+    """
+    seen: list[str] = []
+    for token in _REFERENCE_ID.findall(header or ""):
+        if token not in seen:
+            seen.append(token)
+    return seen[:MAX_REFERENCES]
 
 
 class EmlFileAdapter:

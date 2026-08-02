@@ -47,6 +47,16 @@ WatchKind = Literal[
     "inspection",
     # Something that comes back on a cycle.
     "recurring_obligation",
+    # A date somebody stated in incoming post — a payment date, a date to
+    # respond by, a date work starts. Its own member rather than forced into
+    # "notice_deadline" because it is not derived from a contract's arithmetic:
+    # a person read it in a message and decided to be reminded, and the board
+    # should be able to see which of its dates came from which kind of source.
+    "stated_deadline",
+    # An answer this association is waiting for. The only watch whose subject
+    # is somebody else's action, which is exactly why it goes missing: nothing
+    # in the association's own documents will ever remind anyone of it.
+    "expected_reply",
 ]
 
 WATCH_KIND_LABELS: dict[str, str] = {
@@ -55,6 +65,8 @@ WATCH_KIND_LABELS: dict[str, str] = {
     "warranty": "Garanti",
     "inspection": "Besiktning eller kontroll",
     "recurring_obligation": "Återkommande skyldighet",
+    "stated_deadline": "Datum ur inkommande post",
+    "expected_reply": "Väntat svar",
 }
 
 # Same four words as a finding's status, for the same reason: a reviewer does

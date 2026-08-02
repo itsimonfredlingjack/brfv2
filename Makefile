@@ -1,5 +1,6 @@
 .PHONY: setup backend backend-pilot require-pilot-llm frontend frontend-legacy mobile mobile-build mobile-test \
         desktop-runtime desktop-build desktop-run desktop-check desktop-package desktop-install desktop-uninstall desktop-acceptance \
+        invoice-acceptance \
         test test-isolation eval eval-b eval-fast eval-sweep \
         eval-selfhosted eval-b-selfhosted desktop-acceptance-installed desktop-verify-reproducible demo demo-stop demo-status demo-reset \
         build build-legacy model-readiness model-readiness-selftest \
@@ -81,6 +82,13 @@ RUN_LABEL ?= pilot
 desktop-acceptance: desktop-build  ## Full journey-acceptans mot riktig Tauri/WebKitGTK + självhostad modell
 	backend/.venv/bin/python backend/scripts/desktop_acceptance.py \
 	  --run-label $(RUN_LABEL)
+
+# Fakturaarbetsytan behöver ingen modell — granskningen är deterministisk hela
+# vägen — så den här acceptansen körs på en maskin utan GPU och utan tunnel.
+# Att den kan det är en egenskap hos funktionen, inte hos skriptet.
+invoice-acceptance: desktop-build  ## Fakturaresan mot riktig Tauri/WebKitGTK (ingen modell krävs)
+	backend/.venv/bin/python backend/scripts/invoice_acceptance.py \
+	  $${INVOICE_EVIDENCE:-/tmp/brfv2-invoice-acceptance}
 
 desktop-acceptance-installed:  ## Samma acceptans mot det INSTALLERADE paketet (ange RPM=... för artefaktidentitet)
 	backend/.venv/bin/python backend/scripts/desktop_acceptance.py \

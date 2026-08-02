@@ -25,6 +25,7 @@ const ORIGIN_FALLBACK: Record<TaskOriginKind, string> = {
   finding: 'Fakturagranskning',
   watch: 'Bevakning',
   source_event: 'Inkommande post',
+  invoice_case: 'Fakturaärende',
   manual: 'Skapad för hand',
 }
 

@@ -1,0 +1,839 @@
+/* The review queue for incoming post.
+ *
+ * Same rule as the invoice review's stylesheet, applied to a different screen:
+ * the visual hierarchy carries the epistemic one. What was *read out of the
+ * message* is data — a labelled value with the quote it came from, in a plain
+ * block. What the product *believes* is prose in a tinted block under a heading
+ * that says it is a belief. What it could *not* establish is prose in a warmer
+ * block that cannot be skimmed past. And a category a human confirmed is
+ * visually distinct from one the engine guessed, with the guess still visible
+ * beside it.
+ *
+ * If those four ever look alike, a reader stops being able to tell what the
+ * product knows from what it is proposing — which is the whole thing this
+ * product is for. */
+
+.intake {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 0 4px 48px;
+}
+
+.intake-intro h3 {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 17px;
+  margin: 0 0 6px;
+  color: var(--text-primary);
+}
+
+.intake-intro p {
+  margin: 0 0 18px;
+  color: var(--text-secondary);
+  font-size: 13.5px;
+  line-height: 1.6;
+  max-width: 74ch;
+}
+
+/* ---------- banners ---------- */
+
+.intake-banner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 14px;
+  border-radius: 10px;
+  margin-bottom: 14px;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.intake-banner.error {
+  background: rgba(220, 78, 78, 0.12);
+  border: 1px solid rgba(220, 78, 78, 0.4);
+  color: var(--text-primary);
+}
+
+.intake-banner.ok {
+  background: rgba(64, 168, 110, 0.12);
+  border: 1px solid rgba(64, 168, 110, 0.36);
+  color: var(--text-primary);
+}
+
+.intake-banner .banner-dismiss {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 2px;
+}
+
+/* ---------- fetching ---------- */
+
+.intake-fetch {
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 12px 18px;
+  align-items: start;
+}
+
+.intake-fetch h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  margin: 0 0 6px;
+  color: var(--text-primary);
+}
+
+.intake-fetch p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.55;
+  max-width: 70ch;
+}
+
+.intake-fetch .fetch-error {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: rgba(220, 78, 78, 0.1);
+  border: 1px solid rgba(220, 78, 78, 0.3);
+  color: var(--text-primary);
+}
+
+.fetch-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 15px;
+  border-radius: 10px;
+  border: 1px solid var(--accent, #6384ff);
+  background: var(--accent-soft, rgba(99, 132, 255, 0.14));
+  color: var(--text-primary);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.fetch-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.fetch-result {
+  grid-column: 1 / -1;
+  border-top: 1px dashed var(--panel-border);
+  padding-top: 10px;
+  font-size: 13px;
+}
+
+.fetch-result p { margin: 0; }
+
+/* Refused messages are not an error display — they are the queue being honest
+ * that it is not the mailbox. Neutral, readable, not red. */
+.fetch-skipped {
+  margin-top: 8px;
+}
+
+.fetch-skipped summary {
+  cursor: pointer;
+  color: var(--text-secondary);
+}
+
+.fetch-skipped ul {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  line-height: 1.6;
+}
+
+.intake-manual {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+  font-size: 12.5px;
+}
+
+.intake .hidden-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.intake .import-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  color: var(--text-primary);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.intake .import-button.busy { opacity: 0.6; cursor: progress; }
+
+/* ---------- filters ---------- */
+
+.intake-counts {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.intake-counts button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 13px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.intake-counts button.active {
+  background: var(--accent-soft, rgba(99, 132, 255, 0.14));
+  border-color: var(--accent, #6384ff);
+  color: var(--text-primary);
+}
+
+.intake-counts .pill {
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--accent, #6384ff);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.intake-counts .refresh { margin-left: auto; }
+
+.intake-loading,
+.intake .empty {
+  color: var(--text-secondary);
+  font-size: 13.5px;
+  padding: 18px 2px;
+}
+
+.intake .spin { animation: intake-spin 1s linear infinite; }
+
+@keyframes intake-spin { to { transform: rotate(360deg); } }
+
+/* ---------- thread cards ---------- */
+
+.thread {
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.thread.resolved { opacity: 0.82; }
+
+.thread-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  color: var(--text-primary);
+}
+
+.thread-chevron { padding-top: 2px; color: var(--text-secondary); }
+
+.thread-main { flex: 1; min-width: 0; }
+
+.thread-subject {
+  display: block;
+  font-size: 14.5px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.thread-meta {
+  display: block;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+  line-height: 1.5;
+}
+
+.thread-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+  max-width: 42%;
+}
+
+.intake .badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 600;
+  border: 1px solid var(--panel-border);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+/* The category badge is the engine's reading. Tinted, never solid: a solid
+ * chip reads as a fact, and this is a proposal until somebody confirms it. */
+.intake .badge.category {
+  background: var(--accent-soft, rgba(99, 132, 255, 0.12));
+  border-color: var(--accent, #6384ff);
+  color: var(--text-primary);
+}
+
+.intake .badge.awaiting {
+  background: rgba(226, 155, 42, 0.14);
+  border-color: rgba(226, 155, 42, 0.5);
+  color: var(--text-primary);
+}
+
+.intake .badge.open {
+  background: rgba(99, 132, 255, 0.1);
+}
+
+.intake .badge.done {
+  background: rgba(64, 168, 110, 0.12);
+  border-color: rgba(64, 168, 110, 0.4);
+}
+
+/* "förslag" vs "bekräftad av människa" must never look alike. */
+.intake .badge.proposed {
+  background: transparent;
+  border-style: dashed;
+  font-weight: 500;
+}
+
+.intake .badge.confirmed {
+  background: rgba(64, 168, 110, 0.12);
+  border-color: rgba(64, 168, 110, 0.4);
+  color: var(--text-primary);
+}
+
+.intake .badge.dedup {
+  background: rgba(148, 148, 160, 0.14);
+  font-weight: 500;
+}
+
+.thread-body {
+  padding: 0 16px 16px;
+  border-top: 1px solid var(--panel-border);
+}
+
+/* ---------- triage ---------- */
+
+.triage {
+  margin: 14px 0 18px;
+  padding: 13px 15px;
+  border-radius: 10px;
+  background: var(--accent-soft, rgba(99, 132, 255, 0.07));
+  border: 1px solid rgba(99, 132, 255, 0.24);
+}
+
+.triage-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.triage h5 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 8px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+
+/* Who produced the reading. Always visible, never emphasised: it is a
+ * provenance note, and "regelmotor" and "regelmotor + språkmodell" are
+ * different assurances a reader is entitled to see. */
+.triage-by {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.triage-headline {
+  margin: 0 0 6px;
+  font-size: 14px;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.triage-why,
+.triage-action {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.55;
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+}
+
+/* Warmer than the rest of the block, and deliberately unskimmable. */
+.triage-uncertainty {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  margin: 10px 0 0;
+  padding: 9px 11px;
+  border-radius: 8px;
+  background: rgba(226, 155, 42, 0.13);
+  border: 1px solid rgba(226, 155, 42, 0.42);
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-primary);
+}
+
+.triage h6 {
+  margin: 14px 0 7px;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.triage-signals ul,
+.triage-related ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 7px;
+}
+
+.triage-signals li {
+  display: grid;
+  grid-template-columns: auto auto 1fr;
+  gap: 4px 8px;
+  align-items: baseline;
+  font-size: 12.5px;
+}
+
+.signal-kind {
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(148, 148, 160, 0.16);
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+/* Values read out of the message are data, and read as data. */
+.signal-value {
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 12.5px;
+  color: var(--text-primary);
+}
+
+/* The words the value was read from. Without this, every value above is an
+ * unverifiable claim. */
+.signal-quote {
+  grid-column: 1 / -1;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 5px 9px;
+  border-left: 2px solid var(--panel-border);
+  color: var(--text-secondary);
+  font-size: 12px;
+  line-height: 1.5;
+  quotes: "»" "«";
+}
+
+.triage-related li {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
+.triage-related strong { color: var(--text-primary); font-weight: 600; }
+
+.triage-category { margin-top: 14px; }
+
+.category-confirmed {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin: 0;
+  padding: 9px 11px;
+  border-radius: 8px;
+  background: rgba(64, 168, 110, 0.1);
+  border: 1px solid rgba(64, 168, 110, 0.34);
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-primary);
+}
+
+.category-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.category-form {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  margin-top: 9px;
+}
+
+/* ---------- messages ---------- */
+
+.thread-messages h5 {
+  margin: 0 0 9px;
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-secondary);
+}
+
+.message {
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  padding: 11px 13px;
+  margin-bottom: 9px;
+}
+
+.message.settled { background: rgba(64, 168, 110, 0.05); }
+
+.message summary {
+  cursor: pointer;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+.message-provenance {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 6px 16px;
+  margin: 11px 0;
+  font-size: 12px;
+}
+
+.message-provenance dt { color: var(--text-secondary); }
+.message-provenance dd { margin: 0 0 4px; color: var(--text-primary); }
+
+.message-body {
+  margin: 10px 0;
+  padding: 11px 13px;
+  border-radius: 8px;
+  background: rgba(148, 148, 160, 0.09);
+  font-size: 12.5px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 320px;
+  overflow: auto;
+}
+
+.message-attachments {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.message-attachments li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 12.5px;
+}
+
+.intake .link {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--accent, #6384ff);
+  font-size: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.intake .link:disabled { color: var(--text-secondary); cursor: not-allowed; text-decoration: none; }
+
+.message-preserved {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  flex-wrap: wrap;
+  margin: 10px 0;
+  padding: 9px 11px;
+  border-radius: 8px;
+  background: rgba(64, 168, 110, 0.1);
+  border: 1px solid rgba(64, 168, 110, 0.34);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.retriage {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--text-secondary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* ---------- resolving ---------- */
+
+.resolve {
+  margin-top: 12px;
+  padding: 13px 15px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+}
+
+.resolve h5 {
+  margin: 0 0 10px;
+  font-size: 13.5px;
+  color: var(--text-primary);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.resolve-options {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+}
+
+.resolve-options label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 13px;
+  border-radius: 10px;
+  border: 1px solid var(--panel-border);
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.resolve-options label.chosen {
+  background: var(--accent-soft, rgba(99, 132, 255, 0.14));
+  border-color: var(--accent, #6384ff);
+  color: var(--text-primary);
+}
+
+.resolve-section {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  padding: 11px 13px;
+  margin-bottom: 10px;
+  border-radius: 9px;
+  background: rgba(148, 148, 160, 0.07);
+}
+
+.resolve-section p {
+  flex-basis: 100%;
+  margin: 0 0 4px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  max-width: 74ch;
+}
+
+.resolve-section label,
+.resolve-note,
+.category-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.resolve-note { margin-bottom: 12px; }
+
+.resolve-section input,
+.resolve-section select,
+.resolve-note input,
+.category-form input,
+.category-form select {
+  padding: 7px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--panel-border);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  min-width: 180px;
+}
+
+.resolve-attachments {
+  flex-basis: 100%;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.resolve-attachments li {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 12.5px;
+}
+
+.resolve-attachments label {
+  flex-direction: row;
+  align-items: center;
+  gap: 7px;
+  color: var(--text-primary);
+  font-size: 12.5px;
+}
+
+.date-suggestions {
+  flex-basis: 100%;
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* Dates the engine read, offered as chips — pressing one is still the human
+ * choosing it, which is why they are buttons and not a prefilled field. */
+.date-chip {
+  margin: 0 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  border: 1px dashed var(--panel-border);
+  background: transparent;
+  color: var(--text-primary);
+  font-family: ui-monospace, "SF Mono", Menlo, monospace;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.resolve-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.resolve-submit {
+  padding: 9px 17px;
+  border-radius: 10px;
+  border: 1px solid var(--accent, #6384ff);
+  background: var(--accent-soft, rgba(99, 132, 255, 0.16));
+  color: var(--text-primary);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.resolve-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.resolution {
+  margin-top: 12px;
+  padding: 13px 15px;
+  border-radius: 10px;
+  background: rgba(64, 168, 110, 0.09);
+  border: 1px solid rgba(64, 168, 110, 0.34);
+}
+
+.resolution h5 {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 9px;
+  font-size: 13px;
+  color: var(--text-primary);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.resolution ul {
+  list-style: none;
+  margin: 0 0 9px;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.resolution li { display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; }
+
+.resolution-note {
+  margin: 0 0 9px;
+  font-size: 12.5px;
+  color: var(--text-secondary);
+}
+
+.reopen {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--panel-border);
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  cursor: pointer;
+}
+
+.intake .muted { color: var(--text-secondary); font-size: 12.5px; }
+
+@media (max-width: 760px) {
+  .intake-fetch { grid-template-columns: 1fr; }
+  .thread-head { flex-wrap: wrap; }
+  .thread-badges { max-width: 100%; justify-content: flex-start; }
+}

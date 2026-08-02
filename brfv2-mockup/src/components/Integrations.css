@@ -1,4 +1,10 @@
-/* Incoming queue and invoice review.
+/* Incoming queue, and the shared presentation of a review finding.
+ *
+ * Imported by both Inkommande (Integrations.jsx) and the invoice workspace
+ * (InvoiceCase.jsx). A finding is the same object in both places, so it is the
+ * same stylesheet in both places — two copies would drift, and the drift would
+ * show up as uncertainty reading like a footnote on one screen and a warning on
+ * the other.
  *
  * The visual hierarchy carries the epistemic one, and that is the only design
  * decision here worth defending: verified facts read as data (monospace values,

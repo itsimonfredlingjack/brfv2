@@ -49,6 +49,65 @@ ImportStatus = Literal["imported", "rejected"]
 # Where a source event stands in the human queue.
 ReviewStatus = Literal["open", "approved", "dismissed", "corrected"]
 
+# What the triage believes one piece of incoming post is about.
+#
+# Seven members, deliberately few and deliberately overlapping-free at the
+# level a board acts on: each one leads somewhere different in this product.
+# "unclear" is a first-class member and not a failure — a queue that guesses a
+# category for a message it could read nothing in has started teaching its
+# users that the label means nothing.
+TriageCategory = Literal[
+    "invoice",
+    "contract_or_quote",
+    "authority_or_manager",
+    "decision_or_approval",
+    "question_awaiting_reply",
+    "information",
+    "unclear",
+]
+
+TRIAGE_CATEGORY_LABELS: dict[str, str] = {
+    "invoice": "Faktura",
+    "contract_or_quote": "Avtal eller offert",
+    "authority_or_manager": "Myndighet eller förvaltare",
+    "decision_or_approval": "Beslut eller godkännande",
+    "question_awaiting_reply": "Fråga som väntar svar",
+    "information": "Information",
+    "unclear": "Oklart",
+}
+
+# What a human decided to do about a queue item. Five outcomes, and every one
+# of them lands in a domain this product already has — there is no "email
+# archive" here, because a second archive is how the association ends up with
+# two answers to the same question.
+#
+#   take_in           preserve the message text and/or chosen attachments
+#   create_task       somebody is going to do something (app.tasks)
+#   monitor           a date or an awaited answer to come back to (app.watches)
+#   already_handled   it mattered, and nothing further is needed
+#   not_relevant      out of the queue, untouched in the mailbox
+ResolutionKind = Literal[
+    "take_in",
+    "create_task",
+    "monitor",
+    "already_handled",
+    "not_relevant",
+]
+
+RESOLUTION_LABELS: dict[str, str] = {
+    "take_in": "Ta in",
+    "create_task": "Skapa uppgift",
+    "monitor": "Bevaka",
+    "already_handled": "Redan hanterat",
+    "not_relevant": "Inte relevant",
+}
+
+# Which of them may be combined with which. Preserving a message and creating
+# work from it is one act a board performs constantly; declaring something
+# irrelevant *and* preserving it is a contradiction, and the route refuses it
+# rather than storing a record that says both.
+EXCLUSIVE_RESOLUTIONS: tuple[str, ...] = ("already_handled", "not_relevant")
+
 # Where a finding stands. Same words as ReviewStatus on purpose — a reviewer
 # does the same four things to both, and two vocabularies for one gesture is
 # how UIs start disagreeing with their backend.
@@ -67,6 +126,17 @@ FindingType = Literal[
     # because "we read this and it does not answer your question" is different
     # information from "we found nothing".
     "contract_term_not_comparable",
+    # The four below compare an invoice against the association's **own invoice
+    # history** rather than against a document (:mod:`app.invoices.compare`).
+    # They carry no citations, and that absence is deliberate: a citation in
+    # this product means a verbatim-verified passage in a document, and a
+    # comparison against last month's invoice has no such passage. What stands
+    # behind them is a stored invoice record, named by number and date among
+    # the verified facts.
+    "invoice_previous_comparison",
+    "invoice_possible_duplicate",
+    "invoice_credit_relation",
+    "invoice_new_line",
 ]
 
 # The three answers this product is allowed to give. There is no fourth, and in
@@ -155,6 +225,139 @@ class Provenance(BaseModel):
     imported_at: str = Field(default_factory=utc_now_iso)
 
 
+class TriageSignal(BaseModel):
+    """One thing the triage read, and the words it read it from.
+
+    Every signal carries its own ``quote``, taken verbatim out of the text it
+    was read from. That is the same discipline the review engine and the watch
+    engine live by, applied to a queue: a card that says "förfallodatum
+    2026-09-30" without the sentence it came from is a claim, and a reviewer
+    has no way to check it short of opening the message and searching.
+
+    A signal is *not* a citation. Until the message text is preserved as a
+    document there is no page to open, so this deliberately carries a quote and
+    not a :class:`~app.schemas.CitationOut` — see
+    :mod:`app.integrations.preserve` for where the two meet.
+    """
+
+    kind: Literal[
+        "date",
+        "deadline",
+        "amount",
+        "supplier",
+        "decision",
+        "question",
+        "renewal",
+        "reference",
+    ]
+    label: str
+    value: str
+    quote: str
+    source: Literal["subject", "body", "attachment"]
+    # The attachment id when ``source`` is "attachment"; empty otherwise. The
+    # attachment, not the document: a reader wants to know which file said it.
+    source_ref: str = ""
+
+
+class RelatedRecord(BaseModel):
+    """Something already in this association's records that this may concern.
+
+    A proposal, always. ``basis`` says why the engine thinks so in words a
+    reviewer can check and disagree with — "samma leverantörsnamn som fakturan
+    SI-2026-114" is checkable; a similarity score is not.
+    """
+
+    kind: Literal["document", "invoice", "source_event", "task", "watch"]
+    ref_id: str
+    label: str
+    basis: str
+
+
+class TriageSuggestion(BaseModel):
+    """What the product believes about one piece of incoming post.
+
+    A suggestion, and stored in a type named as one. Three properties make it
+    safe to show next to real records:
+
+    1. **Nothing here is a decision.** The queue displays it, a human confirms
+       or changes the category (:class:`TriageConfirmation`), and only a
+       resolution moves anything into the association's own records.
+    2. **Everything asserted carries its words.** ``signals`` is what was read
+       and where; ``headline`` and ``why_it_matters`` are written from those
+       signals and from nothing else.
+    3. **It says who produced it.** ``suggested_by`` is "regelmotor" for the
+       deterministic reader and names the model when one refined it. The
+       product has never called a rule engine "AI" and does not start here.
+    """
+
+    category: TriageCategory = "unclear"
+    category_label: str = ""
+
+    # What the app believes the message is about, and why it may matter. Both
+    # short, both written from `signals`, both prefixed by nothing that claims
+    # more certainty than the signals carry.
+    headline: str = ""
+    why_it_matters: str = ""
+    # What may need doing. Empty is a real answer and reads as one in the UI.
+    action_hint: str = ""
+
+    # Two questions a board asks of every message, kept as their own fields
+    # because they drive what the card offers to do next.
+    awaiting_reply: bool = False
+    contains_decision: bool = False
+
+    supplier_name: str = ""
+
+    signals: list[TriageSignal] = Field(default_factory=list)
+    related: list[RelatedRecord] = Field(default_factory=list)
+
+    suggested_by: str = "regelmotor"
+    # What could not be established. Required in spirit for anything but a
+    # clean read: a suggestion that expresses no doubt about a message it
+    # barely understood is the one that gets believed.
+    uncertainty: str = ""
+    created_at: str = Field(default_factory=utc_now_iso)
+
+
+class TriageConfirmation(BaseModel):
+    """A human's statement about what the message actually is.
+
+    Kept beside the suggestion rather than overwriting it. Both are worth
+    having: the pair is the only record of where the engine was wrong, and a
+    product that silently replaces its own guess with the correction learns
+    nothing and lets nobody audit it either.
+    """
+
+    category: TriageCategory
+    category_label: str = ""
+    confirmed_by: str
+    confirmed_at: str = Field(default_factory=utc_now_iso)
+    note: str = ""
+
+
+class ResolutionOutcome(BaseModel):
+    """One thing that happened because a human resolved a queue item.
+
+    ``ref_id`` points into the domain that now owns it — a task id, a watch id,
+    a document id — so the queue can say "det blev uppgift X" instead of
+    "hanterad", which is the difference between a record and a feeling.
+    """
+
+    kind: ResolutionKind
+    label: str = ""
+    ref_id: str = ""
+    ref_label: str = ""
+
+
+class Resolution(BaseModel):
+    """How a queue item was settled, by whom, and what it produced."""
+
+    outcomes: list[ResolutionOutcome] = Field(default_factory=list)
+    decided_by: str
+    decided_at: str = Field(default_factory=utc_now_iso)
+    note: str = ""
+
+
 class SourceEvent(BaseModel):
     """Something that arrived and may deserve the board's attention."""
 
@@ -172,6 +375,22 @@ class SourceEvent(BaseModel):
     # mail). Used for duplicate detection alongside the content hash, never as
     # a trust anchor — it is attacker-controlled text.
     external_ref: str | None = None
+
+    # What the message says it is a reply to, and the chain above it. Read
+    # straight out of the headers and used for grouping only — same caveat as
+    # ``external_ref``: a sender controls these, so they may join two things
+    # that are not related, and they may be absent when two things are. The
+    # grouping in :mod:`app.integrations.threads` is therefore a *reading* of
+    # the mailbox and never a claim about it.
+    in_reply_to: str | None = None
+    references: list[str] = Field(default_factory=list)
+    # The conversation this belongs to, computed at import from the headers
+    # above and the normalised subject. Stored rather than recomputed on every
+    # read so that a card cannot silently regroup itself under a reader.
+    thread_key: str = ""
+    # The subject with the reply and forward prefixes stripped, which is what
+    # a thread is named after.
+    thread_subject: str = ""
 
     # SHA-256 of the original bytes exactly as they were handed to us. This is
     # the duplicate check that actually holds, and the value that lets someone
@@ -203,6 +422,45 @@ class SourceEvent(BaseModel):
     decided_by: str | None = None
     decided_at: str | None = None
     decision_note: str | None = None
+
+    # What the product believes this is, and what a human said it is. Both
+    # optional: a queue entry imported by an older build has neither, and a
+    # message nobody has looked at has only the first.
+    triage: TriageSuggestion | None = None
+    triage_confirmation: TriageConfirmation | None = None
+
+    # How it was settled, and what that produced.
+    resolution: Resolution | None = None
+
+    # The message text, preserved as an ordinary document of the
+    # association's. This is what makes an attachment-less mail answerable
+    # later: a decision, an accepted quote or a stated notice period that
+    # arrived as prose becomes a page the ordinary retrieval finds and the
+    # ordinary citation machinery opens at the right line.
+    #
+    # Set only by a human act (:mod:`app.integrations.preserve`), never at
+    # import: the mailbox is raw material, and preserving every message that
+    # arrived would be importing the mailbox into the archive under another
+    # name.
+    preserved_document_id: str | None = None
+    preserved_by: str | None = None
+    preserved_at: str | None = None
+    preservation_note: str | None = None
+
+    def category(self) -> str:
+        """What this is, human decision first.
+
+        One place decides, so a card, a thread header and a filter cannot
+        disagree about the same message.
+        """
+        if self.triage_confirmation is not None:
+            return self.triage_confirmation.category
+        if self.triage is not None:
+            return self.triage.category
+        return "unclear"
+
+    def resolved(self) -> bool:
+        return self.resolution is not None
 
 
 # ---------------------------------------------------------------------------
@@ -258,6 +516,14 @@ class InvoiceSnapshot(BaseModel):
     # PDF, when one exists. Never required: an invoice may be read from an
     # accounting system with no mail behind it.
     source_event_id: str | None = None
+
+    # What the source system says about its own record — booked, cancelled, the
+    # remaining balance. Read and shown so a reviewer can see the accounting
+    # system's state without leaving this product; never sent anywhere, because
+    # there is no adapter method and no egress verb that could send it. This is
+    # the one exception the class docstring above allows for: the snapshot may
+    # *record* what the source system said. It owns none of it.
+    source_status: dict[str, str] = Field(default_factory=dict)
 
 
 # ---------------------------------------------------------------------------
@@ -361,3 +627,70 @@ class ReviewFinding(BaseModel):
 
     def with_label(self) -> "ReviewFinding":
         return self.model_copy(update={"verdict_label": VERDICT_LABELS[self.verdict]})
+
+
+# ---------------------------------------------------------------------------
+# MailboxCheckpoint
+# ---------------------------------------------------------------------------
+
+
+class SkippedMessage(BaseModel):
+    """A message the fetch saw and did not take in, with the reason.
+
+    This type exists because the alternative is silence. The `.eml` format is
+    deliberately narrow — one attachment that is not a PDF refuses the whole
+    message, so that nothing is ever half-imported — and a batch fetch that
+    quietly dropped those messages would leave the operator believing the queue
+    is the mailbox. It is not, and this is how the queue says so.
+
+    Nothing is written to the queue for a skipped message and nothing is
+    touched in the mailbox: it is still there, still unread, and can be
+    exported by hand if it matters.
+    """
+
+    external_ref: str
+    subject: str
+    sender: str
+    received_at: str = ""
+    code: str
+    reason: str
+
+
+class MailboxCheckpoint(BaseModel):
+    """Where the last fetch got to, so the next one asks for what is new.
+
+    A checkpoint, not a sync cursor: this product still has no polling loop, no
+    webhook and no background thread — every fetch happens because a person
+    pressed something (:mod:`app.integrations.protocols`). What this removes is
+    only the *re-presentation* of material already dealt with, which is what
+    made the first version of the inbox unusable after a fortnight.
+
+    ``high_water_mark`` is the ``receivedDateTime`` of the newest message the
+    last successful fetch actually saw, and the next fetch asks the mailbox for
+    everything at or after it. At-or-after rather than strictly-after on
+    purpose: two messages can share a timestamp to the second, and the content
+    hash already makes re-seeing one harmless, whereas skipping one is not.
+    """
+
+    provider: str = ""
+    folder: str = ""
+    # Empty until a first successful fetch. Empty means "everything the folder
+    # will give us", which is the correct first-run behaviour.
+    high_water_mark: str = ""
+    last_fetched_at: str = ""
+    last_fetch_by: str = ""
+    # What the last fetch produced, kept so the UI can say it without the
+    # operator having to have been watching when it happened.
+    last_new_count: int = 0
+    last_seen_count: int = 0
+    last_skipped: list[SkippedMessage] = Field(default_factory=list)
+    # Set when the last attempt failed, cleared by the next success. A
+    # checkpoint that silently kept its old timestamp through a failure would
+    # make a fetch that never ran look like one that found nothing.
+    last_error: str = ""
+
+    def public(self) -> dict:
+        return {
+            **self.model_dump(mode="json"),
+            "hasFetched": bool(self.last_fetched_at),
+        }

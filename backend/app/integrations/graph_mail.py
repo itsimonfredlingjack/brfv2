@@ -196,6 +196,34 @@ class MailboxMessage:
         }
 
 
+def graph_timestamp(value: str) -> str:
+    """An ISO instant as Graph's ``$filter`` grammar wants it, or ``""``.
+
+    Graph compares ``receivedDateTime`` against an unquoted UTC literal ending
+    in ``Z``; an offset like ``+02:00`` — which is exactly what
+    :func:`app.integrations.models.utc_now_iso` and Graph's own
+    ``receivedDateTime`` may produce once round-tripped — is rejected with a
+    400 that reads like a bug in this product. So the value is normalised
+    through ``datetime`` rather than string-patched, and anything unparseable
+    yields the empty string, which means "no filter": fetching too much is a
+    slow fetch, while a filter built out of a malformed stamp is a fetch that
+    silently returns nothing.
+    """
+    text = (value or "").strip()
+    if not text:
+        return ""
+    from datetime import datetime, timezone
+
+    try:
+        parsed = datetime.fromisoformat(text.replace("Z", "+00:00"))
+    except ValueError:
+        logger.warning("Ogiltig tidsstämpel för brevlådefiltret: %r — hämtar utan filter", value)
+        return ""
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=timezone.utc)
+    return parsed.astimezone(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
 def _address(entry: Any) -> tuple[str, str]:
     if not isinstance(entry, dict):
         return "", ""
@@ -246,7 +274,11 @@ class GraphMailAdapter:
         return f"{address or name}"
 
     def list_messages(
-        self, *, limit: int = DEFAULT_PAGE_SIZE, only_with_attachments: bool = True
+        self,
+        *,
+        limit: int = DEFAULT_PAGE_SIZE,
+        only_with_attachments: bool = True,
+        since: str = "",
     ) -> list[MailboxMessage]:
         """The newest messages in the configured folder.
 
@@ -260,15 +292,28 @@ class GraphMailAdapter:
         Graph refuses several ``$filter``/``$orderby`` combinations on messages
         with "The restriction or sort order is too complex", and an operator
         browsing a mailbox should not meet that error because of a convenience.
+
+        ``since`` is the one filter that *is* sent to Graph, because it is the
+        one that must not be applied locally: filtering here would mean asking
+        for the newest 25 messages and discarding most of them, which is how an
+        incremental fetch silently stops finding anything on a busy mailbox.
+        ``receivedDateTime ge`` with ``$orderby receivedDateTime desc`` is the
+        combination Graph documents and accepts.
+
+        Still no sync: this is a narrower question asked when a person presses
+        something, not a cursor a background thread advances. Nothing is marked
+        read, moved or deleted by asking it.
         """
         size = max(1, min(int(limit), MAX_PAGE_SIZE))
-        query = urlencode(
-            {
-                "$select": "id,subject,from,receivedDateTime,hasAttachments,internetMessageId,bodyPreview",
-                "$top": str(size if not only_with_attachments else min(MAX_PAGE_SIZE, size * 3)),
-                "$orderby": "receivedDateTime desc",
-            }
-        )
+        parameters = {
+            "$select": "id,subject,from,receivedDateTime,hasAttachments,internetMessageId,bodyPreview",
+            "$top": str(size if not only_with_attachments else min(MAX_PAGE_SIZE, size * 3)),
+            "$orderby": "receivedDateTime desc",
+        }
+        stamp = graph_timestamp(since)
+        if stamp:
+            parameters["$filter"] = f"receivedDateTime ge {stamp}"
+        query = urlencode(parameters)
         folder = quote(self.config.folder, safe="")
         url = f"{GRAPH_BASE}{self.config.mailbox_root()}/mailFolders/{folder}/messages?{query}"
         payload = read_json(self.egress.get(url, access_token=self._token), provider=PROVIDER)
@@ -327,5 +372,6 @@ __all__ = [
     "READ_SCOPES",
     "SHARED_SCOPE",
     "WELL_KNOWN_FOLDERS",
+    "graph_timestamp",
     "policy",
 ]

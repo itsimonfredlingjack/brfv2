@@ -171,6 +171,93 @@ export const integrationsApi = {
   ),
 };
 
+// The invoice workspace: one invoice as one case.
+//
+// Two reads serve the whole area — the queue and one case — because the
+// alternative is a screen that renders in stages and can briefly show a row
+// whose badge disagrees with its buttons.
+//
+// Nothing in here writes to an accounting system. `importInvoice` and `refresh`
+// are read-only GETs on the other side of the adapter boundary; the review
+// status, the comments and the responsible person are this association's own
+// record and exist nowhere else. There is deliberately no approve call, because
+// there is no approval to give.
+export const invoicesApi = {
+  workspace: (brfId) => request(`/api/brf/${brfId}/invoices`),
+  case: (brfId, caseId) => request(`/api/brf/${brfId}/invoices/cases/${caseId}`),
+
+  // Read one invoice in and analyse it in a single operator action — nobody
+  // reads an invoice in order to leave it unexamined. Idempotent: the same
+  // reference twice lands on the same case.
+  importInvoice: (brfId, externalRef, source = 'fixture') => request(
+    `/api/brf/${brfId}/invoices/import`,
+    jsonBody('POST', { external_ref: externalRef, source }),
+  ),
+  // Re-read the source and re-run the analysis. Adds no second case, no second
+  // finding and no second timeline entry when nothing has changed.
+  refresh: (brfId, caseId) => request(
+    `/api/brf/${brfId}/invoices/cases/${caseId}/refresh`,
+    { method: 'POST' },
+  ),
+
+  // Only the fields that actually changed. The backend refuses a status that
+  // needs a sentence and did not get one.
+  update: (brfId, caseId, change) => request(
+    `/api/brf/${brfId}/invoices/cases/${caseId}`,
+    jsonBody('POST', change),
+  ),
+  comment: (brfId, caseId, note) => request(
+    `/api/brf/${brfId}/invoices/cases/${caseId}/comment`,
+    jsonBody('POST', { note }),
+  ),
+};
+
+// The review queue for incoming post.
+//
+// One read for the whole screen (`queue`), because the alternative is a list
+// call plus a triage call plus a task lookup per row — a screen that renders in
+// stages and can briefly show a card whose badge disagrees with its buttons.
+//
+// Nothing in here writes to the mailbox. `fetch` reads what has arrived since
+// the last checkpoint; `resolve` records what a human decided and routes the
+// result into documents, tasks and watches. A message is never marked, moved
+// or deleted in the mail system by any of it.
+export const intakeApi = {
+  queue: (brfId) => request(`/api/brf/${brfId}/integrations/intake`),
+
+  // Incremental: the backend holds the checkpoint, so the client never sends
+  // one and cannot get it wrong. `onlyWithAttachments` defaults to false —
+  // decisions and deadlines usually arrive as plain text.
+  fetch: (brfId, { limit = 25, onlyWithAttachments = false } = {}) => request(
+    `/api/brf/${brfId}/integrations/mailbox/fetch`
+    + `?limit=${limit}&onlyWithAttachments=${onlyWithAttachments}`,
+    { method: 'POST' },
+  ),
+
+  retriage: (brfId, eventId) => request(
+    `/api/brf/${brfId}/integrations/source-events/${eventId}/triage`,
+    { method: 'POST' },
+  ),
+  // Recorded beside the suggestion, never over it: the pair is the only record
+  // of where the reading was wrong.
+  confirmCategory: (brfId, eventId, category, note = '') => request(
+    `/api/brf/${brfId}/integrations/source-events/${eventId}/triage/confirm`,
+    jsonBody('POST', { category, note }),
+  ),
+
+  // One call for the whole decision. Preserving a message and creating the
+  // task from it is a single act at the desk; two round trips would let the
+  // second half fail after the first succeeded.
+  resolve: (brfId, eventId, decision) => request(
+    `/api/brf/${brfId}/integrations/source-events/${eventId}/resolve`,
+    jsonBody('POST', decision),
+  ),
+  reopen: (brfId, eventId) => request(
+    `/api/brf/${brfId}/integrations/source-events/${eventId}/reopen`,
+    { method: 'POST' },
+  ),
+};
+
 // Dated obligations read out of the association's own contracts.
 //
 // Reading is open to any member; scanning and every decision needs admin,

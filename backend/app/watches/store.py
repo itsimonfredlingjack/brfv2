@@ -22,7 +22,13 @@ from .models import UnresolvedObligation, Watch
 
 logger = logging.getLogger("brf.watches")
 
-SCHEMA_VERSION = 1
+# 2 adds two watch kinds that no document scan produces — "stated_deadline"
+# and "expected_reply", both created from reviewed incoming post. Additive, and
+# the version still goes up: a version-1 build reading one of these would fail
+# validation on the unknown kind, and the loud refusal in _check_schema is a
+# far better failure than a store that will not open with a pydantic
+# traceback.
+SCHEMA_VERSION = 2
 
 META_FILE = "meta.json"
 WATCHES_FILE = "watches.json"

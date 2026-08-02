@@ -20,6 +20,7 @@ Layout, under ``tenants/<brf_id>/integrations/``::
     source-events.json     [SourceEvent, ...]
     invoices.json          [InvoiceSnapshot, ...]
     findings.json          [ReviewFinding, ...]
+    invoice-cases.json     [InvoiceCase, ...]
 
 Migration is by explicit version number rather than by hoping every field has a
 tolerant default. ``schemaVersion`` higher than this build understands is a
@@ -39,7 +40,14 @@ from typing import Iterable, TypeVar
 
 from pydantic import BaseModel, ValidationError
 
-from .models import InvoiceSnapshot, ReviewFinding, SourceEvent, SupplierAlias
+from ..invoices.models import InvoiceCase
+from .models import (
+    InvoiceSnapshot,
+    MailboxCheckpoint,
+    ReviewFinding,
+    SourceEvent,
+    SupplierAlias,
+)
 
 logger = logging.getLogger("brf.integrations")
 
@@ -51,13 +59,31 @@ logger = logging.getLogger("brf.integrations")
 # without them. An adopted document would silently stop being evidence and
 # nobody would see it happen. That is precisely what the version refusal is
 # for, so the number goes up.
-SCHEMA_VERSION = 2
+#
+# 3 is the intake queue: a source event now carries its thread key, its triage
+# suggestion, the human's confirmation of it, how it was resolved, and the
+# document its text was preserved as. The same argument applies with more
+# force — a version-2 build that read one of these events and wrote it back
+# would drop `resolution` and `preserved_document_id`, which would turn a
+# settled queue item back into an open one and orphan a document in the
+# archive with nothing pointing at it.
+#
+# 4 is the invoice workspace: a new file of :class:`~app.invoices.models.InvoiceCase`
+# records, and a ``source_status`` on the invoice snapshot carrying what the
+# accounting system said about its own record. The argument is the same and the
+# stakes are higher than they look — an invoice case holds the association's own
+# review status, its comments and its timeline, and a version-3 build that read
+# one back would drop every one of them. It cannot read the file at all, which
+# is the point of refusing a newer directory outright.
+SCHEMA_VERSION = 4
 
 META_FILE = "meta.json"
 SOURCE_EVENTS_FILE = "source-events.json"
 INVOICES_FILE = "invoices.json"
 FINDINGS_FILE = "findings.json"
 SUPPLIER_ALIASES_FILE = "supplier-aliases.json"
+MAILBOX_FILE = "mailbox-checkpoints.json"
+INVOICE_CASES_FILE = "invoice-cases.json"
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -142,6 +168,21 @@ class IntegrationStore:
         implied. Doing it eagerly matters: a half-migrated directory where some
         events have the field and some do not is the state that makes the next
         migration hard to reason about.
+
+        2 → 3 is additive in the same way, with one thing worth stating: an
+        event from an older build gets ``thread_key=""`` rather than a computed
+        one. Computing it here would mean deciding a message's conversation
+        from a migration, quietly, months after it arrived; instead
+        :func:`app.integrations.threads.build_threads` groups an empty key by
+        subject at read time, so an existing queue reads correctly and nothing
+        was decided on anybody's behalf.
+
+        3 → 4 is additive again, and needs no transformation at all: an invoice
+        read by an older build simply has no ``source_status``, which is the
+        correct record of a build that never asked for one, and there were no
+        invoice cases before this version. Rewriting the files is still done
+        eagerly for the reason above — a directory where some records have the
+        field and some do not is the state that makes the next migration hard.
         """
         logger.info(
             "Migrerar integrationsdata för %s från schemaVersion %d till %d.",
@@ -149,7 +190,7 @@ class IntegrationStore:
             from_version,
             SCHEMA_VERSION,
         )
-        if from_version < 2:
+        if from_version < 4:
             for filename, model in (
                 (SOURCE_EVENTS_FILE, SourceEvent),
                 (INVOICES_FILE, InvoiceSnapshot),
@@ -250,6 +291,37 @@ class IntegrationStore:
             self._write(SOURCE_EVENTS_FILE, remaining)
         return True
 
+    # ---------- mailbox checkpoints ----------
+
+    def get_mailbox_checkpoint(self, provider: str, folder: str) -> MailboxCheckpoint:
+        """Where the last fetch of this folder got to. Never ``None``.
+
+        A tenant that has never fetched gets an empty checkpoint rather than
+        nothing, because "we have not looked yet" and "we looked and found
+        nothing" are different sentences on the screen and the caller should
+        not have to invent the first one.
+
+        Keyed by provider *and* folder: pointing an installation at ``archive``
+        after reading ``inbox`` must not make it believe it has already seen
+        everything in the new folder.
+        """
+        key = (provider, folder)
+        with self.lock:
+            rows = self._read(MAILBOX_FILE, MailboxCheckpoint)
+        for row in rows:
+            if (row.provider, row.folder) == key:
+                return row
+        return MailboxCheckpoint(provider=provider, folder=folder)
+
+    def put_mailbox_checkpoint(self, checkpoint: MailboxCheckpoint) -> MailboxCheckpoint:
+        with self.lock:
+            rows = self._read(MAILBOX_FILE, MailboxCheckpoint)
+            key = (checkpoint.provider, checkpoint.folder)
+            rows = [r for r in rows if (r.provider, r.folder) != key]
+            rows.append(checkpoint)
+            self._write(MAILBOX_FILE, rows)
+        return checkpoint
+
     # ---------- invoices ----------
 
     def list_invoices(self) -> list[InvoiceSnapshot]:
@@ -267,11 +339,22 @@ class IntegrationStore:
         not an event: reading the same invoice twice should leave one row that
         says what the source system currently says, not two rows that a reviewer
         has to reconcile.
+
+        The **identity is kept** across re-reads. An adapter mints a fresh
+        ``id`` every time it maps a payload, so without this a second read of
+        the same invoice would replace the row with one under a new id — and
+        every finding, every case and every task that pointed at the old id
+        would be left pointing at nothing. Re-reading an invoice is the most
+        ordinary thing an operator does on this screen; it must not quietly
+        orphan the review that was done on it.
         """
         with self.lock:
             rows = self._read(INVOICES_FILE, InvoiceSnapshot)
             record = self._stamp(invoice)
             key = (record.adapter, record.external_ref)
+            existing = next((r for r in rows if (r.adapter, r.external_ref) == key), None)
+            if existing is not None:
+                record = record.model_copy(update={"id": existing.id})
             rows = [r for r in rows if (r.adapter, r.external_ref) != key]
             rows.append(record)
             self._write(INVOICES_FILE, rows)
@@ -307,6 +390,58 @@ class IntegrationStore:
             fresh = [self._stamp(f) for f in findings]
             self._write(FINDINGS_FILE, kept + fresh)
         return fresh
+
+    # ---------- invoice cases ----------
+    #
+    # The case is the *only* record in this store a human writes prose into —
+    # a review status, a note, a comment. It lives here rather than in its own
+    # directory for the same reason everything else does: one `brf_id` resolves
+    # to one directory, and `registry.delete()` sweeps it without anyone having
+    # to remember a second place.
+
+    def list_invoice_cases(self) -> list[InvoiceCase]:
+        """Newest activity first — a board reads what moved, not what was filed."""
+        with self.lock:
+            rows = self._read(INVOICE_CASES_FILE, InvoiceCase)
+        return sorted(rows, key=lambda c: c.last_activity_at(), reverse=True)
+
+    def get_invoice_case(self, case_id: str) -> InvoiceCase | None:
+        return next((c for c in self.list_invoice_cases() if c.id == case_id), None)
+
+    def find_invoice_case(self, case_key: str) -> InvoiceCase | None:
+        """The case a new observation converges on, by its deterministic key."""
+        if not case_key:
+            return None
+        return next((c for c in self.list_invoice_cases() if c.case_key == case_key), None)
+
+    def upsert_invoice_case(self, case: InvoiceCase) -> InvoiceCase:
+        """Write a case, replacing the row with the same id.
+
+        Upsert on ``id`` and not on ``case_key``: two cases must never share a
+        key, and if one day they somehow did, silently collapsing them here
+        would destroy one association's review notes without anybody seeing it
+        happen. :mod:`app.invoices.cases` is the only writer and resolves by key
+        before it calls this.
+        """
+        with self.lock:
+            rows = self._read(INVOICE_CASES_FILE, InvoiceCase)
+            record = self._stamp(case)
+            for i, existing in enumerate(rows):
+                if existing.id == record.id:
+                    if len(record.timeline) < len(existing.timeline):
+                        # Same rule as the task store: the timeline is the audit
+                        # trail, and a shorter one means somebody wrote over
+                        # history rather than adding to it.
+                        raise IntegrationError(
+                            f"Fakturaärendet {record.id} skulle skrivas med kortare historik "
+                            "än den redan har. Historiken är append-only."
+                        )
+                    rows[i] = record
+                    break
+            else:
+                rows.append(record)
+            self._write(INVOICE_CASES_FILE, rows)
+        return record
 
     # ---------- supplier aliases ----------
 

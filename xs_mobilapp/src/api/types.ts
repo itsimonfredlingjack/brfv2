@@ -268,7 +268,13 @@ export interface WatchBoard {
 
 export type TaskStatus = 'open' | 'in_progress' | 'blocked' | 'done' | 'cancelled'
 
-export type TaskOriginKind = 'finding' | 'watch' | 'source_event' | 'manual'
+export type TaskOriginKind =
+  | 'finding'
+  | 'watch'
+  | 'source_event'
+  /** The invoice case as a whole, as opposed to one finding inside it. */
+  | 'invoice_case'
+  | 'manual'
 
 export type TaskEventKind =
   | 'created'

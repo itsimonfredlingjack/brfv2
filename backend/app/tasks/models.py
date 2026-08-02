@@ -40,12 +40,16 @@ from ..terms import parse_iso
 # plenty of board work starts in a meeting rather than in a document, and a
 # vocabulary that forced everything to claim a source would produce false
 # provenance rather than honest absence.
-TaskOriginKind = Literal["finding", "watch", "source_event", "manual"]
+TaskOriginKind = Literal["finding", "watch", "source_event", "invoice_case", "manual"]
 
 ORIGIN_LABELS: dict[str, str] = {
     "finding": "Fakturagranskning",
     "watch": "Bevakning",
     "source_event": "Inkommande post",
+    # The invoice case as a whole, as opposed to one finding inside it. Both
+    # exist because both happen: "utred den här avvikelsen" comes off a finding,
+    # "be leverantören om avtalet" comes off the invoice.
+    "invoice_case": "Fakturaärende",
     "manual": "Skapad för hand",
 }
 

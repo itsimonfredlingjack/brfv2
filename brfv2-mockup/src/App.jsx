@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { MessageSquare, Folders, Inbox, CalendarClock, ClipboardList, Search as SearchIcon, FileText, ArrowRight, Loader2, Sparkles, AlertCircle, Upload, CheckCircle2, AlertTriangle, X, ChevronRight, ChevronDown, CornerDownRight, ArrowLeft, ZoomIn, ZoomOut, ThumbsDown, MessageCircle, Info, Menu, ChevronUp, LogOut, Trash2, Settings } from 'lucide-react';
+import { MessageSquare, Folders, Inbox, Receipt, CalendarClock, ClipboardList, Search as SearchIcon, FileText, ArrowRight, Loader2, Sparkles, AlertCircle, Upload, CheckCircle2, AlertTriangle, X, ChevronRight, ChevronDown, CornerDownRight, ArrowLeft, ZoomIn, ZoomOut, ThumbsDown, MessageCircle, Info, Menu, ChevronUp, LogOut, Trash2, Settings } from 'lucide-react';
 import Login from './components/Login';
 import PdfPane from './components/PdfPane';
 import Setup from './components/Setup';
 import DesktopSettings from './components/DesktopSettings';
 import Integrations from './components/Integrations';
+import Invoices from './components/Invoices';
 import Watches from './components/Watches';
 import Tasks from './components/Tasks';
 import { api, desktopApi } from './api';
@@ -813,6 +814,14 @@ function App() {
                   <Inbox size={20} /> Inkommande
                 </button>
               )}
+              {/* Fakturor is its own product area, not a pane inside
+                  Inkommande: an invoice is worked for weeks after the post it
+                  arrived with has been dealt with. */}
+              {desktopState && (
+                <button className={`nav-item ${currentTab === 'invoices' ? 'active' : ''}`} onClick={() => { setCurrentTab('invoices'); setIsMobileMenuOpen(false); }}>
+                  <Receipt size={20} /> Fakturor
+                </button>
+              )}
               {desktopState && (
                 <button className={`nav-item ${currentTab === 'watches' ? 'active' : ''}`} onClick={() => { setCurrentTab('watches'); setIsMobileMenuOpen(false); }}>
                   <CalendarClock size={20} /> Bevakningar
@@ -1561,7 +1570,16 @@ function App() {
               <div className="tab-content">
                 <Integrations
                   brfId={activeBrfId}
-                  documents={documents}
+                  isAdmin={isAdmin}
+                  onOpenDocument={openDocument}
+                />
+              </div>
+            )}
+
+            {currentTab === 'invoices' && desktopState && activeBrfId && (
+              <div className="tab-content">
+                <Invoices
+                  brfId={activeBrfId}
                   isAdmin={isAdmin}
                   onOpenDocument={openDocument}
                   onOpenCitation={openDocumentFromCitation}

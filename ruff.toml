@@ -1,0 +1,49 @@
+# Ruff configuration for the backend, deliberately at the repository root
+# rather than in backend/pyproject.toml.
+#
+# WHY NOT backend/pyproject.toml: that file is on REPRO_DELIVERY_PATHS
+# (ops/lib/repro.sh). The desktop artifact identifies itself by the hash of the
+# delivery tree, not by the commit, which is what lets acceptance evidence be
+# committed alongside the delivery it describes without moving the artifact's
+# bytes. Adding a dev dependency there would change that hash and retroactively
+# invalidate committed evidence — docs/evidence/installerad-rpm-a55e0ff-2026-08-02.md
+# asserts b92ed5d0…65ef8c0 for both a55e0ff and e91b2b3. A linter must not cost
+# an RPM rebuild, so ruff is invoked as an ephemeral pinned tool
+# (`uvx ruff@0.15.0`, matching the existing .ruff_cache/0.15.0) and configured
+# here, off the delivery path.
+#
+# The .claude/hooks/lint-edited-file.sh PostToolUse hook reads this file.
+# Nothing else depends on it; `make test` is unaffected.
+
+target-version = "py312"
+
+# Descriptive, not enforced — E501 is not in the selected rules below. Recorded
+# because p95 of the existing backend is 82 columns and p99 is 97, so 100 is
+# where this codebase actually sits. Do not turn this into a gate without a
+# separate decision: reformatting a codebase that was never ruff-formatted
+# would bury real diffs in layout churn.
+line-length = 100
+
+exclude = [
+    "backend/.venv",
+    "backend/data",
+    "src-tauri/target",
+    "**/__pycache__",
+]
+
+[lint]
+# Ruff's conservative default set, chosen on purpose:
+#   E4  import placement       E7  statement-level mistakes
+#   E9  syntax / IO errors     F   pyflakes — undefined names, unused imports,
+#                                  broken f-strings, shadowed definitions
+#
+# These find defects. Style opinions (naming, import ordering, bugbear) are
+# left off so the edit-time hook stays quiet on pre-existing code and speaks up
+# only when something is actually wrong. Widening this set means first fixing
+# the backlog it surfaces, otherwise every edit reports someone else's lint.
+select = ["E4", "E7", "E9", "F"]
+
+[lint.per-file-ignores]
+# Fixtures and seed scripts build sample corpora; star-imports and unused
+# locals there are intentional scaffolding rather than defects.
+"backend/tests/**" = ["F811"]

@@ -33,6 +33,7 @@ from ..store import Store
 from .eml import EmlFileAdapter, EmlRejected, NormalizedMessage, parse_eml
 from .models import Attachment, Provenance, SourceEvent, utc_now_iso
 from .store import IntegrationStore
+from .threads import thread_key_for
 
 logger = logging.getLogger("brf.integrations.intake")
 
@@ -318,6 +319,8 @@ def import_eml(
         received_at=utc_now_iso(),
         occurred_at=message.sent_at,
         external_ref=message.message_id or external_hint or None,
+        in_reply_to=message.in_reply_to,
+        references=list(message.references),
         content_sha256=content_sha256,
         provenance=Provenance(
             method=method,
@@ -338,6 +341,24 @@ def import_eml(
             store, message, exclude=set(added_document_ids)
         ),
     )
+
+    # Which conversation this belongs to, decided once, against the queue as it
+    # stands. Computed here rather than on every read so that a card cannot
+    # regroup itself under a reader — see app.integrations.threads.
+    thread_key, thread_subject = thread_key_for(event, integrations.list_source_events())
+    event = event.model_copy(update={"thread_key": thread_key, "thread_subject": thread_subject})
+
+    # What this appears to be. A suggestion, computed at import so that the
+    # queue is useful the moment it is opened rather than after somebody
+    # presses "analysera" on every row — and never allowed to fail the import,
+    # because a reading of a message is worth strictly less than the message.
+    try:
+        from .triage import analyze
+
+        event = event.model_copy(update={"triage": analyze(store, event)})
+    except Exception as exc:  # pragma: no cover - analyze() is defensive itself
+        logger.warning("Kunde inte analysera %s vid import: %s", event.id, exc)
+
     try:
         return integrations.add_source_event(event)
     except Exception:

@@ -158,8 +158,15 @@ class MailboxReadAdapter(Protocol):
 
     name: str
 
-    def list_messages(self, *, limit: int, only_with_attachments: bool) -> list:
-        """Recent messages in the configured folder. Headers only, never bodies."""
+    def list_messages(self, *, limit: int, only_with_attachments: bool, since: str) -> list:
+        """Recent messages in the configured folder. Headers only, never bodies.
+
+        ``since`` narrows the question to what arrived at or after an instant
+        the caller already saw. It is a *narrower read*, not a subscription:
+        the caller holds the checkpoint, this call still happens because a
+        person asked for it, and asking twice returns the same messages rather
+        than advancing anything.
+        """
         ...
 
     def get_message_mime(self, message_id: str) -> bytes:

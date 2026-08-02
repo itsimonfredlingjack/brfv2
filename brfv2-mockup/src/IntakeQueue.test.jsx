@@ -1,0 +1,693 @@
+import React from 'react';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
+import IntakeQueue from './components/IntakeQueue';
+import { intakeApi, integrationsApi } from './api';
+
+/**
+ * The review queue for incoming post.
+ *
+ * What is asserted here is not that the component renders. It is that the
+ * screen keeps four promises, each of which is easy to break in a refactor and
+ * expensive to break in front of a board:
+ *
+ * 1. A reading is shown as a reading — with the words it was read from, and
+ *    with who produced it.
+ * 2. A human's category and the engine's guess are both visible, and visibly
+ *    different.
+ * 3. Nothing goes into the archive without a written reason, and the form
+ *    refuses before the backend is asked.
+ * 4. A settled item says where it went, not merely that it is settled.
+ */
+
+vi.mock('./api', () => ({
+  api: {},
+  desktopApi: {},
+  integrationsApi: { importSourceEvent: vi.fn() },
+  intakeApi: {
+    queue: vi.fn(),
+    fetch: vi.fn(),
+    retriage: vi.fn(),
+    confirmCategory: vi.fn(),
+    resolve: vi.fn(),
+    reopen: vi.fn(),
+  },
+  tasksApi: {},
+  watchesApi: {},
+}));
+
+const CATEGORY_LABELS = {
+  invoice: 'Faktura',
+  contract_or_quote: 'Avtal eller offert',
+  authority_or_manager: 'Myndighet eller förvaltare',
+  decision_or_approval: 'Beslut eller godkännande',
+  question_awaiting_reply: 'Fråga som väntar svar',
+  information: 'Information',
+  unclear: 'Oklart',
+};
+
+const RESOLUTION_LABELS = {
+  take_in: 'Ta in',
+  create_task: 'Skapa uppgift',
+  monitor: 'Bevaka',
+  already_handled: 'Redan hanterat',
+  not_relevant: 'Inte relevant',
+};
+
+const FORMAT = {
+  mail: {
+    extension: '.eml',
+    maxAttachments: 10,
+    attachmentTypes: ['application/pdf'],
+  },
+};
+
+const EVENT = {
+  id: 'ev1',
+  tenant_id: 'brf-a',
+  source_type: 'email',
+  received_at: '2026-08-01T10:00:00+00:00',
+  occurred_at: '2026-02-10T09:00:00+01:00',
+  external_ref: '<offert2@snosvangen.example>',
+  content_sha256: 'f9bac952a56cfe18b2d7248ca6953cf1e7d8e38e2f46b0261bd6a04be6cf302f',
+  provenance: {
+    method: 'graph-mailbox-import',
+    adapter: 'microsoft-graph',
+    origin_filename: 'AAMkAGI2.eml',
+    origin_bytes: 4485,
+    imported_by: 'user-1',
+    imported_at: '2026-08-01T10:00:00+00:00',
+  },
+  origin: 'anna@snosvangen.example',
+  origin_display: 'Anna Lind',
+  recipients: ['styrelsen@gjutformen12.example'],
+  subject: 'SV: Offert takomläggning',
+  body_text: 'Vi godkänner offerten på 148 000 kr och sätter igång vecka 12.',
+  attachments: [{
+    id: 'att1',
+    filename: 'offert-tak.pdf',
+    media_type: 'application/pdf',
+    bytes: 2048,
+    sha256: 'c'.repeat(64),
+    document_id: 'doc9',
+    ingested: true,
+    reused_existing_document: false,
+    archived: false,
+    archived_by: null,
+    archived_at: null,
+    archive_note: null,
+  }],
+  import_status: 'imported',
+  review_status: 'open',
+  linked_document_ids: [],
+  suggested_document_ids: [],
+  triage: {
+    category: 'decision_or_approval',
+    category_label: 'Beslut eller godkännande',
+    headline: 'Kan innehålla ett beslut eller godkännande — SV: Offert takomläggning (från Anna Lind)',
+    why_it_matters: 'Ett godkännande som bara finns i en inkorg är svårt att belägga senare. belopp nämns (148 000 kr).',
+    action_hint: 'Bevara meddelandet så att beslutet går att belägga.',
+    awaiting_reply: false,
+    contains_decision: true,
+    supplier_name: 'Anna Lind',
+    signals: [
+      {
+        kind: 'decision',
+        label: 'Kan innehålla ett beslut',
+        value: 'godkänner',
+        quote: 'Vi godkänner offerten på 148 000 kr och sätter igång vecka 12.',
+        source: 'body',
+        source_ref: '',
+      },
+      {
+        kind: 'amount',
+        label: 'Belopp',
+        value: '148000 kr',
+        quote: 'Vi godkänner offerten på 148 000 kr och sätter igång vecka 12.',
+        source: 'body',
+        source_ref: '',
+      },
+      {
+        kind: 'date',
+        label: 'Datum i texten',
+        value: '2026-09-30',
+        quote: 'Svar önskas senast den 30 september 2026.',
+        source: 'body',
+        source_ref: '',
+      },
+    ],
+    related: [{
+      kind: 'document',
+      ref_id: 'doc3',
+      label: 'Snöröjningsavtal 2026.pdf',
+      basis: 'föreslaget av sökningen på ämne och avsändare',
+    }],
+    suggested_by: 'regelmotor',
+    uncertainty: '',
+    created_at: '2026-08-01T10:00:00+00:00',
+  },
+  triage_confirmation: null,
+  resolution: null,
+  preserved_document_id: null,
+  preserved_by: null,
+  preserved_at: null,
+  preservation_note: null,
+  in_reply_to: null,
+  references: [],
+  thread_key: 'subject:offert takomläggning|gjutformen12.example,snosvangen.example',
+  thread_subject: 'Offert takomläggning',
+  decided_by: null,
+  decided_at: null,
+  decision_note: null,
+};
+
+const THREAD = {
+  key: EVENT.thread_key,
+  subject: 'Offert takomläggning',
+  category: 'decision_or_approval',
+  category_label: 'Beslut eller godkännande',
+  category_confirmed: false,
+  latest_sender: 'anna@snosvangen.example',
+  latest_sender_display: 'Anna Lind',
+  first_at: '2026-02-03T08:14:00+01:00',
+  latest_at: '2026-02-10T09:00:00+01:00',
+  message_count: 2,
+  attachment_count: 1,
+  awaiting_reply: false,
+  open_count: 1,
+  resolved: false,
+  headline: EVENT.triage.headline,
+  why_it_matters: EVENT.triage.why_it_matters,
+  action_hint: EVENT.triage.action_hint,
+  supplier_name: 'Anna Lind',
+  suggested_by: 'regelmotor',
+  uncertainty: '',
+  signals: EVENT.triage.signals,
+  related: EVENT.triage.related,
+  events: [EVENT],
+};
+
+function mountWith({
+  threads = [THREAD],
+  mailbox = { hasFetched: false, last_new_count: 0, last_fetched_at: '', last_error: '' },
+  counts = { threads: 1, openThreads: 1, openMessages: 1, awaitingReply: 0, unclear: 0 },
+  isAdmin = true,
+  mailboxConnected = true,
+  onOpenDocument = vi.fn(),
+} = {}) {
+  intakeApi.queue.mockResolvedValue({
+    threads,
+    categoryLabels: CATEGORY_LABELS,
+    resolutionLabels: RESOLUTION_LABELS,
+    mailbox,
+    counts,
+  });
+  return render(
+    <IntakeQueue
+      brfId="brf-a"
+      isAdmin={isAdmin}
+      mailboxConnected={mailboxConnected}
+      format={FORMAT}
+      onOpenDocument={onOpenDocument}
+    />,
+  );
+}
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+// ---------------------------------------------------------------------------
+
+describe('the queue, before anything is decided', () => {
+  it('says out loud that the mailbox is raw material and this is a queue', async () => {
+    mountWith();
+    const intro = await screen.findByText(/Brevlådan är råmaterial/);
+    expect(intro).toHaveTextContent(/ingenting ändras i brevlådan/i);
+  });
+
+  it('shows a thread as a conversation, not as unrelated messages', async () => {
+    mountWith();
+    expect(await screen.findByText('Offert takomläggning')).toBeInTheDocument();
+    const meta = screen.getByText(/Senast från Anna Lind/);
+    expect(meta).toHaveTextContent('2 meddelanden');
+    expect(meta).toHaveTextContent('1 bilaga');
+    expect(meta).toHaveTextContent('2026-02-03');
+    expect(meta).toHaveTextContent('2026-02-10');
+  });
+
+  it('marks a thread that appears to be waiting for a reply', async () => {
+    mountWith({
+      threads: [{ ...THREAD, awaiting_reply: true }],
+      counts: { threads: 1, openThreads: 1, awaitingReply: 1 },
+    });
+    // "ser ut att" and not "väntar svar": the product reads incoming post and
+    // cannot see whether somebody here already replied.
+    expect(await screen.findByText(/ser ut att vänta svar/)).toBeInTheDocument();
+  });
+
+  it('filters to what still needs a decision without hiding the rest', async () => {
+    mountWith({
+      threads: [THREAD, { ...THREAD, key: 't2', subject: 'Avklarad tråd', resolved: true, open_count: 0 }],
+      counts: { threads: 2, openThreads: 1, awaitingReply: 0 },
+    });
+    await screen.findByText('Offert takomläggning');
+    expect(screen.queryByText('Avklarad tråd')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /Alla trådar/ }));
+    expect(await screen.findByText('Avklarad tråd')).toBeInTheDocument();
+  });
+});
+
+describe('what the app believes', () => {
+  it('shows the reading under a heading that says it is a reading', async () => {
+    mountWith();
+    expect(await screen.findByText('Vad det ser ut att gälla')).toBeInTheDocument();
+    expect(screen.getByText(EVENT.triage.headline)).toBeInTheDocument();
+    expect(screen.getByText(/Ett godkännande som bara finns i en inkorg/)).toBeInTheDocument();
+  });
+
+  it('names who produced the reading, and never calls a rule engine AI', async () => {
+    mountWith();
+    expect(await screen.findByText('bedömt av regelmotor')).toBeInTheDocument();
+  });
+
+  it('says when a language model was involved', async () => {
+    mountWith({
+      threads: [{ ...THREAD, suggested_by: 'regelmotor + språkmodell (gemma4:e12b)' }],
+    });
+    expect(await screen.findByText(/bedömt av regelmotor \+ språkmodell \(gemma4:e12b\)/))
+      .toBeInTheDocument();
+  });
+
+  it('shows every value next to the words it was read from', async () => {
+    mountWith();
+    await screen.findByText('Offert takomläggning');
+    const signals = screen.getByText('Läst ur meddelandet').closest('div');
+
+    // A value without its quote is an unverifiable claim, so each one is
+    // asserted together with the sentence behind it.
+    expect(within(signals).getByText('148000 kr')).toBeInTheDocument();
+    expect(within(signals).getByText('2026-09-30')).toBeInTheDocument();
+    expect(within(signals).getAllByText(/Vi godkänner offerten på 148 000 kr/).length)
+      .toBeGreaterThan(0);
+    expect(within(signals).getByText(/Svar önskas senast den 30 september 2026/))
+      .toBeInTheDocument();
+    expect(within(signals).getAllByText(/ur mejltexten/).length).toBeGreaterThan(0);
+  });
+
+  it('marks a related record as a proposal and states its basis', async () => {
+    mountWith();
+    await screen.findByText('Offert takomläggning');
+    const item = screen.getByText('Snöröjningsavtal 2026.pdf').closest('li');
+    expect(within(item).getByText('förslag')).toBeInTheDocument();
+    expect(within(item).getByText(/föreslaget av sökningen på ämne och avsändare/))
+      .toBeInTheDocument();
+  });
+
+  it('shows stated uncertainty rather than a confident empty card', async () => {
+    mountWith({
+      threads: [{
+        ...THREAD,
+        category: 'unclear',
+        category_label: 'Oklart',
+        signals: [],
+        uncertainty: 'Meddelandet innehåller ingen text som den här läsningen känner igen.',
+      }],
+    });
+    expect(await screen.findByText(/ingen text som den här läsningen känner igen/))
+      .toBeInTheDocument();
+  });
+});
+
+describe('correcting the category', () => {
+  it('records the human decision and keeps the suggestion visible beside it', async () => {
+    mountWith({
+      threads: [{
+        ...THREAD,
+        category_confirmed: true,
+        events: [{
+          ...EVENT,
+          triage_confirmation: {
+            category: 'authority_or_manager',
+            category_label: 'Myndighet eller förvaltare',
+            confirmed_by: 'user-1',
+            confirmed_at: '2026-08-01T11:00:00+00:00',
+            note: 'Det är förvaltaren som skrivit.',
+          },
+        }],
+      }],
+    });
+    const block = (await screen.findByText(/har satt kategorin till/)).closest('p');
+    expect(within(block).getByText('Myndighet eller förvaltare')).toBeInTheDocument();
+    expect(block).toHaveTextContent('Det är förvaltaren som skrivit.');
+    // The engine's guess survives the correction: the pair is the only record
+    // of where the reading was wrong.
+    expect(within(block).getByText('Beslut eller godkännande')).toBeInTheDocument();
+  });
+
+  it('posts exactly the category that was chosen', async () => {
+    mountWith();
+    await screen.findByText('Offert takomläggning');
+    fireEvent.click(screen.getByRole('button', { name: /Rätta kategorin/ }));
+
+    fireEvent.change(screen.getByLabelText('Kategori'), { target: { value: 'invoice' } });
+    intakeApi.confirmCategory.mockResolvedValue(EVENT);
+    fireEvent.click(screen.getByRole('button', { name: 'Spara kategorin' }));
+
+    await waitFor(() => expect(intakeApi.confirmCategory)
+      .toHaveBeenCalledWith('brf-a', 'ev1', 'invoice', ''));
+  });
+});
+
+describe('fetching', () => {
+  it('says when it last looked and what it found', async () => {
+    mountWith({
+      mailbox: {
+        hasFetched: true,
+        last_fetched_at: '2026-08-01T10:00:00+00:00',
+        last_new_count: 3,
+        last_error: '',
+      },
+    });
+    expect(await screen.findByText(/Senast hämtat .* — 3 nya\./)).toBeInTheDocument();
+    expect(screen.getByText(/frågar efter det som kommit sedan förra gången/))
+      .toBeInTheDocument();
+  });
+
+  it('reports what could not be taken in rather than staying silent', async () => {
+    mountWith();
+    await screen.findByText('Offert takomläggning');
+    intakeApi.fetch.mockResolvedValue({
+      seen: 2,
+      new: 1,
+      alreadyKnown: 0,
+      events: [],
+      skipped: [{
+        external_ref: '<x@fixture.invalid>',
+        subject: 'Underlag i kalkylblad',
+        sender: 'forvaltare@example.se',
+        received_at: '2026-08-01T09:00:00+00:00',
+        code: 'unsupported_attachment',
+        reason: "Bilagan 'underlag.csv' är text/csv. Den här versionen tar bara emot application/pdf",
+      }],
+      checkpoint: { hasFetched: true },
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Hämta nytt/ }));
+
+    // The queue is not the mailbox, and says so.
+    expect(await screen.findByText(/kunde inte tas in — de ligger kvar i brevlådan/))
+      .toBeInTheDocument();
+    expect(screen.getByText(/underlag\.csv/)).toBeInTheDocument();
+  });
+
+  it('says plainly when there is nothing new', async () => {
+    mountWith();
+    await screen.findByText('Offert takomläggning');
+    intakeApi.fetch.mockResolvedValue({
+      seen: 0, new: 0, alreadyKnown: 0, events: [], skipped: [], checkpoint: {},
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Hämta nytt/ }));
+    expect(await screen.findByText(/Inget nytt sedan förra hämtningen/)).toBeInTheDocument();
+  });
+
+  it('shows a failed fetch as a failure, not as an empty result', async () => {
+    mountWith({
+      mailbox: {
+        hasFetched: true,
+        last_fetched_at: '2026-08-01T10:00:00+00:00',
+        last_new_count: 0,
+        last_error: 'microsoft-graph: 503 Service Unavailable',
+      },
+    });
+    expect(await screen.findByText(/Senaste försöket gick inte igenom/)).toBeInTheDocument();
+    expect(screen.getByText(/Läget är oförändrat/)).toBeInTheDocument();
+  });
+
+  it('keeps the manual .eml import usable with nothing connected', async () => {
+    mountWith({ mailboxConnected: false });
+    expect(await screen.findByText('Importera en .eml-fil')).toBeInTheDocument();
+    expect(screen.getByText(/Ingen brevlåda är ansluten/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Hämta nytt/ })).toBeDisabled();
+    expect(intakeApi.fetch).not.toHaveBeenCalled();
+  });
+
+  it('states the accepted format instead of leaving the operator to guess', async () => {
+    mountWith();
+    expect(await screen.findByText(/application\/pdf som bilaga/)).toBeInTheDocument();
+    expect(screen.getByText(/Allt annat avvisas i sin helhet/)).toBeInTheDocument();
+  });
+
+  it('surfaces a refusal reason from the backend verbatim', async () => {
+    mountWith();
+    await screen.findByText('Offert takomläggning');
+    integrationsApi.importSourceEvent.mockRejectedValue(
+      new Error("Bilagan 'underlag.csv' är text/csv. Den här versionen tar bara emot application/pdf"),
+    );
+    fireEvent.change(document.getElementById('intake-eml-import'), {
+      target: { files: [new File(['x'], 'underlag.eml', { type: 'message/rfc822' })] },
+    });
+    expect(await screen.findByRole('alert')).toHaveTextContent(/underlag\.csv/);
+  });
+});
+
+describe('the message itself', () => {
+  it('shows provenance the operator can check the message against', async () => {
+    mountWith();
+    await screen.findByText('Offert takomläggning');
+    fireEvent.click(screen.getByText('SV: Offert takomläggning'));
+
+    expect(screen.getByText('graph-mailbox-import / microsoft-graph')).toBeInTheDocument();
+    expect(screen.getByText('user-1')).toBeInTheDocument();
+    expect(screen.getByText(/f9bac952a56cfe18b2d724/)).toBeInTheDocument();
+  });
+
+  it('keeps an attachment as material under review until somebody says otherwise', async () => {
+    mountWith();
+    await screen.findByText('Offert takomläggning');
+    fireEvent.click(screen.getByText('SV: Offert takomläggning'));
+
+    const item = screen.getByText('offert-tak.pdf').closest('li');
+    expect(within(item).getByText('material under granskning')).toBeInTheDocument();
+  });
+
+  it('shows a preserved message as preserved, by whom and why', async () => {
+    mountWith({
+      threads: [{
+        ...THREAD,
+        events: [{
+          ...EVENT,
+          preserved_document_id: 'doc42',
+          preserved_by: 'user-1',
+          preserved_at: '2026-08-01T11:00:00+00:00',
+          preservation_note: 'Godkännandet måste gå att belägga.',
+        }],
+      }],
+    });
+    await screen.findByText('Offert takomläggning');
+    fireEvent.click(screen.getByText('SV: Offert takomläggning'));
+    expect(screen.getByText(/Texten är bevarad som dokument/)).toBeInTheDocument();
+    expect(screen.getByText(/Godkännandet måste gå att belägga/)).toBeInTheDocument();
+  });
+});
+
+describe('resolving', () => {
+  function openForm() {
+    fireEvent.click(screen.getByText('SV: Offert takomläggning'));
+  }
+
+  it('offers every outcome the product model has', async () => {
+    mountWith();
+    await screen.findByText('Offert takomläggning');
+    openForm();
+    for (const label of Object.values(RESOLUTION_LABELS)) {
+      expect(screen.getByRole('checkbox', { name: label })).toBeInTheDocument();
+    }
+  });
+
+  it('refuses to take anything in without a stated reason, before the backend is asked', async () => {
+    mountWith();
+    await screen.findByText('Offert takomläggning');
+    openForm();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Ta in' }));
+    const submit = screen.getByRole('button', { name: 'Spara beslutet' });
+    expect(submit).toBeDisabled();
+
+    fireEvent.click(submit);
+    expect(intakeApi.resolve).not.toHaveBeenCalled();
+
+    fireEvent.change(screen.getByLabelText(/Varför ska posten bevaras\?/), {
+      target: { value: 'Godkännandet måste gå att belägga.' },
+    });
+    expect(submit).toBeEnabled();
+  });
+
+  it('preserves the message without adopting its attachments by default', async () => {
+    mountWith();
+    await screen.findByText('Offert takomläggning');
+    openForm();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Ta in' }));
+    fireEvent.change(screen.getByLabelText(/Varför ska posten bevaras\?/), {
+      target: { value: 'Godkännandet måste gå att belägga.' },
+    });
+    intakeApi.resolve.mockResolvedValue({ ...EVENT, resolution: { outcomes: [], decided_by: 'user-1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Spara beslutet' }));
+
+    await waitFor(() => expect(intakeApi.resolve).toHaveBeenCalledWith('brf-a', 'ev1', {
+      outcomes: ['take_in'],
+      note: 'Godkännandet måste gå att belägga.',
+      attachment_ids: [],
+      task: null,
+      watch: null,
+    }));
+  });
+
+  it('sends the attachments a reviewer explicitly chose', async () => {
+    mountWith();
+    await screen.findByText('Offert takomläggning');
+    openForm();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Ta in' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: /offert-tak\.pdf/ }));
+    fireEvent.change(screen.getByLabelText(/Varför ska posten bevaras\?/), {
+      target: { value: 'Offerten hör till underlaget.' },
+    });
+    intakeApi.resolve.mockResolvedValue({ ...EVENT, resolution: { outcomes: [], decided_by: 'user-1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Spara beslutet' }));
+
+    await waitFor(() => expect(intakeApi.resolve).toHaveBeenCalledWith(
+      'brf-a', 'ev1', expect.objectContaining({ attachment_ids: ['att1'] }),
+    ));
+  });
+
+  it('combines preserving with taking work on, in one act', async () => {
+    mountWith();
+    await screen.findByText('Offert takomläggning');
+    openForm();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Ta in' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Skapa uppgift' }));
+    fireEvent.change(screen.getByLabelText('Rubrik'), {
+      target: { value: 'Beställ takomläggning' },
+    });
+    fireEvent.change(screen.getByLabelText('Ansvarig'), { target: { value: 'Bo' } });
+    fireEvent.change(screen.getByLabelText(/Varför ska posten bevaras\?/), {
+      target: { value: 'Godkännandet måste gå att belägga.' },
+    });
+    intakeApi.resolve.mockResolvedValue({ ...EVENT, resolution: { outcomes: [], decided_by: 'user-1' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Spara beslutet' }));
+
+    await waitFor(() => expect(intakeApi.resolve).toHaveBeenCalledWith(
+      'brf-a', 'ev1', expect.objectContaining({
+        outcomes: ['take_in', 'create_task'],
+        task: { title: 'Beställ takomläggning', responsible: 'Bo', due_date: '' },
+      }),
+    ));
+  });
+
+  it('offers the dates it read, as something to press rather than a prefilled guess', async () => {
+    mountWith();
+    await screen.findByText('Offert takomläggning');
+    openForm();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Bevaka' }));
+    const chip = screen.getByRole('button', { name: '2026-09-30' });
+    expect(screen.getByLabelText('Datum')).toHaveValue('');
+
+    fireEvent.click(chip);
+    expect(screen.getByLabelText('Datum')).toHaveValue('2026-09-30');
+  });
+
+  it('will not let a card say both "inte relevant" and something else', async () => {
+    mountWith();
+    await screen.findByText('Offert takomläggning');
+    openForm();
+
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Ta in' }));
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Inte relevant' }));
+
+    expect(screen.getByRole('checkbox', { name: 'Inte relevant' })).toBeChecked();
+    expect(screen.getByRole('checkbox', { name: 'Ta in' })).not.toBeChecked();
+  });
+
+  it('says that the mailbox is untouched, on the form where it matters', async () => {
+    mountWith();
+    await screen.findByText('Offert takomläggning');
+    openForm();
+    expect(screen.getByText(/Ingenting ändras i brevlådan/)).toBeInTheDocument();
+  });
+});
+
+describe('a resolved item', () => {
+  const settled = {
+    ...EVENT,
+    review_status: 'approved',
+    preserved_document_id: 'doc42',
+    resolution: {
+      outcomes: [
+        { kind: 'take_in', label: 'Meddelandets text bevarad som dokument', ref_id: 'doc42', ref_label: 'E-post 2026-02-10 — SV- Offert takomläggning.pdf' },
+        { kind: 'create_task', label: 'Skapa uppgift', ref_id: 'task7', ref_label: 'Beställ takomläggning (att göra)' },
+      ],
+      decided_by: 'user-1',
+      decided_at: '2026-08-01T11:00:00+00:00',
+      note: 'Godkännandet måste gå att belägga.',
+    },
+  };
+
+  /** Resolved threads live behind the "Alla trådar" filter, collapsed. */
+  async function showResolved() {
+    fireEvent.click(await screen.findByRole('button', { name: /Alla trådar/ }));
+    fireEvent.click(await screen.findByText('Offert takomläggning'));
+  }
+
+  it('says where it went, not merely that it is handled', async () => {
+    mountWith({ threads: [{ ...THREAD, resolved: true, open_count: 0, events: [settled] }] });
+    await showResolved();
+    fireEvent.click(screen.getByText('SV: Offert takomläggning'));
+
+    expect(screen.getByText('Meddelandets text bevarad som dokument')).toBeInTheDocument();
+    expect(screen.getByText(/E-post 2026-02-10/)).toBeInTheDocument();
+    expect(screen.getByText(/Beställ takomläggning \(att göra\)/)).toBeInTheDocument();
+  });
+
+  it('opens the preserved document through the app’s own navigation', async () => {
+    const onOpenDocument = vi.fn();
+    mountWith({
+      threads: [{ ...THREAD, resolved: true, open_count: 0, events: [settled] }],
+      onOpenDocument,
+    });
+    await showResolved();
+    fireEvent.click(screen.getByText('SV: Offert takomläggning'));
+    fireEvent.click(screen.getAllByRole('button', { name: 'Öppna dokumentet' })[0]);
+
+    expect(onOpenDocument).toHaveBeenCalledWith('doc42', 1);
+  });
+
+  it('can be reopened, and says that what it produced stays', async () => {
+    mountWith({ threads: [{ ...THREAD, resolved: true, open_count: 0, events: [settled] }] });
+    await showResolved();
+    fireEvent.click(screen.getByText('SV: Offert takomläggning'));
+
+    expect(screen.getByText(/Det som redan skapats står kvar/)).toBeInTheDocument();
+    intakeApi.reopen.mockResolvedValue({ ...EVENT, resolution: null });
+    fireEvent.click(screen.getByRole('button', { name: /Öppna i kön igen/ }));
+    await waitFor(() => expect(intakeApi.reopen).toHaveBeenCalledWith('brf-a', 'ev1'));
+  });
+});
+
+describe('a member who is not an administrator', () => {
+  it('may read the queue and may not act on it', async () => {
+    mountWith({ isAdmin: false });
+    await screen.findByText('Offert takomläggning');
+
+    // Reading is the point of showing it; the acts are admin-only in the
+    // backend, and the UI must not offer what the route will refuse.
+    expect(screen.queryByRole('button', { name: /Hämta nytt/ })).not.toBeInTheDocument();
+    expect(screen.queryByText('Importera en .eml-fil')).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('SV: Offert takomläggning'));
+    expect(screen.getByRole('checkbox', { name: 'Ta in' })).toBeDisabled();
+  });
+});

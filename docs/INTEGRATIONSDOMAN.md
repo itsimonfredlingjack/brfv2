@@ -36,6 +36,17 @@ Leverantör, referens, datum, period, belopp, valuta, moms, rader, originalkäll
 och hash. **Inget bokföringstillstånd som appen får ändra** — inte för att det
 är bortglömt, utan för att det inte finns någon kodväg som kunde skriva ett.
 
+`source_status` är undantaget som bekräftar det: ögonblicksbilden *återger* vad
+källsystemet sa om sin egen post (`Booked`, `Cancelled`, `Balance`), så en
+granskare kan se ekonomisystemets läge utan att lämna produkten. Det läses,
+visas och skickas aldrig — och det visas alltid åtskilt från föreningens egen
+granskningsstatus, som är en annan sak.
+
+Ögonblicksbilden **behåller sitt `id`** när samma `(adapter, external_ref)` läses
+om. En adapter mintar ett nytt id varje gång den mappar en payload; utan den
+regeln hade en omläsning lämnat varje fynd, ärende och uppgift som pekade på det
+gamla id:t pekande på ingenting.
+
 Belopp är `Decimal`, aldrig `float`, och serialiseras som JSON-*sträng*.
 `12500.10 != 12500.099999999999` spelar roll när en jämförelse avgör om ett fynd
 säger *överensstämmer* eller *möjlig avvikelse*.
@@ -57,10 +68,11 @@ Per tenant, i tenantens egen katalog:
 
 ```
 tenants/<brf_id>/integrations/
-    meta.json            {"schemaVersion": 1}
+    meta.json            {"schemaVersion": 4}
     source-events.json
     invoices.json
     findings.json
+    invoice-cases.json
 ```
 
 Filerna skrivs atomärt med läge `0600`.
@@ -376,6 +388,10 @@ allt som ändrar tillstånd kräver `admin`. En icke-medlem får `404`, aldrig `
 | GET | `findings` | Fynden. Läses också av mobilklienten, read-only |
 | POST | `findings/{id}/decision` | Ställningstagande (admin) |
 
+Fakturaarbetsytan har sina egna vägar under `/api/brf/{brf_id}/invoices` — se
+[FAKTUROR.md](FAKTUROR.md) §7. Den delar den här blockets adaptrar, butik och
+granskningsmotor och lägger ingen andra väg till någon av dem.
+
 `source` på fakturaruttarna är `fixture` eller `fortnox`, aldrig gissat: en
 installation med Fortnox ansluten kan fortfarande läsa fixturunderlaget, och en
 skärmdump ska inte kunna förväxla de två.
@@ -388,6 +404,14 @@ En omkörd granskning ersätter bara `open` fynd. Ett godkänt eller avfärdat f
 `brfv2-mockup/src/components/Integrations.jsx`, nåbar som **Inkommande** i
 sidomenyn. Posten renderas bara när `/api/desktop/state` svarar — på webben
 404:ar den, så vyn finns inte där. Ingen byggflagga, ingen andra bundle.
+
+**Fakturagranskningen ligger inte längre här.** Den var en flik i den här vyn
+och är nu ett eget produktområde, **Fakturor** — en faktura arbetas i veckor
+efter att posten den kom med är avklarad, och en kö som ska tömmas och ett
+ärende som ska avgöras hör inte hemma under samma rubrik. Ögonblicksbilden,
+fynden, ankaret, aliasen och fältkontrollen är oförändrade; det som tillkommit
+runt dem är ärendet, historikjämförelsen och föreningens egen granskningsstatus.
+Se [FAKTUROR.md](FAKTUROR.md).
 
 Den visuella hierarkin bär den epistemiska: verifierade fakta läses som data,
 förslaget som prosa i ett tonat block, och osäkerheten i ett *varmare* block som

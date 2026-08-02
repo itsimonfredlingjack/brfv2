@@ -417,6 +417,16 @@ class FortnoxAccountingAdapter:
             _json.dumps(invoice, sort_keys=True, ensure_ascii=False, default=str).encode("utf-8")
         ).hexdigest()
 
+        # Read, carried, shown — never sent. The same fields `mapping_preview`
+        # lists under `observedNotChanged`, kept on the snapshot so a reviewer
+        # can see Fortnox's own state beside this product's own review status
+        # and never mistake one for the other.
+        status = {
+            key: str(invoice[key])
+            for key in OBSERVED_ONLY
+            if key in invoice and invoice[key] not in (None, "")
+        }
+
         return InvoiceSnapshot(
             id=uuid.uuid4().hex[:12],
             tenant_id=tenant_id,
@@ -436,6 +446,7 @@ class FortnoxAccountingAdapter:
             retrieved_at=utc_now_iso(),
             source_dataset="fortnox:supplierinvoices",
             content_sha256=digest,
+            source_status=status,
         )
 
 

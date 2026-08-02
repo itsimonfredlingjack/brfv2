@@ -334,17 +334,28 @@ def unadopted_incoming_document_ids(store: Store) -> set[str]:
 def evidence_excluded_document_ids(store: Store, invoice: InvoiceSnapshot) -> set[str]:
     """What may not be cited as evidence about *this* invoice.
 
-    Two rules, and the second is not implied by the first: every unadopted
-    queue attachment, **plus** every attachment of the source event this
-    invoice came in on — adopted or not. Adopting the PDF of an invoice is a
-    perfectly reasonable thing for a board to do; letting that invoice then
-    corroborate itself is not.
+    Three rules, and neither of the last two is implied by the first: every
+    unadopted queue attachment, **plus** every attachment of the source event
+    this invoice came in on — adopted or not — **plus** that event's preserved
+    message text.
+
+    Adopting the PDF of an invoice is a perfectly reasonable thing for a board
+    to do; letting that invoice then corroborate itself is not. The third rule
+    exists for the same reason and is easy to miss: a preserved message is
+    evidence by construction (a named administrator kept it, with a stated
+    reason — see :mod:`app.integrations.preserve`), so nothing else excludes
+    it. But the covering mail of an invoice says what the invoice says, and
+    "fakturan avser 12 500 kr enligt avtalet" verifying verbatim against the
+    sender's own sentence is exactly the self-corroboration this whole
+    function exists to prevent.
     """
     excluded = unadopted_incoming_document_ids(store)
     if invoice.source_event_id:
         event = store.integrations.get_source_event(invoice.source_event_id)
         if event is not None:
             excluded |= {a.document_id for a in event.attachments if a.document_id}
+            if event.preserved_document_id:
+                excluded.add(event.preserved_document_id)
     return excluded
 
 

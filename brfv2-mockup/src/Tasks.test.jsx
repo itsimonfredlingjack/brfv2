@@ -5,8 +5,13 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import Tasks from './components/Tasks';
 import Watches from './components/Watches';
-import Integrations from './components/Integrations';
-import { integrationsApi, tasksApi, watchesApi } from './api';
+import InvoiceCase from './components/InvoiceCase';
+import { integrationsApi, invoicesApi, tasksApi, watchesApi } from './api';
+
+// PdfPane pulls in pdfjs-dist, which needs browser canvas APIs jsdom lacks.
+vi.mock('./components/PdfPane', () => ({
+  default: () => <div data-testid="pdf-pane" />,
+}));
 
 vi.mock('./api', () => ({
   api: {},
@@ -22,6 +27,16 @@ vi.mock('./api', () => ({
     decideFinding: vi.fn(),
     reviewInvoice: vi.fn(),
     addSupplierAlias: vi.fn(),
+    deleteSupplierAlias: vi.fn(),
+    mappingPreview: vi.fn(),
+  },
+  invoicesApi: {
+    workspace: vi.fn(),
+    case: vi.fn(),
+    importInvoice: vi.fn(),
+    refresh: vi.fn(),
+    update: vi.fn(),
+    comment: vi.fn(),
   },
   watchesApi: {
     board: vi.fn(),
@@ -325,23 +340,71 @@ const FINDING = {
   decision_note: null,
 };
 
-function mountIntegrations() {
-  integrationsApi.format.mockResolvedValue({
-    mail: { attachmentTypes: ['application/pdf'], maxAttachments: 10, maxMessageBytes: 26214400 },
-    invoiceSources: ['fixture'],
-    mailFolders: ['inbox'],
-  });
+/** The invoice case, which is where a finding is turned into work. */
+function mountInvoiceCase() {
   integrationsApi.connections.mockResolvedValue({
     'microsoft-graph': { provider: 'microsoft-graph', configured: false, connection: null },
     fortnox: { provider: 'fortnox', configured: false, connection: null },
   });
-  integrationsApi.listSourceEvents.mockResolvedValue([]);
-  integrationsApi.listInvoices.mockResolvedValue([INVOICE]);
-  integrationsApi.listFindings.mockResolvedValue([FINDING]);
-  integrationsApi.listSupplierAliases.mockResolvedValue([]);
-  integrationsApi.availableInvoices.mockResolvedValue({ invoices: [] });
+  invoicesApi.case.mockResolvedValue({
+    today: '2026-08-02',
+    case: {
+      id: 'case-1',
+      supplier_name: 'Snösvängen Entreprenad AB',
+      supplier_ref: '556812-3344',
+      invoice_number: '2026-114',
+      invoice_date: '2026-02-03',
+      due_date: '2026-03-05',
+      total_amount: '6250.00',
+      currency: 'SEK',
+      vat_amount: '1250.00',
+      identity_basis: 'Leverantör och fakturanummer är båda kända.',
+      observations: [],
+      source_status: null,
+      source_status_label: '',
+      review_status: 'not_reviewed',
+      review_status_label: 'Ej granskad',
+      review_status_caveat: 'Ingen här har tagit ställning till fakturan ännu.',
+      review_status_note: '',
+      review_status_by: '',
+      review_status_at: '',
+      responsible: '',
+      signals: [],
+      top_signal: null,
+      timeline: [],
+      comments: [],
+      open: true,
+      overdue: false,
+    },
+    invoice: INVOICE,
+    findings: [FINDING],
+    documents: [],
+    sourceEvent: null,
+    supplier: {
+      supplier_name: 'Snösvängen Entreprenad AB',
+      org_numbers: [],
+      invoice_count: 1,
+      amount_low: null,
+      amount_high: null,
+      currency: 'SEK',
+      previous: [],
+      documents: [],
+      deviation_count: 0,
+      aliases: [],
+      tasks: [],
+      responsibles: [],
+    },
+    tasks: [],
+    labels: {
+      reviewStatus: { not_reviewed: 'Ej granskad', closed: 'Granskning avslutad' },
+      reviewStatusCaveats: { not_reviewed: '…', closed: '…' },
+      signals: {},
+      signalSeverity: {},
+      verdicts: {},
+    },
+  });
   tasksApi.forOrigin.mockResolvedValue([]);
-  render(<Integrations brfId="brf-a" documents={[]} isAdmin onOpenCitation={vi.fn()} />);
+  render(<InvoiceCase brfId="brf-a" caseId="case-1" isAdmin onOpenCitation={vi.fn()} />);
 }
 
 const cardFor = (title) => screen.getByText(title).closest('article');
@@ -645,8 +708,7 @@ describe('creating work', () => {
   });
 
   it('takes the finding as origin, prefilled with what the review suggested', async () => {
-    mountIntegrations();
-    fireEvent.click(await screen.findByRole('tab', { name: /Fakturagranskning/ }));
+    mountInvoiceCase();
     const card = (await screen.findByText(FINDING.suggestion)).closest('article');
 
     fireEvent.click(within(card).getByRole('button', { name: /Skapa uppgift/ }));

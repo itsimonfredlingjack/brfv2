@@ -30,7 +30,6 @@ from ..store import Store
 from .accounting_fixture import FixtureAccountingAdapter, FixtureError
 from .connections import ConnectionManager, NotConnected, PROVIDER_FORTNOX, PROVIDER_GRAPH
 from .credentials import ConnectionError_
-from .egress import EgressRefused, RemoteError
 from .eml import EmlRejected, accepted_format
 from .fortnox import FortnoxConfig, FortnoxConfigError
 from .graph_mail import GraphConfig, GraphConfigError, WELL_KNOWN_FOLDERS
@@ -41,9 +40,20 @@ from .intake import (
     import_eml,
     withdraw_attachment,
 )
-from .models import FindingStatus, ReviewStatus, SupplierAlias, utc_now_iso
-from .oauth import OAuthError, PendingLogins
+from .mailbox import FETCH_LIMIT, fetch_new, note_fetch_failure
+from .models import (
+    RESOLUTION_LABELS,
+    TRIAGE_CATEGORY_LABELS,
+    SupplierAlias,
+    TriageConfirmation,
+    utc_now_iso,
+)
+from .resolve import ResolutionError, reopen_source_event, resolve_source_event
+from .threads import build_threads
+from .triage import analyze_and_refine
+from .oauth import PendingLogins
 from .review import review_invoice
+from .sources import INVOICE_SOURCES, accounting_source, live_runner
 from .supplier import normalize as normalize_supplier
 
 logger = logging.getLogger("brf.integrations.routes")
@@ -53,12 +63,6 @@ logger = logging.getLogger("brf.integrations.routes")
 # and hashed.
 MAX_EML_BYTES = 26 * 1024 * 1024
 
-# Where an invoice may be read from. "fixture" is the synthetic dataset the
-# block shipped with and keeps working with no credential at all; "fortnox" is
-# a live, connected company. Named in the request rather than inferred from
-# what happens to be connected, so a demo and a live read cannot be confused
-# for one another in a screenshot.
-INVOICE_SOURCES = ("fixture", "fortnox")
 
 
 class DecisionRequest(BaseModel):
@@ -101,6 +105,31 @@ class ArchiveRequest(BaseModel):
     note: str
 
 
+class TriageConfirmRequest(BaseModel):
+    category: str
+    note: str = ""
+
+
+class ResolveRequest(BaseModel):
+    """What a human decided to do with a queue item.
+
+    One request rather than one per outcome, because preserving a message and
+    creating the task from it is a single act at the desk — two round trips
+    would let the second half fail after the first succeeded, and leave the
+    reviewer to work out which half landed.
+    """
+
+    outcomes: list[str]
+    note: str = ""
+    # Which attachments to adopt into the archive. Empty is meaningful: the
+    # message text is preserved and the attachments stay as material under
+    # review.
+    attachment_ids: list[str] = []
+    # Only read when the matching outcome is requested.
+    task: dict | None = None
+    watch: dict | None = None
+
+
 def build_router(
     *,
     tenant_store: Callable,
@@ -123,34 +152,8 @@ def build_router(
         )
 
     def _live(store: Store, provider: str):
-        """Run a live call, turning every failure into an operator-readable 4xx.
-
-        Everything that can go wrong here is about the *other* system or the
-        connection to it, and none of it is a bug in this request — so none of
-        it should read as a 500. The connection also records what happened, so
-        the UI can show "återkallad" instead of an error that looks transient.
-        """
-
-        def run(fn):
-            try:
-                return fn()
-            except NotConnected as exc:
-                raise HTTPException(status_code=409, detail=str(exc)) from exc
-            except OAuthError as exc:
-                raise HTTPException(status_code=409, detail=exc.message) from exc
-            except EgressRefused as exc:
-                # A refused URL is a bug in *this* product, and it is louder
-                # than a 4xx would suggest — so it is logged with its code and
-                # returned as a plain refusal rather than dressed up.
-                logger.error("Utgående anrop vägrades (%s): %s", exc.code, exc.message)
-                raise HTTPException(status_code=502, detail=exc.message) from exc
-            except RemoteError as exc:
-                manager(store).note_failure(provider, exc)
-                raise HTTPException(
-                    status_code=502, detail=f"{provider}: {exc.detail}"
-                ) from exc
-
-        return run
+        """Shared with the invoice workspace — see :mod:`app.integrations.sources`."""
+        return live_runner(store, provider, manager(store))
 
     # ---------- what this version accepts ----------
 
@@ -495,6 +498,200 @@ def build_router(
             raise HTTPException(status_code=404, detail=str(exc)) from exc
         return event.model_dump(mode="json")
 
+    def _mail_folder(store: Store) -> str:
+        """Which folder this installation reads, for keying the checkpoint.
+
+        Falls back to ``inbox`` when nothing is configured, so the queue can
+        show "aldrig hämtat" on an installation that only ever imports files
+        rather than having to special-case the absence of a connection.
+        """
+        connection = store.integrations.credentials.get_connection(PROVIDER_GRAPH)
+        return (connection.folder if connection else "") or "inbox"
+
+    # ---------- the intake queue ----------
+    #
+    # One read for the whole screen. The alternative — a list call plus a
+    # triage call plus a task-lookup per row — is a screen that renders in
+    # stages and can show a card whose badge disagrees with its buttons.
+
+    @router.get("/api/brf/{brf_id}/integrations/intake")
+    def intake_queue(access: tuple[Store, str] = Depends(tenant_store)) -> dict:
+        """The review queue: conversations, what each appears to be, and where it stands.
+
+        Grouped, counted and labelled on the server for the same reason the
+        watch board is: the desktop and any other client must not be able to
+        disagree about what is open, what is waiting for a reply, or what a
+        category is called.
+        """
+        store, _ = access
+        events = store.integrations.list_source_events()
+        threads = build_threads(events)
+        open_threads = [t for t in threads if t.open_count > 0]
+        checkpoint = store.integrations.get_mailbox_checkpoint(
+            PROVIDER_GRAPH, _mail_folder(store)
+        )
+        return {
+            "threads": [t.public() for t in threads],
+            "categoryLabels": TRIAGE_CATEGORY_LABELS,
+            "resolutionLabels": RESOLUTION_LABELS,
+            "mailbox": checkpoint.public(),
+            "counts": {
+                "threads": len(threads),
+                "openThreads": len(open_threads),
+                "openMessages": sum(t.open_count for t in threads),
+                "awaitingReply": sum(1 for t in open_threads if t.awaiting_reply),
+                "unclear": sum(1 for t in open_threads if t.category == "unclear"),
+            },
+        }
+
+    @router.post("/api/brf/{brf_id}/integrations/mailbox/fetch")
+    def fetch_mailbox(
+        limit: int = FETCH_LIMIT,
+        onlyWithAttachments: bool = False,
+        store: Store = Depends(require_admin),
+        user: dict = Depends(current_user),
+    ) -> dict:
+        """Take in what has arrived since the last successful fetch.
+
+        Still no sync: this runs because somebody pressed it. What it adds over
+        browsing the mailbox is that it asks a narrower question — everything
+        at or after the last checkpoint — so the queue stops re-presenting
+        material already dealt with.
+
+        The attachment filter defaults to **off** here. The messages worth most
+        to a board are frequently the ones with no attachment at all: an
+        approval, an accepted quote, a stated notice period.
+        """
+        folder = _mail_folder(store)
+        try:
+            adapter = _live(store, PROVIDER_GRAPH)(lambda: manager(store).graph_adapter())
+            result = _live(store, PROVIDER_GRAPH)(
+                lambda: fetch_new(
+                    store=store,
+                    adapter=adapter,
+                    provider=PROVIDER_GRAPH,
+                    folder=folder,
+                    user_id=user["id"],
+                    limit=max(1, min(int(limit), 100)),
+                    only_with_attachments=onlyWithAttachments,
+                )
+            )
+        except HTTPException as exc:
+            # The checkpoint must not move when the fetch did not happen, and
+            # the failure is recorded where the screen can show it — otherwise
+            # a fetch that never ran reads exactly like one that found nothing.
+            note_fetch_failure(
+                store=store,
+                provider=PROVIDER_GRAPH,
+                folder=folder,
+                error=str(exc.detail),
+            )
+            raise
+        return result.public()
+
+    @router.post("/api/brf/{brf_id}/integrations/source-events/{event_id}/triage")
+    def run_triage(
+        event_id: str, store: Store = Depends(require_admin)
+    ) -> dict:
+        """Re-read one queue item.
+
+        Worth having as its own act because the answer changes with the
+        archive: a message that could not be linked to anything in March links
+        to the contract somebody uploaded in April, and the card should be able
+        to say so without the message being imported again.
+
+        A human's confirmed category is never overwritten by this — the
+        suggestion is refreshed beside it.
+        """
+        event = store.integrations.get_source_event(event_id)
+        if event is None:
+            raise HTTPException(status_code=404, detail="Okänd källhändelse.")
+        updated = store.integrations.update_source_event(
+            event.model_copy(update={"triage": analyze_and_refine(store, event)})
+        )
+        return updated.model_dump(mode="json")
+
+    @router.post("/api/brf/{brf_id}/integrations/source-events/{event_id}/triage/confirm")
+    def confirm_triage(
+        event_id: str,
+        req: TriageConfirmRequest,
+        store: Store = Depends(require_admin),
+        user: dict = Depends(current_user),
+    ) -> dict:
+        """Say what the message actually is.
+
+        Recorded *beside* the suggestion rather than over it. Keeping both is
+        the only way anyone can later see where the reading was wrong — and a
+        product that quietly replaced its own guess with the correction would
+        be one nobody could audit.
+        """
+        if req.category not in TRIAGE_CATEGORY_LABELS:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Okänd kategori. Tillåtna: {', '.join(TRIAGE_CATEGORY_LABELS)}.",
+            )
+        event = store.integrations.get_source_event(event_id)
+        if event is None:
+            raise HTTPException(status_code=404, detail="Okänd källhändelse.")
+        updated = store.integrations.update_source_event(
+            event.model_copy(
+                update={
+                    "triage_confirmation": TriageConfirmation(
+                        category=req.category,
+                        category_label=TRIAGE_CATEGORY_LABELS[req.category],
+                        confirmed_by=user["id"],
+                        confirmed_at=utc_now_iso(),
+                        note=(req.note or "").strip(),
+                    )
+                }
+            )
+        )
+        return updated.model_dump(mode="json")
+
+    @router.post("/api/brf/{brf_id}/integrations/source-events/{event_id}/resolve")
+    def resolve_event(
+        event_id: str,
+        req: ResolveRequest,
+        store: Store = Depends(require_admin),
+        user: dict = Depends(current_user),
+    ) -> dict:
+        """Settle a queue item, and route what it produced into the right domain.
+
+        Nothing in the mailbox is touched by this, whichever outcome is
+        chosen — including "inte relevant". The message stays where it is,
+        unread and undeleted; what changes is that this application stops
+        asking about it.
+        """
+        try:
+            event = resolve_source_event(
+                store=store,
+                event_id=event_id,
+                user_id=user["id"],
+                kinds=list(req.outcomes),
+                note=req.note,
+                attachment_ids=list(req.attachment_ids),
+                task=req.task,
+                watch=req.watch,
+            )
+        except ResolutionError as exc:
+            status = 404 if str(exc).startswith("Okänd källhändelse") else 422
+            raise HTTPException(status_code=status, detail=str(exc)) from exc
+        return event.model_dump(mode="json")
+
+    @router.post("/api/brf/{brf_id}/integrations/source-events/{event_id}/reopen")
+    def reopen_event(event_id: str, store: Store = Depends(require_admin)) -> dict:
+        """Put a settled item back in the queue.
+
+        What it produced stays: a task made from this message is still a task,
+        a preserved document is still in the archive. Those are records of
+        decisions, and reopening a card is not a decision about any of them.
+        """
+        try:
+            event = reopen_source_event(store=store, event_id=event_id)
+        except ResolutionError as exc:
+            raise HTTPException(status_code=404, detail=str(exc)) from exc
+        return event.model_dump(mode="json")
+
     # ---------- supplier aliases ----------
 
     @router.get("/api/brf/{brf_id}/integrations/supplier-aliases")
@@ -551,22 +748,8 @@ def build_router(
     # ---------- invoices ----------
 
     def _accounting_source(store: Store, source: str):
-        """Resolve a named source to something with the read adapter's shape.
-
-        Two sources, never guessed between. ``fixture`` reads synthetic files
-        and needs nothing; ``fortnox`` reads a live, connected company. An
-        installation with Fortnox connected can still read the fixture set —
-        which is what keeps the demo and the tests honest on a machine where a
-        real integration exists.
-        """
-        if source not in INVOICE_SOURCES:
-            raise HTTPException(
-                status_code=422,
-                detail=f"Okänd fakturakälla. Tillåtna: {', '.join(INVOICE_SOURCES)}.",
-            )
-        if source == "fixture":
-            return adapter
-        return manager(store).fortnox_adapter()
+        """Shared with the invoice workspace — see :mod:`app.integrations.sources`."""
+        return accounting_source(store, source, fixture=adapter, manager=manager(store))
 
     @router.get("/api/brf/{brf_id}/integrations/available-invoices")
     def list_available_invoices(
