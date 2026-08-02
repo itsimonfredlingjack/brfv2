@@ -2,7 +2,31 @@
 
 Sammanslagningen av uppgiftsdomänen flyttade `main` förbi den artefakt som
 verifierats dagen innan. Det här bygget stänger det gapet direkt i stället för
-att låta det stå öppet: **paketet och `main` är samma sak igen.**
+att låta det stå öppet.
+
+**Att paketet motsvarar `main` är kontrollerat, inte påstått.** Artefakten
+byggdes ur `a55e0ff`; den här evidensen är ett dokument-only-tillägg som gör
+`main` till `e91b2b3`. Bygget identifierar sig med *delivery tree*-hashen och
+inte med commiten, just för att dokumentation och acceptansevidens ligger i
+samma commit som leveransen och inte får kunna flytta artefaktens bytes
+(`ops/lib/repro.sh`, `REPRO_DELIVERY_PATHS`). Den hash som ligger inbakad i det
+byggda paketets `BUNDLE.json` är
+
+```
+b92ed5d0820ba461a720d490b1e14a681c18607ae5654d2a1d93edded65ef8c0
+```
+
+och samma hash räknas fram ur **båda** commitarna:
+
+```
+$ git ls-tree -r a55e0ff -- "${REPRO_DELIVERY_PATHS[@]}" | sha256sum
+b92ed5d0820ba461a720d490b1e14a681c18607ae5654d2a1d93edded65ef8c0
+$ git ls-tree -r e91b2b3 -- "${REPRO_DELIVERY_PATHS[@]}" | sha256sum
+b92ed5d0820ba461a720d490b1e14a681c18607ae5654d2a1d93edded65ef8c0
+```
+
+Paketet är alltså den nuvarande produkten på `main`, och skillnaden mellan de
+två commitarna är bevisligen inte i leveransen.
 
 Körningen prövar dessutom hela kedjan i ett svep, i den installerade
 applikationen: ett avtal läses → en frist räknas fram → en människa godkänner
