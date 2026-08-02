@@ -115,7 +115,11 @@ def build_router(
                 watch.source_document_name,
             )
         if kind == "invoice_case":
-            case = store.integrations.get_invoice_case(ref_id)
+            # Projected, not fetched from disk: a case only reaches storage once
+            # somebody acts on it, and taking work on may well be the first act.
+            from ..invoices.cases import findings_for_invoice, project_one
+
+            case = project_one(store, ref_id)
             if case is None:
                 raise HTTPException(status_code=404, detail="Okänt fakturaärende.")
             label = (
@@ -125,8 +129,6 @@ def build_router(
             # The evidence travels here too: the first finding on the case that
             # has citations lends them to the task, so the passage behind the
             # work still opens after the invoice has been re-read.
-            from ..invoices.cases import findings_for_invoice
-
             cited = next(
                 (
                     f
@@ -257,12 +259,14 @@ def build_router(
         if origin.kind == "invoice_case":
             # The case's timeline is the one place a reviewer looks for "what
             # has happened to this invoice", so work taken on from it belongs
-            # there. The task itself is still the record; this is a pointer.
-            from ..invoices.cases import note_task
+            # there. The task itself is still the record; this is a pointer —
+            # and writing it is what materialises a case nobody had touched yet.
+            from ..invoices.cases import CaseError, note_task
 
-            case = store.integrations.get_invoice_case(origin.ref_id)
-            if case is not None:
-                note_task(store, case, task=stored, user_id=user["id"])
+            try:
+                note_task(store, origin.ref_id, task=stored, user_id=user["id"])
+            except CaseError:  # pragma: no cover - the origin was resolved above
+                logger.warning("Kunde inte notera uppgiften på fakturaärendet %s", origin.ref_id)
         return stored.public(now)
 
     @router.post("/api/brf/{brf_id}/tasks/{task_id}")

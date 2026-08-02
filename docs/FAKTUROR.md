@@ -131,24 +131,60 @@ Det som gör "Läs om och granska" trygg att trycka på två gånger:
   `id` för samma `(adapter, external_ref)`. Utan det hade en omläsning bytt id
   och lämnat varje fynd, ärende och uppgift som pekade på det gamla pekande på
   ingenting.
-* **Ärendet konvergerar på `case_key`**, och faller tillbaka på "det ärende som
-  redan pekar på den här ögonblicksbilden" om nyckeln ändras (t.ex. när en
-  omläsning fyller i ett fakturanummer som saknades). Föreningens
-  granskningsanteckningar blir aldrig föräldralösa.
+* **Ärendet konvergerar på `case_key`**, och ett lagrat ärende är också
+  sökbart via den läsning det beskriver. Det behövs när identiteten *ändras*:
+  en faktura som kom utan nummer nycklas på källans referens, och får en riktig
+  nyckel den dag någon fyller i numret i ekonomisystemet. Det härledda id:t
+  flyttar med, och anteckningarna flyttar med det — annars hade en omläsning
+  tyst strandat någons utredning på en rad ingenting längre pekar på.
+  Adoptionen sker **i projektionen**, alltså i minnet; raden skrivs om under
+  det nya id:t nästa gång någon faktiskt ändrar något.
 * **Öppna fynd ersätts, avgjorda behålls** — `replace_findings_for_invoice`,
   oförändrad.
 * **Maskinella tidslinjeposter bär en nyckel** härledd ur vad de *säger*
   (`analysis:<fingerprint>`, `finding:<fingerprint>`, `obs:<kind>:<ref>`). En
   omkörning som inte hittar något nytt lägger inte till något. Mänskliga poster
   bär ingen nyckel: att säga samma sak två gånger är två handlingar.
-* **Kön skriver bara när något faktiskt skiljer sig**, så en vanlig läsning av
-  arbetsytan inte river i filen.
+* **En läsning skriver ingenting.** `project()` är ren: den läser fakturor,
+  fynd och köhändelser och räknar ut vilka ärenden de innebär. Ett `GET` av
+  arbetsytan har alltså inga sidoeffekter alls, och två samtidiga läsningar
+  räknar ut samma svar utan att lämna spår. Ett ärende skrivs till disk första
+  gången någon *gör* något med det.
 
-`ensure_cases` är en **projektion** och körs på varje läsning. Den fattar inga
-beslut — ett projicerat ärende börjar på *Ej granskad* utan ansvarig, vilket är
-ett sant påstående om att ingen tittat på det. Det är också vad som gör att
-fakturor som lästes in innan den här arbetsytan fanns dyker upp utan ett
-migreringssteg.
+### Varför identiteten är nyckeln, och inte ett slumptal
+
+`InvoiceCase.id` härleds ur `(tenant_id, case_key)` i stället för att mintas.
+Det är det som gör skrivvägen säker: butiken upsertar på `id`, så två samtidiga
+skribenter som var för sig kommer fram till att fakturan behöver ett ärende
+landar på **en** rad i stället för att lägga till två.
+
+Den första versionen av det här blocket gjorde tvärtom. `ensure_cases` var en
+"projektion" som körde på varje läsning men *skrev* medan den gjorde det, och
+`id` var ett `uuid4`. Åtta samtidiga läsningar av fyra fakturor gav **trettioen
+ärenden** — hitta-sedan-skriv var inte atomärt, och ett slumpat id gjorde att
+butikens upsert inte kunde slå ihop dubbletterna efteråt. Båda halvorna
+regressionstestas nu (`TestConcurrency`), eftersom endera ensam skulle släppa
+tillbaka felet.
+
+### Var skrivningarna sker, och under vilket lås
+
+`mutate()` är den enda skribenten. Den håller tenantens butikslås över hela
+läs–ändra–skriv och **projicerar om inuti låset**, så en anropare som läste
+ärendet för en sekund sedan inte kan skriva tillbaka en version som hunnit få en
+kommentar. `analyse_case`, `set_review_status`, `assign`, `comment` och
+`note_task` tar alla ett **id**, aldrig ett `InvoiceCase` — det är signaturen
+som tvingar fram att den version som ändras är den som ligger på disk nu.
+
+Gränsen sägs rakt ut: låset är ett trådlås över en process cachade
+per-tenant-`Store`, vilket är den samtidighetsmodell hela den här backenden
+redan har. Det gör samtidiga *anrop* säkra; det gör inte två *processer* säkra.
+Det härledda id:t håller även där — två processer kan inte skapa dubbla ärenden
+— men en samtidig kommentar från vardera skulle fortfarande kunna tappas. Att
+säga det är billigare än att antyda en garanti filupplägget inte kan ge.
+
+Att projektionen är ren är också vad som gör att fakturor som lästes in innan
+den här arbetsytan fanns dyker upp utan ett migreringssteg, och utan att ett
+`GET` tyst skapar poster.
 
 ## 6. Leverantörsminnet
 
@@ -216,7 +252,9 @@ ett API.
 ## 10. Verifiering
 
 `backend/tests/test_invoice_cases.py` — identitet och konvergens (inklusive två
-källor på ett ärende och ett mejl som *inte* knyts), idempotent omläsning,
+källor på ett ärende och ett mejl som *inte* knyts), samtidighet (att en läsning
+inte skriver, att åtta samtidiga skrivningar ger ett ärende och noll tappade
+kommentarer, och att id:t är härlett), idempotent omläsning,
 jämförelsens uppdelning i förklarat och oförklarat, dubbletter, kreditrelation,
 nya rader, signaler ur fynd, att ett avfärdat fynd slutar driva en signal, att
 en omkörning inte rör granskningsstatus, kommentarer eller ansvarig, och att

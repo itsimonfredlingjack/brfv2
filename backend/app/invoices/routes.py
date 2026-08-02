@@ -35,6 +35,7 @@ from ..integrations.oauth import PendingLogins
 from ..integrations.sources import INVOICE_SOURCES, accounting_source, live_runner
 from ..store import Store
 from . import cases as case_ops
+from .identity import case_key_for
 from .models import (
     REVIEW_STATUS_CAVEATS,
     REVIEW_STATUS_LABELS,
@@ -91,7 +92,8 @@ def build_router(
         )
 
     def _case(store: Store, case_id: str) -> InvoiceCase:
-        case = store.integrations.get_invoice_case(case_id)
+        """The projected case, whether or not it has ever been written to disk."""
+        case = case_ops.project_one(store, case_id)
         if case is None:
             raise HTTPException(status_code=404, detail="Okänt fakturaärende.")
         return case
@@ -132,16 +134,16 @@ def build_router(
     def workspace(access: tuple[Store, str] = Depends(tenant_store)) -> dict:
         """Every invoice case, with what it is, where it stands and what it needs.
 
-        :func:`app.invoices.cases.ensure_cases` runs here. It is a projection,
-        not a decision: an invoice the association has read but never had a
-        case for gets one, at ``not_reviewed`` with nobody assigned, which is
-        an accurate statement that nobody has looked at it. That is what makes
-        invoices read before this workspace existed — or through the incoming
-        pane — appear here without a migration step.
+        A **read**, in the ordinary sense: :func:`app.invoices.cases.project`
+        computes the cases the tenant's records imply and writes nothing. An
+        invoice read before this workspace existed — or through the incoming
+        pane — therefore appears here with no migration step and without a GET
+        quietly creating records. A case is written to disk the first time
+        somebody acts on it, and not before.
         """
         store, _ = access
         now = today()
-        rows = case_ops.ensure_cases(store)
+        rows = case_ops.project(store)
         return {
             "today": now.isoformat(),
             "cases": [c.public(now) for c in rows],
@@ -159,7 +161,6 @@ def build_router(
         """One case with everything a reviewer needs, in one read."""
         store, _ = access
         now = today()
-        case_ops.ensure_cases(store)
         case = _case(store, case_id)
         snapshot = store.integrations.get_invoice(case.primary_invoice_id)
         findings = case_ops.findings_for_invoice(store, case.primary_invoice_id)
@@ -210,12 +211,12 @@ def build_router(
         try:
             if req.responsible is not None:
                 case = case_ops.assign(
-                    store, case, responsible=req.responsible, user_id=user["id"]
+                    store, case.id, responsible=req.responsible, user_id=user["id"]
                 )
                 changed = True
             if req.review_status is not None:
                 case = case_ops.set_review_status(
-                    store, case, status=req.review_status, note=req.note, user_id=user["id"]
+                    store, case.id, status=req.review_status, note=req.note, user_id=user["id"]
                 )
                 changed = True
         except case_ops.CaseError as exc:
@@ -233,7 +234,7 @@ def build_router(
     ) -> dict:
         case = _case(store, case_id)
         try:
-            case = case_ops.comment(store, case, text=req.note, user_id=user["id"])
+            case = case_ops.comment(store, case.id, text=req.note, user_id=user["id"])
         except case_ops.CaseError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         return case.public(today())
@@ -275,8 +276,7 @@ def build_router(
                         "Granskningen kördes mot det som redan är inläst."
                     )
                 else:
-                    stored = store.integrations.upsert_invoice(snapshot)
-                    case = case_ops.case_for_snapshot(store, stored)
+                    store.integrations.upsert_invoice(snapshot)
                     source_note = f"Fakturan lästes om ur {source}."
             else:
                 source_note = (
@@ -284,7 +284,7 @@ def build_router(
                     "mot det som redan är inläst."
                 )
         try:
-            case = case_ops.analyse_case(store, case)
+            case = case_ops.analyse_case(store, case.id)
         except case_ops.CaseError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         return {"case": case.public(today()), "source": source_note}
@@ -305,9 +305,12 @@ def build_router(
         """
         snapshot = _read_snapshot(store, req.source, req.external_ref)
         stored = store.integrations.upsert_invoice(snapshot)
-        case = case_ops.case_for_snapshot(store, stored)
+        # The id is derived from the invoice's identity, so reading the same
+        # reference again resolves to the same case rather than creating a
+        # second one — including when two operators press the button at once.
+        case_id = case_ops.case_id_for(store.tenant_id, case_key_for(stored)[0])
         try:
-            case = case_ops.analyse_case(store, case)
+            case = case_ops.analyse_case(store, case_id)
         except case_ops.CaseError as exc:  # pragma: no cover - defensive
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         return case.public(today())

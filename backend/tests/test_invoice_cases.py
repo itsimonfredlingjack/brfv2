@@ -35,6 +35,19 @@ from app.invoices import cases as case_ops
 from app.invoices import compare
 from app.invoices.identity import case_key_for, email_basis, number_key
 
+
+def case_for(env, snapshot) -> object:
+    """The projected case a snapshot belongs to.
+
+    Goes through the deterministic id rather than through a lookup, because
+    that id *is* the identity — a case exists conceptually as soon as its
+    invoice does, whether or not anybody has written it to disk yet.
+    """
+    return case_ops.project_one(
+        env.store, case_ops.case_id_for(env.store.tenant_id, case_key_for(snapshot)[0])
+    )
+
+
 TODAY = date(2026, 8, 2)
 
 
@@ -172,36 +185,35 @@ class TestConvergence:
     def test_reading_an_invoice_opens_exactly_one_case(self, integration_env):
         env = integration_env
         stored = env.integrations.upsert_invoice(snapshot())
-        case = case_ops.case_for_snapshot(env.store, stored)
+        case = case_for(env, stored)
         assert case.primary_invoice_id == stored.id
         assert [o.kind for o in case.observations] == ["accounting_snapshot"]
-        assert len(env.integrations.list_invoice_cases()) == 1
+        assert len(case_ops.project(env.store)) == 1
 
     def test_reading_the_same_invoice_again_changes_nothing(self, integration_env):
         env = integration_env
         first = env.integrations.upsert_invoice(snapshot())
-        case = case_ops.case_for_snapshot(env.store, first)
+        case = case_for(env, first)
         opened = len(case.timeline)
 
         # A second read mints a new adapter-side id; the store keeps the
         # identity, so nothing downstream is orphaned.
         second = env.integrations.upsert_invoice(snapshot())
         assert second.id == first.id
-        again = case_ops.case_for_snapshot(env.store, second)
+        again = case_for(env, second)
 
         assert again.id == case.id
         assert len(again.timeline) == opened
-        assert len(env.integrations.list_invoice_cases()) == 1
+        assert len(case_ops.project(env.store)) == 1
         assert len(env.integrations.list_invoices()) == 1
 
     def test_a_second_source_becomes_a_second_observation_not_a_second_case(
         self, integration_env
     ):
         env = integration_env
-        fixture_read = env.integrations.upsert_invoice(
+        env.integrations.upsert_invoice(
             snapshot(adapter="fixture-accounting", external_ref="SI-2026-131", number="2026-131")
         )
-        case_ops.case_for_snapshot(env.store, fixture_read)
         fortnox_read = env.integrations.upsert_invoice(
             snapshot(
                 adapter="fortnox",
@@ -210,9 +222,9 @@ class TestConvergence:
                 source_status={"Booked": "True", "Cancelled": "False"},
             )
         )
-        case = case_ops.case_for_snapshot(env.store, fortnox_read)
+        case = case_for(env, fortnox_read)
 
-        assert len(env.integrations.list_invoice_cases()) == 1
+        assert len(case_ops.project(env.store)) == 1
         snapshots = [o for o in case.observations if o.kind == "accounting_snapshot"]
         assert {o.adapter for o in snapshots} == {"fixture-accounting", "fortnox"}
         # Every observation says why it was attached.
@@ -224,7 +236,7 @@ class TestConvergence:
         stored = env.integrations.upsert_invoice(
             snapshot(number="2026-114", source_event_id=event.id)
         )
-        case = case_ops.case_for_snapshot(env.store, stored)
+        case = case_for(env, stored)
         kinds = [o.kind for o in case.observations]
         assert "email" in kinds and "document" in kinds
         documents = case_ops.documents_for(env.store, case)
@@ -236,11 +248,11 @@ class TestConvergence:
         env = integration_env
         env.import_invoice("SI-2026-114")
         env.import_invoice("SI-2026-207")
-        assert env.integrations.list_invoice_cases() == []
-        rows = case_ops.ensure_cases(env.store)
+        rows = case_ops.project(env.store)
         assert len(rows) == 2
-        # Running it again is a no-op, not a second set.
-        assert len(case_ops.ensure_cases(env.store)) == 2
+        # And the projection left nothing behind to be picked up twice.
+        assert env.integrations.list_invoice_cases() == []
+        assert len(case_ops.project(env.store)) == 2
 
 
 # ---------------------------------------------------------------------------
@@ -396,8 +408,7 @@ def worked(integration_env):
     """One real fixture invoice, converged and analysed against the seeded corpus."""
     env = integration_env
     stored = env.integrations.upsert_invoice(env.adapter.get_invoice(env.brf_id, "SI-2026-131"))
-    case = case_ops.case_for_snapshot(env.store, stored)
-    env.case = case_ops.analyse_case(env.store, case)
+    env.case = case_ops.analyse_case(env.store, case_for(env, stored).id)
     return env
 
 
@@ -418,7 +429,7 @@ class TestAnalysis:
         findings_before = len(
             case_ops.findings_for_invoice(worked.store, worked.case.primary_invoice_id)
         )
-        again = case_ops.analyse_case(worked.store, worked.case)
+        again = case_ops.analyse_case(worked.store, worked.case.id)
         assert len(again.timeline) == before
         assert (
             len(case_ops.findings_for_invoice(worked.store, again.primary_invoice_id))
@@ -444,7 +455,7 @@ class TestAnalysis:
         decided = worked.integrations.update_finding(
             findings[0].model_copy(update={"status": "approved", "decision_note": "kollad"})
         )
-        case_ops.analyse_case(worked.store, worked.case)
+        case_ops.analyse_case(worked.store, worked.case.id)
         after = worked.integrations.get_finding(decided.id)
         assert after is not None and after.status == "approved"
         assert after.decision_note == "kollad"
@@ -461,7 +472,7 @@ class TestHumanWork:
     def test_setting_a_status_writes_who_and_when(self, worked):
         case = case_ops.set_review_status(
             worked.store,
-            worked.case,
+            worked.case.id,
             status="reviewed_no_objection",
             note="",
             user_id="anna",
@@ -475,34 +486,34 @@ class TestHumanWork:
         for status in ("needs_investigation", "awaiting_documentation", "question_sent"):
             with pytest.raises(case_ops.CaseError):
                 case_ops.set_review_status(
-                    worked.store, worked.case, status=status, note="  ", user_id="anna"
+                    worked.store, worked.case.id, status=status, note="  ", user_id="anna"
                 )
 
     def test_a_comment_is_kept_apart_from_the_engine(self, worked):
         case = case_ops.comment(
-            worked.store, worked.case, text="Ringde leverantören.", user_id="anna"
+            worked.store, worked.case.id, text="Ringde leverantören.", user_id="anna"
         )
         assert [c.note for c in case.comments()] == ["Ringde leverantören."]
         assert case.comments()[0].human is True
         assert all(not e.human for e in case.timeline if e.kind == "finding_recorded")
 
     def test_two_identical_comments_are_two_comments(self, worked):
-        case = case_ops.comment(worked.store, worked.case, text="Påminde", user_id="anna")
-        case = case_ops.comment(worked.store, case, text="Påminde", user_id="anna")
+        case_ops.comment(worked.store, worked.case.id, text="Påminde", user_id="anna")
+        case = case_ops.comment(worked.store, worked.case.id, text="Påminde", user_id="anna")
         assert len(case.comments()) == 2
 
     def test_a_re_analysis_leaves_the_human_record_alone(self, worked):
         case = case_ops.set_review_status(
             worked.store,
-            worked.case,
+            worked.case.id,
             status="needs_investigation",
             note="Fråga om taxan",
             user_id="anna",
         )
-        case = case_ops.comment(worked.store, case, text="Avtalet mailat", user_id="bo")
-        case = case_ops.assign(worked.store, case, responsible="Bo", user_id="anna")
+        case_ops.comment(worked.store, case.id, text="Avtalet mailat", user_id="bo")
+        case_ops.assign(worked.store, case.id, responsible="Bo", user_id="anna")
 
-        after = case_ops.analyse_case(worked.store, case)
+        after = case_ops.analyse_case(worked.store, case.id)
         assert after.review_status == "needs_investigation"
         assert after.review_status_note == "Fråga om taxan"
         assert after.responsible == "Bo"
@@ -522,7 +533,7 @@ class TestSourceStatusIsNotOurs:
         stored = env.integrations.upsert_invoice(
             snapshot(adapter="fortnox", source_status={"Booked": "True", "Cancelled": "False"})
         )
-        case = case_ops.case_for_snapshot(env.store, stored)
+        case = case_for(env, stored)
         assert case.source_status is not None
         assert case.source_status.booked is True
         assert case.source_status.label() == "Bokförd i ekonomisystemet"
@@ -532,7 +543,7 @@ class TestSourceStatusIsNotOurs:
     def test_a_source_with_no_such_notion_gets_no_invented_status(self, integration_env):
         env = integration_env
         stored = env.integrations.upsert_invoice(snapshot())
-        case = case_ops.case_for_snapshot(env.store, stored)
+        case = case_for(env, stored)
         assert case.source_status is None
 
 
@@ -540,26 +551,170 @@ class TestQueue:
     def test_an_overdue_case_is_only_overdue_while_it_is_open(self, integration_env):
         env = integration_env
         stored = env.integrations.upsert_invoice(snapshot(due_date="2026-01-01"))
-        case = case_ops.case_for_snapshot(env.store, stored)
+        case = case_for(env, stored)
         assert case.overdue(TODAY) is True
         closed = case_ops.set_review_status(
-            env.store, case, status="closed", note="", user_id="anna"
+            env.store, case.id, status="closed", note="", user_id="anna"
         )
         assert closed.overdue(TODAY) is False
 
     def test_date_signals_are_computed_not_stored(self, integration_env):
         env = integration_env
         stored = env.integrations.upsert_invoice(snapshot(due_date="2026-08-05"))
-        case = case_ops.case_for_snapshot(env.store, stored)
+        case = case_for(env, stored)
         assert [s.kind for s in case.signals] == []
         assert "due_soon" in [s.kind for s in case.all_signals(TODAY)]
 
     def test_counts_are_computed_on_the_server(self, integration_env):
         env = integration_env
         env.import_invoice("SI-2026-114")
-        rows = case_ops.ensure_cases(env.store)
+        rows = case_ops.project(env.store)
         counts = case_ops.totals(rows, TODAY)
         assert counts["total"] == 1 and counts["open"] == 1 and counts["unassigned"] == 1
+
+
+class TestConcurrency:
+    """What happens when two requests arrive at once.
+
+    This class exists because an earlier version of the workspace projected
+    cases *by writing them* on every read, with a ``uuid4`` id. Eight
+    concurrent reads of four invoices produced **thirty-one** cases: the
+    find-then-write was not atomic, and a random id meant the store's upsert
+    could not collapse the duplicates afterwards. Both halves are asserted
+    here, because either one alone would let it come back.
+    """
+
+    def _threads(self, work, count: int = 8) -> list[Exception]:
+        import threading
+
+        errors: list[Exception] = []
+
+        def run() -> None:
+            try:
+                work()
+            except Exception as exc:  # noqa: BLE001 - the point is to collect them
+                errors.append(exc)
+
+        threads = [threading.Thread(target=run) for _ in range(count)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join()
+        return errors
+
+    def test_a_read_writes_nothing_at_all(self, integration_env):
+        env = integration_env
+        env.import_invoice("SI-2026-114")
+        env.import_invoice("SI-2026-131")
+
+        assert case_ops.project(env.store)  # there is something to see
+        assert env.integrations.list_invoice_cases() == [], (
+            "projicering är en läsning och ska inte skriva någonting"
+        )
+
+    def test_the_projection_is_the_same_answer_every_time(self, integration_env):
+        env = integration_env
+        env.import_invoice("SI-2026-114")
+        first = [c.model_dump(mode="json") for c in case_ops.project(env.store)]
+        second = [c.model_dump(mode="json") for c in case_ops.project(env.store)]
+        # Ids, timestamps and machine timeline entries are all derived, so two
+        # reads are byte-identical. An id or a clock read in here would make a
+        # React key change under the reader on every refresh.
+        assert first == second
+
+    def test_concurrent_reads_create_no_cases(self, integration_env):
+        env = integration_env
+        for ref in ("SI-2026-114", "SI-2026-131", "SI-2026-207", "SI-2026-402"):
+            env.import_invoice(ref)
+
+        errors = self._threads(lambda: case_ops.project(env.store))
+        assert errors == []
+        assert env.integrations.list_invoice_cases() == []
+
+    def test_concurrent_writes_converge_on_one_case(self, integration_env):
+        env = integration_env
+        env.import_invoice("SI-2026-114")
+        case_id = case_ops.project(env.store)[0].id
+
+        errors = self._threads(
+            lambda: case_ops.comment(
+                env.store, case_id, text="Ringde leverantören.", user_id="anna"
+            )
+        )
+        assert errors == []
+        rows = env.integrations.list_invoice_cases()
+        assert len(rows) == 1, f"åtta samtidiga kommentarer gav {len(rows)} ärenden"
+        assert rows[0].id == case_id
+        # And not one of the eight was lost to a read-modify-write race.
+        assert len(rows[0].comments()) == 8
+
+    def test_the_id_is_derived_from_identity_not_minted(self, integration_env):
+        env = integration_env
+        env.import_invoice("SI-2026-114")
+        case = case_ops.project(env.store)[0]
+        assert case.id == case_ops.case_id_for(env.store.tenant_id, case.case_key)
+        # Two associations that share a supplier and a number still get
+        # different ids, so a lookup that forgot its tenant cannot cross over.
+        assert case_ops.case_id_for("annan-brf", case.case_key) != case.id
+
+    def test_a_case_is_written_the_first_time_somebody_acts(self, integration_env):
+        env = integration_env
+        env.import_invoice("SI-2026-114")
+        case_id = case_ops.project(env.store)[0].id
+        assert env.integrations.list_invoice_cases() == []
+
+        case_ops.set_review_status(
+            env.store, case_id, status="reviewed_no_objection", note="", user_id="anna"
+        )
+        stored = env.integrations.list_invoice_cases()
+        assert [c.id for c in stored] == [case_id]
+        # And the projection keeps reporting the human record it now carries.
+        assert case_ops.project_one(env.store, case_id).review_status == "reviewed_no_objection"
+
+    def test_a_changed_identity_does_not_orphan_the_review_notes(self, integration_env):
+        """An invoice that gains a number changes its key — and its derived id.
+
+        That is the one case the deterministic id makes awkward, so it is
+        asserted rather than hoped for: the human record has to travel to the
+        new identity, or a re-read would quietly strand somebody's
+        investigation on a row nothing points at.
+        """
+        env = integration_env
+        first = env.integrations.upsert_invoice(snapshot(number=None, external_ref="SI-9"))
+        case = case_for(env, first)
+        case_ops.set_review_status(
+            env.store,
+            case.id,
+            status="needs_investigation",
+            note="Saknar fakturanummer — fråga leverantören.",
+            user_id="anna",
+        )
+
+        # The number turns up on a re-read. Same invoice, new identity.
+        again = env.integrations.upsert_invoice(snapshot(number="2026-500", external_ref="SI-9"))
+        assert again.id == first.id
+        moved = case_for(env, again)
+        assert moved is not None
+        assert moved.id != case.id
+        assert moved.review_status == "needs_investigation"
+        assert moved.review_status_note == "Saknar fakturanummer — fråga leverantören."
+        # And there is still exactly one case on screen, not the old one beside it.
+        assert len(case_ops.project(env.store)) == 1
+
+    def test_a_mutation_reads_the_version_on_disk_not_the_callers_copy(self, integration_env):
+        env = integration_env
+        env.import_invoice("SI-2026-114")
+        case_id = case_ops.project(env.store)[0].id
+
+        # A caller holds a stale copy from before somebody else commented…
+        stale = case_ops.project_one(env.store, case_id)
+        case_ops.comment(env.store, case_id, text="Först", user_id="bo")
+        assert len(stale.comments()) == 0
+
+        # …and writing through it must not drop what happened in between.
+        case_ops.comment(env.store, case_id, text="Sedan", user_id="anna")
+        notes = [c.note for c in case_ops.project_one(env.store, case_id).comments()]
+        assert notes == ["Först", "Sedan"]
 
 
 class TestSupplierMemory:
@@ -567,7 +722,7 @@ class TestSupplierMemory:
         env = integration_env
         env.import_invoice("SI-2026-114")
         env.import_invoice("SI-2026-131")
-        rows = case_ops.ensure_cases(env.store)
+        rows = case_ops.project(env.store)
         newest = max(rows, key=lambda c: c.invoice_date or "")
         context = case_ops.supplier_context(env.store, newest, TODAY)
         assert context["invoice_count"] == 2
