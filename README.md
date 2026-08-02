@@ -19,6 +19,7 @@ föreningens dokument ska avvisas i stället för att gissas.
 - [Ansluta en brevlåda](docs/INTEGRATION-OUTLOOK.md) ·
   [Ansluta Fortnox](docs/INTEGRATION-FORTNOX.md)
 - [Källstyrda bevakningar och årshjul](docs/BEVAKNINGAR.md)
+- [Uppgifter och ansvar](docs/UPPGIFTER.md)
 
 ## Ett repo, en produkt
 
@@ -100,6 +101,12 @@ garantier och besiktningar blir daterade åtaganden med citatet de räknades fra
 ur, sorterade i ett årshjul — försenat, snart, senare, återkommande. En tidsfrist
 som inte går att datera blir aldrig en kalenderpost på en gissning, utan säger
 vad som saknas. Se [docs/BEVAKNINGAR.md](docs/BEVAKNINGAR.md).
+
+Sist i kedjan står **uppgifterna**: ett fynd, en bevakning eller ett inkommande
+mejl blir arbete med ansvarig, datum, status och en historik som bara växer —
+med ursprungets citat i behåll, så att passagen bakom arbetet öppnas även ett
+halvår senare. Det är den enda domänen motorn inte kan skapa något i: att skapa
+en uppgift *är* beslutet. Se [docs/UPPGIFTER.md](docs/UPPGIFTER.md).
 
 ## Lokal verifiering
 

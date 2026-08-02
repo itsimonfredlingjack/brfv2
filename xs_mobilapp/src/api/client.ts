@@ -7,6 +7,7 @@ import type {
   MeResponse,
   PageWidth,
   ReviewFinding,
+  TaskBoard,
   WatchBoard,
 } from './types'
 
@@ -119,6 +120,21 @@ export const api = {
    * desk. Leaving the methods off makes a write from the phone a compile
    * error instead of a code-review note. */
   listWatches: (brfId: string) => request<WatchBoard>(`/api/brf/${seg(brfId)}/watches`),
+
+  /* Work the association has taken on. Reading needs membership, the same as
+   * the document list; the grouping, the status labels and the day count
+   * arrive computed and this client re-derives none of it.
+   *
+   * The backend also exposes POST .../tasks, POST .../tasks/{id} and POST
+   * .../tasks/{id}/comment, all three admin-only. None of them is declared
+   * here, and that is the whole point: creating a task IS the decision that
+   * the work will be done, and moving a deadline, naming an owner or writing
+   * into the history are changes to a record with a person's name on them.
+   * Those happen at a desk. The phone is where the board reads what is
+   * outstanding, in the meeting, with the source one tap away. Leaving the
+   * methods off makes a write from the phone a compile error instead of a
+   * code-review note. */
+  listTasks: (brfId: string) => request<TaskBoard>(`/api/brf/${seg(brfId)}/tasks`),
 
   pageImageUrl: (brfId: string, docId: string, page: number, width: PageWidth) =>
     `/api/brf/${seg(brfId)}/documents/${seg(docId)}/page/${seg(page)}?w=${seg(width)}`,

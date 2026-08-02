@@ -130,12 +130,12 @@ förening B, och en odelad klientcache skulle lämna tillbaka precis den läckan
 src/
   api/          typad klient mot backendens HTTP-kontrakt
   app/          router (~60 rader) och skärmsammansättning
-  components/   AppFrame, CitationChip, Finding, Watch, KallaSheet, Notice,
-                ikoner
+  components/   AppFrame, CitationChip, Finding, Watch, Task, KallaSheet,
+                Notice, ikoner
   lib/          rects (transformen), refusals (vägranstexter), findings,
-                watches, format
+                watches, tasks, format
   screens/      Login, ValjForening, Fraga, Svar, Bibliotek, Dokument,
-                Granskning, Bevakningar, Konto, Lock
+                Granskning, Bevakningar, Uppgifter, Konto, Lock
   state/        session, localStore (IndexedDB), usePageImage, useOnline, lock
   styles/       tokens.css (designsystem), app.css (komponenter)
 e2e/            browseracceptans + tillgänglighet
@@ -171,6 +171,16 @@ aldrig, den är bevismaterialet.
   Förslag ligger under en egen rubrik som säger att ingen tagit ställning till
   dem ännu. Inte heller bevakningarna cachas på telefonen — tabellen ovan är
   fortfarande hela sanningen om vad som ligger kvar där.
+- **Uppgifterna är också en läsvy.** Arbetet föreningen tagit på sig visas i
+  serverns ordning — försenat först, sedan efter datum, odaterat sist — med
+  ansvarig, ursprunget arbetet kom ur, dess citat och hela den påbyggda
+  historiken. Klienten känner varken till skapandet, ändringen eller
+  kommentaren: att lägga upp en uppgift *är* beslutet att arbetet ska göras,
+  och att flytta ett datum eller utse en ansvarig är ändringar i ett protokoll
+  med någons namn på. Klart och avbrutet arbete ligger kvar men hopfällt under
+  egna rubriker, och en avbruten uppgift bär skälet den avbröts med. Inte
+  heller uppgifterna cachas på telefonen — tabellen ovan är fortfarande hela
+  sanningen om vad som ligger kvar där.
 - **Ingen uppladdning eller kamera.** Väntar på OCR-gaten (`docs/SLUTRAPPORT.md` §5).
   Administration sker i webbappen.
 - **Ingen strömning** av svar (XS-21, parkerad). Väntetiden beskrivs i stället

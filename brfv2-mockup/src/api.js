@@ -193,6 +193,34 @@ export const watchesApi = {
   ),
 };
 
+// Work somebody has taken on: owner, deadline, status, history.
+//
+// There is no scan and no proposal here, and there is deliberately no delete:
+// the backend has no such route, because a task that existed is a record of
+// what the board decided to do. Work that turned out to be unnecessary is
+// cancelled with a stated reason and stays readable.
+export const tasksApi = {
+  list: (brfId) => request(`/api/brf/${brfId}/tasks`),
+  // What already exists for a finding, a watch or a piece of incoming post —
+  // asked before creating, so two people a week apart do not each make the
+  // same task.
+  forOrigin: (brfId, kind, refId) => request(
+    `/api/brf/${brfId}/tasks/for/${encodeURIComponent(kind)}/${encodeURIComponent(refId)}`,
+  ),
+  create: (brfId, task) => request(`/api/brf/${brfId}/tasks`, jsonBody('POST', task)),
+  // Only the fields that actually changed. Sending a field its current value
+  // with no note is 422 "Inget att ändra" — the route refuses to write history
+  // that says nothing happened.
+  update: (brfId, taskId, change) => request(
+    `/api/brf/${brfId}/tasks/${taskId}`,
+    jsonBody('POST', change),
+  ),
+  comment: (brfId, taskId, note) => request(
+    `/api/brf/${brfId}/tasks/${taskId}/comment`,
+    jsonBody('POST', { note }),
+  ),
+};
+
 // Routes that only the installed desktop application serves. On the web these
 // 404, which is exactly how the UI detects which delivery it is running in —
 // there is no build flag and no second bundle.

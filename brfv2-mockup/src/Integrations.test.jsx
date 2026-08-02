@@ -37,6 +37,13 @@ vi.mock('./api', () => ({
     addSupplierAlias: vi.fn(),
     deleteSupplierAlias: vi.fn(),
   },
+  tasksApi: {
+    list: vi.fn(),
+    forOrigin: vi.fn(),
+    create: vi.fn(),
+    update: vi.fn(),
+    comment: vi.fn(),
+  },
 }));
 
 const FORMAT = {

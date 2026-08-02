@@ -103,6 +103,16 @@ export const WatchIcon = ({ size = 22, className }: IconProps) => (
   </svg>
 )
 
+/* Work taken on: lines, with what is settled ticked off. Deliberately not a
+ * checkbox — a box invites a tap, and there is nothing here to tick. */
+export const TaskIcon = ({ size = 22, className }: IconProps) => (
+  <svg {...base(size)} className={className}>
+    <path d="m3.5 7.6 1.9 1.9 3.4-3.4" />
+    <path d="m3.5 16.6 1.9 1.9 3.4-3.4" />
+    <path d="M12.5 8h8M12.5 17h8" />
+  </svg>
+)
+
 export const DocIcon = ({ size = 20, className }: IconProps) => (
   <svg {...base(size)} className={className}>
     <path d="M14 3H7a1.5 1.5 0 0 0-1.5 1.5v15A1.5 1.5 0 0 0 7 21h10a1.5 1.5 0 0 0 1.5-1.5V7.5Z" />

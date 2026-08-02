@@ -766,37 +766,46 @@
  * signal rather than the only one.
  */
 
-.watch-asof {
+/* The task list is this board's sibling — same grouping, same restraint, same
+ * as-of line — so the two share these rules rather than keeping two
+ * near-identical copies of one decision. */
+.watch-asof,
+.task-asof {
   margin-top: var(--s4);
   font-size: var(--t-meta);
   color: var(--ink-3);
 }
 
-.watch-group {
+.watch-group,
+.task-group {
   margin-top: var(--s6);
 }
 
-.watch-group__head {
+.watch-group__head,
+.task-group__head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: var(--s3);
 }
 
-.watch-group__title {
+.watch-group__title,
+.task-group__title {
   font-size: var(--t-body);
   font-weight: 660;
   letter-spacing: -0.01em;
 }
 
-.watch-group__count {
+.watch-group__count,
+.task-group__count {
   flex: none;
   font-size: var(--t-meta);
   font-variant-numeric: tabular-nums;
   color: var(--ink-3);
 }
 
-.watch-group__note {
+.watch-group__note,
+.task-group__note {
   margin-top: var(--s2);
   font-size: var(--t-meta);
   line-height: 1.45;
@@ -804,7 +813,8 @@
 }
 
 .watch,
-.unresolved {
+.unresolved,
+.task {
   padding: var(--s4);
   background: var(--surface);
   border: 1px solid var(--hairline);
@@ -898,12 +908,189 @@
   color: var(--ink);
 }
 
-.watch__citations {
+.watch__citations,
+.task__citations {
   margin-top: var(--s4);
 }
 
-.watch__citations .cite {
+.watch__citations .cite,
+.task__citations .cite {
   margin-top: var(--s2);
+}
+
+/* -------------------------------------------------------------- uppgifter
+ *
+ * A watch card with a history under it. The four questions a meeting asks —
+ * what, by when, who, where from — sit at the top in that order; the trail
+ * sits at the bottom, quieter and set on a rail, because it is read when
+ * somebody asks rather than scanned.
+ *
+ * Late, blocked and cancelled are each stated in words on the card. The edge
+ * colour is a second signal, never the only one.
+ */
+
+.task-counts {
+  margin-top: var(--s1);
+  font-size: var(--t-meta);
+  color: var(--ink-2);
+}
+
+/* Deliberately NOT laid out as a flex row like the open group's head: any
+   display other than list-item takes the browser's own disclosure triangle
+   away, and a heading with a number beside it and no marker reads as a
+   heading rather than as something to open. Padding rather than min-height,
+   so the whole line is a 44px target. */
+.task-group__summary {
+  padding: var(--s3) 0;
+  cursor: pointer;
+}
+
+.task-group__summary .task-group__title {
+  display: inline;
+}
+
+.task-group__summary .task-group__count {
+  margin-left: var(--s2);
+}
+
+.task-group--closed .list {
+  margin-top: var(--s3);
+}
+
+.task--overdue {
+  border-left-color: var(--refusal);
+}
+
+/* Waiting on somebody else. Dashed, so it reads as stalled rather than
+   running even where the colour does not survive. */
+.task--blocked {
+  border-left-style: dashed;
+  border-left-color: var(--refusal);
+}
+
+.task--done {
+  border-left-color: var(--grounded);
+}
+
+.task--cancelled {
+  border-left-style: dashed;
+}
+
+.task__head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: var(--s2);
+}
+
+.task__title {
+  font-size: var(--t-body);
+  font-weight: 640;
+  line-height: 1.35;
+  letter-spacing: -0.01em;
+}
+
+.task__status {
+  flex: none;
+}
+
+.task__status--done {
+  background: var(--grounded-wash);
+  color: var(--grounded);
+}
+
+.task__status--blocked {
+  background: var(--refusal-wash);
+  color: var(--refusal);
+}
+
+.task__due {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  margin-top: var(--s2);
+  font-size: var(--t-meta);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink-2);
+}
+
+.task__description {
+  margin-top: var(--s3);
+  line-height: 1.5;
+  color: var(--ink);
+}
+
+/* The sentence somebody wrote when the work stopped. Warm rather than grey:
+   it is the part of a blocked or cancelled task that is worth reading. */
+.task__reason {
+  margin-top: var(--s3);
+  padding: var(--s2) var(--s3);
+  background: var(--refusal-wash);
+  border-radius: var(--r-field);
+  font-size: var(--t-meta);
+  line-height: 1.45;
+  color: var(--ink);
+}
+
+.task__reason-label {
+  font-weight: 620;
+}
+
+.task__meta {
+  margin-top: var(--s3);
+}
+
+.task__trail {
+  margin-top: var(--s5);
+}
+
+.trail {
+  list-style: none;
+  margin-top: var(--s2);
+}
+
+/* A rail down the left, so a run of events reads as one record rather than a
+   stack of unrelated lines. */
+.trail__event {
+  padding: var(--s2) 0 var(--s2) var(--s3);
+  border-left: 2px solid var(--hairline);
+}
+
+.trail__line {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--s2);
+  font-size: var(--t-meta);
+  color: var(--ink-3);
+}
+
+.trail__kind {
+  flex: none;
+}
+
+.trail__who {
+  font-weight: 620;
+  color: var(--ink-2);
+}
+
+.trail__when {
+  font-variant-numeric: tabular-nums;
+}
+
+.trail__change {
+  margin-top: var(--s1);
+  font-size: var(--t-meta);
+  color: var(--ink);
+}
+
+.trail__note {
+  margin-top: var(--s1);
+  font-size: var(--t-meta);
+  line-height: 1.45;
+  color: var(--ink-2);
 }
 
 /* --------------------------------------------------------------- states */

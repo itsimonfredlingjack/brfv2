@@ -1,0 +1,220 @@
+/* Skapa uppgift.
+ *
+ * The panel is deliberately quiet where the surrounding card is loud: it is a
+ * decision somebody makes, not an outcome the product produced, so nothing in
+ * it borrows the tinted "förslag" treatment used for what an engine read. The
+ * one thing that does get colour is the block that says work already exists —
+ * that is the sentence the screen is here to make hard to walk past. */
+
+.task-create {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--panel-border);
+}
+
+.task-create.open {
+  display: block;
+}
+
+.task-create-open {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 13px;
+  border-radius: 9px;
+  border: 1px solid var(--panel-border);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.task-create-open:hover,
+.task-create-open:focus-visible {
+  border-color: var(--accent, #6384ff);
+}
+
+.task-create-known {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.task-create-panel {
+  border: 1px solid var(--panel-border);
+  border-radius: 11px;
+  padding: 13px 15px 15px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.task-create-panel h5 {
+  margin: 0 0 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-secondary);
+}
+
+.task-create-panel .muted {
+  margin: 0 0 10px;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  max-width: 78ch;
+}
+
+.task-create-panel label {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.task-create-panel input,
+.task-create-panel textarea {
+  padding: 7px 10px;
+  border-radius: 9px;
+  border: 1px solid var(--panel-border);
+  background: rgba(0, 0, 0, 0.22);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.task-create-panel input:disabled,
+.task-create-panel textarea:disabled { opacity: 0.6; }
+
+.task-create-fields {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.task-create-fields label { flex: 1 1 170px; }
+
+.task-create-looking {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin: 0 0 10px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+/* Not knowing is not the same as knowing there is none. */
+.task-create-unknown {
+  margin: 0 0 10px;
+  padding: 9px 12px;
+  border-radius: 9px;
+  border: 1px solid rgba(230, 180, 70, 0.32);
+  background: rgba(230, 180, 70, 0.09);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-primary);
+}
+
+.task-create-duplicate {
+  margin: 0 0 12px;
+  padding: 11px 13px;
+  border-radius: 10px;
+  border: 1px solid rgba(230, 180, 70, 0.42);
+  background: rgba(230, 180, 70, 0.11);
+}
+
+.task-create-duplicate h6 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.task-create-duplicate ul {
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.task-create-duplicate li {
+  display: grid;
+  gap: 2px;
+}
+
+.task-create-duplicate-title {
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.task-create-duplicate .muted,
+.task-create-duplicate li .muted {
+  margin: 0;
+  font-size: 12px;
+}
+
+/* Shared with the change form on a task card: a value the route would refuse,
+   said before anything is sent. */
+.task-invalid {
+  margin: 0 0 8px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: rgb(235, 190, 95);
+}
+
+.task-create-error {
+  margin: 0 0 10px;
+  padding: 9px 12px;
+  border-radius: 9px;
+  border: 1px solid rgba(220, 90, 90, 0.4);
+  background: rgba(220, 90, 90, 0.14);
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-primary);
+}
+
+.task-create-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.task-create-submit,
+.task-create-cancel {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 13px;
+  border-radius: 9px;
+  border: 1px solid var(--panel-border);
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.task-create-submit { border-color: rgba(80, 190, 130, 0.5); }
+.task-create-cancel { color: var(--text-secondary); }
+
+.task-create-submit:disabled,
+.task-create-cancel:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.task-create .spin { animation: task-create-spin 1s linear infinite; }
+
+@keyframes task-create-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .task-create .spin { animation: none; }
+}

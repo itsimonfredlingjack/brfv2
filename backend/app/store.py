@@ -102,6 +102,7 @@ class Store:
         self.tenant_id = tenant_id or self.data_dir.name
         self._integrations = None
         self._watches = None
+        self._tasks = None
 
     @property
     def integrations(self):
@@ -137,6 +138,15 @@ class Store:
 
             self._watches = WatchStore(self.data_dir / "watches", tenant_id=self.tenant_id)
         return self._watches
+
+    @property
+    def tasks(self):
+        """Work the association has taken on. Lazy, like the rest."""
+        if getattr(self, "_tasks", None) is None:
+            from .tasks.store import TaskStore
+
+            self._tasks = TaskStore(self.data_dir / "tasks", tenant_id=self.tenant_id)
+        return self._tasks
 
     def _load_or_init_corpus_origin(self, corpus_origin: CorpusOrigin | None) -> CorpusOrigin:
         """tenant_meta.json — a sibling record to documents.json/settings.json

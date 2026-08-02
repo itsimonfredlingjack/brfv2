@@ -374,6 +374,33 @@ test.describe('Bevakningar', () => {
   })
 })
 
+test.describe('Uppgifter', () => {
+  /* Against the real endpoint, with a member's session cookie as the whole
+   * credential — reading the association's work needs membership and nothing
+   * more, while every write behind it needs an admin at a desk. A förening
+   * that has taken nothing on has no tasks, and that is an answer the screen
+   * owes rather than a spinner. */
+  test('a member with no tasks is told so, and is offered no way to change one', async ({ page }) => {
+    await login(page)
+    await expect(page.getByRole('heading', { name: 'Fråga' })).toBeVisible()
+
+    const response = page.waitForResponse((r) => r.url().endsWith('/tasks'))
+    await page.getByRole('link', { name: 'Uppgifter' }).click()
+    const board = await response
+    expect(board.status()).toBe(200)
+    // The grouping, the labels and the counts are the server's — the client
+    // groups, sorts and counts nothing.
+    const body = await board.json()
+    expect(Object.keys(body)).toEqual(
+      expect.arrayContaining(['today', 'active', 'done', 'cancelled', 'statusLabels', 'counts']),
+    )
+
+    await expect(page.getByRole('heading', { name: 'Uppgifter', level: 1 })).toBeVisible()
+    await expect(page.getByText('Inga uppgifter ännu')).toBeVisible()
+    await expect(page.getByTestId('readonly-note')).toContainText('görs i webbappen')
+  })
+})
+
 test.describe('Offline', () => {
   test('asking is refused up front, and an already-seen page still renders', async ({
     page,
