@@ -48,6 +48,7 @@ vi.mock('./api', () => ({
     refresh: vi.fn(),
     update: vi.fn(),
     comment: vi.fn(),
+    analysis: vi.fn(),
   },
   intakeApi: {},
   tasksApi: {
@@ -89,6 +90,17 @@ const LABELS = {
     possible_deviation: 'möjlig avvikelse',
     cannot_be_verified: 'kan inte verifieras',
   },
+  findingTypes: {
+    invoice_contract_amount: 'Belopp mot avtal',
+    invoice_previous_comparison: 'Jämförelse med föregående faktura',
+  },
+  changes: {
+    added: 'nytt fynd',
+    removed: 'fyndet finns inte längre',
+    changed: 'fyndet har ändrats',
+  },
+  engine: 'regelmotor',
+  engineVersion: '2026.08.1',
 };
 
 const PRICE_SIGNAL = {
@@ -175,6 +187,10 @@ const CASE_ROW = {
   signals: [PRICE_SIGNAL],
   top_signal: PRICE_SIGNAL,
   analysis_at: '2026-08-01T10:06:00+00:00',
+  analysis_run_id: 'run-2',
+  analysis_sequence: 2,
+  analysis_engine_version: '2026.08.1',
+  analysis_outdated: false,
   timeline: [
     {
       id: 't1',
@@ -394,6 +410,99 @@ const SUPPLIER = {
   responsibles: ['Anna'],
 };
 
+// Two recorded analyses, newest first, exactly as the backend serialises them:
+// the superseded findings themselves are *not* here — those come from
+// invoicesApi.analysis when somebody asks for them.
+const REPLACED_FINDING = {
+  ...HISTORY_FINDING,
+  id: 'f-hist-old',
+  verdict: 'matches',
+  verdict_label: 'överensstämmer',
+  suggestion: 'Beloppet är oförändrat mot Faktura 2026-114 (2026-02-03) (6 250,00 SEK).',
+  verified_facts: [
+    { label: 'Förändring', value: 'oförändrat belopp', source: 'invoice', citation_index: null },
+  ],
+};
+
+const ANALYSES = [
+  {
+    id: 'run-2',
+    tenant_id: 'brf-a',
+    case_id: 'case-1',
+    invoice_id: 'inv-1',
+    sequence: 2,
+    ran_at: '2026-08-01T10:06:00+00:00',
+    engine: 'regelmotor',
+    engine_version: '2026.08.1',
+    source: {
+      invoice_id: 'inv-1',
+      adapter: 'fortnox',
+      external_ref: '4711',
+      source_dataset: 'fortnox:supplierinvoices',
+      content_sha256: 'a'.repeat(64),
+      retrieved_at: '2026-08-01T10:05:00+00:00',
+    },
+    supersedes: 'run-1',
+    supersedes_sequence: 1,
+    source_changed: true,
+    finding_count: 2,
+    kept_count: 0,
+    already_decided_count: 0,
+    changes: [
+      {
+        kind: 'changed',
+        kind_label: 'fyndet har ändrats',
+        finding_type: 'invoice_previous_comparison',
+        finding_type_label: 'Jämförelse med föregående faktura',
+        summary: 'Jämförelse med föregående faktura: överensstämmer → möjlig avvikelse.',
+        from_verdict: 'matches',
+        to_verdict: 'possible_deviation',
+        from_text: 'Beloppet är oförändrat mot Faktura 2026-114 (2026-02-03) (6 250,00 SEK).',
+        to_text: 'Fakturan är 4 625,00 SEK högre än Faktura 2026-114 (2026-02-03).',
+        fact_changes: [
+          { label: 'Förändring', from_value: 'oförändrat belopp', to_value: '4 625,00 SEK (+74,0 %)' },
+        ],
+        finding_id: 'f-hist',
+        replaced_finding_id: 'f-hist-old',
+      },
+    ],
+    replaced_count: 1,
+    summary: 'Ersatte den föregående granskningen: 1 ändrat fynd. Fakturan hade lästs om ur källan sedan dess.',
+    note:
+      'Fynden är förslag från en regelmotor, inte beslut. Det som ersatts ligger kvar här och '
+      + 'går att läsa, men gäller inte längre som aktuell granskning. Ingenting en människa '
+      + 'beslutat om har rörts av den här körningen.',
+  },
+  {
+    id: 'run-1',
+    tenant_id: 'brf-a',
+    case_id: 'case-1',
+    invoice_id: 'inv-1',
+    sequence: 1,
+    ran_at: '2026-07-28T09:00:00+00:00',
+    engine: 'regelmotor',
+    engine_version: '2026.08.1',
+    source: {
+      invoice_id: 'inv-1',
+      adapter: 'fortnox',
+      external_ref: '4711',
+      source_dataset: 'fortnox:supplierinvoices',
+      content_sha256: 'd'.repeat(64),
+      retrieved_at: '2026-07-28T08:59:00+00:00',
+    },
+    supersedes: '',
+    supersedes_sequence: 0,
+    source_changed: false,
+    finding_count: 2,
+    kept_count: 0,
+    already_decided_count: 0,
+    changes: [],
+    replaced_count: 0,
+    summary: 'Första inspelade granskningen: 2 fynd.',
+    note: 'Fynden är förslag från en regelmotor, inte beslut.',
+  },
+];
+
 const DETAIL = {
   today: '2026-08-02',
   case: CASE_ROW,
@@ -435,6 +544,7 @@ const DETAIL = {
   },
   supplier: SUPPLIER,
   tasks: [],
+  analyses: ANALYSES,
   labels: LABELS,
 };
 
@@ -803,6 +913,118 @@ describe('deciding on a finding', () => {
     const finding = screen.getAllByText('möjlig avvikelse')[0].closest('article');
     expect(within(finding).getByRole('button', { name: 'Godkänn fyndet' })).toBeInTheDocument();
     expect(within(finding).getByText(/ställningstagande till/)).toBeInTheDocument();
+  });
+});
+
+describe('the analysis audit trail', () => {
+  /**
+   * A re-analysis replaces the engine's open findings. The screen has to be
+   * able to answer five questions about that afterwards: that it happened,
+   * which reading it was built on, what changed, when, and under which rules.
+   * The replaced version stops being a card; it does not stop being readable.
+   */
+
+  it('says that a new analysis replaced the old one, and when', async () => {
+    mount();
+    await openCase();
+    const panel = screen.getByText('Analyshistorik').closest('.case-panel');
+    const [latest] = within(panel).getAllByRole('listitem');
+
+    expect(within(latest).getByText('Version 2')).toBeInTheDocument();
+    expect(within(latest).getByText('gäller nu')).toBeInTheDocument();
+    expect(within(latest).getByText(/Ersatte den föregående granskningen/)).toBeInTheDocument();
+    expect(within(latest).getAllByText(/2026-08-01/).length).toBeGreaterThan(0);
+    // And the first run is still there, as its own version.
+    expect(within(panel).getByText('Version 1')).toBeInTheDocument();
+  });
+
+  it('names the source version and the rule version behind each run', async () => {
+    mount();
+    await openCase();
+    const panel = screen.getByText('Analyshistorik').closest('.case-panel');
+    const [latest] = within(panel).getAllByRole('listitem');
+
+    expect(within(latest).getByText('regelmotor 2026.08.1')).toBeInTheDocument();
+    expect(within(latest).getByText('aaaaaaaaaaaa…')).toBeInTheDocument();
+    expect(within(latest).getByText(/fortnox 4711/)).toBeInTheDocument();
+    expect(within(latest).getByText(/lästs om sedan förra granskningen/)).toBeInTheDocument();
+  });
+
+  it('says what changed, with the previous value beside the current one', async () => {
+    mount();
+    await openCase();
+    const panel = screen.getByText('Analyshistorik').closest('.case-panel');
+
+    expect(within(panel).getByText('fyndet har ändrats')).toBeInTheDocument();
+    expect(
+      within(panel).getByText(/Jämförelse med föregående faktura: överensstämmer → möjlig avvikelse/),
+    ).toBeInTheDocument();
+    // The number itself, then and now — not a paraphrase of it.
+    expect(within(panel).getByText('oförändrat belopp')).toBeInTheDocument();
+    expect(within(panel).getByText('4 625,00 SEK (+74,0 %)')).toBeInTheDocument();
+  });
+
+  it('keeps the replaced findings out of the way until somebody asks', async () => {
+    mount();
+    await openCase();
+    // The change list already says what the old finding *said* — what is not
+    // here is the finding itself, as a card, and nothing was fetched for it.
+    expect(document.querySelectorAll('.finding.replaced')).toHaveLength(0);
+    expect(invoicesApi.analysis).not.toHaveBeenCalled();
+
+    invoicesApi.analysis.mockResolvedValue({
+      case_id: 'case-1',
+      run: { ...ANALYSES[0], replaced: [REPLACED_FINDING] },
+      labels: LABELS,
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Visa den ersatta versionen \(1 fynd\)/ }));
+
+    await waitFor(() => expect(invoicesApi.analysis)
+      .toHaveBeenCalledWith('brf-a', 'case-1', 'run-2'));
+    expect(await screen.findByText('ersatt')).toBeInTheDocument();
+    expect(document.querySelectorAll('.finding.replaced')).toHaveLength(1);
+  });
+
+  it('marks a replaced finding as no longer applying and offers no decision on it', async () => {
+    mount();
+    await openCase();
+    invoicesApi.analysis.mockResolvedValue({
+      case_id: 'case-1',
+      run: { ...ANALYSES[0], replaced: [REPLACED_FINDING] },
+      labels: LABELS,
+    });
+    fireEvent.click(screen.getByRole('button', { name: /Visa den ersatta versionen/ }));
+
+    const old = (await screen.findByText('ersatt')).closest('.finding');
+    expect(within(old).getByText('överensstämmer')).toBeInTheDocument();
+    expect(within(old).getByText('oförändrat belopp')).toBeInTheDocument();
+    // No control on a superseded card: it is a record, not something in play.
+    expect(within(old).queryByRole('button')).toBeNull();
+  });
+
+  it('does not call a re-run that changed nothing a version', async () => {
+    mount({
+      detail: { ...DETAIL, analyses: [ANALYSES[1]] },
+    });
+    await openCase();
+    const panel = screen.getByText('Analyshistorik').closest('.case-panel');
+    expect(within(panel).getAllByRole('listitem')).toHaveLength(1);
+    expect(
+      within(panel).getByText(/En omkörning som kom fram till exakt samma sak är ingen ny version/),
+    ).toBeInTheDocument();
+  });
+
+  it('flags findings that nobody has re-run since the rules changed', async () => {
+    mount({
+      detail: {
+        ...DETAIL,
+        case: { ...CASE_ROW, analysis_outdated: true, analysis_engine_version: '2026.05.1' },
+      },
+    });
+    await openCase();
+    const banner = await screen.findByRole('status');
+    expect(banner).toHaveTextContent('regelversion 2026.05.1');
+    expect(banner).toHaveTextContent('Nu gäller 2026.08.1');
   });
 });
 

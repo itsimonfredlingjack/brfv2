@@ -461,6 +461,350 @@ class TestAnalysis:
         assert after.decision_note == "kollad"
 
 
+class TestAnalysisAudit:
+    """A re-analysis may replace the engine's own findings, but not silently.
+
+    "Open" means nobody had formally decided on it — not that nobody was
+    working from it. Somebody may well have rung the supplier because of an
+    open finding, so a run that replaces one has to leave behind: that it
+    happened, when, which reading it was built on, which rules produced it,
+    what differed, and the replaced version itself. The old version stops being
+    a card on the screen; it does not stop existing.
+    """
+
+    def _changed_reading(self, env, *, amount: str = "9999.00") -> None:
+        """The same invoice, read again out of a source that now says something else."""
+        current = env.integrations.get_invoice(env.case.primary_invoice_id)
+        env.integrations.upsert_invoice(
+            current.model_copy(
+                update={
+                    "total_amount": Decimal(amount),
+                    "content_sha256": "a" * 64,
+                    "retrieved_at": utc_now_iso(),
+                }
+            )
+        )
+
+    def test_the_first_run_records_what_it_read_and_which_rules_read_it(self, worked):
+        from app.invoices.models import ANALYSIS_ENGINE_VERSION, ENGINE
+
+        runs = worked.integrations.list_analysis_runs(worked.case.primary_invoice_id)
+        assert len(runs) == 1
+        run = runs[0]
+        snapshot = worked.integrations.get_invoice(worked.case.primary_invoice_id)
+        assert run.sequence == 1 and run.supersedes == ""
+        assert run.engine == ENGINE and run.engine_version == ANALYSIS_ENGINE_VERSION
+        assert run.source.content_sha256 == snapshot.content_sha256
+        assert run.source.adapter == snapshot.adapter
+        assert run.source.external_ref == snapshot.external_ref
+        assert run.ran_at
+        # It replaced nothing, so it changed nothing. Listing every finding it
+        # produced as "new" would be the findings on the screen repeated.
+        assert run.replaced == [] and run.changes == []
+        assert run.finding_count == len(
+            case_ops.findings_for_invoice(worked.store, worked.case.primary_invoice_id)
+        )
+        # And its note does not describe something that did not happen.
+        assert "ersatts" not in run.note
+
+    def test_the_case_points_at_the_run_its_findings_came_from(self, worked):
+        from app.invoices.models import ANALYSIS_ENGINE_VERSION
+
+        run = worked.integrations.list_analysis_runs(worked.case.primary_invoice_id)[-1]
+        assert worked.case.analysis_run_id == run.id
+        assert worked.case.analysis_sequence == 1
+        assert worked.case.analysis_engine_version == ANALYSIS_ENGINE_VERSION
+        assert worked.case.public(TODAY)["analysis_outdated"] is False
+
+    def test_findings_produced_under_older_rules_are_visibly_old(self, worked, monkeypatch):
+        import app.invoices.models as models
+
+        monkeypatch.setattr(models, "ANALYSIS_ENGINE_VERSION", "9999.01")
+        assert worked.case.public(TODAY)["analysis_outdated"] is True
+
+    def test_a_run_that_changes_nothing_is_not_a_second_version(self, worked):
+        before = len(worked.case.timeline)
+        again = case_ops.analyse_case(worked.store, worked.case.id)
+        runs = worked.integrations.list_analysis_runs(worked.case.primary_invoice_id)
+        assert len(runs) == 1, "en omkörning som inte ändrade något blev en version"
+        assert len(again.timeline) == before
+        assert again.analysis_at == worked.case.analysis_at
+
+    def test_a_changed_reading_records_a_new_version_that_names_the_old_one(self, worked):
+        first = worked.integrations.list_analysis_runs(worked.case.primary_invoice_id)[0]
+        self._changed_reading(worked)
+        case_ops.analyse_case(worked.store, worked.case.id)
+
+        runs = worked.integrations.list_analysis_runs(worked.case.primary_invoice_id)
+        assert [r.sequence for r in runs] == [1, 2]
+        second = runs[1]
+        assert second.supersedes == first.id
+        assert second.supersedes_sequence == 1
+        assert second.source_changed is True
+        assert second.source.content_sha256 == "a" * 64
+        assert second.id != first.id
+
+    def test_the_replaced_findings_are_kept_whole_by_the_run_that_replaced_them(self, worked):
+        was = {
+            f.id: f.suggestion
+            for f in case_ops.findings_for_invoice(
+                worked.store, worked.case.primary_invoice_id
+            )
+        }
+        assert was
+        self._changed_reading(worked)
+        case_ops.analyse_case(worked.store, worked.case.id)
+
+        run = worked.integrations.list_analysis_runs(worked.case.primary_invoice_id)[-1]
+        replaced = {f.id: f.suggestion for f in run.replaced}
+        assert replaced == was, "det som ersattes finns inte kvar ordagrant i revisionsspåret"
+        # And it is emphatically not a live card any more.
+        live = {
+            f.id
+            for f in case_ops.findings_for_invoice(
+                worked.store, worked.case.primary_invoice_id
+            )
+        }
+        assert live.isdisjoint(replaced)
+
+    def test_the_difference_is_written_out_with_both_values(self, worked):
+        self._changed_reading(worked)
+        case_ops.analyse_case(worked.store, worked.case.id)
+        run = worked.integrations.list_analysis_runs(worked.case.primary_invoice_id)[-1]
+
+        assert run.changes, "en ny version utan en enda beskriven skillnad"
+        changed = [c for c in run.changes if c.kind == "changed"]
+        assert changed, "ingen ändring beskrevs som en ändring"
+        for change in changed:
+            assert change.from_text and change.to_text
+            assert change.summary
+            assert change.finding_type_label and change.finding_type_label != change.finding_type
+            assert change.from_text != change.to_text or change.fact_changes, (
+                "ett fynd rapporterades som ändrat utan att något gick att peka på"
+            )
+        spoken = " ".join(
+            [c.to_text for c in changed]
+            + [f"{f.label} {f.from_value} {f.to_value}" for c in changed for f in c.fact_changes]
+        )
+        assert "9 999,00" in spoken, (
+            "det nya beloppet står inte i beskrivningen av vad som ändrades"
+        )
+        # The old value has to be there too — "det står 9 999 nu" without "det
+        # stod 12 500 då" is not a change description, it is a reading.
+        assert any(f.from_value for c in changed for f in c.fact_changes)
+
+    def test_the_timeline_says_that_a_new_analysis_replaced_the_old(self, worked):
+        self._changed_reading(worked)
+        case = case_ops.analyse_case(worked.store, worked.case.id)
+        run = worked.integrations.list_analysis_runs(case.primary_invoice_id)[-1]
+
+        entries = [e for e in case.timeline if e.kind == "analysis_run"]
+        assert len(entries) == 2, "den nya granskningen syns inte som en egen händelse"
+        latest = entries[-1]
+        assert "version 2" in latest.summary
+        assert latest.ref_id == run.id
+        assert "Ersatte" in latest.note
+        assert "a" * 16 in latest.note, "källversionen står inte i händelsen"
+        assert run.engine_version in latest.note, "regelversionen står inte i händelsen"
+
+    def test_a_recorded_run_is_never_edited(self, worked):
+        run = worked.integrations.list_analysis_runs(worked.case.primary_invoice_id)[0]
+        again = worked.integrations.append_analysis_run(
+            run.model_copy(update={"summary": "omskriven"})
+        )
+        assert again.summary == run.summary, "en inspelad körning gick att skriva om"
+        assert len(worked.integrations.list_analysis_runs()) == 1
+        for verb in ("update_analysis_run", "delete_analysis_run", "upsert_analysis_run"):
+            assert not hasattr(worked.integrations, verb)
+
+    def test_a_decided_finding_is_never_in_the_replaced_set(self, worked):
+        findings = case_ops.findings_for_invoice(worked.store, worked.case.primary_invoice_id)
+        decided = worked.integrations.update_finding(
+            findings[0].model_copy(update={"status": "approved", "decision_note": "kollad"})
+        )
+        self._changed_reading(worked)
+        case_ops.analyse_case(worked.store, worked.case.id)
+
+        run = worked.integrations.list_analysis_runs(worked.case.primary_invoice_id)[-1]
+        assert decided.id not in {f.id for f in run.replaced}
+        assert run.kept_count >= 1
+        still = worked.integrations.get_finding(decided.id)
+        assert still is not None and still.status == "approved"
+
+    def test_something_a_person_dismissed_does_not_come_back_as_a_second_card(self, worked):
+        findings = case_ops.findings_for_invoice(worked.store, worked.case.primary_invoice_id)
+        target = findings[0]
+        worked.integrations.update_finding(
+            target.model_copy(update={"status": "dismissed", "decided_by": "anna"})
+        )
+        case_ops.analyse_case(worked.store, worked.case.id)
+
+        after = case_ops.findings_for_invoice(worked.store, worked.case.primary_invoice_id)
+        same = [f for f in after if f.suggestion == target.suggestion]
+        assert len(same) == 1 and same[0].status == "dismissed", (
+            "motorn skrev ett andra öppet kort bredvid ett beslut om samma sak"
+        )
+
+    def test_the_engine_still_saying_it_is_counted_on_the_next_recorded_run(
+        self, integration_env
+    ):
+        """Suppressing a repeat must not read as the engine having stopped saying it."""
+        env = integration_env
+        first = env.integrations.upsert_invoice(
+            snapshot(external_ref="AUD-1", supplier="Ödemarksbolaget AB", number="A-1")
+        )
+        case = case_for(env, first)
+        case_ops.analyse_case(env.store, case.id)
+
+        findings = case_ops.findings_for_invoice(env.store, first.id)
+        # Whatever the document review made of it — the point is that it is not
+        # the history comparison, so the second invoice below leaves it alone.
+        against_documents = next(
+            f for f in findings if f.finding_type != "invoice_previous_comparison"
+        )
+        env.integrations.update_finding(
+            against_documents.model_copy(update={"status": "dismissed", "decided_by": "anna"})
+        )
+
+        # An earlier invoice from the same supplier arrives: the history
+        # comparison changes, the contract finding does not.
+        env.integrations.upsert_invoice(
+            snapshot(
+                external_ref="AUD-0",
+                supplier="Ödemarksbolaget AB",
+                number="A-0",
+                invoice_date="2026-04-01",
+                total="5000.00",
+            )
+        )
+        case_ops.analyse_case(env.store, case.id)
+
+        run = env.integrations.list_analysis_runs(first.id)[-1]
+        assert run.sequence == 2
+        assert run.already_decided_count >= 1, (
+            "att motorn fortfarande säger det som avfärdats är inte inspelat någonstans"
+        )
+        assert run.kept_count >= 1
+        assert any(c.finding_type == "invoice_previous_comparison" for c in run.changes)
+
+    def test_confirming_a_supplier_name_is_recorded_as_what_it_changed(self, integration_env):
+        """The one way an operator can change the analysis without the source moving.
+
+        Confirming that "Snösvängen AB" and "Snösvängen Entreprenad AB" are the
+        same company turns a weak anchor into a confirmed one, which is exactly
+        the sort of change that used to happen silently: the finding's caveat
+        disappeared and nothing said why.
+        """
+        import uuid as _uuid
+
+        from app.integrations.models import SupplierAlias
+        from app.integrations.supplier import normalize
+
+        env = integration_env
+        invoice = env.import_invoice("SI-2027-018")
+        case = case_for(env, invoice)
+        case_ops.analyse_case(env.store, case.id)
+
+        weak = next(
+            f
+            for f in case_ops.findings_for_invoice(env.store, invoice.id)
+            if f.alias_proposal is not None
+        )
+        proposal = weak.alias_proposal
+        env.integrations.add_supplier_alias(
+            SupplierAlias(
+                id=_uuid.uuid4().hex[:12],
+                tenant_id=env.store.tenant_id,
+                invoice_name=proposal.invoice_name,
+                document_name=proposal.document_name,
+                normalized_key=normalize(proposal.invoice_name),
+                created_by="anna",
+                created_at=utc_now_iso(),
+                note=None,
+            )
+        )
+        case_ops.analyse_case(env.store, case.id)
+
+        runs = env.integrations.list_analysis_runs(invoice.id)
+        assert [r.sequence for r in runs] == [1, 2]
+        latest = runs[-1]
+        assert latest.source_changed is False, "källan rörde sig inte — reglerna gjorde det"
+        anchors = [
+            fact
+            for change in latest.changes
+            for fact in change.fact_changes
+            if fact.label == "Koppling till leverantören"
+        ]
+        assert anchors, "att kopplingen bekräftades syns inte som en beskriven skillnad"
+        assert anchors[0].from_value == "delvis namnlikhet"
+        assert anchors[0].to_value == "ett namn någon här har bekräftat"
+        # And the version that rested on the weak link is still readable, with
+        # the weakness still on it — that is what makes it checkable later.
+        assert any(f.anchor_strength == "partial" for f in latest.replaced)
+
+    def test_the_audit_trail_belongs_to_the_tenant_like_everything_else(self, worked):
+        run = worked.integrations.list_analysis_runs()[0]
+        assert run.tenant_id == worked.store.tenant_id
+        for finding in run.replaced:
+            assert finding.tenant_id == worked.store.tenant_id
+
+
+class TestAnalysisDiff:
+    """The comparison itself, without a store in the way."""
+
+    def _finding(self, finding_type: str, verdict: str, text: str):
+        from app.integrations.models import ReviewFinding
+
+        return ReviewFinding(
+            id=uuid.uuid4().hex[:12],
+            tenant_id="t",
+            finding_type=finding_type,
+            created_at=utc_now_iso(),
+            invoice_id="i",
+            verdict=verdict,
+            suggestion=text,
+        )
+
+    def test_identical_findings_are_no_difference_at_all(self):
+        from app.invoices import audit
+
+        a = self._finding("invoice_new_line", "cannot_be_verified", "samma text")
+        b = self._finding("invoice_new_line", "cannot_be_verified", "samma text")
+        assert audit.diff_findings([a], [b]) == []
+
+    def test_one_of_a_type_on_each_side_is_a_change_not_a_swap(self):
+        from app.invoices import audit
+
+        old = self._finding("invoice_previous_comparison", "matches", "oförändrat")
+        new = self._finding("invoice_previous_comparison", "possible_deviation", "höjt")
+        [change] = audit.diff_findings([old], [new])
+        assert change.kind == "changed"
+        assert change.from_verdict == "matches" and change.to_verdict == "possible_deviation"
+        assert change.from_text == "oförändrat" and change.to_text == "höjt"
+        assert change.replaced_finding_id == old.id and change.finding_id == new.id
+
+    def test_several_of_one_type_are_not_paired_by_guesswork(self):
+        from app.invoices import audit
+
+        old = [
+            self._finding("invoice_possible_duplicate", "possible_deviation", "A"),
+            self._finding("invoice_possible_duplicate", "possible_deviation", "B"),
+        ]
+        new = [self._finding("invoice_possible_duplicate", "possible_deviation", "C")]
+        kinds = sorted(c.kind for c in audit.diff_findings(old, new))
+        assert kinds == ["added", "removed", "removed"], (
+            "två borttagna och en ny parades ihop till en påhittad ändring"
+        )
+
+    def test_a_disappearance_is_not_reported_as_a_dismissal(self):
+        from app.invoices import audit
+
+        old = self._finding("invoice_new_line", "cannot_be_verified", "ny rad")
+        [change] = audit.diff_findings([old], [])
+        assert change.kind == "removed"
+        assert "inte att det är avfärdat" in change.summary
+
+
 class TestHumanWork:
     def test_a_local_status_is_never_called_an_approval(self, worked):
         from app.invoices.models import REVIEW_STATUS_CAVEATS, REVIEW_STATUS_LABELS

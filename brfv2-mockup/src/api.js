@@ -210,6 +210,13 @@ export const invoicesApi = {
     `/api/brf/${brfId}/invoices/cases/${caseId}/comment`,
     jsonBody('POST', { note }),
   ),
+
+  // One recorded analysis, with the findings it replaced. Fetched only when
+  // somebody opens an older version — carrying every superseded finding,
+  // citations and all, on every case read would send bytes nobody asked for.
+  analysis: (brfId, caseId, runId) => request(
+    `/api/brf/${brfId}/invoices/cases/${caseId}/analyses/${runId}`,
+  ),
 };
 
 // The review queue for incoming post.

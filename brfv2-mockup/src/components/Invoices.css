@@ -904,3 +904,190 @@
   color: var(--text-secondary);
   font-size: 13px;
 }
+
+/* --- the analysis audit trail ---
+ *
+ * Styled deliberately quieter than a finding: this is a record of what the
+ * engine *used* to say, and it must not compete for attention with what it
+ * says now. The one loud element is the change list, because "vad ändrades" is
+ * the question the panel exists to answer.
+ */
+
+.analysis-outdated {
+  margin: 0 0 12px;
+  padding: 9px 12px;
+  border: 1px solid var(--warn-border, #7a5c1f);
+  border-left-width: 3px;
+  border-radius: 6px;
+  background: var(--warn-bg, rgba(180, 130, 30, 0.09));
+  color: var(--text-secondary);
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.analysis-runs {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.analysis-run {
+  padding: 11px 12px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: var(--panel-bg-soft, rgba(255, 255, 255, 0.02));
+}
+
+.analysis-run.current {
+  border-color: var(--accent, #6384ff);
+}
+
+.run-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.run-badge {
+  padding: 0 7px;
+  border-radius: 999px;
+  border: 1px solid var(--accent, #6384ff);
+  color: var(--accent, #6384ff);
+  font-size: 10.5px;
+}
+
+.run-summary {
+  margin: 6px 0 8px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+/* A grid rather than rows of flex: the source line is long and wraps, and a
+   wrapped value that slides under its own label makes three facts read as one
+   paragraph. */
+.run-meta {
+  margin: 0 0 8px;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 3px 10px;
+  font-size: 11.5px;
+}
+
+.run-meta > div { display: contents; }
+.run-meta dt { color: var(--text-muted); }
+.run-meta dd { margin: 0; color: var(--text-secondary); min-width: 0; }
+.run-meta code { font-size: 11px; color: var(--text-muted); }
+.run-meta em { color: var(--text-muted); font-style: normal; }
+
+.run-changes {
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.run-changes .change {
+  padding: 7px 9px;
+  border-left: 2px solid var(--panel-border);
+  border-radius: 0 5px 5px 0;
+  background: var(--panel-bg, rgba(255, 255, 255, 0.03));
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.run-changes .change.added { border-left-color: var(--accent, #6384ff); }
+.run-changes .change.changed { border-left-color: var(--warn-border, #7a5c1f); }
+.run-changes .change.removed { border-left-color: var(--text-muted); }
+
+.change-kind {
+  display: inline-block;
+  margin-right: 7px;
+  color: var(--text-muted);
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.change-summary { color: var(--text-primary); }
+
+.change-facts {
+  margin: 6px 0 0;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 10px;
+  font-size: 12px;
+}
+
+.change-facts > div { display: contents; }
+.change-facts dt { color: var(--text-muted); }
+.change-facts dd { margin: 0; min-width: 0; }
+
+/* The old value stays legible rather than struck through: it is what somebody
+   may have acted on, not a mistake. */
+.change-facts .was { color: var(--text-muted); }
+.change-facts .now { color: var(--text-primary); font-weight: 500; }
+
+.change-texts { margin-top: 6px; font-size: 12px; }
+.change-texts summary { cursor: pointer; color: var(--text-muted); }
+.change-texts p { margin: 6px 0 0; color: var(--text-secondary); line-height: 1.55; }
+.change-texts em { color: var(--text-muted); font-style: normal; }
+
+.run-note { margin: 0 0 6px; font-size: 11.5px; line-height: 1.5; }
+
+.run-open {
+  padding: 0;
+  font-size: 12px;
+}
+
+.run-replaced {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* A superseded finding is deliberately flat: no decision bar, no task button,
+   nothing that could be mistaken for something still in play. */
+/* Dashed on three sides only: the left edge is the verdict's tone bar, and
+   breaking that up makes the card read as damaged rather than as superseded. */
+.finding.replaced {
+  opacity: 0.85;
+  border-top-style: dashed;
+  border-right-style: dashed;
+  border-bottom-style: dashed;
+}
+
+.finding.replaced .finding-suggestion-text {
+  margin: 8px 0 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+}
+
+.finding.replaced .finding-uncertainty-text {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+.replaced-facts {
+  margin: 8px 0 0;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 10px;
+  font-size: 12px;
+}
+
+.replaced-facts > div { display: contents; }
+.replaced-facts dt { color: var(--text-muted); }
+.replaced-facts dd { margin: 0; color: var(--text-secondary); min-width: 0; }

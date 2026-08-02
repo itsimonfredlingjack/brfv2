@@ -21,6 +21,7 @@ Layout, under ``tenants/<brf_id>/integrations/``::
     invoices.json          [InvoiceSnapshot, ...]
     findings.json          [ReviewFinding, ...]
     invoice-cases.json     [InvoiceCase, ...]
+    analysis-runs.json     [AnalysisRun, ...]      append-only
 
 Migration is by explicit version number rather than by hoping every field has a
 tolerant default. ``schemaVersion`` higher than this build understands is a
@@ -40,13 +41,14 @@ from typing import Iterable, TypeVar
 
 from pydantic import BaseModel, ValidationError
 
-from ..invoices.models import InvoiceCase
+from ..invoices.models import AnalysisRun, InvoiceCase
 from .models import (
     InvoiceSnapshot,
     MailboxCheckpoint,
     ReviewFinding,
     SourceEvent,
     SupplierAlias,
+    finding_content_key,
 )
 
 logger = logging.getLogger("brf.integrations")
@@ -75,7 +77,15 @@ logger = logging.getLogger("brf.integrations")
 # review status, its comments and its timeline, and a version-3 build that read
 # one back would drop every one of them. It cannot read the file at all, which
 # is the point of refusing a newer directory outright.
-SCHEMA_VERSION = 4
+#
+# 5 is the analysis audit trail: a new append-only file of
+# :class:`~app.invoices.models.AnalysisRun` records, and three fields on the
+# invoice case naming which run the current findings came out of. The argument
+# for the bump is the sharpest one yet — a version-4 build would read a case,
+# drop `analysis_run_id`, and write it back, severing the only link between
+# what is on screen and the record of what it replaced. An audit trail that a
+# downgrade can quietly detach is not one.
+SCHEMA_VERSION = 5
 
 META_FILE = "meta.json"
 SOURCE_EVENTS_FILE = "source-events.json"
@@ -84,6 +94,7 @@ FINDINGS_FILE = "findings.json"
 SUPPLIER_ALIASES_FILE = "supplier-aliases.json"
 MAILBOX_FILE = "mailbox-checkpoints.json"
 INVOICE_CASES_FILE = "invoice-cases.json"
+ANALYSIS_RUNS_FILE = "analysis-runs.json"
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -183,6 +194,14 @@ class IntegrationStore:
         invoice cases before this version. Rewriting the files is still done
         eagerly for the reason above — a directory where some records have the
         field and some do not is the state that makes the next migration hard.
+
+        4 → 5 adds the analysis audit trail, and the one thing worth stating is
+        what is *not* invented: a case migrated from 4 has findings but no
+        recorded run, and gets ``analysis_run_id=""`` rather than a fabricated
+        run built from whatever is on disk. The next analysis records run 1 and
+        carries the findings it replaced, saying in as many words that what
+        came before them was never recorded. Back-dating a run here would put a
+        row in an audit trail that describes a run nobody observed.
         """
         logger.info(
             "Migrerar integrationsdata för %s från schemaVersion %d till %d.",
@@ -198,6 +217,8 @@ class IntegrationStore:
             ):
                 if (self.dir / filename).exists():
                     self._write(filename, self._read(filename, model))
+        if from_version < 5 and (self.dir / INVOICE_CASES_FILE).exists():
+            self._write(INVOICE_CASES_FILE, self._read(INVOICE_CASES_FILE, InvoiceCase))
 
     # ---------- generic io ----------
 
@@ -379,6 +400,19 @@ class IntegrationStore:
         finding is a record of a decision, and a fresh run must not erase the
         decision it was made against. Only ``open`` ones — nobody's work — are
         replaced.
+
+        A produced finding that repeats, word for word, one of those decisions
+        is **not** written beside it. Without this, dismissing a finding and
+        pressing refresh left the invoice carrying the same sentence twice —
+        once marked "avfärdad" and once "öppen" — and the reviewer had to work
+        out that the second one was the first one coming back. A decision
+        covers the statement it was made about; the engine still saying it is
+        recorded on the analysis run
+        (:attr:`~app.invoices.models.AnalysisRun.already_decided_count`) rather
+        than as a second card.
+
+        Returns what was actually written, which is what the audit trail
+        records as this run's output.
         """
         with self.lock:
             rows = self._read(FINDINGS_FILE, ReviewFinding)
@@ -387,7 +421,14 @@ class IntegrationStore:
                 for f in rows
                 if not (f.invoice_id == invoice_id and f.status == "open")
             ]
-            fresh = [self._stamp(f) for f in findings]
+            decided = {
+                finding_content_key(f)
+                for f in kept
+                if f.invoice_id == invoice_id and f.status != "open"
+            }
+            fresh = [
+                self._stamp(f) for f in findings if finding_content_key(f) not in decided
+            ]
             self._write(FINDINGS_FILE, kept + fresh)
         return fresh
 
@@ -441,6 +482,51 @@ class IntegrationStore:
             else:
                 rows.append(record)
             self._write(INVOICE_CASES_FILE, rows)
+        return record
+
+    # ---------- analysis runs ----------
+    #
+    # The one collection in this store that is append-only in the strong sense:
+    # no upsert, no update, no delete. A record of what an analysis replaced is
+    # worth exactly as much as the guarantee that it was not edited afterwards,
+    # and a method that could edit one is the guarantee gone. Removing the
+    # tenant removes these with everything else, which is the only deletion
+    # there is.
+
+    def list_analysis_runs(self, invoice_id: str = "") -> list[AnalysisRun]:
+        """Recorded runs, oldest first — this is a history, and it reads forwards."""
+        with self.lock:
+            rows = self._read(ANALYSIS_RUNS_FILE, AnalysisRun)
+        if invoice_id:
+            rows = [r for r in rows if r.invoice_id == invoice_id]
+        return sorted(rows, key=lambda r: (r.sequence, r.ran_at))
+
+    def get_analysis_run(self, run_id: str) -> AnalysisRun | None:
+        return next((r for r in self.list_analysis_runs() if r.id == run_id), None)
+
+    def latest_analysis_run(self, invoice_id: str) -> AnalysisRun | None:
+        rows = self.list_analysis_runs(invoice_id)
+        return rows[-1] if rows else None
+
+    def append_analysis_run(self, run: AnalysisRun) -> AnalysisRun:
+        """Write one run. Refuses to touch a run that is already recorded.
+
+        The id is derived from what the run is — its rules, its reading, its
+        result and the run it superseded (:func:`app.invoices.audit.run_id_for`)
+        — so a second write under the same id is either a duplicate that should
+        do nothing, or a rewrite of history. It cannot be both, and this returns
+        the existing record rather than deciding: the caller writes under the
+        lock it already holds, so the only way to arrive here twice with the
+        same id is to have computed the identical run twice.
+        """
+        with self.lock:
+            rows = self._read(ANALYSIS_RUNS_FILE, AnalysisRun)
+            existing = next((r for r in rows if r.id == run.id), None)
+            if existing is not None:
+                return existing
+            record = self._stamp(run)
+            rows.append(record)
+            self._write(ANALYSIS_RUNS_FILE, rows)
         return record
 
     # ---------- supplier aliases ----------

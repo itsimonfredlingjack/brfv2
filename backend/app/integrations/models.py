@@ -139,6 +139,32 @@ FindingType = Literal[
     "invoice_new_line",
 ]
 
+# What each kind of finding is *about*, in one noun phrase. Used wherever a
+# finding has to be named without being shown — an analysis run's change list,
+# a filter, a heading — so those places do not each invent their own wording
+# for the same thing.
+FINDING_TYPE_LABELS: dict[str, str] = {
+    "invoice_contract_amount": "Belopp mot avtal",
+    "invoice_contract_period": "Period mot avtal",
+    "invoice_without_contract": "Inget avtal att jämföra mot",
+    "contract_term_not_comparable": "Avtalsvillkor som inte går att jämföra",
+    "invoice_previous_comparison": "Jämförelse med föregående faktura",
+    "invoice_possible_duplicate": "Möjlig dubblett",
+    "invoice_credit_relation": "Möjlig kreditfaktura",
+    "invoice_new_line": "Ny post på fakturan",
+}
+
+# How a document was tied to an invoice's supplier, in words. Same vocabulary
+# the case view shows, so a change from one to another can be *described*
+# rather than left as two codes the reader has to know.
+ANCHOR_LABELS: dict[str, str] = {
+    "org_number": "organisationsnummer",
+    "exact": "leverantörens namn ordagrant",
+    "alias": "ett namn någon här har bekräftat",
+    "legal_form": "samma namn, annan bolagsform",
+    "partial": "delvis namnlikhet",
+}
+
 # The three answers this product is allowed to give. There is no fourth, and in
 # particular there is no "avviker" — asserting a deviation as fact would claim
 # the contract says something it may simply not say on the page that was found.
@@ -627,6 +653,49 @@ class ReviewFinding(BaseModel):
 
     def with_label(self) -> "ReviewFinding":
         return self.model_copy(update={"verdict_label": VERDICT_LABELS[self.verdict]})
+
+
+def finding_content_key(finding: ReviewFinding) -> str:
+    """What a finding *says*, independent of when it was produced.
+
+    Two findings with the same key are the same statement about the same
+    invoice, made by two runs. The id is deliberately not part of it: an engine
+    mints a fresh id every run, so keying on it would make every finding unique
+    and every re-run look like a change.
+
+    The **verified facts are part of what it says**, and leaving them out was a
+    real hole: an invoice whose total changed while the surrounding prose
+    happened not to — the "no contract names this supplier" finding is the
+    obvious case — would have compared as unchanged, and the amount would have
+    moved under the reader with nothing recording it. The citations are in for
+    the same reason: a finding that now rests on a different passage is a
+    different finding, whatever it reads like.
+
+    Used in three places that must agree with each other: deciding whether a
+    re-run may append a second copy of something a human already decided on
+    (:meth:`IntegrationStore.replace_findings_for_invoice`), diffing one
+    analysis run against the previous one (:mod:`app.invoices.audit`), and
+    deduplicating a case's timeline.
+    """
+    facts = "|".join(
+        f"{fact.label}={fact.value}@{fact.source}" for fact in finding.verified_facts
+    )
+    # Not the score and not the rects: those are retrieval mechanics, and a
+    # rounding difference in one is not a change in what was established.
+    citations = "|".join(
+        f"{c.document_id}#{c.page}:{c.quote}" for c in finding.citations
+    )
+    return "\x00".join(
+        [
+            finding.finding_type,
+            finding.verdict,
+            finding.suggestion,
+            finding.uncertainty or "",
+            finding.anchor_strength or "",
+            facts,
+            citations,
+        ]
+    )
 
 
 # ---------------------------------------------------------------------------

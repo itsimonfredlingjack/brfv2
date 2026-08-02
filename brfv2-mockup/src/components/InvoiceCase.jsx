@@ -49,6 +49,10 @@ import './Integrations.css';
  * 2. **The original is never replaced by a derivative.** The invoice PDF is
  *    opened through the app's own document viewer at the real page; the
  *    normalised fields are shown beside it as a reading, not instead of it.
+ * 3. **A replaced conclusion is not a vanished one.** The middle column ends
+ *    with the engine's own history: every analysis that changed something,
+ *    what it read, which rules ran, what differed, and the findings it
+ *    superseded — behind a control, because they no longer apply.
  */
 
 const VERDICT_TONE = {
@@ -523,6 +527,141 @@ function ReviewStatusForm({ caseData, labels, busy, canDecide, onSave }) {
   );
 }
 
+/** One finding as it stood in a superseded version: readable, and inert. */
+function ReplacedFinding({ finding }) {
+  const tone = VERDICT_TONE[finding.verdict] || 'unknown';
+  return (
+    <article className={`finding replaced ${tone}`}>
+      <header className="finding-head">
+        <span className={`verdict ${tone}`}>{finding.verdict_label}</span>
+        <span className="finding-status">ersatt</span>
+      </header>
+      <p className="finding-suggestion-text">{finding.suggestion}</p>
+      {finding.verified_facts.length > 0 && (
+        <dl className="replaced-facts">
+          {finding.verified_facts.map((fact, i) => (
+            <div key={i}><dt>{fact.label}</dt><dd>{fact.value}</dd></div>
+          ))}
+        </dl>
+      )}
+      {finding.uncertainty && <p className="finding-uncertainty-text">{finding.uncertainty}</p>}
+    </article>
+  );
+}
+
+/**
+ * One recorded analysis.
+ *
+ * The five things an auditor asks, in one card: that this run replaced
+ * another, which reading it was built on, what differed, when, and which rules
+ * produced it. The replaced findings are behind a control rather than on the
+ * screen — they no longer apply, and showing them beside the current ones is
+ * exactly the confusion the audit trail exists to avoid.
+ */
+function AnalysisRun({ run, current, busy, replaced, onOpen }) {
+  const [open, setOpen] = useState(false);
+  const bodies = replaced?.[run.id];
+
+  return (
+    <li className={`analysis-run${current ? ' current' : ''}`}>
+      <header className="run-head">
+        <strong>Version {run.sequence}</strong>
+        {current && <span className="run-badge">gäller nu</span>}
+        <span className="muted">{formatDateTime(run.ran_at)}</span>
+      </header>
+
+      <p className="run-summary">{run.summary}</p>
+
+      <dl className="run-meta">
+        <div>
+          <dt>Regelversion</dt>
+          <dd>{run.engine} {run.engine_version}</dd>
+        </div>
+        <div>
+          <dt>Källversion</dt>
+          <dd>
+            {run.source.adapter} {run.source.external_ref}
+            {' · innehållshash '}
+            <code>{(run.source.content_sha256 || '').slice(0, 12)}…</code>
+            {' · läst '}{formatDateTime(run.source.retrieved_at)}
+            {run.source_changed && <em> — fakturan hade lästs om sedan förra granskningen.</em>}
+          </dd>
+        </div>
+        <div>
+          <dt>Fynd</dt>
+          <dd>
+            {run.finding_count} från motorn
+            {run.kept_count > 0 && `, ${run.kept_count} beslutade lämnades orörda`}
+            {run.already_decided_count > 0
+              && `, ${run.already_decided_count} som någon redan tagit ställning till skrevs inte om`}
+          </dd>
+        </div>
+      </dl>
+
+      {run.changes.length > 0 && (
+        <ul className="run-changes">
+          {run.changes.map((change, i) => (
+            <li key={i} className={`change ${change.kind}`}>
+              <span className="change-kind">{change.kind_label}</span>
+              <span className="change-summary">{change.summary}</span>
+              {change.fact_changes.length > 0 && (
+                <dl className="change-facts">
+                  {change.fact_changes.map((fact, j) => (
+                    <div key={j}>
+                      <dt>{fact.label}</dt>
+                      <dd>
+                        <span className="was">{fact.from_value || '—'}</span>
+                        <span aria-hidden="true"> → </span>
+                        <span className="now">{fact.to_value || '—'}</span>
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
+              {(change.from_text || change.to_text) && (
+                <details className="change-texts">
+                  <summary>Fyndets egen text före och efter</summary>
+                  <p><em>Förut:</em> {change.from_text || '—'}</p>
+                  <p><em>Nu:</em> {change.to_text || '—'}</p>
+                </details>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      <p className="run-note muted">{run.note}</p>
+
+      {run.replaced_count > 0 && (
+        <>
+          <button
+            type="button"
+            className="link run-open"
+            disabled={busy}
+            onClick={() => {
+              setOpen((was) => !was);
+              if (!bodies) onOpen(run.id);
+            }}
+          >
+            {open
+              ? 'Dölj den ersatta versionen'
+              : `Visa den ersatta versionen (${run.replaced_count} fynd)`}
+          </button>
+          {open && (
+            <div className="run-replaced">
+              {bodies
+                ? bodies.map((finding) => (
+                  <ReplacedFinding key={finding.id} finding={finding} />
+                ))
+                : <p className="muted">Hämtar…</p>}
+            </div>
+          )}
+        </>
+      )}
+    </li>
+  );
+}
+
 function Timeline({ events }) {
   return (
     <div className="case-timeline">
@@ -560,6 +699,9 @@ export default function InvoiceCase({
   const [comment, setComment] = useState('');
   const [responsible, setResponsible] = useState('');
   const [aliasConfirmed, setAliasConfirmed] = useState({});
+  // Superseded findings, by run id. Fetched when somebody asks for one and
+  // kept, because the record is immutable — there is nothing to re-fetch.
+  const [replaced, setReplaced] = useState({});
 
   const refresh = useCallback(async () => {
     if (!brfId || !caseId) return;
@@ -593,6 +735,15 @@ export default function InvoiceCase({
     }
   }, [refresh, onChanged]);
 
+  const openReplaced = useCallback(async (runId) => {
+    try {
+      const body = await invoicesApi.analysis(brfId, caseId, runId);
+      setReplaced((current) => ({ ...current, [runId]: body.run.replaced }));
+    } catch (err) {
+      setError(err.message || 'Den ersatta versionen kunde inte hämtas.');
+    }
+  }, [brfId, caseId]);
+
   const documentFindings = useMemo(
     () => (data?.findings || []).filter((f) => !HISTORY_FINDINGS.has(f.finding_type)),
     [data],
@@ -614,7 +765,10 @@ export default function InvoiceCase({
     );
   }
 
-  const { case: kase, invoice, supplier, labels, tasks, sourceEvent, documents } = data;
+  const {
+    case: kase, invoice, supplier, labels, tasks, sourceEvent, documents,
+  } = data;
+  const analyses = data.analyses || [];
 
   return (
     <div className="invoice-case">
@@ -770,6 +924,14 @@ export default function InvoiceCase({
 
         {/* ---- what the product thinks ---- */}
         <section className="case-column analysis">
+          {kase.analysis_outdated && (
+            <p className="analysis-outdated" role="status">
+              Fynden nedan är producerade med regelversion {kase.analysis_engine_version}.
+              Nu gäller {labels.engineVersion}. De står kvar som de skrevs — kör om
+              granskningen för att se vad dagens regler säger.
+            </p>
+          )}
+
           <div className="case-panel">
             <div className="case-panel-head">
               <h4><Sparkles size={15} /> Granskning mot föreningens dokument</h4>
@@ -850,6 +1012,37 @@ export default function InvoiceCase({
                 )}
               />
             ))}
+          </div>
+
+          {/* The engine's own history. A finding nobody formally decided on may
+              still have been the reason somebody rang the supplier, so a run
+              that replaced one has to leave a record — not a silent overwrite. */}
+          <div className="case-panel case-analyses">
+            <div className="case-panel-head">
+              <h4><History size={15} /> Analyshistorik</h4>
+            </div>
+            <p className="muted case-history-note">
+              Varje granskning som ändrade något ligger kvar här: vad den läste, vilka
+              regler som körde, vad som skilde mot förra gången, och de fynd den ersatte.
+              En omkörning som kom fram till exakt samma sak är ingen ny version och
+              står därför inte här.
+            </p>
+            {analyses.length === 0 ? (
+              <p className="muted">Ingen granskning är inspelad för den här fakturan ännu.</p>
+            ) : (
+              <ol className="analysis-runs">
+                {analyses.map((run) => (
+                  <AnalysisRun
+                    key={run.id}
+                    run={run}
+                    current={run.id === kase.analysis_run_id}
+                    busy={busy}
+                    replaced={replaced}
+                    onOpen={openReplaced}
+                  />
+                ))}
+              </ol>
+            )}
           </div>
         </section>
 

@@ -14,9 +14,11 @@ call any of these routes can make is the same read-only GET the integrations
 block already owns (:mod:`app.integrations.sources`), and the adapter behind it
 has no write verb for :mod:`app.integrations.protocols` to allow.
 
-Two reads serve the whole product area — the queue and one case — because the
-alternative is a screen that renders in stages and can show a row whose badge
-disagrees with its buttons.
+Two reads serve the whole screen — the queue and one case — because the
+alternative renders in stages and can show a row whose badge disagrees with its
+buttons. A third exists for one thing only: opening a superseded analysis,
+which nobody reads until they ask for it and which would otherwise be carried,
+whole, on every case read.
 """
 
 from __future__ import annotations
@@ -30,13 +32,16 @@ from pydantic import BaseModel
 
 from ..integrations.accounting_fixture import FixtureAccountingAdapter, FixtureError
 from ..integrations.connections import ConnectionManager, PROVIDER_FORTNOX
-from ..integrations.models import VERDICT_LABELS
+from ..integrations.models import FINDING_TYPE_LABELS, VERDICT_LABELS
 from ..integrations.oauth import PendingLogins
 from ..integrations.sources import INVOICE_SOURCES, accounting_source, live_runner
 from ..store import Store
 from . import cases as case_ops
 from .identity import case_key_for
 from .models import (
+    ANALYSIS_ENGINE_VERSION,
+    CHANGE_LABELS,
+    ENGINE,
     REVIEW_STATUS_CAVEATS,
     REVIEW_STATUS_LABELS,
     SIGNAL_LABELS,
@@ -105,6 +110,13 @@ def build_router(
             "signals": SIGNAL_LABELS,
             "signalSeverity": SIGNAL_SEVERITY,
             "verdicts": VERDICT_LABELS,
+            "findingTypes": FINDING_TYPE_LABELS,
+            "changes": CHANGE_LABELS,
+            # The rules the *code* runs now. A client compares it against the
+            # version stamped on the case to tell a fresh conclusion from one
+            # nobody has re-run since the rules changed.
+            "engineVersion": ANALYSIS_ENGINE_VERSION,
+            "engine": ENGINE,
         }
 
     def _read_snapshot(store: Store, source: str, external_ref: str):
@@ -189,8 +201,39 @@ def build_router(
             "sourceEvent": source_event,
             "supplier": case_ops.supplier_context(store, case, now),
             "tasks": tasks,
+            # Every recorded analysis, newest first, *without* the superseded
+            # findings themselves — those are one request away and nobody reads
+            # them until they ask. What is here is enough to see that a run
+            # replaced another, what it read, what changed and under which
+            # rules.
+            "analyses": [run.public() for run in case_ops.analysis_runs(store, case)],
             "labels": _labels(),
         }
+
+    @router.get("/api/brf/{brf_id}/invoices/cases/{case_id}/analyses/{run_id}")
+    def read_analysis(
+        case_id: str, run_id: str, access: tuple[Store, str] = Depends(tenant_store)
+    ) -> dict:
+        """One recorded analysis, with the findings it replaced.
+
+        The third read in this product area, and the exception is deliberate:
+        carrying every superseded finding — citations, quotes and all — on every
+        case read would grow the payload with records nobody has asked to see.
+        A reader who *does* ask gets the version whole, exactly as it stood.
+
+        Reading needs a membership only. An audit trail a reviewer cannot open
+        without admin rights is one the board cannot check, and nothing here
+        changes anything.
+        """
+        store, _ = access
+        case = _case(store, case_id)
+        run = store.integrations.get_analysis_run(run_id)
+        # The case check is what keeps a run id from being a way around it: a
+        # run belongs to one invoice, and asking for it under another case is a
+        # 404 the same way another tenant's case is.
+        if run is None or run.invoice_id != case.primary_invoice_id:
+            raise HTTPException(status_code=404, detail="Okänd granskningskörning.")
+        return {"case_id": case.id, "run": run.with_replaced(), "labels": _labels()}
 
     @router.post("/api/brf/{brf_id}/invoices/cases/{case_id}")
     def update_case(
@@ -253,6 +296,12 @@ def build_router(
         derived from what it says, so a refresh that finds nothing new adds
         nothing to the history. Pressing this twice leaves exactly the same
         records as pressing it once.
+
+        A refresh that *does* find something new is written down rather than
+        applied silently: the superseded findings, the reading they were built
+        on and the rules that produced them are kept as an
+        :class:`~app.invoices.models.AnalysisRun`, readable under
+        ``/analyses/{run_id}``.
         """
         case = _case(store, case_id)
         source_note = "Källan lästes inte om."

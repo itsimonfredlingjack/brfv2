@@ -68,11 +68,12 @@ Per tenant, i tenantens egen katalog:
 
 ```
 tenants/<brf_id>/integrations/
-    meta.json            {"schemaVersion": 4}
+    meta.json            {"schemaVersion": 5}
     source-events.json
     invoices.json
     findings.json
     invoice-cases.json
+    analysis-runs.json   append-only
 ```
 
 Filerna skrivs atomärt med läge `0600`.
@@ -397,7 +398,15 @@ installation med Fortnox ansluten kan fortfarande läsa fixturunderlaget, och en
 skärmdump ska inte kunna förväxla de två.
 
 En omkörd granskning ersätter bara `open` fynd. Ett godkänt eller avfärdat fynd
-är ett protokoll över ett mänskligt beslut och raderas aldrig av en ny körning.
+är ett protokoll över ett mänskligt beslut och raderas aldrig av en ny körning —
+och producerar motorn ordagrant samma påstående igen skrivs det inte som ett
+andra kort bredvid beslutet.
+
+Att ett fynd var `open` betyder inte att ingen arbetade utifrån det. Därför
+skrivs varje körning som ändrade något ned, oföränderligt, med vad den läste
+(innehållshash), vilka regler som körde, vad som skilde i klartext och de fynd
+den ersatte — `analysis-runs.json`, se [FAKTUROR.md](FAKTUROR.md) §4. En körning
+som kom fram till exakt samma sak är ingen version och skrivs inte.
 
 ## 7. Desktopvyn
 

@@ -34,7 +34,13 @@ What it asserts, in order:
    finding and no second case, and overwrites nothing a human wrote.
 7. The next invoice from the same supplier reports the change **decomposed into
    the part the invoice explains itself and the part it does not**.
-8. **Inkommande no longer reviews invoices**, so the product cannot grow two
+8. **A replaced analysis leaves a record.** Confirming that two spellings of a
+   supplier name are one company re-runs the review, and the case says so: a
+   second version naming the one it superseded, the reading it was built on,
+   the rules that produced it, what differed in plain language — and the
+   superseded findings themselves, readable, marked as no longer applying and
+   carrying no control that would let anyone act on them.
+9. **Inkommande no longer reviews invoices**, so the product cannot grow two
    invoice screens that disagree.
 
 Evidence lands in the directory given as the single positional argument
@@ -530,13 +536,158 @@ def main() -> int:
             if needle not in change["suggestion"]:
                 raise AcceptanceError(f"The change breakdown never said {needle!r}: {change!r}")
 
+        # -- a replaced analysis leaves a record ---------------------------
+        #
+        # The third invoice is from "Snösvängen AB" while the contract says
+        # "Snösvängen Entreprenad AB", so the review anchors weakly and asks
+        # whether they are the same company. Confirming it and re-running is
+        # the one way an operator can change the analysis without anything
+        # moving in the accounting system — and it is exactly the case the
+        # audit trail exists for: the previous findings were open, nobody had
+        # formally decided on them, and they still must not vanish silently.
+        driver.click_text("Till fakturakön")
+        wait_until(
+            "the queue",
+            lambda: driver.execute("return Boolean(document.querySelector('.invoices-queue'));"),
+            timeout=60,
+        )
+        driver.click("details.invoices-read-in > summary")
+        wait_until(
+            "the read-in list a third time",
+            lambda: driver.execute(
+                "return document.querySelectorAll('.invoices-available tbody tr').length > 0;"
+            ),
+            timeout=60,
+        )
+        driver.execute(
+            """
+            const rows = [...document.querySelectorAll('.invoices-available tbody tr')];
+            const row = rows.find((r) => r.querySelector('code')?.textContent.trim() === arguments[0]);
+            row.querySelector('button').click();
+            return true;
+            """,
+            ["SI-2027-018"],
+        )
+        first_run = wait_until(
+            "the first recorded analysis",
+            lambda: driver.execute(
+                """
+                const runs = [...document.querySelectorAll('.case-analyses .analysis-run')];
+                if (runs.length !== 1) return false;
+                const run = runs[0];
+                return {
+                  head: run.querySelector('.run-head')?.textContent.trim(),
+                  summary: run.querySelector('.run-summary')?.textContent.trim(),
+                  meta: [...run.querySelectorAll('.run-meta dd')].map(d => d.textContent.trim()),
+                  replacedControls: run.querySelectorAll('.run-open').length,
+                };
+                """
+            ),
+            timeout=240,
+        )
+        note("analysisVersionOne", first_run)
+        if "Version 1" not in first_run["head"]:
+            raise AcceptanceError(f"The first analysis was not recorded as one: {first_run!r}")
+
+        confirmed = driver.execute(
+            """
+            const button = document.querySelector('.alias-confirm');
+            if (!button) return false;
+            button.click();
+            return true;
+            """
+        )
+        if not confirmed:
+            raise AcceptanceError(
+                "The weak supplier link offered no confirmation — expected "
+                "'Snösvängen AB' against the contract's 'Snösvängen Entreprenad AB'"
+            )
+        wait_until(
+            "the confirmation saved",
+            lambda: driver.execute(
+                "return Boolean(document.querySelector('.alias-proposal.confirmed'));"
+            ),
+            timeout=120,
+        )
+        driver.click_text("Kör om granskningen")
+        replaced = wait_until(
+            "the second recorded analysis",
+            lambda: driver.execute(
+                """
+                const runs = [...document.querySelectorAll('.case-analyses .analysis-run')];
+                if (runs.length !== 2) return false;
+                const run = runs[0];
+                return {
+                  head: run.querySelector('.run-head')?.textContent.trim(),
+                  summary: run.querySelector('.run-summary')?.textContent.trim(),
+                  meta: [...run.querySelectorAll('.run-meta dd')].map(d => d.textContent.trim()),
+                  changes: [...run.querySelectorAll('.run-changes .change')].map((c) => ({
+                    kind: c.querySelector('.change-kind')?.textContent.trim(),
+                    summary: c.querySelector('.change-summary')?.textContent.trim(),
+                    facts: [...c.querySelectorAll('.change-facts > div')].map(d => d.textContent.trim()),
+                  })),
+                  opens: run.querySelector('.run-open')?.textContent.trim(),
+                };
+                """
+            ),
+            timeout=240,
+        )
+        note("analysisVersionTwo", replaced)
+        # Bring the panel into view before the shot: evidence of a claim about
+        # what a screen shows should show it.
+        driver.execute(
+            "document.querySelector('.case-analyses').scrollIntoView({block: 'start'}); return true;"
+        )
+        time.sleep(0.4)
+        driver.screenshot(SHOTS / "06-analysis-history.png")
+
+        if "Version 2" not in replaced["head"] or "gäller nu" not in replaced["head"]:
+            raise AcceptanceError(f"The replacement did not read as one: {replaced!r}")
+        if "Ersatte den föregående granskningen" not in replaced["summary"]:
+            raise AcceptanceError(f"The run never said it replaced anything: {replaced!r}")
+        spoken = json.dumps(replaced, ensure_ascii=False)
+        for needle in ("regelmotor", "innehållshash", "delvis namnlikhet", "bekräftat"):
+            if needle not in spoken:
+                raise AcceptanceError(f"The recorded run never said {needle!r}: {replaced!r}")
+
+        # And the version it replaced is still readable — behind a control,
+        # because it no longer applies.
+        driver.click(".case-analyses .analysis-run .run-open")
+        old = wait_until(
+            "the superseded findings",
+            lambda: driver.execute(
+                """
+                const cards = [...document.querySelectorAll('.run-replaced .finding.replaced')];
+                if (!cards.length) return false;
+                return cards.map((c) => ({
+                  verdict: c.querySelector('.verdict')?.textContent.trim(),
+                  status: c.querySelector('.finding-status')?.textContent.trim(),
+                  buttons: c.querySelectorAll('button').length,
+                }));
+                """
+            ),
+            timeout=120,
+        )
+        note("replacedVersion", old)
+        driver.execute(
+            "document.querySelector('.run-replaced').scrollIntoView({block: 'center'}); return true;"
+        )
+        time.sleep(0.4)
+        driver.screenshot(SHOTS / "07-replaced-version.png")
+        if any(card["status"] != "ersatt" for card in old):
+            raise AcceptanceError(f"A superseded finding did not say so: {old!r}")
+        if any(card["buttons"] for card in old):
+            raise AcceptanceError(
+                f"A superseded finding offered a control — it is a record, not a card in play: {old!r}"
+            )
+
         driver.click_text("Till fakturakön")
         queue = wait_until(
-            "two cases in the queue",
+            "the worked cases in the queue",
             lambda: driver.execute(
                 """
                 const rows = [...document.querySelectorAll('.invoices-queue tbody tr')];
-                if (rows.length < 2) return false;
+                if (rows.length < 3) return false;
                 return rows.map((r) => {
                   const cells = [...r.querySelectorAll('td')].map(c => c.textContent.trim());
                   return {

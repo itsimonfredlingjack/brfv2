@@ -32,6 +32,12 @@ path here lets the first touch the second, and the timeline keeps both in one
 order while marking which is which
 (:data:`app.invoices.models.HUMAN_EVENT_KINDS`).
 
+**Nor can it silently overwrite itself.** A run that replaces the engine's own
+open findings writes down what it replaced, what it read, and under which
+rules (:mod:`app.invoices.audit`). "Nobody had formally decided on it" is not
+the same as "nobody was working from it", so the superseded version stays
+findable in the audit trail even though it stops being a card on the screen.
+
 **Where this stops.** The lock is a threading lock over one process's cached
 per-tenant :class:`~app.store.Store`, which is the concurrency model this whole
 backend already has (see :mod:`app.integrations.store`). It makes concurrent
@@ -54,18 +60,20 @@ from ..integrations.models import (
     InvoiceSnapshot,
     ReviewFinding,
     SourceEvent,
+    finding_content_key,
     utc_now_iso,
 )
 from ..integrations.review import review_invoice
 from ..integrations.supplier import normalize as normalize_supplier
 from ..store import Store
-from . import compare
+from . import audit, compare
 from .identity import case_key_for, email_basis
 from .models import (
     ENGINE,
     REVIEW_REASON_REQUIRED,
     REVIEW_STATUS_LABELS,
     SIGNAL_LABELS,
+    AnalysisRun,
     CaseEvent,
     CaseObservation,
     CaseSignal,
@@ -557,30 +565,30 @@ def signals_for(findings: list[ReviewFinding]) -> list[CaseSignal]:
     return out
 
 
-def _fingerprint(findings: list[ReviewFinding], signals: list[CaseSignal]) -> str:
-    """What an analysis run *said*, independent of when it ran.
-
-    Used as the run's dedupe key so a re-run over unchanged data adds no second
-    "granskning körd" to the timeline, while a run that found something new
-    does. Finding ids are deliberately not part of it — they are fresh on every
-    run and would make every fingerprint unique, which is the bug this avoids.
-    """
-    payload = "|".join(
-        sorted(f"{f.finding_type}:{f.verdict}:{f.suggestion}" for f in findings)
-    ) + "||" + "|".join(sorted(f"{s.kind}:{s.detail}" for s in signals))
-    return hashlib.sha256(payload.encode("utf-8")).hexdigest()[:16]
+def analysis_runs(store: Store, case: InvoiceCase) -> list[AnalysisRun]:
+    """The case's recorded analyses, newest first — how a reader looks at them."""
+    return list(reversed(store.integrations.list_analysis_runs(case.primary_invoice_id)))
 
 
 def analyse_case(store: Store, case_id: str) -> InvoiceCase:
     """Run both engines over the case's invoice and record what came out.
 
-    Held under the same lock as every other write, because it both replaces
-    findings and appends to the timeline, and those two must not be observed
-    half-done.
+    Held under the same lock as every other write, because it replaces
+    findings, writes an audit record and appends to the timeline, and those
+    three must not be observed half-done.
 
     Open findings are replaced; findings a human already decided on are kept
     untouched by :meth:`IntegrationStore.replace_findings_for_invoice`. Nothing
     a human wrote on the *case* is touched at all.
+
+    **Replaced is not gone.** A run that changes anything is written down as an
+    :class:`~app.invoices.models.AnalysisRun`: which reading it was built on,
+    which rules produced it, what differed from the previous run in plain
+    Swedish, and the superseded findings themselves. An open finding may have
+    been the reason somebody rang the supplier even though nobody ever formally
+    decided on it, so replacing it silently would be this product rewriting its
+    own conclusions. A run that reproduces the previous one exactly is not a
+    version and is not recorded — see :mod:`app.invoices.audit`.
     """
     with store.integrations.lock:
         case = project_one(store, case_id)
@@ -593,29 +601,67 @@ def analyse_case(store: Store, case_id: str) -> InvoiceCase:
         history = store.integrations.list_invoices()
         keys = {row.id: case_key_for(row)[0] for row in history}
 
+        # Captured before anything is written: this is the version about to be
+        # replaced, and after the write it is not recoverable from the store.
+        before = findings_for_invoice(store, snapshot.id)
+        open_before = [f for f in before if f.status == "open"]
+        kept = [f for f in before if f.status != "open"]
+        decided_keys = {finding_content_key(f) for f in kept}
+
         produced = list(review_invoice(store, snapshot))
         produced.extend(
             compare.analyse_history(
                 snapshot, history, case=case, key_of=lambda row: keys.get(row.id, "")
             )
         )
-        store.integrations.replace_findings_for_invoice(snapshot.id, produced)
+        already_decided = [f for f in produced if finding_content_key(f) in decided_keys]
+        written = store.integrations.replace_findings_for_invoice(snapshot.id, produced)
+
+        at = utc_now_iso()
+        run = audit.build_run(
+            case=case,
+            snapshot=snapshot,
+            previous=store.integrations.latest_analysis_run(snapshot.id),
+            open_before=open_before,
+            kept=kept,
+            written=written,
+            already_decided=already_decided,
+            at=at,
+        )
+        if run is not None:
+            run = store.integrations.append_analysis_run(run)
 
         findings = findings_for_invoice(store, snapshot.id)
         signals = signals_for(findings)
-        at = utc_now_iso()
-        events = [
-            _machine_event(
-                "analysis_run",
-                at=at,
-                summary=(
-                    f"Granskning körd: {len(findings)} fynd, "
-                    + (", ".join(s.label for s in signals) if signals else "ingen signal att lyfta")
-                    + "."
-                ),
-                dedupe_key=f"analysis:{_fingerprint(findings, signals)}",
+        events: list[CaseEvent] = []
+        if run is not None:
+            # Only when there was a run to record. A refresh that read the same
+            # bytes and reached the same conclusion has nothing to say, and a
+            # timeline entry saying it would push the entries that do matter
+            # off the top of the panel.
+            events.append(
+                _machine_event(
+                    "analysis_run",
+                    at=at,
+                    summary=(
+                        f"Granskning körd (version {run.sequence}): {len(findings)} fynd, "
+                        + (
+                            ", ".join(s.label for s in signals)
+                            if signals
+                            else "ingen signal att lyfta"
+                        )
+                        + "."
+                    ),
+                    note=(
+                        f"{run.summary} Källversion: {snapshot.adapter} "
+                        f"{snapshot.external_ref}, läst {snapshot.retrieved_at}, "
+                        f"innehållshash {snapshot.content_sha256[:16]}…. "
+                        f"Regelversion: {run.engine} {run.engine_version}."
+                    ),
+                    ref_id=run.id,
+                    dedupe_key=f"analysis:{run.id}",
+                )
             )
-        ]
         events.extend(
             _machine_event(
                 "finding_recorded",
@@ -624,19 +670,29 @@ def analyse_case(store: Store, case_id: str) -> InvoiceCase:
                 ref_id=f.id,
                 by=f.suggested_by or ENGINE,
                 dedupe_key="finding:"
-                + hashlib.sha256(
-                    f"{f.finding_type}:{f.verdict}:{f.suggestion}".encode("utf-8")
-                ).hexdigest()[:16],
+                + hashlib.sha256(finding_content_key(f).encode("utf-8")).hexdigest()[:16],
             )
             for f in findings
         )
         # Re-project so the freshly written findings are reflected, then append.
         case = project_one(store, case_id) or case
+        stamp = (
+            {
+                # When *these* findings were produced, not when somebody last
+                # pressed a button that changed nothing.
+                "analysis_at": run.ran_at,
+                "analysis_run_id": run.id,
+                "analysis_sequence": run.sequence,
+                "analysis_engine_version": run.engine_version,
+            }
+            if run is not None
+            else {}
+        )
         return store.integrations.upsert_invoice_case(
             case.model_copy(
                 update={
                     "signals": signals,
-                    "analysis_at": at,
+                    **stamp,
                     "timeline": _merged_timeline(case.timeline, events),
                 }
             )
@@ -897,6 +953,7 @@ def totals(cases: list[InvoiceCase], today: date) -> dict:
 __all__ = [
     "CaseError",
     "analyse_case",
+    "analysis_runs",
     "assign",
     "case_id_for",
     "comment",

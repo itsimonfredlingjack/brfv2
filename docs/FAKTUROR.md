@@ -28,6 +28,7 @@ Inkommande har två flikar (kön och anslutningarna) i stället för fyra.
 | `review_status` | Föreningens **egen** granskningsstatus. Sju lägen, inget av dem ett godkännande. |
 | `responsible` | Vem som tittar på den. Tomt betyder *ej utsedd* och visas så. |
 | `signals` | Härlett ur fynden, ersätts helt av en ny granskning. Ingenting en människa skrivit lagras här. |
+| `analysis_run_id`, `analysis_sequence`, `analysis_engine_version` | Vilken inspelad granskning de aktuella fynden kom ur, och under vilka regler (§4). |
 | `timeline` | Append-only. Maskinens läsningar och människornas beslut i en ordning, med `human` satt på de senare. |
 
 ### Statusarna, och varför ingen av dem heter "godkänd"
@@ -123,6 +124,58 @@ det det betyder överallt annars. Vyn har därför två rubriker: *mot förening
 dokument* och *mot föreningens tidigare fakturor*, och säger rakt ut att den
 andra gruppen saknar citat med flit.
 
+### Vad en omkörning ersatte, och vad den byggde på
+
+Öppna maskinfynd ersätts av en ny granskning, avgjorda behålls. Det är rätt
+förval — en inaktuell slutsats kvar bredvid en färsk är värre än ingen — men
+*ersatt* får inte betyda *borta*. **"Ingen hade formellt beslutat om det" är
+inte samma sak som "ingen arbetade utifrån det."** Ett öppet fynd kan mycket väl
+vara skälet till att någon ringde leverantören.
+
+Därför skrivs varje körning som **ändrade något** ned en gång, och redigeras
+aldrig (`app/invoices/audit.py`, `AnalysisRun`):
+
+| Frågan | Var den besvaras |
+| -- | -- |
+| Att en ny analys ersatte den gamla | `supersedes`, `supersedes_sequence`, `summary` — och en egen tidslinjepost, "Granskning körd (version 2)" |
+| Vilken källversion den byggde på | `source`: adapter, referens, dataset, **innehållshash** och lästidpunkt. Hashen är den bärande — två körningar mot samma hash läste samma bytes, vad tidsstämplarna än säger |
+| Vad som ändrades | `changes`: per fynd, i klartext, med `from_text`/`to_text` hela och `fact_changes` som *etikett, förut, nu* |
+| När det skedde | `ran_at` |
+| Vilken motor och regelversion | `engine`, `engine_version` (`ANALYSIS_ENGINE_VERSION`) |
+| Vad den ersatte | `replaced`: de öppna fynden som stod där innan, hela |
+
+Den gamla versionen ligger **inte kvar som ett aktivt kort**. Den ligger bakom
+en kontroll i *Analyshistorik*, märkt "ersatt", utan en enda knapp — den är en
+post, inte något som är i spel. Ärendet bär `analysis_run_id`, så det som står
+på skärmen alltid är en uppslagning från sin egen revisionspost.
+
+**En körning som kom fram till exakt samma sak är ingen version.** Villkoret är
+tredelat: samma läsning (innehållshash), samma resultat, samma regelversion. Att
+skriva ned tomma körningar hade fyllt spåret med rader som säger "någon tryckte
+uppdatera", vilket är precis bruset som döljer raderna som säger "den här
+slutsatsen ändrades" — och det hade brutit idempotensen nedan.
+
+Två saker som föll ut av det och är värda att säga:
+
+* **Fynd jämförs på vad de säger, inte på id** (`finding_content_key`). Motorn
+  mintar nya id varje körning, så en id-jämförelse hade fått varje omkörning att
+  se ut som ett totalbyte. De *verifierade fakta* ingår i nyckeln, och det var
+  ett verkligt hål: en faktura vars belopp ändrats medan prosan råkade vara
+  oförändrad — "inget dokument namnger leverantören" ser likadant ut oavsett
+  belopp — hade jämförts som oförändrad, och siffran hade flyttat sig under
+  läsaren utan att något registrerade det.
+* **Ett fynd någon redan avgjort skrivs inte som ett andra kort.** Innan det här
+  gav "avfärda ett fynd, tryck uppdatera" två kort med samma mening, ett märkt
+  *avfärdad* och ett *öppen*, och läsaren fick själv lista ut att det andra var
+  det första som kom tillbaka. Ett beslut täcker det påstående det fattades om;
+  att motorn fortfarande säger det registreras på körningen
+  (`already_decided_count`) i stället för på skärmen.
+
+Regelversionen är handbumpad och betyder en sak: *vilka regler skrev det här*.
+Ett fynd stämplat med en äldre version är ett fynd ingen kört om sedan reglerna
+ändrades, och vyn säger det rakt ut ovanför fynden i stället för att låta en två
+månader gammal slutsats se likadan ut som en färsk.
+
 ## 5. Idempotens
 
 Det som gör "Läs om och granska" trygg att trycka på två gånger:
@@ -139,12 +192,13 @@ Det som gör "Läs om och granska" trygg att trycka på två gånger:
   tyst strandat någons utredning på en rad ingenting längre pekar på.
   Adoptionen sker **i projektionen**, alltså i minnet; raden skrivs om under
   det nya id:t nästa gång någon faktiskt ändrar något.
-* **Öppna fynd ersätts, avgjorda behålls** — `replace_findings_for_invoice`,
-  oförändrad.
+* **Öppna fynd ersätts, avgjorda behålls** — `replace_findings_for_invoice`.
+  Det som ersätts sparas på körningen som ersatte det (§4).
 * **Maskinella tidslinjeposter bär en nyckel** härledd ur vad de *säger*
-  (`analysis:<fingerprint>`, `finding:<fingerprint>`, `obs:<kind>:<ref>`). En
-  omkörning som inte hittar något nytt lägger inte till något. Mänskliga poster
-  bär ingen nyckel: att säga samma sak två gånger är två handlingar.
+  (`analysis:<run-id>`, `finding:<fingerprint>`, `obs:<kind>:<ref>`). En
+  omkörning som inte hittar något nytt lägger inte till något — den skriver
+  ingen körning, och därmed ingen post. Mänskliga poster bär ingen nyckel: att
+  säga samma sak två gånger är två handlingar.
 * **En läsning skriver ingenting.** `project()` är ren: den läser fakturor,
   fynd och köhändelser och räknar ut vilka ärenden de innebär. Ett `GET` av
   arbetsytan har alltså inga sidoeffekter alls, och två samtidiga läsningar
@@ -202,11 +256,18 @@ tillstånd kräver `admin`. En icke-medlem får `404`, aldrig `403`.
 | Metod | Väg | Vad |
 | -- | -- | -- |
 | GET | `` | Kön: ärenden, räknare, etiketter, källor |
-| GET | `cases/{id}` | Ett ärende med faktura, fynd, dokument, mejl, leverantörskontext och uppgifter |
+| GET | `cases/{id}` | Ett ärende med faktura, fynd, dokument, mejl, leverantörskontext, uppgifter och de inspelade granskningarna |
+| GET | `cases/{id}/analyses/{run_id}` | En inspelad granskning **med de fynd den ersatte** |
 | POST | `cases/{id}` | Granskningsstatus och/eller ansvarig (admin) |
 | POST | `cases/{id}/comment` | Kommentar (admin) |
 | POST | `cases/{id}/refresh` | Läs om källan och kör om granskningen (admin) |
 | POST | `import` | Läs in en faktura, konvergera och granska (admin) |
+
+Den tredje läsningen är ett medvetet undantag från "två läsningar räcker för
+hela ytan": att bära varje ersatt fynd, med citat och allt, på varje
+ärendeläsning vore bytes ingen bett om. Den kräver bara medlemskap — ett
+revisionsspår som en granskare inte kommer åt utan adminrätt är ett spår
+styrelsen inte kan kontrollera, och ingenting i det ändrar något.
 
 En omläsning där källan inte svarar, är utloggad eller inte längre har fakturan
 **stoppar inte granskningen**: den körs mot det som redan är inläst, och svaret
@@ -231,7 +292,11 @@ faktura någonstans.
   mejlet fakturan kom med. Ett härlett utdrag ersätter aldrig originalet.
 * **Vad produkten tror** — fynden, med verifierat faktum, förslag och osäkerhet
   i tre olika visuella vikter (samma stilmall som Inkommande, `Integrations.css`,
-  eftersom det är samma sak som visas).
+  eftersom det är samma sak som visas). Kolumnen slutar med **Analyshistorik**:
+  varje granskning som ändrat något, medvetet tystare formgiven än ett fynd,
+  eftersom den beskriver vad motorn *brukade* säga och inte får konkurrera med
+  vad den säger nu. Det ersatta ligger bakom en kontroll, märkt "ersatt", utan
+  knappar.
 * **Vad människor gjort** — granskningsläge, ansvarig, kommentarer, uppgifter
   och hela tidslinjen, där maskinella poster och mänskliga beslut är visuellt
   åtskilda.
@@ -258,7 +323,15 @@ kommentarer, och att id:t är härlett), idempotent omläsning,
 jämförelsens uppdelning i förklarat och oförklarat, dubbletter, kreditrelation,
 nya rader, signaler ur fynd, att ett avfärdat fynd slutar driva en signal, att
 en omkörning inte rör granskningsstatus, kommentarer eller ansvarig, och att
-historiken bara kan växa.
+historiken bara kan växa. Och revisionsspåret: att första körningen spelas in
+med sin källhash och regelversion, att en omkörning som inte ändrade något
+*inte* blir en version, att en ändrad läsning blir en version som namnger den
+den ersatte, att det ersatta finns kvar ordagrant, att skillnaden skrivs ut med
+både förra och nuvarande värdet, att en inspelad körning inte går att skriva om
+(och att det inte finns någon metod som kunde), att ett avgjort fynd aldrig
+hamnar i det ersatta, och att bekräftandet av ett leverantörsnamn registreras
+som *vad* det ändrade — kopplingen gick från "delvis namnlikhet" till "ett namn
+någon här har bekräftat".
 
 `backend/tests/test_invoices_http.py` — samma sak över riktig HTTP med två
 föreningar: kön, ärendena och kommentarerna är osynliga för den andra tenanten,
@@ -287,3 +360,17 @@ som eget område, om ett fynd som inte är en match saknar osäkerhet, om någon
 kontroll läser som ett godkännande, om ett citat inte öppnar rätt sida med
 passagen markerad, om en omkörning växer tidslinjen, eller om Inkommande
 fortfarande granskar fakturor.
+
+Den kör också hela ersättningsfallet i det riktiga fönstret, med enbart
+levererad fixturdata: den tredje fakturan kommer från "Snösvängen AB" medan
+avtalet skriver "Snösvängen Entreprenad AB", så granskningen ankrar svagt och
+frågar om det är samma företag. Att bekräfta det och köra om är den enda vägen
+en operatör kan ändra analysen utan att något rört sig i ekonomisystemet — och
+det är precis fallet spåret finns för. Skriptet vägrar om version 2 inte säger
+att den ersatte version 1, om körningen inte namnger sin källhash och sin
+regelversion, om skillnaden inte står i klartext, eller om ett ersatt fynd
+saknar märkningen "ersatt" eller erbjuder en enda knapp.
+
+Ett hål som är värt att veta om: ingen automatiserad kontroll bevakar att
+`ANALYSIS_ENGINE_VERSION` faktiskt bumpas när en regel ändras. Den är
+handbumpad, som en CHANGELOG-rad, och lika lätt att glömma.

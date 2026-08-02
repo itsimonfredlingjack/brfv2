@@ -36,7 +36,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from ..integrations.models import utc_now_iso
+from ..integrations.models import ReviewFinding, utc_now_iso
 from ..terms import parse_iso
 
 # ---------------------------------------------------------------------------
@@ -274,6 +274,17 @@ HUMAN_EVENT_KINDS: tuple[str, ...] = (
 # called its rule engine "AI" and does not start here.
 ENGINE = "regelmotor"
 
+# Which rules produced a result, recorded on every analysis run.
+#
+# Bumped by hand when a rule changes what the engine would say about the same
+# invoice read the same way: a new comparison, a moved threshold, a reworded
+# verdict. It is not the product version and not the store's schema version —
+# it answers exactly one question, "which rules wrote this", and a finding
+# stamped with an older version is a finding nobody has re-run since the rules
+# changed. Saying that is the point: the alternative is a screen where a
+# two-month-old conclusion and a fresh one look identical.
+ANALYSIS_ENGINE_VERSION = "2026.08.1"
+
 
 class CaseEvent(BaseModel):
     """One thing that happened to this case. Written once, never edited.
@@ -306,6 +317,161 @@ class CaseEvent(BaseModel):
             **self.model_dump(mode="json"),
             "kind_label": EVENT_LABELS.get(self.kind, self.kind),
             "human": self.human,
+        }
+
+
+# ---------------------------------------------------------------------------
+# The analysis audit trail
+# ---------------------------------------------------------------------------
+#
+# A re-analysis replaces the engine's open findings. That is the right default —
+# a stale conclusion left on the screen beside a fresh one is worse than no
+# conclusion — but "replaced" must not mean "gone". An open finding nobody had
+# formally decided on may still have been the reason somebody rang the
+# supplier, and a product whose whole argument is that its conclusions are
+# checkable cannot quietly rewrite them.
+#
+# So every run that changes anything is written down, once, and never edited:
+# what it read, which rules read it, what it produced, what it overwrote, and
+# what the difference was in plain Swedish. The replaced findings travel *with*
+# the run that replaced them, which is what makes the old version findable
+# without leaving it on the screen as though it still applied.
+
+
+class AnalysisSource(BaseModel):
+    """Which reading of the invoice a run was built on.
+
+    The content hash is the load-bearing field: two runs against the same hash
+    read the same bytes out of the accounting system, whatever the retrieval
+    times say. Without it "the analysis was re-run" and "the invoice changed"
+    are indistinguishable in hindsight.
+    """
+
+    invoice_id: str = ""
+    adapter: str = ""
+    external_ref: str = ""
+    source_dataset: str = ""
+    content_sha256: str = ""
+    retrieved_at: str = ""
+
+    def fingerprint(self) -> str:
+        return f"{self.invoice_id}\x00{self.content_sha256}"
+
+
+AnalysisChangeKind = Literal["added", "removed", "changed"]
+
+CHANGE_LABELS: dict[str, str] = {
+    "added": "nytt fynd",
+    "removed": "fyndet finns inte längre",
+    "changed": "fyndet har ändrats",
+}
+
+
+class FactChange(BaseModel):
+    """One verified value that is not what it was.
+
+    The whole of "vad ändrades" in three fields: which number, what it was,
+    what it is. An empty ``from_value`` means the run established something it
+    could not establish before; an empty ``to_value`` means the opposite, which
+    is the one people miss.
+    """
+
+    label: str
+    from_value: str = ""
+    to_value: str = ""
+
+
+class AnalysisChange(BaseModel):
+    """One difference between two analysis runs, in words a reader can check.
+
+    ``from_text`` and ``to_text`` are the two findings' own prose, kept whole
+    rather than summarised: the sentence a board member read last month is the
+    thing they need back, not this product's paraphrase of it.
+
+    ``fact_changes`` is the part that carries numbers. A finding can change
+    without a word of its prose changing — an amount is a *fact*, and "Inget
+    dokument namnger leverantören" reads the same whether the invoice says
+    12 500 or 99 000. Listing the facts is how that stops being invisible.
+    """
+
+    kind: AnalysisChangeKind
+    finding_type: str = ""
+    finding_type_label: str = ""
+    summary: str = ""
+
+    from_verdict: str = ""
+    to_verdict: str = ""
+    from_text: str = ""
+    to_text: str = ""
+    fact_changes: list[FactChange] = Field(default_factory=list)
+
+    # The finding as it stands now, and the one it replaced. The second is
+    # findable in the run's own ``replaced`` list — that is the whole point of
+    # keeping it there.
+    finding_id: str = ""
+    replaced_finding_id: str = ""
+
+    def public(self) -> dict:
+        return {**self.model_dump(mode="json"), "kind_label": CHANGE_LABELS[self.kind]}
+
+
+class AnalysisRun(BaseModel):
+    """One recorded analysis of one invoice. Written once, never edited.
+
+    Recorded only when a run *changed* something — a different reading, a
+    different result, different rules. A run that reproduces the previous one
+    exactly is not a version of anything and writing it down would bury the
+    replacements it is supposed to make visible.
+    """
+
+    id: str
+    tenant_id: str
+    case_id: str
+    invoice_id: str
+
+    # 1-based, so the timeline can say "version 3" rather than a hash.
+    sequence: int = 1
+    ran_at: str = ""
+
+    engine: str = ENGINE
+    engine_version: str = ANALYSIS_ENGINE_VERSION
+    source: AnalysisSource = Field(default_factory=AnalysisSource)
+
+    # The run this one replaced, and whether the reading underneath had changed
+    # since then. Empty on the first recorded run for an invoice.
+    supersedes: str = ""
+    supersedes_sequence: int = 0
+    source_changed: bool = False
+
+    finding_count: int = 0
+    # Findings a person had already decided on. Untouched by the run, and not
+    # produced again if the engine said exactly the same thing — a decision
+    # covers the statement it was made about.
+    kept_count: int = 0
+    already_decided_count: int = 0
+
+    changes: list[AnalysisChange] = Field(default_factory=list)
+    # What this run overwrote: the open findings that were on the invoice
+    # before it ran, whole. Not an active card anywhere — a record.
+    replaced: list[ReviewFinding] = Field(default_factory=list)
+
+    summary: str = ""
+    note: str = ""
+
+    def public(self) -> dict:
+        """The run without the replaced bodies — what a list needs."""
+        payload = self.model_dump(mode="json", exclude={"replaced"})
+        return {
+            **payload,
+            "changes": [c.public() for c in self.changes],
+            "replaced_count": len(self.replaced),
+        }
+
+    def with_replaced(self) -> dict:
+        """The run *with* the version it replaced. What an auditor asks for."""
+        return {
+            **self.public(),
+            "replaced": [f.model_dump(mode="json") for f in self.replaced],
         }
 
 
@@ -357,6 +523,13 @@ class InvoiceCase(BaseModel):
     # human wrote is stored here.
     signals: list[CaseSignal] = Field(default_factory=list)
     analysis_at: str = ""
+    # Which recorded run the current findings came out of, and under which
+    # rules. Carried on the case so a reader can tell a conclusion produced by
+    # today's rules from one nobody has re-run since they changed — and so the
+    # audit record behind what is on screen is one lookup away.
+    analysis_run_id: str = ""
+    analysis_sequence: int = 0
+    analysis_engine_version: str = ""
 
     timeline: list[CaseEvent] = Field(default_factory=list)
     created_at: str = Field(default_factory=utc_now_iso)
@@ -435,6 +608,13 @@ class InvoiceCase(BaseModel):
             "timeline": [e.public() for e in self.timeline],
             "comments": [e.public() for e in self.comments()],
             "open": self.open,
+            # Computed on the way out rather than stored, for the same reason
+            # "förfaller snart" is: what counts as the current rules changes
+            # when the code changes, not when the case is written.
+            "analysis_outdated": bool(
+                self.analysis_engine_version
+                and self.analysis_engine_version != ANALYSIS_ENGINE_VERSION
+            ),
             "overdue": self.overdue(today),
             "days_until_due": self.days_until_due(today),
             "last_activity_at": self.last_activity_at(),
@@ -443,7 +623,14 @@ class InvoiceCase(BaseModel):
 
 
 __all__ = [
+    "ANALYSIS_ENGINE_VERSION",
+    "CHANGE_LABELS",
+    "AnalysisChange",
+    "AnalysisChangeKind",
+    "AnalysisRun",
+    "AnalysisSource",
     "CaseEvent",
+    "FactChange",
     "CaseEventKind",
     "CaseObservation",
     "CaseSignal",

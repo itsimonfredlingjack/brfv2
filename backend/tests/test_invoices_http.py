@@ -196,6 +196,88 @@ class TestTheJourney:
         assert len(_cases(env, "brf-a", env.admin_a_headers)) == 1
         assert after["case"]["review_status"] == "awaiting_documentation"
 
+    def test_a_replaced_analysis_stays_readable_over_http(self, seeded):
+        """The audit trail, from the outside: run, replace, open the old version."""
+        env = seeded
+        case_id = _cases(env, "brf-a", env.admin_a_headers)[0]["id"]
+
+        def refresh() -> None:
+            r = env.client.post(
+                f"/api/brf/brf-a/invoices/cases/{case_id}/refresh",
+                headers=env.admin_a_headers,
+            )
+            assert r.status_code == 200, r.text
+
+        def read() -> dict:
+            r = env.client.get(
+                f"/api/brf/brf-a/invoices/cases/{case_id}", headers=env.admin_a_headers
+            )
+            assert r.status_code == 200, r.text
+            return r.json()
+
+        refresh()
+        first = read()
+        assert len(first["analyses"]) == 1
+        was = [f["suggestion"] for f in first["findings"]]
+
+        # Nothing changed in the source, so pressing it again is not a version.
+        refresh()
+        assert len(read()["analyses"]) == 1
+
+        # Now the accounting system says something else about the same invoice.
+        from decimal import Decimal
+
+        store = env.registry.get("brf-a")
+        snapshot = store.integrations.get_invoice(first["case"]["primary_invoice_id"])
+        store.integrations.upsert_invoice(
+            snapshot.model_copy(
+                update={"total_amount": Decimal("4321.00"), "content_sha256": "b" * 64}
+            )
+        )
+        refresh()
+
+        after = read()
+        assert len(after["analyses"]) == 2
+        latest = after["analyses"][0]  # newest first
+        assert latest["sequence"] == 2
+        assert latest["supersedes"] == first["analyses"][0]["id"]
+        assert latest["source"]["content_sha256"] == "b" * 64
+        assert latest["engine_version"] and latest["changes"]
+        assert latest["replaced_count"] == len(was)
+        # The list carries the difference but not the bodies — those are a
+        # request away, and this is the request.
+        assert "replaced" not in latest
+
+        r = env.client.get(
+            f"/api/brf/brf-a/invoices/cases/{case_id}/analyses/{latest['id']}",
+            headers=env.member_a_headers,  # a member may read the audit trail
+        )
+        assert r.status_code == 200, r.text
+        replaced = r.json()["run"]["replaced"]
+        assert [f["suggestion"] for f in replaced] == was, (
+            "den ersatta versionen går inte att läsa ordagrant"
+        )
+
+    def test_another_tenant_cannot_read_a_recorded_analysis(self, seeded):
+        env = seeded
+        case_id = _cases(env, "brf-a", env.admin_a_headers)[0]["id"]
+        assert env.client.post(
+            f"/api/brf/brf-a/invoices/cases/{case_id}/refresh", headers=env.admin_a_headers
+        ).status_code == 200
+        run_id = env.client.get(
+            f"/api/brf/brf-a/invoices/cases/{case_id}", headers=env.admin_a_headers
+        ).json()["analyses"][0]["id"]
+
+        # 404 and not 403, like everywhere else: a 403 would confirm it exists.
+        assert env.client.get(
+            f"/api/brf/brf-a/invoices/cases/{case_id}/analyses/{run_id}",
+            headers=env.admin_b_headers,
+        ).status_code == 404
+        assert env.client.get(
+            f"/api/brf/brf-a/invoices/cases/{case_id}/analyses/does-not-exist",
+            headers=env.admin_a_headers,
+        ).status_code == 404
+
     def test_a_status_that_hides_a_missing_sentence_is_refused(self, seeded):
         env = seeded
         case_id = _cases(env, "brf-a", env.admin_a_headers)[0]["id"]
