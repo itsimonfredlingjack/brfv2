@@ -87,6 +87,9 @@ WATCH_CONTRACT_LINES = (
 )
 WATCH_EXPECTED_DUE = "2027-07-31"
 WATCH_RESPONSIBLE = "Karin Lindqvist"
+# The task made from that watch gets a different owner on purpose: it proves
+# the name travelled from the create form rather than being inherited.
+TASK_RESPONSIBLE = "Jonas Berg"
 
 SUPPORTED_QUESTION = "Var har styrelsen sitt säte?"
 UNSUPPORTED_QUESTION = "Vilka öppettider har föreningens planetarium?"
@@ -431,7 +434,9 @@ def app_data_dir(environment: dict[str, str]) -> Path:
 # Where a run leaves its evidence
 # ---------------------------------------------------------------------------
 
-UI_SCREENSHOTS = ("setup", "documents", "answer-highlight", "refusal", "watches", "settings")
+UI_SCREENSHOTS = (
+    "setup", "documents", "answer-highlight", "refusal", "watches", "tasks", "settings",
+)
 FAILURE_SCREENSHOTS = ("startup-failure",)
 LABEL_PATTERN = re.compile(r"\A[a-z0-9][a-z0-9._-]*\Z")
 
@@ -941,6 +946,66 @@ def ui_journey(
             "proposalsAfterApproval": watch_board["stillProposed"],
         }
 
+        # -- tasks: make the obligation somebody's job ------------------------
+        #
+        # A date is not work. This turns the watch that was just approved into
+        # a task from the watch card itself, then checks on the Uppgifter view
+        # that it arrived with its owner, its origin and its history — the
+        # three things that make a task worth more than a line in a notebook.
+        driver.click_text("Skapa uppgift")
+        wait_until(
+            "the create panel, prefilled from the watch",
+            lambda: driver.execute(
+                "return Boolean(document.querySelector('.task-create.open'));"
+            ),
+        )
+        driver.type_labelled("Ansvarig", TASK_RESPONSIBLE)
+        driver.click_text("Skapa uppgift")
+        wait_until(
+            "the task created",
+            lambda: driver.execute(
+                "return !document.querySelector('.task-create.open');"
+            ),
+            timeout=60,
+        )
+
+        driver.click_text("Uppgifter")
+        task_view = wait_until(
+            "the task on the Uppgifter view, with its origin and history",
+            lambda: driver.execute(
+                """
+                const cards = [...document.querySelectorAll('.tasks-active .task')];
+                const card = cards.find((c) => c.innerText.includes(arguments[0]));
+                if (!card) return false;
+                return {
+                  active: cards.length,
+                  text: card.innerText.replace(/\\n/g, ' '),
+                  citations: card.querySelectorAll('.task-citation').length,
+                  events: card.querySelectorAll('.task-event').length,
+                };
+                """,
+                [WATCH_EXPECTED_DUE],
+            ),
+            timeout=60,
+        )
+        for expected in (TASK_RESPONSIBLE, "Bevakning"):
+            if expected not in task_view["text"]:
+                raise AcceptanceError(
+                    f"The task lost {expected!r} on the way to the view: {task_view!r}"
+                )
+        if task_view["citations"] < 1:
+            raise AcceptanceError(f"The task did not carry the watch's citation: {task_view!r}")
+        if task_view["events"] < 1:
+            raise AcceptanceError(f"The task has no activity history: {task_view!r}")
+        driver.screenshot(evidence.path("tasks"))
+        tasks = {
+            "createdFrom": "watch",
+            "responsible": TASK_RESPONSIBLE,
+            "activeTasks": task_view["active"],
+            "citationsCarried": task_view["citations"],
+            "activityEvents": task_view["events"],
+        }
+
         # -- backup from the UI ----------------------------------------------
         driver.click(".user-profile")
         driver.click_text("Appinställningar")
@@ -1108,6 +1173,7 @@ def ui_journey(
             "pdfZoom": {"before": zoom_before, "after": zoom_after},
             "refusal": {"question": UNSUPPORTED_QUESTION, **refusal},
             "watches": watches,
+            "tasks": tasks,
             "backup": backup,
             "compactWindow": {"rect": compact_rect, "layout": compact_layout},
             "security": {
