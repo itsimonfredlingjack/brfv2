@@ -81,8 +81,16 @@ class LLMProvider(Protocol):
     def complete(self, system: str, user: str, *, max_tokens: int, model: str) -> str: ...
 
 
-def parse_llm_json(raw: str) -> dict:
-    """Parse the answer contract out of possibly-noisy model output."""
+def extract_json_object(raw: str) -> dict:
+    """The JSON object in possibly-noisy model output, with nothing dropped.
+
+    Split out of :func:`parse_llm_json` when a second contract appeared: the
+    website's AI partner answers with editing *commands*, not with the answer
+    envelope, and it needs the same tolerance for fenced blocks and chatter
+    around the JSON without the answer-shaped normalization that follows it.
+    Two copies of this loop would have been two things to fix the next time a
+    model starts wrapping its output differently.
+    """
     s = raw.strip()
     if s.startswith("```"):
         s = s.split("\n", 1)[1] if "\n" in s else ""
@@ -98,6 +106,12 @@ def parse_llm_json(raw: str) -> dict:
         raise LLMFormatError(f"Ogiltig JSON i modellsvaret: {exc}") from exc
     if not isinstance(obj, dict):
         raise LLMFormatError("Modellsvaret är inte ett JSON-objekt.")
+    return obj
+
+
+def parse_llm_json(raw: str) -> dict:
+    """Parse the answer contract out of possibly-noisy model output."""
+    obj = extract_json_object(raw)
 
     citations = []
     for item in obj.get("citations") or []:

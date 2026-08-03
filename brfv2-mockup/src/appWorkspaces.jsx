@@ -1,8 +1,11 @@
-import { Folders, Inbox, Receipt, CalendarClock, ClipboardList, MessageSquare } from 'lucide-react';
+import { Folders, Inbox, Receipt, CalendarClock, ClipboardList, MessageSquare, Globe } from 'lucide-react';
 import Integrations from './components/Integrations';
 import Invoices from './components/Invoices';
 import Watches from './components/Watches';
 import Tasks from './components/Tasks';
+// Loaded when it is opened rather than at startup, and behind a boundary — see
+// WebsiteWorkspace.jsx for why that is load-bearing rather than tidy.
+import Website from './components/website/WebsiteWorkspace';
 
 // Product workspaces are kept together so adding another desktop area means
 // adding one definition, with navigation and rendering derived from it.
@@ -56,6 +59,21 @@ export const PRODUCT_WORKSPACES = [
       <Tasks
         brfId={brfId}
         isAdmin={isAdmin}
+        onOpenCitation={onOpenCitation}
+      />
+    ),
+  },
+  {
+    id: 'website',
+    label: 'Hemsidan',
+    icon: Globe,
+    render: ({ brfId, isAdmin, onOpenCitation }) => (
+      <Website
+        brfId={brfId}
+        isAdmin={isAdmin}
+        // Text the AI wrote out of the association's own documents keeps its
+        // citations, and they open the PDF at the cited page like every other
+        // piece of evidence in the product.
         onOpenCitation={onOpenCitation}
       />
     ),

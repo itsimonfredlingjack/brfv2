@@ -20,6 +20,7 @@ föreningens dokument ska avvisas i stället för att gissas.
   [Ansluta Fortnox](docs/INTEGRATION-FORTNOX.md)
 - [Källstyrda bevakningar och årshjul](docs/BEVAKNINGAR.md)
 - [Uppgifter och ansvar](docs/UPPGIFTER.md)
+- [Hemsidan](docs/HEMSIDA.md) — föreningens egen webbplats, byggd i produkten
 
 ## Ett repo, en produkt
 
@@ -50,6 +51,7 @@ inte där en förening granskar sin post eller sina fakturor:
 | Dokument | ✅ | ✅ | ✅ |
 | Granskning · Bevakningar · Uppgifter | ✅ | ✅ | — |
 | Inkommande post · Fakturor · Anslutningar | ✅ | — | — |
+| Hemsidan (webbplatsbyggaren) | ✅ | — | — |
 
 Backendkontraktet delas oavsett: en ruttändring prövas mot alla tre, inte bara
 mot den klient som råkar ha skärmen.

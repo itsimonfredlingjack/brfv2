@@ -315,6 +315,64 @@ export const tasksApi = {
   ),
 };
 
+// The association's own public website.
+//
+// Every change goes through `runCommands` — a drag, an inline edit, a delete and
+// the AI's whole turn alike. There is deliberately no "save page" call: the
+// client never sends content to be stored as-is, it says what changed and the
+// backend validates and applies it. That is what makes one undo, one history and
+// one set of rules correct for both the person and the model.
+//
+// Publishing is not in the command vocabulary at all, which is why it has routes
+// of its own here: nothing the AI can express reaches the public site.
+export const websiteApi = {
+  workspace: (brfId) => request(`/api/brf/${brfId}/website`),
+  vocabulary: (brfId) => request(`/api/brf/${brfId}/website/vocabulary`),
+  page: (brfId, pageId) => request(`/api/brf/${brfId}/website/pages/${pageId}`),
+  published: (brfId) => request(`/api/brf/${brfId}/website/published`),
+
+  initialize: (brfId, title = 'Startsida') => request(
+    `/api/brf/${brfId}/website/initialize`,
+    jsonBody('POST', { title }),
+  ),
+
+  // One batch, one transaction, one line in the history.
+  runCommands: (brfId, operations, summary = '') => request(
+    `/api/brf/${brfId}/website/commands`,
+    jsonBody('POST', { operations, summary }),
+  ),
+
+  // The instruction plus what the operator has selected, so "korta den
+  // markerade texten" refers to something the model can actually resolve.
+  ai: (brfId, payload) => request(
+    `/api/brf/${brfId}/website/ai`,
+    jsonBody('POST', payload),
+  ),
+
+  undo: (brfId, transactionId) => request(
+    `/api/brf/${brfId}/website/transactions/${transactionId}/undo`,
+    { method: 'POST' },
+  ),
+
+  publish: (brfId, pageId, note = '') => request(
+    `/api/brf/${brfId}/website/pages/${pageId}/publish`,
+    jsonBody('POST', { note }),
+  ),
+  unpublish: (brfId, pageId) => request(
+    `/api/brf/${brfId}/website/pages/${pageId}/unpublish`,
+    { method: 'POST' },
+  ),
+  revisions: (brfId, pageId) => request(`/api/brf/${brfId}/website/pages/${pageId}/revisions`),
+  rollback: (brfId, pageId, revisionId, note = '') => request(
+    `/api/brf/${brfId}/website/pages/${pageId}/rollback`,
+    jsonBody('POST', { revision_id: revisionId, note }),
+  ),
+
+  blockSources: (brfId, pageId, blockId) => request(
+    `/api/brf/${brfId}/website/blocks/${pageId}/${blockId}/sources`,
+  ),
+};
+
 // Routes that only the installed desktop application serves. On the web these
 // 404, which is exactly how the UI detects which delivery it is running in —
 // there is no build flag and no second bundle.

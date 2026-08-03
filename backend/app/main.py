@@ -423,6 +423,27 @@ def create_app(
         )
     )
 
+    # ---------- website (the association's own public pages) ----------
+    #
+    # Same dependencies again. `trusted_names_for` is the one addition: the
+    # grounding gate that guards what a model writes onto a public page needs
+    # the tenant's registered name for exactly the reason api_ask does — "Brf
+    # Gjutformen 12" is an identifier, not a claim about the number twelve — and
+    # it comes from the trusted tenant record, never from the request.
+
+    from .website.routes import build_router as _build_website_router
+
+    app.include_router(
+        _build_website_router(
+            tenant_store=tenant_store,
+            require_admin=require_admin,
+            current_user=current_user,
+            trusted_names_for=lambda brf_id: (
+                (auth.get_tenant(brf_id) or {}).get("name", ""),
+            ),
+        )
+    )
+
     # ---------- dev only ----------
 
     @app.post("/api/reset")

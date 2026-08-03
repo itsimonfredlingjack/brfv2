@@ -1,0 +1,864 @@
+{
+  "categories": [
+    "innehåll",
+    "information",
+    "kontakt",
+    "förening"
+  ],
+  "components": {
+    "Calendar": {
+      "ai_insertable": true,
+      "category": "information",
+      "defaults": {
+        "events": [],
+        "heading": "Kalender"
+      },
+      "description": "Kommande datum: stämma, städdag, container på gården.",
+      "fields": {
+        "events": {
+          "fields": {
+            "date": {
+              "fields": {},
+              "help": "",
+              "inline": false,
+              "kind": "date",
+              "label": "Datum",
+              "max_items": 0,
+              "max_length": 0,
+              "options": [],
+              "required": true
+            },
+            "note": {
+              "fields": {},
+              "help": "",
+              "inline": false,
+              "kind": "text",
+              "label": "Kommentar",
+              "max_items": 0,
+              "max_length": 240,
+              "options": [],
+              "required": false
+            },
+            "place": {
+              "fields": {},
+              "help": "",
+              "inline": true,
+              "kind": "text",
+              "label": "Var",
+              "max_items": 0,
+              "max_length": 120,
+              "options": [],
+              "required": false
+            },
+            "title": {
+              "fields": {},
+              "help": "",
+              "inline": true,
+              "kind": "text",
+              "label": "Vad",
+              "max_items": 0,
+              "max_length": 160,
+              "options": [],
+              "required": true
+            }
+          },
+          "help": "",
+          "inline": false,
+          "kind": "list",
+          "label": "Händelser",
+          "max_items": 36,
+          "max_length": 0,
+          "options": [],
+          "required": false
+        },
+        "heading": {
+          "fields": {},
+          "help": "",
+          "inline": true,
+          "kind": "text",
+          "label": "Rubrik",
+          "max_items": 0,
+          "max_length": 120,
+          "options": [],
+          "required": false
+        }
+      },
+      "label": "Kalender",
+      "singleton": false
+    },
+    "ContactCard": {
+      "ai_insertable": true,
+      "category": "kontakt",
+      "defaults": {
+        "entries": [],
+        "heading": "Kontakt",
+        "intro": ""
+      },
+      "description": "Vem man når, och hur. Styrelsen, förvaltaren, felanmälan.",
+      "fields": {
+        "entries": {
+          "fields": {
+            "email": {
+              "fields": {},
+              "help": "",
+              "inline": false,
+              "kind": "text",
+              "label": "E-post",
+              "max_items": 0,
+              "max_length": 160,
+              "options": [],
+              "required": false
+            },
+            "name": {
+              "fields": {},
+              "help": "",
+              "inline": true,
+              "kind": "text",
+              "label": "Namn",
+              "max_items": 0,
+              "max_length": 120,
+              "options": [],
+              "required": false
+            },
+            "phone": {
+              "fields": {},
+              "help": "",
+              "inline": false,
+              "kind": "text",
+              "label": "Telefon",
+              "max_items": 0,
+              "max_length": 60,
+              "options": [],
+              "required": false
+            },
+            "role": {
+              "fields": {},
+              "help": "",
+              "inline": true,
+              "kind": "text",
+              "label": "Roll",
+              "max_items": 0,
+              "max_length": 120,
+              "options": [],
+              "required": true
+            }
+          },
+          "help": "",
+          "inline": false,
+          "kind": "list",
+          "label": "Kontakter",
+          "max_items": 12,
+          "max_length": 0,
+          "options": [],
+          "required": false
+        },
+        "heading": {
+          "fields": {},
+          "help": "",
+          "inline": true,
+          "kind": "text",
+          "label": "Rubrik",
+          "max_items": 0,
+          "max_length": 120,
+          "options": [],
+          "required": false
+        },
+        "intro": {
+          "fields": {},
+          "help": "",
+          "inline": false,
+          "kind": "textarea",
+          "label": "Ingress",
+          "max_items": 0,
+          "max_length": 320,
+          "options": [],
+          "required": false
+        }
+      },
+      "label": "Kontakt",
+      "singleton": false
+    },
+    "DocumentList": {
+      "ai_insertable": true,
+      "category": "förening",
+      "defaults": {
+        "documents": [],
+        "heading": "Dokument",
+        "intro": ""
+      },
+      "description": "Föreningens egna handlingar — stadgar, årsredovisning, protokoll — hämtade ur arkivet och inte uppladdade en gång till.",
+      "fields": {
+        "documents": {
+          "fields": {
+            "document_id": {
+              "fields": {},
+              "help": "",
+              "inline": false,
+              "kind": "document",
+              "label": "Dokument",
+              "max_items": 0,
+              "max_length": 0,
+              "options": [],
+              "required": true
+            },
+            "label": {
+              "fields": {},
+              "help": "Lämna tomt för dokumentets eget namn.",
+              "inline": true,
+              "kind": "text",
+              "label": "Visas som",
+              "max_items": 0,
+              "max_length": 160,
+              "options": [],
+              "required": false
+            }
+          },
+          "help": "",
+          "inline": false,
+          "kind": "list",
+          "label": "Dokument",
+          "max_items": 40,
+          "max_length": 0,
+          "options": [],
+          "required": false
+        },
+        "heading": {
+          "fields": {},
+          "help": "",
+          "inline": true,
+          "kind": "text",
+          "label": "Rubrik",
+          "max_items": 0,
+          "max_length": 120,
+          "options": [],
+          "required": false
+        },
+        "intro": {
+          "fields": {},
+          "help": "",
+          "inline": false,
+          "kind": "textarea",
+          "label": "Ingress",
+          "max_items": 0,
+          "max_length": 320,
+          "options": [],
+          "required": false
+        }
+      },
+      "label": "Dokument",
+      "singleton": false
+    },
+    "Faq": {
+      "ai_insertable": true,
+      "category": "information",
+      "defaults": {
+        "heading": "Frågor och svar",
+        "items": []
+      },
+      "description": "Det de boende frågar om ändå — hopfällbart, så sidan inte blir en vägg av text.",
+      "fields": {
+        "heading": {
+          "fields": {},
+          "help": "",
+          "inline": true,
+          "kind": "text",
+          "label": "Rubrik",
+          "max_items": 0,
+          "max_length": 120,
+          "options": [],
+          "required": false
+        },
+        "items": {
+          "fields": {
+            "answer": {
+              "fields": {},
+              "help": "",
+              "inline": false,
+              "kind": "richtext",
+              "label": "Svar",
+              "max_items": 0,
+              "max_length": 0,
+              "options": [],
+              "required": false
+            },
+            "question": {
+              "fields": {},
+              "help": "",
+              "inline": true,
+              "kind": "text",
+              "label": "Fråga",
+              "max_items": 0,
+              "max_length": 200,
+              "options": [],
+              "required": true
+            }
+          },
+          "help": "",
+          "inline": false,
+          "kind": "list",
+          "label": "Frågor",
+          "max_items": 40,
+          "max_length": 0,
+          "options": [],
+          "required": false
+        }
+      },
+      "label": "Frågor och svar",
+      "singleton": false
+    },
+    "FaultReport": {
+      "ai_insertable": true,
+      "category": "kontakt",
+      "defaults": {
+        "action": {
+          "href": "",
+          "label": ""
+        },
+        "body": "<p></p>",
+        "email": "",
+        "emergency_note": "",
+        "emergency_phone": "",
+        "heading": "Felanmälan",
+        "phone": ""
+      },
+      "description": "Vägen in när något är trasigt, med jouren tydligt skild från det som kan vänta.",
+      "fields": {
+        "action": {
+          "fields": {},
+          "help": "",
+          "inline": false,
+          "kind": "link",
+          "label": "Knapp",
+          "max_items": 0,
+          "max_length": 0,
+          "options": [],
+          "required": false
+        },
+        "body": {
+          "fields": {},
+          "help": "",
+          "inline": false,
+          "kind": "richtext",
+          "label": "Så här gör du",
+          "max_items": 0,
+          "max_length": 0,
+          "options": [],
+          "required": false
+        },
+        "email": {
+          "fields": {},
+          "help": "",
+          "inline": false,
+          "kind": "text",
+          "label": "E-post",
+          "max_items": 0,
+          "max_length": 160,
+          "options": [],
+          "required": false
+        },
+        "emergency_note": {
+          "fields": {},
+          "help": "",
+          "inline": false,
+          "kind": "text",
+          "label": "När jouren gäller",
+          "max_items": 0,
+          "max_length": 200,
+          "options": [],
+          "required": false
+        },
+        "emergency_phone": {
+          "fields": {},
+          "help": "",
+          "inline": false,
+          "kind": "text",
+          "label": "Jour (akut)",
+          "max_items": 0,
+          "max_length": 60,
+          "options": [],
+          "required": false
+        },
+        "heading": {
+          "fields": {},
+          "help": "",
+          "inline": true,
+          "kind": "text",
+          "label": "Rubrik",
+          "max_items": 0,
+          "max_length": 120,
+          "options": [],
+          "required": true
+        },
+        "phone": {
+          "fields": {},
+          "help": "",
+          "inline": false,
+          "kind": "text",
+          "label": "Telefon dagtid",
+          "max_items": 0,
+          "max_length": 60,
+          "options": [],
+          "required": false
+        }
+      },
+      "label": "Felanmälan",
+      "singleton": true
+    },
+    "Hero": {
+      "ai_insertable": true,
+      "category": "innehåll",
+      "defaults": {
+        "action": {
+          "href": "",
+          "label": ""
+        },
+        "heading": "Välkommen till föreningen",
+        "image": {
+          "alt": "",
+          "src": ""
+        },
+        "preamble": "",
+        "variant": "image"
+      },
+      "description": "Sidans första intryck: föreningens namn, en kort rad och en väg vidare.",
+      "fields": {
+        "action": {
+          "fields": {},
+          "help": "Lämna tom för ingen knapp.",
+          "inline": false,
+          "kind": "link",
+          "label": "Knapp",
+          "max_items": 0,
+          "max_length": 0,
+          "options": [],
+          "required": false
+        },
+        "heading": {
+          "fields": {},
+          "help": "",
+          "inline": true,
+          "kind": "text",
+          "label": "Rubrik",
+          "max_items": 0,
+          "max_length": 120,
+          "options": [],
+          "required": true
+        },
+        "image": {
+          "fields": {},
+          "help": "",
+          "inline": false,
+          "kind": "image",
+          "label": "Bild",
+          "max_items": 0,
+          "max_length": 0,
+          "options": [],
+          "required": false
+        },
+        "preamble": {
+          "fields": {},
+          "help": "En eller två meningar. Längre text hör hemma i ett textblock.",
+          "inline": false,
+          "kind": "textarea",
+          "label": "Ingress",
+          "max_items": 0,
+          "max_length": 320,
+          "options": [],
+          "required": false
+        },
+        "variant": {
+          "fields": {},
+          "help": "",
+          "inline": false,
+          "kind": "select",
+          "label": "Utseende",
+          "max_items": 0,
+          "max_length": 0,
+          "options": [
+            {
+              "label": "Med bild",
+              "value": "image"
+            },
+            {
+              "label": "Utan bild",
+              "value": "plain"
+            },
+            {
+              "label": "Låg",
+              "value": "compact"
+            }
+          ],
+          "required": false
+        }
+      },
+      "label": "Toppsektion",
+      "singleton": true
+    },
+    "ImageWithText": {
+      "ai_insertable": true,
+      "category": "innehåll",
+      "defaults": {
+        "body": "<p>Skriv här.</p>",
+        "heading": "Rubrik",
+        "image": {
+          "alt": "",
+          "src": ""
+        },
+        "side": "left"
+      },
+      "description": "En bild bredvid en text, för presentationer av huset, gården eller ett projekt.",
+      "fields": {
+        "body": {
+          "fields": {},
+          "help": "",
+          "inline": false,
+          "kind": "richtext",
+          "label": "Text",
+          "max_items": 0,
+          "max_length": 0,
+          "options": [],
+          "required": false
+        },
+        "heading": {
+          "fields": {},
+          "help": "",
+          "inline": true,
+          "kind": "text",
+          "label": "Rubrik",
+          "max_items": 0,
+          "max_length": 120,
+          "options": [],
+          "required": false
+        },
+        "image": {
+          "fields": {},
+          "help": "",
+          "inline": false,
+          "kind": "image",
+          "label": "Bild",
+          "max_items": 0,
+          "max_length": 0,
+          "options": [],
+          "required": true
+        },
+        "side": {
+          "fields": {},
+          "help": "",
+          "inline": false,
+          "kind": "select",
+          "label": "Bildens placering",
+          "max_items": 0,
+          "max_length": 0,
+          "options": [
+            {
+              "label": "Vänster",
+              "value": "left"
+            },
+            {
+              "label": "Höger",
+              "value": "right"
+            }
+          ],
+          "required": false
+        }
+      },
+      "label": "Bild och text",
+      "singleton": false
+    },
+    "ImportantNotice": {
+      "ai_insertable": true,
+      "category": "information",
+      "defaults": {
+        "body": "<p></p>",
+        "heading": "Viktigt meddelande",
+        "tone": "info",
+        "valid_until": ""
+      },
+      "description": "Något de boende behöver veta nu: avstängt vatten, ett stambyte, en portkod.",
+      "fields": {
+        "body": {
+          "fields": {},
+          "help": "",
+          "inline": false,
+          "kind": "richtext",
+          "label": "Meddelande",
+          "max_items": 0,
+          "max_length": 0,
+          "options": [],
+          "required": false
+        },
+        "heading": {
+          "fields": {},
+          "help": "",
+          "inline": true,
+          "kind": "text",
+          "label": "Rubrik",
+          "max_items": 0,
+          "max_length": 120,
+          "options": [],
+          "required": true
+        },
+        "tone": {
+          "fields": {},
+          "help": "",
+          "inline": false,
+          "kind": "select",
+          "label": "Allvarsgrad",
+          "max_items": 0,
+          "max_length": 0,
+          "options": [
+            {
+              "label": "Information",
+              "value": "info"
+            },
+            {
+              "label": "Viktigt",
+              "value": "warning"
+            },
+            {
+              "label": "Akut",
+              "value": "critical"
+            }
+          ],
+          "required": false
+        },
+        "valid_until": {
+          "fields": {},
+          "help": "Efter det här datumet visas meddelandet inte på den publicerade sidan.",
+          "inline": false,
+          "kind": "date",
+          "label": "Gäller till och med",
+          "max_items": 0,
+          "max_length": 0,
+          "options": [],
+          "required": false
+        }
+      },
+      "label": "Viktigt meddelande",
+      "singleton": false
+    },
+    "NewsList": {
+      "ai_insertable": true,
+      "category": "information",
+      "defaults": {
+        "heading": "Nyheter",
+        "items": []
+      },
+      "description": "Korta notiser i datumordning, senast först.",
+      "fields": {
+        "heading": {
+          "fields": {},
+          "help": "",
+          "inline": true,
+          "kind": "text",
+          "label": "Rubrik",
+          "max_items": 0,
+          "max_length": 120,
+          "options": [],
+          "required": false
+        },
+        "items": {
+          "fields": {
+            "body": {
+              "fields": {},
+              "help": "",
+              "inline": false,
+              "kind": "richtext",
+              "label": "Text",
+              "max_items": 0,
+              "max_length": 0,
+              "options": [],
+              "required": false
+            },
+            "date": {
+              "fields": {},
+              "help": "",
+              "inline": false,
+              "kind": "date",
+              "label": "Datum",
+              "max_items": 0,
+              "max_length": 0,
+              "options": [],
+              "required": true
+            },
+            "title": {
+              "fields": {},
+              "help": "",
+              "inline": true,
+              "kind": "text",
+              "label": "Rubrik",
+              "max_items": 0,
+              "max_length": 160,
+              "options": [],
+              "required": true
+            }
+          },
+          "help": "",
+          "inline": false,
+          "kind": "list",
+          "label": "Nyheter",
+          "max_items": 24,
+          "max_length": 0,
+          "options": [],
+          "required": false
+        }
+      },
+      "label": "Nyheter",
+      "singleton": false
+    },
+    "ProjectStatus": {
+      "ai_insertable": true,
+      "category": "information",
+      "defaults": {
+        "body": "<p></p>",
+        "heading": "Projektstatus",
+        "steps": []
+      },
+      "description": "Var ett pågående arbete står, steg för steg — det stambytet får flest frågor.",
+      "fields": {
+        "body": {
+          "fields": {},
+          "help": "",
+          "inline": false,
+          "kind": "richtext",
+          "label": "Beskrivning",
+          "max_items": 0,
+          "max_length": 0,
+          "options": [],
+          "required": false
+        },
+        "heading": {
+          "fields": {},
+          "help": "",
+          "inline": true,
+          "kind": "text",
+          "label": "Rubrik",
+          "max_items": 0,
+          "max_length": 120,
+          "options": [],
+          "required": true
+        },
+        "steps": {
+          "fields": {
+            "label": {
+              "fields": {},
+              "help": "",
+              "inline": true,
+              "kind": "text",
+              "label": "Steg",
+              "max_items": 0,
+              "max_length": 120,
+              "options": [],
+              "required": true
+            },
+            "note": {
+              "fields": {},
+              "help": "",
+              "inline": false,
+              "kind": "text",
+              "label": "Kommentar",
+              "max_items": 0,
+              "max_length": 200,
+              "options": [],
+              "required": false
+            },
+            "state": {
+              "fields": {},
+              "help": "",
+              "inline": false,
+              "kind": "select",
+              "label": "Läge",
+              "max_items": 0,
+              "max_length": 0,
+              "options": [
+                {
+                  "label": "Klart",
+                  "value": "done"
+                },
+                {
+                  "label": "Pågår",
+                  "value": "ongoing"
+                },
+                {
+                  "label": "Planerat",
+                  "value": "planned"
+                }
+              ],
+              "required": false
+            }
+          },
+          "help": "",
+          "inline": false,
+          "kind": "list",
+          "label": "Steg",
+          "max_items": 12,
+          "max_length": 0,
+          "options": [],
+          "required": false
+        }
+      },
+      "label": "Projektstatus",
+      "singleton": false
+    },
+    "TextSection": {
+      "ai_insertable": true,
+      "category": "innehåll",
+      "defaults": {
+        "body": "<p>Skriv här.</p>",
+        "heading": "Rubrik",
+        "width": "normal"
+      },
+      "description": "Löpande text med rubrik — det vanligaste blocket på en föreningssida.",
+      "fields": {
+        "body": {
+          "fields": {},
+          "help": "",
+          "inline": false,
+          "kind": "richtext",
+          "label": "Text",
+          "max_items": 0,
+          "max_length": 0,
+          "options": [],
+          "required": false
+        },
+        "heading": {
+          "fields": {},
+          "help": "",
+          "inline": true,
+          "kind": "text",
+          "label": "Rubrik",
+          "max_items": 0,
+          "max_length": 120,
+          "options": [],
+          "required": false
+        },
+        "width": {
+          "fields": {},
+          "help": "",
+          "inline": false,
+          "kind": "select",
+          "label": "Bredd",
+          "max_items": 0,
+          "max_length": 0,
+          "options": [
+            {
+              "label": "Normal",
+              "value": "normal"
+            },
+            {
+              "label": "Smal",
+              "value": "narrow"
+            },
+            {
+              "label": "Bred",
+              "value": "wide"
+            }
+          ],
+          "required": false
+        }
+      },
+      "label": "Text",
+      "singleton": false
+    }
+  }
+}

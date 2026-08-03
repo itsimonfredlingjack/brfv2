@@ -1,6 +1,7 @@
 .PHONY: setup backend backend-pilot require-pilot-llm frontend frontend-legacy mobile mobile-build mobile-test \
         desktop-runtime desktop-build desktop-run desktop-check desktop-package desktop-install desktop-uninstall desktop-acceptance \
-        invoice-acceptance intake-acceptance desktop-acceptance-full invoice-rules-lock \
+        invoice-acceptance intake-acceptance website-acceptance desktop-acceptance-full invoice-rules-lock \
+        website-vocabulary-lock website-vocabulary-check \
         test test-isolation eval eval-b eval-fast eval-sweep \
         eval-selfhosted eval-b-selfhosted desktop-acceptance-installed desktop-verify-reproducible demo demo-stop demo-status demo-reset \
         build build-legacy model-readiness model-readiness-selftest \
@@ -96,6 +97,16 @@ invoice-acceptance: desktop-build  ## Fakturaresan mot riktig Tauri/WebKitGTK (i
 	  --run-label $(RUN_LABEL) \
 	  $(if $(INVOICE_EVIDENCE),--evidence-dir $(INVOICE_EVIDENCE),)
 
+# Hemsidans resa behöver ingen modell heller. Att bygga och publicera en sida är
+# deterministiskt hela vägen, och resan frågar AI-partnern om exakt en sak: att
+# den vägrar när det inte finns någon modell att fråga. Resan kontrollerar
+# framför allt publiceringsgränsen utifrån — att ett utkast inte når publiken
+# förrän någon publicerar det.
+website-acceptance: desktop-build  ## Hemsidans resa mot riktig Tauri/WebKitGTK (ingen modell krävs)
+	backend/.venv/bin/python backend/scripts/website_acceptance.py \
+	  --run-label $(RUN_LABEL) \
+	  $(if $(WEBSITE_EVIDENCE),--evidence-dir $(WEBSITE_EVIDENCE),)
+
 # Inkommande post-resan behöver lika lite en modell som fakturaresan, och av
 # samma skäl: köns läsning är deterministisk — kategori, datum, belopp och
 # leverantör kommer ur regler över texten med produktens egna läsare. Att den
@@ -107,15 +118,21 @@ intake-acceptance: desktop-build  ## Inkommande post-resan mot riktig Tauri/WebK
 	  $(if $(INTAKE_EVIDENCE),--evidence-dir $(INTAKE_EVIDENCE),)
 
 # Hela acceptansen på en maskin där tunneln till agenntserver är uppe: först de
-# två modellfria resorna, som felar snabbt och billigt, sedan den fulla resan
-# som kräver den självhostade modellen. Tre kvitton, tre skärmbildsserier, en
-# etikett — `<etikett>-invoice-*`, `<etikett>-intake-*` och `<etikett>-desktop-*`
-# kan aldrig skriva över varandra.
-desktop-acceptance-full: invoice-acceptance intake-acceptance desktop-acceptance  ## Faktura- + post- + full journey-acceptans (kräver modelltunneln)
-	@echo "Alla tre acceptanserna klara. Evidens: docs/evidence/$(RUN_LABEL)-{invoice,intake,desktop}-*"
+# tre modellfria resorna, som felar snabbt och billigt, sedan den fulla resan
+# som kräver den självhostade modellen. Fyra kvitton, fyra skärmbildsserier, en
+# etikett — `<etikett>-invoice-*`, `<etikett>-intake-*`, `<etikett>-website-*`
+# och `<etikett>-desktop-*` kan aldrig skriva över varandra.
+desktop-acceptance-full: invoice-acceptance intake-acceptance website-acceptance desktop-acceptance  ## Faktura- + post- + hemsida- + full journey-acceptans (kräver modelltunneln)
+	@echo "Alla fyra acceptanserna klara. Evidens: docs/evidence/$(RUN_LABEL)-{invoice,intake,website,desktop}-*"
 
 invoice-rules-lock:  ## Spela in granskningsreglernas fingeravtryck för nuvarande ANALYSIS_ENGINE_VERSION
 	cd backend && .venv/bin/python -m app.invoices.rules --write
+
+website-vocabulary-lock:  ## Spela in hemsidans komponentordlista efter en medveten ändring
+	cd backend && .venv/bin/python -m app.website.vocabulary --write
+
+website-vocabulary-check:  ## Kontrollera att ordlistan och låsfilen stämmer (utan att skriva)
+	cd backend && .venv/bin/python -m app.website.vocabulary
 
 desktop-acceptance-installed:  ## Samma acceptans mot det INSTALLERADE paketet (ange RPM=... för artefaktidentitet)
 	backend/.venv/bin/python backend/scripts/desktop_acceptance.py \

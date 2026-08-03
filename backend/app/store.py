@@ -103,6 +103,7 @@ class Store:
         self._integrations = None
         self._watches = None
         self._tasks = None
+        self._website = None
 
     # ---------- domain stores ----------
     #
@@ -183,6 +184,23 @@ class Store:
             return TaskStore(self.data_dir / "tasks", tenant_id=self.tenant_id)
 
         return self._domain_store("_tasks", build)
+
+    @property
+    def website(self):
+        """The association's public website: drafts, revisions, publications.
+
+        Lazy and cached like the rest, and living inside the Store for the same
+        reason: a published page is written from the same object graph that
+        holds the documents it cites, so there is no path to one association's
+        site that does not begin by resolving a membership to its brf_id.
+        """
+
+        def build():
+            from .website.store import WebsiteStore
+
+            return WebsiteStore(self.data_dir / "website", tenant_id=self.tenant_id)
+
+        return self._domain_store("_website", build)
 
     # ---------- persistence helpers ----------
 
