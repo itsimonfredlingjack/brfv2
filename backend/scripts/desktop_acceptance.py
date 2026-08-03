@@ -453,23 +453,37 @@ class Evidence:
     for the one that happened to collide.
     """
 
-    def __init__(self, directory: Path, label: str, receipt: Path | None = None) -> None:
+    def __init__(
+        self,
+        directory: Path,
+        label: str,
+        receipt: Path | None = None,
+        *,
+        kind: str = "desktop",
+        views: tuple[str, ...] = (*UI_SCREENSHOTS, *FAILURE_SCREENSHOTS),
+    ) -> None:
         if not LABEL_PATTERN.match(label):
             raise AcceptanceError(
                 f"Unusable run label {label!r}: use lowercase letters, digits, '.', '_' or '-'."
             )
         self.dir = directory
         self.label = label
+        # Which journey wrote these. A second acceptance run that shares this
+        # class must not share its filenames — `pilot-desktop-*` and
+        # `pilot-invoice-*` are two records, and one overwriting the other
+        # would be the exact defect the tracked() guard below exists for.
+        self.kind = kind
+        self.views = tuple(views)
         # An explicitly placed receipt is guarded exactly like a default one:
         # --output is the older way to aim at a committed file.
         self._receipt = receipt
 
     def path(self, name: str) -> Path:
-        return self.dir / f"{self.label}-desktop-{name}.png"
+        return self.dir / f"{self.label}-{self.kind}-{name}.png"
 
     @property
     def receipt(self) -> Path:
-        return self._receipt or self.dir / f"{self.label}-desktop-acceptance.json"
+        return self._receipt or self.dir / f"{self.label}-{self.kind}-acceptance.json"
 
     def reference(self, name: str) -> str:
         """The screenshot as a reader of the committed evidence would cite it."""
@@ -486,9 +500,7 @@ class Evidence:
         which phases run would pass on a partial run and destroy the evidence
         on the next full one.
         """
-        return [self.path(name) for name in (*UI_SCREENSHOTS, *FAILURE_SCREENSHOTS)] + [
-            self.receipt
-        ]
+        return [self.path(name) for name in self.views] + [self.receipt]
 
     def tracked(self) -> list[str]:
         """Targets that git already tracks — evidence somebody committed.

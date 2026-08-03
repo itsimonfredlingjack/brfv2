@@ -1,0 +1,32 @@
+{
+  "Schema": "brfv2-accounting-fixture/v1",
+  "Note": "Syntetiskt underlag. Ingen verklig leverantör, förening, organisation eller faktura. En kreditfaktura ligger i en egen datamängd av två skäl: den kommer i verkligheten ofta ur en senare export än den faktura den krediterar, och en separat fil håller innehållshashen för gjutformen12-2026 orörd så att redan inspelad evidens fortsätter beskriva exakt de bytes den beskrev. Beloppet är negativt, vilket är så en leverantörskreditfaktura ser ut i en svensk ekonomisystemexport. Den tar exakt ut SI-2027-018 — och råkar också ta ut SI-2026-114 och SI-2026-402, som är på samma belopp. Det är just den tvetydigheten granskningen ska säga högt: ingenting i underlaget säger vilken faktura en kreditnota hör till.",
+  "Dataset": "gjutformen12-2027-kredit",
+  "SupplierInvoices": [
+    {
+      "AssociationRef": "gjutformen-12",
+      "DocumentNumber": "SI-2027-024",
+      "InvoiceNumber": "2027-024",
+      "SupplierName": "Snösvängen AB",
+      "SupplierOrgNo": "",
+      "InvoiceDate": "2027-01-15",
+      "DueDate": "2027-02-14",
+      "Period": {
+        "From": "2026-12-01",
+        "To": "2026-12-31"
+      },
+      "Currency": "SEK",
+      "Total": "-6250.00",
+      "VAT": "-1250.00",
+      "InvoiceRows": [
+        {
+          "Description": "Maskinell snöröjning med traktor",
+          "DeliveredQuantity": "-4",
+          "Price": "1250.00",
+          "Total": "-5000.00",
+          "VAT": "-1250.00"
+        }
+      ]
+    }
+  ]
+}

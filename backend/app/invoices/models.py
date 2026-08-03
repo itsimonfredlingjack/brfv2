@@ -276,14 +276,20 @@ ENGINE = "regelmotor"
 
 # Which rules produced a result, recorded on every analysis run.
 #
-# Bumped by hand when a rule changes what the engine would say about the same
-# invoice read the same way: a new comparison, a moved threshold, a reworded
-# verdict. It is not the product version and not the store's schema version —
-# it answers exactly one question, "which rules wrote this", and a finding
-# stamped with an older version is a finding nobody has re-run since the rules
-# changed. Saying that is the point: the alternative is a screen where a
-# two-month-old conclusion and a fresh one look identical.
-ANALYSIS_ENGINE_VERSION = "2026.08.1"
+# Bumped when a rule changes what the engine would say about the same invoice
+# read the same way: a new comparison, a moved threshold, a reworded verdict.
+# It is not the product version and not the store's schema version — it answers
+# exactly one question, "which rules wrote this", and a finding stamped with an
+# older version is a finding nobody has re-run since the rules changed. Saying
+# that is the point: the alternative is a screen where a two-month-old
+# conclusion and a fresh one look identical.
+#
+# Bumping it is no longer a thing anyone has to remember. The rule sources are
+# fingerprinted against this number in `app/invoices/RULES.lock.json`, and
+# `tests/test_invoice_rules_version.py` fails — naming the module that moved —
+# if they part company. After a deliberate rule change: bump this, then run
+# `make invoice-rules-lock`. See :mod:`app.invoices.rules`.
+ANALYSIS_ENGINE_VERSION = "2026.08.2"
 
 
 class CaseEvent(BaseModel):

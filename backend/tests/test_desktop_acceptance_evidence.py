@@ -12,6 +12,7 @@ from __future__ import annotations
 import pytest
 
 from scripts.desktop_acceptance import REPO, UI_SCREENSHOTS, AcceptanceError, Evidence
+from scripts.invoice_acceptance import FAILURE_SCREENSHOT, INVOICE_SCREENSHOTS
 
 # The XS-49 run that caused the damage, and the evidence files it overwrote,
 # belong to the Fedora pilot and stay on that frozen release line — they are
@@ -59,3 +60,39 @@ def test_the_guard_does_not_depend_on_which_phases_run(tmp_path):
     names = {target.name for target in Evidence(tmp_path, "pilot").targets()}
     assert {f"pilot-desktop-{view}.png" for view in UI_SCREENSHOTS} <= names
     assert "pilot-desktop-startup-failure.png" in names
+
+
+# ---------------------------------------------------------------------------
+# Two journeys, one evidence directory
+# ---------------------------------------------------------------------------
+#
+# The invoice acceptance writes into the same directory under the same label.
+# If the two shared a filename, running both — which is exactly what
+# `make desktop-acceptance-full` does — would leave one record describing the
+# other's run. The kind is what keeps them apart, so it is asserted rather than
+# assumed.
+
+
+def test_the_two_journeys_cannot_write_the_same_file(tmp_path):
+    desktop = Evidence(tmp_path, "pilot")
+    invoice = Evidence(
+        tmp_path, "pilot", kind="invoice", views=(*INVOICE_SCREENSHOTS, FAILURE_SCREENSHOT)
+    )
+    assert not {t.name for t in desktop.targets()} & {t.name for t in invoice.targets()}
+
+
+def test_the_invoice_run_names_its_evidence_after_the_run_and_the_journey(tmp_path):
+    invoice = Evidence(
+        tmp_path, "rc2", kind="invoice", views=(*INVOICE_SCREENSHOTS, FAILURE_SCREENSHOT)
+    )
+    assert invoice.path("credit").name == "rc2-invoice-credit.png"
+    assert invoice.receipt.name == "rc2-invoice-acceptance.json"
+
+
+def test_every_invoice_screenshot_including_the_failure_one_is_guarded(tmp_path):
+    invoice = Evidence(
+        tmp_path, "pilot", kind="invoice", views=(*INVOICE_SCREENSHOTS, FAILURE_SCREENSHOT)
+    )
+    names = {target.name for target in invoice.targets()}
+    assert {f"pilot-invoice-{view}.png" for view in INVOICE_SCREENSHOTS} <= names
+    assert "pilot-invoice-failure.png" in names

@@ -107,6 +107,46 @@ Gör den här jämförelsen mot fakturan i Fortnox **en gång**, vid första
 anslutningen. Det är det enda tillfälle mappningen faktiskt går att kontrollera,
 och "beloppen såg rätt ut" är inte en kontroll.
 
+## Vad som är verifierat — och vad som inte är det
+
+Den här gränsen är värd en egen rubrik, eftersom "Fortnox-integrationen är
+testad" annars går att läsa på två sätt.
+
+**Verifierat, i den här kodbasen, på varje körning av sviten:**
+
+| Vad | Var |
+| -- | -- |
+| Varje anrop är ett `GET`; ingen skrivmetod finns att kalla | `test_integrations.py::TestAdaptersCannotWrite`, `test_integrations_live.py::TestFortnoxAdapter` |
+| URL, host-allowlist, scopes, `Authorization`-header, token-hantering och rotation | `test_integrations_live.py` |
+| Fältöversättningen, inklusive andrahandskällorna (`ExternalInvoiceNumber`, `Debit`) | `test_accounting_edge_cases.py::TestFortnoxEdgeCases` |
+| Kantfallen: bunden sidläsning, tom radlista, rader utan innehåll, `null` i stället för värde, annullerad faktura, kreditfaktura med negativt belopp, svenskt decimalkomma, oläsbart belopp, leverantör utan namn eller nummer, oläsbart leverantörsregister | samma fil |
+| Att belopp är `Decimal` hela vägen och serialiseras som sträng, aldrig `float` | samma fil |
+| Att samma faktura läst ur Fortnox och ur en annan källa blir **ett** ärende | samma fil |
+| Att ingen bilaga hämtas — inte "det fanns ingen", utan att det inte finns någon kod som skulle hämta en | samma fil |
+
+**Inte verifierat:**
+
+* **Ingen körning mot ett skarpt Fortnox-konto har gjorts i det här repot.**
+  Fältnamnen, sidformerna och felkoderna kommer ur Fortnox API-dokumentation,
+  inte ur observerad trafik. Stubbtransporten svarar med det vi *tror* att
+  Fortnox svarar med — den kan inte upptäcka att vi tror fel.
+* Därmed heller inte: att `Total` verkligen är inklusive moms i just den
+  föreningens företagsdatabas, att `GivenNumber` är stabilt över tid, eller att
+  ett kontoplansberoende fält som `Account` innehåller det vi antar.
+* Beteende under Fortnox egna gränser (rate limits, `429`, planerat underhåll)
+  är inte observerat, bara hanterat som vilket icke-200-svar som helst.
+
+Det är precis därför `mapping_preview` finns och därför föregående avsnitt ber
+om en manuell jämförelse vid första anslutningen: kontraktet är bevisat, men
+**att kontraktet är rätt kontrakt** är något bara en riktig anslutning kan visa.
+En stubb som skrivits av samma person som adaptern bevisar konsekvens, inte
+sanning.
+
+Om och när en skarp anslutning görs: notera avvikelser mellan `mapping_preview`
+och fakturan i Fortnox, och lägg observerade svarsformer som nya fall i
+`test_accounting_edge_cases.py`. Då — och först då — flyttar raderna ovan från
+den nedre listan till den övre.
+
 ## Säkerhet
 
 Samma som för brevlådan: `0600` i en `0700`-katalog inne i föreningens egen

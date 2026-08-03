@@ -3,7 +3,7 @@
 Run from the repository root after ``make desktop-build`` (or ``make
 invoice-acceptance``, which does both)::
 
-    backend/.venv/bin/python backend/scripts/invoice_acceptance.py [evidence-dir]
+    backend/.venv/bin/python backend/scripts/invoice_acceptance.py [--run-label ...]
 
 Why this exists separately from :mod:`scripts.desktop_acceptance`: that one is
 the delivery's full journey and requires a reachable self-hosted model, because
@@ -40,20 +40,32 @@ What it asserts, in order:
    the rules that produced it, what differed in plain language — and the
    superseded findings themselves, readable, marked as no longer applying and
    carrying no control that would let anyone act on them.
-9. **Inkommande no longer reviews invoices**, so the product cannot grow two
-   invoice screens that disagree.
+9. **A credit invoice reads as a credit invoice.** A negative amount is shown
+   as one, the case names the invoice it exactly cancels, says out loud that
+   nothing in the material decides *which* invoice a credit note belongs to,
+   and offers no control that would settle anything.
+10. **Inkommande no longer reviews invoices**, so the product cannot grow two
+    invoice screens that disagree.
 
-Evidence lands in the directory given as the single positional argument
-(screenshots plus ``journey.json``), defaulting to
-``/tmp/brfv2-invoice-acceptance``.
+**Where the evidence goes.** ``docs/evidence`` by default, under the run's own
+label — ``<label>-invoice-<view>.png`` beside a machine-readable
+``<label>-invoice-acceptance.json`` — so an accepted run is a committable
+record rather than something in ``/tmp`` that the next reboot decides the fate
+of. Evidence git already tracks is never overwritten without
+``--overwrite-evidence``: that record is what an earlier acceptance was
+approved on. The isolated ``XDG_DATA_HOME`` is a throwaway temporary directory
+and is deliberately *not* in the evidence tree.
 """
 
 from __future__ import annotations
 
+import argparse
 import base64
 import json
+import shutil
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 from pathlib import Path
@@ -61,19 +73,39 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO / "backend"))
 
+# The integrations package first: it and app.invoices reference each other's
+# models, and the cycle only resolves when this side is entered first. Every
+# in-process caller does that implicitly; a script that starts at the invoice
+# end has to say it. Same reason as in app/invoices/rules.py.
+from app.integrations import models as _integration_models  # noqa: E402, F401
+from app.invoices.models import ANALYSIS_ENGINE_VERSION  # noqa: E402
 from scripts.desktop_acceptance import (  # noqa: E402
     DRIVER_ORIGIN,
     AcceptanceError,
+    Evidence,
     WebDriver,
+    application_identity,
     isolated_environment,
     set_select,
     wait_until,
 )
 
-OUT = Path(sys.argv[1] if len(sys.argv) > 1 else "/tmp/brfv2-invoice-acceptance")
-OUT.mkdir(parents=True, exist_ok=True)
-SHOTS = OUT / "shots"
-SHOTS.mkdir(exist_ok=True)
+# The views this journey records, in the order it walks them. The list is also
+# what the overwrite guard checks, so it must name every screenshot the run can
+# write — including the failure one, which is exactly the case where a partial
+# run must not be allowed to quietly replace a complete one.
+INVOICE_SCREENSHOTS: tuple[str, ...] = (
+    "queue-empty",
+    "case",
+    "citation",
+    "case-worked",
+    "change",
+    "analysis-history",
+    "replaced-version",
+    "credit",
+    "queue",
+)
+FAILURE_SCREENSHOT = "failure"
 
 APPLICATION = REPO / "src-tauri" / "target" / "release" / "brfv2-desktop"
 
@@ -105,8 +137,109 @@ def note(step: str, payload) -> None:
     print(f"  · {step}: {json.dumps(payload, ensure_ascii=False)[:300]}")
 
 
-def main() -> int:
-    environment = isolated_environment(OUT / "home")
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument(
+        "--application",
+        type=Path,
+        default=APPLICATION,
+        help="Shell binary to exercise (defaults to the release build in this checkout)",
+    )
+    parser.add_argument(
+        "--evidence-dir",
+        type=Path,
+        default=REPO / "docs/evidence",
+        help="Where this run's screenshots and receipt are written.",
+    )
+    parser.add_argument(
+        "--run-label",
+        default="pilot",
+        help="Names this run's evidence: <label>-invoice-<view>.png and "
+        "<label>-invoice-acceptance.json. Give each run that is to be kept its own "
+        "label; evidence already committed is never overwritten without --overwrite-evidence.",
+    )
+    parser.add_argument(
+        "--overwrite-evidence",
+        action="store_true",
+        help="Permit this run to overwrite committed evidence files. Destroys the record "
+        "an earlier acceptance was approved on, so it has to be asked for.",
+    )
+    parser.add_argument("--output", type=Path, default=None, help="Receipt path override.")
+    parser.add_argument(
+        "--keep-data",
+        action="store_true",
+        help="Keep the throwaway XDG home this run provisioned into.",
+    )
+    return parser.parse_args(argv)
+
+
+def write_receipt(evidence: Evidence, application: Path, started: float, ok: bool) -> Path:
+    """The machine-readable half of the record, written whether or not it passed.
+
+    A failing run's receipt is the more useful of the two, so it is not
+    conditional: what was reached, what was read, and which screenshot shows
+    the state it stopped in.
+    """
+    receipt = {
+        "schema": "brfv2-invoice-acceptance/v1",
+        "ok": ok,
+        "runLabel": evidence.label,
+        "application": str(application),
+        "applicationIdentity": application_identity(application, None),
+        "durationSeconds": round(time.time() - started, 1),
+        # Said in the record rather than only in a docstring: this journey is
+        # green on a machine with no GPU, no tunnel and no model configured,
+        # because the invoice review is deterministic end to end.
+        "modelRequired": False,
+        "engineVersion": ANALYSIS_ENGINE_VERSION,
+        "screenshots": [
+            evidence.reference(name)
+            for name in INVOICE_SCREENSHOTS
+            if evidence.path(name).is_file()
+        ],
+        "failureScreenshot": (
+            evidence.reference(FAILURE_SCREENSHOT)
+            if evidence.path(FAILURE_SCREENSHOT).is_file()
+            else None
+        ),
+        "steps": results,
+    }
+    evidence.receipt.write_text(
+        json.dumps(receipt, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
+    )
+    return evidence.receipt
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
+    evidence = Evidence(
+        args.evidence_dir,
+        args.run_label,
+        receipt=args.output,
+        kind="invoice",
+        views=(*INVOICE_SCREENSHOTS, FAILURE_SCREENSHOT),
+    )
+    # Checked before anything is built or started, so an operator who picked a
+    # colliding label learns it in the first second rather than after a journey.
+    committed = evidence.tracked()
+    if committed and not args.overwrite_evidence:
+        listing = "\n  ".join(committed)
+        raise AcceptanceError(
+            f"Run label {args.run_label!r} writes over evidence that is committed:\n  {listing}\n"
+            "That record is what an earlier acceptance was approved on. Give this run its own "
+            "--run-label, or pass --overwrite-evidence if replacing it is the intent."
+        )
+    evidence.dir.mkdir(parents=True, exist_ok=True)
+    if not args.application.is_file():
+        raise AcceptanceError(
+            f"Application missing: {args.application}; run make desktop-build"
+        )
+
+    # The provisioned home is a throwaway and is deliberately not in the
+    # evidence tree: evidence is committed, and a tenant's store is not.
+    home = Path(tempfile.mkdtemp(prefix="brfv2-invoice-acceptance-"))
+    started = time.time()
+    environment = isolated_environment(home)
     # The embedder weights are already in the operator's HF cache. Without
     # this, model2vec re-resolves them over the network on every run, which
     # is both slow and — on this tqdm/huggingface_hub pair — flaky. The
@@ -134,7 +267,7 @@ def main() -> int:
 
     try:
         wait_until("tauri-driver", lambda: driver.request("GET", "/status"), timeout=20)
-        driver.create_session(APPLICATION)
+        driver.create_session(args.application)
         driver.resize(1720, 1080)
 
         # -- provision ----------------------------------------------------
@@ -220,7 +353,7 @@ def main() -> int:
         )
         empty = driver.execute("return document.querySelector('.empty')?.textContent.trim();")
         note("emptyQueue", empty)
-        driver.screenshot(SHOTS / "01-queue-empty.png")
+        driver.screenshot(evidence.path("queue-empty"))
 
         # -- read one invoice in ------------------------------------------
         driver.click("details.invoices-read-in > summary")
@@ -284,7 +417,7 @@ def main() -> int:
             timeout=240,
         )
         note("caseAfterImport", case)
-        driver.screenshot(SHOTS / "02-case.png")
+        driver.screenshot(evidence.path("case"))
 
         # Every finding that is not a match has to state its uncertainty, and
         # no control on the screen may read as an approval of the invoice.
@@ -330,7 +463,7 @@ def main() -> int:
                 timeout=120,
             )
             note("citationNavigation", {"clicked": citation, **opened})
-            driver.screenshot(SHOTS / "03-citation.png")
+            driver.screenshot(evidence.path("citation"))
             driver.click_text("Tillbaka")
             driver.click_text("Fakturor")
             wait_until(
@@ -453,7 +586,7 @@ def main() -> int:
             """
         )
         note("afterHumanWork", worked)
-        driver.screenshot(SHOTS / "04-case-worked.png")
+        driver.screenshot(evidence.path("case-worked"))
 
         # -- refresh is idempotent ----------------------------------------
         before = len(worked["timeline"])
@@ -531,7 +664,7 @@ def main() -> int:
             timeout=240,
         )
         note("previousInvoiceComparison", change)
-        driver.screenshot(SHOTS / "05-change.png")
+        driver.screenshot(evidence.path("change"))
         for needle in ("4 625,00 SEK", "+74,0 %", "förklarar", "förklarar den inte"):
             if needle not in change["suggestion"]:
                 raise AcceptanceError(f"The change breakdown never said {needle!r}: {change!r}")
@@ -639,7 +772,7 @@ def main() -> int:
             "document.querySelector('.case-analyses').scrollIntoView({block: 'start'}); return true;"
         )
         time.sleep(0.4)
-        driver.screenshot(SHOTS / "06-analysis-history.png")
+        driver.screenshot(evidence.path("analysis-history"))
 
         if "Version 2" not in replaced["head"] or "gäller nu" not in replaced["head"]:
             raise AcceptanceError(f"The replacement did not read as one: {replaced!r}")
@@ -673,13 +806,125 @@ def main() -> int:
             "document.querySelector('.run-replaced').scrollIntoView({block: 'center'}); return true;"
         )
         time.sleep(0.4)
-        driver.screenshot(SHOTS / "07-replaced-version.png")
+        driver.screenshot(evidence.path("replaced-version"))
         if any(card["status"] != "ersatt" for card in old):
             raise AcceptanceError(f"A superseded finding did not say so: {old!r}")
         if any(card["buttons"] for card in old):
             raise AcceptanceError(
                 f"A superseded finding offered a control — it is a record, not a card in play: {old!r}"
             )
+
+        # -- a credit invoice reads as a credit invoice ---------------------
+        #
+        # The fourth read-in is the credit note for the third. It is the one
+        # case in this workspace where the arithmetic is unambiguous and the
+        # *meaning* is not: two amounts that cancel exactly are a fact, and
+        # which invoice a credit note belongs to is not written anywhere in
+        # the material. The screen has to carry both of those at once — and it
+        # must not grow a control that looks like settling the pair, because
+        # settling them is something that happens in the accounting system.
+        driver.click_text("Till fakturakön")
+        wait_until(
+            "the queue",
+            lambda: driver.execute("return Boolean(document.querySelector('.invoices-queue'));"),
+            timeout=60,
+        )
+        driver.click("details.invoices-read-in > summary")
+        wait_until(
+            "the read-in list a fourth time",
+            lambda: driver.execute(
+                "return document.querySelectorAll('.invoices-available tbody tr').length > 0;"
+            ),
+            timeout=60,
+        )
+        offered = driver.execute(
+            """
+            const rows = [...document.querySelectorAll('.invoices-available tbody tr')];
+            const row = rows.find((r) => r.querySelector('code')?.textContent.trim() === arguments[0]);
+            if (!row) return false;
+            const cells = [...row.querySelectorAll('td')].map((c) => c.textContent.trim());
+            row.querySelector('button').click();
+            return cells;
+            """,
+            ["SI-2027-024"],
+        )
+        if not offered:
+            raise AcceptanceError("The credit invoice SI-2027-024 was not offered by the source")
+        note("creditOffered", offered)
+
+        credit = wait_until(
+            "the credit invoice as a case",
+            lambda: driver.execute(
+                """
+                const root = document.querySelector('.invoice-case');
+                if (!root) return false;
+                const findings = [...root.querySelectorAll('.finding')];
+                if (!findings.length) return false;
+                const credits = findings.filter((f) =>
+                  (f.querySelector('.finding-suggestion p')?.textContent || '').includes('krediteringen'));
+                if (!credits.length) return false;
+                return {
+                  amount: root.querySelector('.case-amount')?.textContent.trim(),
+                  signals: [...root.querySelectorAll('.case-signals li.signal')].map((s) => ({
+                    label: s.querySelector('strong')?.textContent.trim(),
+                    severity: s.className.replace('signal', '').trim(),
+                    detail: s.querySelector('span')?.textContent.trim(),
+                  })),
+                  credits: credits.map((f) => ({
+                    verdict: f.querySelector('.verdict')?.textContent.trim(),
+                    says: f.querySelector('.finding-suggestion p')?.textContent.trim(),
+                    uncertainty: f.querySelector('.finding-uncertainty')?.textContent.trim(),
+                    citations: f.querySelectorAll('.finding-citation').length,
+                  })),
+                };
+                """
+            ),
+            timeout=240,
+        )
+        note("creditCase", credit)
+        driver.screenshot(evidence.path("credit"))
+
+        # The amount is shown as the negative it is, rather than as a number
+        # whose sign a reader has to infer from the word "kredit" somewhere.
+        if "-" not in credit["amount"] and "−" not in credit["amount"]:
+            raise AcceptanceError(f"A credit invoice was not shown as negative: {credit!r}")
+        labels = [s["label"] for s in credit["signals"]]
+        if "Möjlig kreditfaktura" not in labels:
+            raise AcceptanceError(f"The queue signal for a credit was not raised: {labels!r}")
+        # A credit relation is a reading, not a warning: an exactly cancelling
+        # pair is a normal, correct thing to find.
+        credit_signal = next(s for s in credit["signals"] if s["label"] == "Möjlig kreditfaktura")
+        if credit_signal["severity"] != "info":
+            raise AcceptanceError(f"A credit was raised as an alarm: {credit_signal!r}")
+        # It names the invoice it cancels, the right way round, and says what
+        # it cannot know.
+        if not any("2027-018" in c["says"] for c in credit["credits"]):
+            raise AcceptanceError(
+                f"The credit never named the invoice it cancels: {credit['credits']!r}"
+            )
+        for card in credit["credits"]:
+            if "Den här posten är negativ" not in card["says"]:
+                raise AcceptanceError(f"The credit was stated backwards: {card!r}")
+            if not card["uncertainty"] or "hör till" not in card["uncertainty"]:
+                raise AcceptanceError(
+                    f"The credit did not say which invoice it cannot decide about: {card!r}"
+                )
+            if card["citations"]:
+                raise AcceptanceError(
+                    "A history comparison carried a citation — citations mean a verified "
+                    f"passage in a document, and there is none behind this: {card!r}"
+                )
+        controls = driver.execute(
+            "return [...document.querySelectorAll('button')].map(b => b.textContent.trim().toLowerCase());"
+        )
+        settling = [
+            c
+            for c in controls
+            if any(word in c for word in ("kvitta", "matcha mot", "godkänn faktura", "attestera", "betala"))
+        ]
+        note("creditControls", {"forbidden": settling, "count": len(controls)})
+        if settling:
+            raise AcceptanceError(f"The credit view offered a control that settles: {settling!r}")
 
         driver.click_text("Till fakturakön")
         queue = wait_until(
@@ -711,7 +956,7 @@ def main() -> int:
             ".map(d => d.textContent.trim());"
         )
         note("counts", counts)
-        driver.screenshot(SHOTS / "06-queue.png")
+        driver.screenshot(evidence.path("queue"))
 
         # Inkommande must no longer carry an invoice pane.
         driver.click_text("Inkommande")
@@ -727,22 +972,18 @@ def main() -> int:
         if any("Faktura" in t for t in tabs):
             raise AcceptanceError(f"Inkommande still reviews invoices: {tabs!r}")
 
-        (OUT / "journey.json").write_text(
-            json.dumps(results, ensure_ascii=False, indent=2), encoding="utf-8"
-        )
-        print("\nJOURNEY OK")
+        receipt = write_receipt(evidence, args.application, started, ok=True)
+        print(f"\nJOURNEY OK\nEvidence: {evidence.dir}\nReceipt:  {receipt}")
         return 0
     except Exception as exc:  # noqa: BLE001 - this is a driver script
         print(f"\nJOURNEY FAILED: {exc}")
         try:
-            driver.screenshot(SHOTS / "99-failure.png")
+            driver.screenshot(evidence.path(FAILURE_SCREENSHOT))
             print(driver.execute("return document.body.innerText.slice(0, 3000);"))
         except Exception:  # noqa: BLE001
             pass
         print("\nDriver tail:\n" + "\n".join(driver_logs[-25:]))
-        (OUT / "journey.json").write_text(
-            json.dumps(results, ensure_ascii=False, indent=2), encoding="utf-8"
-        )
+        print(f"\nReceipt: {write_receipt(evidence, args.application, started, ok=False)}")
         return 1
     finally:
         try:
@@ -750,6 +991,10 @@ def main() -> int:
         except Exception:  # noqa: BLE001
             pass
         process.terminate()
+        if args.keep_data:
+            print(f"Isolated XDG home kept at {home}")
+        else:
+            shutil.rmtree(home, ignore_errors=True)
 
 
 if __name__ == "__main__":

@@ -1,6 +1,6 @@
 .PHONY: setup backend backend-pilot require-pilot-llm frontend frontend-legacy mobile mobile-build mobile-test \
         desktop-runtime desktop-build desktop-run desktop-check desktop-package desktop-install desktop-uninstall desktop-acceptance \
-        invoice-acceptance \
+        invoice-acceptance desktop-acceptance-full invoice-rules-lock \
         test test-isolation eval eval-b eval-fast eval-sweep \
         eval-selfhosted eval-b-selfhosted desktop-acceptance-installed desktop-verify-reproducible demo demo-stop demo-status demo-reset \
         build build-legacy model-readiness model-readiness-selftest \
@@ -86,9 +86,26 @@ desktop-acceptance: desktop-build  ## Full journey-acceptans mot riktig Tauri/We
 # Fakturaarbetsytan behöver ingen modell — granskningen är deterministisk hela
 # vägen — så den här acceptansen körs på en maskin utan GPU och utan tunnel.
 # Att den kan det är en egenskap hos funktionen, inte hos skriptet.
+#
+# Evidensen hamnar i docs/evidence under körningens etikett, precis som
+# desktop-acceptansens: skärmbilder och ett maskinläsbart kvitto som går att
+# committa. Redan committad evidens skrivs aldrig över utan att
+# --overwrite-evidence begärs uttryckligen.
 invoice-acceptance: desktop-build  ## Fakturaresan mot riktig Tauri/WebKitGTK (ingen modell krävs)
 	backend/.venv/bin/python backend/scripts/invoice_acceptance.py \
-	  $${INVOICE_EVIDENCE:-/tmp/brfv2-invoice-acceptance}
+	  --run-label $(RUN_LABEL) \
+	  $(if $(INVOICE_EVIDENCE),--evidence-dir $(INVOICE_EVIDENCE),)
+
+# Hela acceptansen på en maskin där tunneln till agenntserver är uppe: först
+# fakturaresan, som är modellfri och därför felar snabbt och billigt, sedan den
+# fulla resan som kräver den självhostade modellen. Två kvitton, två
+# skärmbildsserier, en etikett — `<etikett>-invoice-*` och `<etikett>-desktop-*`
+# kan aldrig skriva över varandra.
+desktop-acceptance-full: invoice-acceptance desktop-acceptance  ## Faktura- + full journey-acceptans (kräver modelltunneln)
+	@echo "Båda acceptanserna klara. Evidens: docs/evidence/$(RUN_LABEL)-invoice-* och $(RUN_LABEL)-desktop-*"
+
+invoice-rules-lock:  ## Spela in granskningsreglernas fingeravtryck för nuvarande ANALYSIS_ENGINE_VERSION
+	cd backend && .venv/bin/python -m app.invoices.rules --write
 
 desktop-acceptance-installed:  ## Samma acceptans mot det INSTALLERADE paketet (ange RPM=... för artefaktidentitet)
 	backend/.venv/bin/python backend/scripts/desktop_acceptance.py \

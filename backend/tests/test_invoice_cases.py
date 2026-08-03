@@ -369,6 +369,37 @@ class TestDuplicatesAndCredits:
         assert "kan vara krediteringen" in credit.suggestion
         assert "betyder inte" in (credit.uncertainty or "")
 
+    def test_which_of_the_two_is_the_credit_note_is_stated_the_right_way_round(self):
+        """A negative amount credits a positive one, never the reverse.
+
+        One sentence for both directions is wrong in one of them, and it was
+        wrong in the direction a reviewer actually meets: opening the credit
+        note itself, where it read as though the ordinary invoice credited the
+        credit note.
+        """
+        invoice = snapshot(external_ref="A", number="1001", invoice_date="2026-05-02", total="6250.00")
+        note = snapshot(external_ref="B", number="1002", invoice_date="2026-05-20", total="-6250.00")
+        keys = self._keys([invoice, note])
+
+        from_the_note = next(
+            f
+            for f in compare.duplicate_findings(
+                note, [invoice, note], case_key=keys[note.id], key_of=lambda r: keys[r.id]
+            )
+            if f.finding_type == "invoice_credit_relation"
+        )
+        assert "Den här posten är negativ" in from_the_note.suggestion
+        assert "krediteringen av den fakturan" in from_the_note.suggestion
+
+        from_the_invoice = next(
+            f
+            for f in compare.duplicate_findings(
+                invoice, [invoice, note], case_key=keys[invoice.id], key_of=lambda r: keys[r.id]
+            )
+            if f.finding_type == "invoice_credit_relation"
+        )
+        assert "krediteringen av den här fakturan" in from_the_invoice.suggestion
+
 
 class TestNewLines:
     def test_a_line_never_seen_from_this_supplier_becomes_a_question(self):

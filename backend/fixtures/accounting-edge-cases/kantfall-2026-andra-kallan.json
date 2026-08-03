@@ -1,0 +1,28 @@
+{
+  "Schema": "brfv2-accounting-fixture/v1",
+  "Note": "Samma faktura som KF-TOMMA-RADER, läst ur en andra datamängd under en annan dokumentreferens — så som en förening ser den när fakturan finns både i ekonomisystemet och i en export någon skickat vidare. Fakturanumret och leverantören är desamma, vilket är vad ärendeidentiteten bygger på: två observationer, ett ärende. Att den ligger i en egen fil är också poängen med att adaptern läser en katalog och inte en fil.",
+  "Dataset": "kantfall-2026-andra-kallan",
+  "SupplierInvoices": [
+    {
+      "AssociationRef": "gjutformen-12",
+      "DocumentNumber": "KF-TOMMA-RADER-KOPIA",
+      "InvoiceNumber": "2026-901",
+      "SupplierName": "Snösvängen Entreprenad AB",
+      "SupplierOrgNo": "556812-3344",
+      "InvoiceDate": "2026-04-01",
+      "DueDate": "2026-05-01",
+      "Currency": "SEK",
+      "Total": "6250.00",
+      "VAT": "1250.00",
+      "InvoiceRows": [
+        {
+          "Description": "Maskinell snöröjning med traktor",
+          "DeliveredQuantity": "4",
+          "Price": "1250.00",
+          "Total": "5000.00",
+          "VAT": "1250.00"
+        }
+      ]
+    }
+  ]
+}

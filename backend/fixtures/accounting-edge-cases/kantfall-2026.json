@@ -1,0 +1,115 @@
+{
+  "Schema": "brfv2-accounting-fixture/v1",
+  "Note": "Syntetiskt underlag med de fall en riktig ekonomisystemexport innehåller och en snäll fixtur inte gör: tomma radlistor, rader utan innehåll, fält som är null, negativa belopp och en leverantör som knappt är identifierad. Ligger i en EGEN katalog och läses aldrig av standardadaptern — den som pekar hit gör det med avsikt, och gjutformen12-datamängden förblir den lilla, läsbara berättelse den är. AssociationRef är gjutformen-12 så att fallen kan köras mot den seedade föreningens riktiga dokumentarkiv.",
+  "Dataset": "kantfall-2026",
+  "SupplierInvoices": [
+    {
+      "AssociationRef": "gjutformen-12",
+      "DocumentNumber": "KF-TOMMA-RADER",
+      "InvoiceNumber": "2026-901",
+      "SupplierName": "Snösvängen Entreprenad AB",
+      "SupplierOrgNo": "556812-3344",
+      "InvoiceDate": "2026-04-01",
+      "DueDate": "2026-05-01",
+      "Currency": "SEK",
+      "Total": "6250.00",
+      "VAT": "1250.00",
+      "InvoiceRows": []
+    },
+    {
+      "AssociationRef": "gjutformen-12",
+      "DocumentNumber": "KF-INNEHALLSLOSA-RADER",
+      "InvoiceNumber": "2026-902",
+      "SupplierName": "Snösvängen Entreprenad AB",
+      "SupplierOrgNo": "556812-3344",
+      "InvoiceDate": "2026-04-02",
+      "DueDate": "2026-05-02",
+      "Currency": "SEK",
+      "Total": "6250.00",
+      "VAT": "1250.00",
+      "InvoiceRows": [
+        {},
+        {
+          "Description": "",
+          "DeliveredQuantity": null,
+          "Price": null,
+          "Total": null
+        },
+        {
+          "Description": "Maskinell snöröjning med traktor",
+          "DeliveredQuantity": "4",
+          "Price": "1250.00",
+          "Total": "5000.00"
+        }
+      ]
+    },
+    {
+      "AssociationRef": "gjutformen-12",
+      "DocumentNumber": "KF-NULL-FALT",
+      "InvoiceNumber": null,
+      "SupplierName": "Snösvängen Entreprenad AB",
+      "SupplierOrgNo": null,
+      "InvoiceDate": null,
+      "DueDate": null,
+      "Period": null,
+      "Currency": null,
+      "Total": null,
+      "VAT": null,
+      "InvoiceRows": null
+    },
+    {
+      "AssociationRef": "gjutformen-12",
+      "DocumentNumber": "KF-OKAND-LEVERANTOR",
+      "InvoiceNumber": "2026-904",
+      "SupplierName": "",
+      "SupplierOrgNo": "",
+      "InvoiceDate": "2026-04-04",
+      "DueDate": "2026-05-04",
+      "Currency": "SEK",
+      "Total": "4180.00",
+      "VAT": "836.00",
+      "InvoiceRows": [
+        {
+          "Description": "Enligt överenskommelse",
+          "DeliveredQuantity": "1",
+          "Price": "4180.00",
+          "Total": "4180.00"
+        }
+      ]
+    },
+    {
+      "AssociationRef": "gjutformen-12",
+      "DocumentNumber": "KF-KREDIT",
+      "InvoiceNumber": "2026-905",
+      "SupplierName": "Snösvängen Entreprenad AB",
+      "SupplierOrgNo": "556812-3344",
+      "InvoiceDate": "2026-04-20",
+      "DueDate": "2026-05-20",
+      "Currency": "SEK",
+      "Total": "-6250.00",
+      "VAT": "-1250.00",
+      "InvoiceRows": [
+        {
+          "Description": "Maskinell snöröjning med traktor",
+          "DeliveredQuantity": "-4",
+          "Price": "1250.00",
+          "Total": "-5000.00",
+          "VAT": "-1250.00"
+        }
+      ]
+    },
+    {
+      "AssociationRef": "nagon-annan-forening",
+      "DocumentNumber": "KF-ANNAN-FORENING",
+      "InvoiceNumber": "2026-906",
+      "SupplierName": "Snösvängen Entreprenad AB",
+      "SupplierOrgNo": "556812-3344",
+      "InvoiceDate": "2026-04-06",
+      "DueDate": "2026-05-06",
+      "Currency": "SEK",
+      "Total": "9999.00",
+      "VAT": "1999.80",
+      "InvoiceRows": []
+    }
+  ]
+}

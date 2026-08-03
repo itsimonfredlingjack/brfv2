@@ -495,6 +495,12 @@ def duplicate_findings(
             snapshot.total_amount != 0
             and abs(snapshot.total_amount + other.total_amount) <= AMOUNT_EPSILON
         ):
+            # Which of the two is the credit note is not a detail. A negative
+            # amount credits a positive one and never the other way round, so a
+            # single sentence for both directions is wrong in one of them — and
+            # it is wrong exactly when the invoice on the screen is the credit
+            # note, which is the case a reviewer opens a credit note to read.
+            crediting = snapshot.total_amount < 0
             out.append(
                 finding(
                     snapshot,
@@ -505,7 +511,10 @@ def duplicate_findings(
                         VerifiedFact(label="Motsvarande post", value=f"{label} — {money(other.total_amount, currency)}", source="invoice"),
                     ],
                     suggestion=(
-                        f"{label} har exakt motsatt belopp och kan vara krediteringen av den "
+                        f"Den här posten är negativ och tar exakt ut {label}. Den kan vara "
+                        "krediteringen av den fakturan."
+                        if crediting
+                        else f"{label} har exakt motsatt belopp och kan vara krediteringen av den "
                         "här fakturan."
                     ),
                     uncertainty=(

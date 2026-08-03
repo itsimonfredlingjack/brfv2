@@ -171,10 +171,54 @@ Två saker som föll ut av det och är värda att säga:
   att motorn fortfarande säger det registreras på körningen
   (`already_decided_count`) i stället för på skärmen.
 
-Regelversionen är handbumpad och betyder en sak: *vilka regler skrev det här*.
-Ett fynd stämplat med en äldre version är ett fynd ingen kört om sedan reglerna
-ändrades, och vyn säger det rakt ut ovanför fynden i stället för att låta en två
-månader gammal slutsats se likadan ut som en färsk.
+Regelversionen betyder en sak: *vilka regler skrev det här*. Ett fynd stämplat
+med en äldre version är ett fynd ingen kört om sedan reglerna ändrades, och vyn
+säger det rakt ut ovanför fynden i stället för att låta en två månader gammal
+slutsats se likadan ut som en färsk.
+
+### Regelversionen kan inte längre halka efter reglerna
+
+`backend/app/invoices/rules.py` · `backend/app/invoices/RULES.lock.json`
+
+Numret var handbumpat, som en CHANGELOG-rad, och lika lätt att glömma. En
+glömd bump felar inte högt — den **påstår tyst att två slutsatser skrivna under
+olika regler skrevs under samma**, vilket är exakt den felläsning hela
+revisionsspåret finns för att förhindra.
+
+Så reglerna fingeravtrycks, och avtrycket låses till den version som gällde när
+det togs:
+
+| Frågan | Svaret |
+| -- | -- |
+| Vad räknas som en regel | Modulerna som avgör vad ett fynd **säger**: `integrations/review.py`, `invoices/compare.py`, `integrations/supplier.py`, `terms.py` — plus etikettabellerna i `integrations/models.py`, eftersom en omformulerad dom är en ändrad slutsats för den som läser den |
+| Vad räknas medvetet inte | Retrieval, extraktion och `citations.resolve_citation`. En ändring där kan mycket väl ändra ett fynd — och gör den det så spelas en ny version in ändå, för `build_run` triggar på att *resultatet* skiljer sig. Regelversionen svarar på den smalare frågan de två andra triggrarna inte kan: vilka regler skrev det här, för ett fynd vars text råkar vara oförändrad |
+| Vad avtrycket tas över | Det parsade syntaxträdet med docstrings borttagna. Att formatera om en regelmodul eller skriva om dess dokumentation kräver alltså ingen bump — men strängarna ingår, för domens ordalydelse är det en styrelseledamot faktiskt läser |
+| Vad som händer om en regel ändras utan bump | `tests/test_invoice_rules_version.py` felar och **namnger modulen som rörde sig** |
+| Vad som händer om någon spelar in om låsfilen i stället för att bumpa | `record()` vägrar. En redan inspelad version behåller sitt avtryck, så enda vägen till en grön svit är bumpen |
+| Vad som händer om reglerna flyttar till en ny modul | Testet letar upp varje modul i `backend/app` som konstruerar en `ReviewFinding` och kräver att den ingår i avtrycket |
+
+Efter en avsiktlig regeländring: höj `ANALYSIS_ENGINE_VERSION` i
+`app/invoices/models.py` och kör `make invoice-rules-lock`. Låsfilen växer med
+en rad per version, aldrig genom att skriva om en gammal, så skillnaden mellan
+två versioner visar vilken regelkälla som ändrades mellan dem.
+
+Kontrollen har körts skarpt: `2026.08.2` är den version som blev följden av att
+kreditfyndet formulerades om (nästa avsnitt), och testet felade på `compare.py` innan
+bumpen fanns.
+
+### Kreditfakturan, och vilket håll den läses åt
+
+En post vars belopp tar ut en annan exakt är ett faktum. **Vilken faktura en
+kreditnota hör till är det inte** — ingenting i underlaget säger det, och tre
+fakturor på samma belopp tar ut samma kreditnota lika exakt. Fyndet säger båda
+delarna: vad som är räknat, och vad som inte går att avgöra.
+
+Riktningen är inte en detalj. Ett negativt belopp krediterar ett positivt och
+aldrig tvärtom, så en enda mening för båda hållen är fel i ett av dem — och den
+var fel i just det håll en granskare möter: *öppnad på kreditnotan* läste den
+som om den vanliga fakturan krediterade kreditnotan. Nu står det åt rätt håll i
+båda riktningarna, och acceptansen i den riktiga applikationen kontrollerar
+det (§10).
 
 ## 5. Idempotens
 
@@ -371,6 +415,69 @@ att den ersatte version 1, om körningen inte namnger sin källhash och sin
 regelversion, om skillnaden inte står i klartext, eller om ett ersatt fynd
 saknar märkningen "ersatt" eller erbjuder en enda knapp.
 
-Ett hål som är värt att veta om: ingen automatiserad kontroll bevakar att
-`ANALYSIS_ENGINE_VERSION` faktiskt bumpas när en regel ändras. Den är
-handbumpad, som en CHANGELOG-rad, och lika lätt att glömma.
+Och kreditfakturan, som är den fjärde inläsningen i samma körning: att beloppet
+**visas som negativt** i stället för att teckenet ska härledas ur ordet
+"kredit" någonstans, att signalen "Möjlig kreditfaktura" ligger som *info* och
+inte som en varning (ett par som tar ut varandra exakt är en normal och riktig
+sak att hitta), att fyndet namnger fakturan det tar ut och står åt rätt håll,
+att det säger vad det inte kan avgöra, att det inte bär något citat — det finns
+ingen dokumentpassage bakom en jämförelse mot en annan faktura — och att vyn
+inte erbjuder någon kontroll som **kvittar** eller **matchar** paret. Att kvitta
+är något som sker i ekonomisystemet.
+
+`backend/tests/test_accounting_edge_cases.py` — det en riktig
+ekonomisystemexport innehåller och en snäll fixtur inte gör, för båda
+adaptrarna: paginering, saknad bilaga, tom radlista, rader utan innehåll,
+`null` i stället för värde, annullerad faktura, kreditfaktura, samma faktura ur
+två källor, och en leverantör exporten knappt identifierar. Fixturfallen ligger
+i en **egen katalog** (`backend/fixtures/accounting-edge-cases/`) som den
+levererade adaptern aldrig läser — demons datamängd får förbli den lilla
+läsbara berättelse den är — och Fortnox-fallen körs genom samma stubbade
+transport som resten av den skarpa integrationssviten: riktiga URL:er, riktig
+mappningstabell, riktiga vägranden, utan att någon behöver vara online.
+
+`backend/tests/test_invoice_rules_version.py` — att regelversionen inte kan
+halka efter reglerna (§4). Med sitt eget RED-bevis: ett ändrat tröskelvärde och
+en omformulerad dom flyttar avtrycket, en omskriven docstring och en ny
+kommentar gör det inte, och en ny modul som skriver fynd utan att ingå i
+avtrycket felar sviten.
+
+### Var evidensen hamnar
+
+`docs/evidence/<etikett>-invoice-<vy>.png` plus ett maskinläsbart
+`docs/evidence/<etikett>-invoice-acceptance.json` — samma namngivning och samma
+skydd som desktopacceptansen: evidens som git redan bär skrivs aldrig över utan
+`--overwrite-evidence`, eftersom det är den posten en tidigare acceptans
+godkändes på. Kvittot bär körningens etikett, binärens SHA-256, regelversionen,
+varaktigheten, `modelRequired: false` och varje steg skriptet noterade — och
+skrivs även när resan **failar**, då tillsammans med felskärmbilden, eftersom
+det är den körningen kvittot är mest värt på.
+
+Den provisionerade `XDG_DATA_HOME` är en slängbar temporärkatalog och ligger
+medvetet **inte** i evidensträdet: evidens committas, en förenings butik gör det
+inte.
+
+`make desktop-acceptance-full` kör båda acceptanserna under en etikett — först
+fakturaresan, som är modellfri och därför felar snabbt och billigt, sedan den
+fulla resan som kräver den självhostade modellen. `<etikett>-invoice-*` och
+`<etikett>-desktop-*` kan aldrig skriva över varandra, vilket är testat och
+inte antaget.
+
+### Vad som är verifierat mot Fortnox, och vad som inte är det
+
+Värt att säga rakt ut, eftersom "Fortnox-integrationen är testad" annars går att
+läsa på två sätt:
+
+* **Verifierat:** kontraktet och mappningen. Varje URL, verb, scope, header och
+  fältöversättning körs mot en stubbad transport som vägrar en obeställd
+  begäran, plus kantfallen ovan. Att varje anrop är ett `GET` och att ingen
+  skrivmetod finns är strukturellt bevisat.
+* **Inte verifierat:** att en riktig Fortnox-företagsdatabas svarar med de
+  former stubben svarar med. Ingen körning mot ett skarpt Fortnox-konto har
+  gjorts i det här repot. Fältnamnen och sidformerna kommer från Fortnox
+  API-dokumentation och inte från observerad trafik.
+
+Det är också därför `mapping_preview` finns: den första skarpa anslutningen är
+det enda tillfälle mappningen faktiskt går att kontrollera, och "beloppen såg
+rätt ut" är inte att kontrollera. Se
+[INTEGRATION-FORTNOX.md](INTEGRATION-FORTNOX.md) för hela gränsdragningen.
