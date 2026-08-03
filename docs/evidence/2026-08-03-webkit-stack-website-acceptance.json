@@ -1,0 +1,28 @@
+{
+  "schema": "brfv2-website-acceptance/v1",
+  "runLabel": "2026-08-03-webkit-stack",
+  "ok": false,
+  "startedAt": "2026-08-03T20:46:48+0200",
+  "durationSeconds": 134.5,
+  "application": {
+    "path": "/home/aidev/Projects/brfv2/src-tauri/target/release/brfv2-desktop",
+    "sha256": "460686a0c964fb05481ef59da74db24ac005a5f6259c0c17ff96015f2a6d0c49",
+    "bytes": 3429824
+  },
+  "transportRetries": 0,
+  "steps": {
+    "withoutModel": {
+      "mode": "desktop",
+      "llm": {
+        "display_name": "",
+        "model": "",
+        "runtime_label": "",
+        "ready": false,
+        "provider": "none"
+      }
+    }
+  },
+  "screenshots": [
+    "docs/evidence/2026-08-03-webkit-stack-website-failure.png"
+  ]
+}

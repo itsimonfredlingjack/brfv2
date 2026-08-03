@@ -131,6 +131,7 @@ class WebsiteStore:
         if isinstance(version, int) and version < SCHEMA_VERSION:  # pragma: no cover
             # Migration lives here, in the product, and not inside the editor
             # library's own state — which is why the schema version is ours.
+            self._migrate_legacy_public_state()
             _atomic_write_json(path, {"schemaVersion": SCHEMA_VERSION})
             return
         raise WebsiteStoreError(
@@ -138,6 +139,74 @@ class WebsiteStore:
             f"versionen förstår {SCHEMA_VERSION}. En nyare datakatalog får inte öppnas av "
             "en äldre installation — då skrivs fält bort."
         )
+
+    def _migrate_legacy_public_state(self) -> None:
+        """Snapshot v1's live page flags before enabling the new boundary.
+
+        v1 revisions did not carry ``publish_window`` or ``home`` and the
+        site-level chrome did not carry the public home id. Pydantic defaults
+        would make those files readable, but would silently turn an existing
+        published page into an always-visible, non-home page. The only honest
+        migration is to copy the state v1 actually served at upgrade time into
+        the immutable records that v2 now serves.
+
+        Missing or malformed revision files are left alone; the normal read
+        path already treats those as unpublished and logs the orphan. The
+        migration is idempotent, so a failed write can safely be retried on the
+        next startup before the schema marker is advanced.
+        """
+        site_path = self.dir / SITE_FILE
+        try:
+            raw_site = json.loads(site_path.read_text(encoding="utf-8"))
+        except FileNotFoundError:
+            return
+        except (OSError, json.JSONDecodeError) as exc:
+            raise WebsiteStoreError(f"{site_path} går inte att migrera: {exc}") from exc
+
+        try:
+            site = Site.model_validate(raw_site)
+        except ValidationError as exc:
+            raise WebsiteStoreError(f"Ogiltigt innehåll i {site_path}: {exc}") from exc
+
+        for page in site.pages:
+            if page.publication is None:
+                continue
+            revision_path = self._revision_path(page.publication.revision_id)
+            try:
+                raw_revision = json.loads(revision_path.read_text(encoding="utf-8"))
+            except FileNotFoundError:
+                continue
+            except (OSError, json.JSONDecodeError) as exc:
+                logger.warning("Hoppar över oläsbar gammal version %s: %s", revision_path, exc)
+                continue
+            if not isinstance(raw_revision, dict):
+                continue
+            changed = False
+            if "publish_window" not in raw_revision:
+                raw_revision["publish_window"] = page.publish_window.model_dump(mode="json")
+                changed = True
+            if "home" not in raw_revision:
+                raw_revision["home"] = page.home
+                changed = True
+            if changed:
+                _atomic_write_json(revision_path, raw_revision)
+
+        published_ids = {page.id for page in site.pages if page.publication is not None}
+        public_home_id = next(
+            (page.id for page in site.pages if page.id in published_ids and page.home),
+            next((page.id for page in site.pages if page.id in published_ids), ""),
+        )
+        chrome = site.published_chrome
+        if chrome is None and published_ids:
+            site.published_chrome = SiteChrome(
+                navigation=[n.model_copy(deep=True) for n in site.navigation],
+                settings=site.settings.model_copy(deep=True),
+                home_page_id=public_home_id,
+            )
+            self._write(site)
+        elif chrome is not None and not chrome.home_page_id:
+            chrome.home_page_id = public_home_id
+            self._write(site)
 
     # ---------- io ----------
 
@@ -284,7 +353,15 @@ class WebsiteStore:
             self._write(site)
             return site, transaction
 
-    def _snapshot_chrome(self, site: Site, *, at: str, by: str) -> None:
+    def _snapshot_chrome(
+        self,
+        site: Site,
+        *,
+        at: str,
+        by: str,
+        home_page_id: str | None = None,
+        exclude_home_page_id: str = "",
+    ) -> None:
         """Make the menu and the settings the public sees match the canvas.
 
         Called by every publication. Pressing publicera means "make what I am
@@ -292,9 +369,45 @@ class WebsiteStore:
         at — while *not* snapshotting it was how a model rearranging the draft
         menu changed a visitor's navigation with nobody publishing anything.
         """
+        published_ids = {p.id for p in site.pages if p.publication is not None}
+        if home_page_id is not None:
+            public_home_id = home_page_id if home_page_id in published_ids else ""
+        else:
+            draft_home = site.home_page()
+            public_home_id = (
+                draft_home.id
+                if draft_home is not None
+                and draft_home.id in published_ids
+                and draft_home.id != exclude_home_page_id
+                else ""
+            )
+            if not public_home_id and site.published_chrome is not None:
+                previous = site.published_chrome.home_page_id
+                if previous in published_ids and previous != exclude_home_page_id:
+                    public_home_id = previous
+            if not public_home_id:
+                public_home_id = next(
+                    (
+                        page.id
+                        for page in site.pages
+                        if page.id in published_ids and page.id != exclude_home_page_id
+                    ),
+                    "",
+                )
+            if not public_home_id:
+                # A site with published pages must always expose one home. This
+                # matters when the last published page is being rolled back to
+                # a revision whose `home` flag is false: there is no eligible
+                # replacement, so keep that page as the deterministic fallback.
+                public_home_id = next(
+                    (page.id for page in site.pages if page.id in published_ids),
+                    "",
+                )
+
         site.published_chrome = SiteChrome(
             navigation=[n.model_copy(deep=True) for n in site.navigation],
             settings=site.settings.model_copy(deep=True),
+            home_page_id=public_home_id,
             published_at=at,
             published_by=by,
         )
@@ -405,7 +518,12 @@ class WebsiteStore:
                 note=note,
             )
             page.draft.based_on_revision_id = revision.id
-            self._snapshot_chrome(site, at=published_at, by=published_by)
+            self._snapshot_chrome(
+                site,
+                at=published_at,
+                by=published_by,
+                home_page_id=page_id if revision.home else None,
+            )
             site.history = [*site.history, transaction]
             self._write(site)
             return site, revision
@@ -427,6 +545,13 @@ class WebsiteStore:
             if page.publication is None:
                 raise WebsiteStoreError("Sidan är inte publicerad.")
             page.publication = None
+            if site.published_chrome and site.published_chrome.home_page_id == page_id:
+                self._snapshot_chrome(
+                    site,
+                    at=site.published_chrome.published_at,
+                    by=site.published_chrome.published_by,
+                    exclude_home_page_id=page_id,
+                )
             site.history = [*site.history, transaction]
             self._write(site)
             return site

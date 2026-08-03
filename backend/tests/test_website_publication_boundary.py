@@ -10,6 +10,8 @@ all reached the public instantly, several of them at a model's request.
 
 from __future__ import annotations
 
+import json
+
 import pytest
 
 from app.llm import FakeLLM
@@ -131,6 +133,26 @@ class TestWhatTheModelCannotReach:
         assert r.json()["applied"] is False
         assert len(_public(site)["pages"]) == 1
 
+    def test_the_ai_cannot_reveal_a_page_before_human_publication(self, site, monkeypatch):
+        _publish_home(site)
+        site.run([{
+            "command": "set_publish_window",
+            "page_id": site.home_id,
+            "starts": "2099-01-01",
+            "ends": "",
+        }])
+        assert site.post(f"/pages/{site.home_id}/publish", {}).status_code == 200
+        assert _public(site)["pages"] == []
+
+        self._fake(monkeypatch, {
+            "summary": "Visar sidan nu",
+            "operations": [{"command": "set_publish_window", "page_id": site.home_id,
+                            "starts": "", "ends": ""}],
+        })
+        r = site.post("/ai", {"instruction": "Visa startsidan nu"})
+        assert r.json()["applied"] is False
+        assert _public(site)["pages"] == []
+
     def test_the_ai_cannot_delete_a_published_page(self, site, monkeypatch):
         _publish_home(site)
         page_id = _second_page(site)
@@ -157,8 +179,116 @@ class TestWhatTheModelCannotReach:
         # …and not for the public until somebody publishes.
         assert [n["page_id"] for n in _public(site)["navigation"]] == [site.home_id, page_id]
 
+    def test_a_draft_home_change_does_not_replace_the_public_home(self, site):
+        _publish_home(site)
+        result = site.run([{
+            "command": "create_page",
+            "title": "För boende",
+            "slug": "for-boende",
+            "home": True,
+        }])
+        assert result.status_code == 200, result.text
+        new_home_id = next(
+            p["id"] for p in result.json()["workspace"]["pages"] if p["slug"] == "for-boende"
+        )
+
+        public = _public(site)
+        assert [p["page_id"] for p in public["pages"]] == [site.home_id]
+        assert public["pages"][0]["home"] is True
+
+        # Publishing the new page is the human act that changes the public home.
+        assert site.post(f"/pages/{new_home_id}/publish", {}).status_code == 200
+        public = _public(site)
+        assert {p["page_id"] for p in public["pages"]} == {site.home_id, new_home_id}
+        assert sum(p["home"] for p in public["pages"]) == 1
+        assert next(p for p in public["pages"] if p["home"])["page_id"] == new_home_id
+
+    def test_publishing_without_a_published_replacement_keeps_one_public_home(self, site):
+        _publish_home(site)
+        site.run([{
+            "command": "create_page",
+            "title": "Kommande startsida",
+            "slug": "kommande-start",
+            "home": True,
+        }])
+        site.run([{
+            "command": "update_text",
+            "page_id": site.home_id,
+            "block_id": site.get(f"/pages/{site.home_id}").json()["draft"]["content"][0]["id"],
+            "field": "heading",
+            "value": "Publicerad rubrik 2",
+        }])
+        assert site.post(f"/pages/{site.home_id}/publish", {}).status_code == 200
+        public = _public(site)
+        assert len(public["pages"]) == 1
+        assert public["pages"][0]["home"] is True
+        assert public["pages"][0]["page_id"] == site.home_id
+
+    def test_the_ai_cannot_silently_replace_the_public_home(self, site, monkeypatch):
+        _publish_home(site)
+        self._fake(monkeypatch, {
+            "summary": "Ny startsida",
+            "operations": [{
+                "command": "create_page",
+                "title": "AI-start",
+                "slug": "ai-start",
+                "home": True,
+            }],
+        })
+        result = site.post("/ai", {"instruction": "Skapa en ny startsida"})
+        assert result.json()["applied"] is True
+        public = _public(site)
+        assert [p["page_id"] for p in public["pages"]] == [site.home_id]
+        assert public["pages"][0]["home"] is True
+
+    def test_publish_and_rollback_use_the_revision_window(self, site):
+        first = _publish_home(site)
+        site.run([{
+            "command": "set_publish_window",
+            "page_id": site.home_id,
+            "starts": "2099-01-01",
+            "ends": "",
+        }])
+        second_response = site.post(f"/pages/{site.home_id}/publish", {})
+        assert second_response.status_code == 200, second_response.text
+        assert _public(site)["pages"] == []
+
+        # Rollback restores both the content and the public scheduling state;
+        # the draft window remains the newer draft value.
+        assert site.post(
+            f"/pages/{site.home_id}/rollback", {"revision_id": first}
+        ).status_code == 200
+        public = _public(site)
+        assert len(public["pages"]) == 1
+        assert public["pages"][0]["home"] is True
+
 
 class TestPublishingIsOneLockedStep:
+    def test_v1_public_state_is_snapshotted_during_upgrade(self, site):
+        _publish_home(site)
+        website_dir = site.env.registry.get("brf-a").website.dir
+        meta_path = website_dir / "meta.json"
+        site_path = website_dir / "site.json"
+        site_raw = json.loads(site_path.read_text(encoding="utf-8"))
+        revision_id = site_raw["pages"][0]["publication"]["revision_id"]
+        site_raw["published_chrome"].pop("home_page_id", None)
+        site_path.write_text(json.dumps(site_raw), encoding="utf-8")
+        revision_path = website_dir / "revisions" / f"{revision_id}.json"
+        revision_raw = json.loads(revision_path.read_text(encoding="utf-8"))
+        revision_raw.pop("publish_window", None)
+        revision_raw.pop("home", None)
+        revision_path.write_text(json.dumps(revision_raw), encoding="utf-8")
+        meta_path.write_text(json.dumps({"schemaVersion": 1}), encoding="utf-8")
+
+        from app.website.store import WebsiteStore
+
+        migrated = WebsiteStore(website_dir, "brf-a")
+        revision = migrated.revision(revision_id)
+        assert revision.home is True
+        assert revision.publish_window.starts == ""
+        assert migrated.site().published_chrome.home_page_id == site.home_id
+        assert json.loads(meta_path.read_text(encoding="utf-8"))["schemaVersion"] == 2
+
     def test_publishing_cuts_the_draft_as_it_is_on_disk(self, site):
         """The revision is built inside the lock, not from a copy read before it.
 
@@ -293,6 +423,63 @@ class TestFabricatedProseCannotBePublished:
         after = site.get(f"/pages/{site.home_id}").json()["draft"]["content"][0]
         assert after["grounding"] == "authored"
         assert site.post(f"/pages/{site.home_id}/publish", {}).status_code == 200
+
+    def test_editing_only_a_heading_does_not_adopt_unverified_body(self, site, monkeypatch):
+        block = self._write_prose(site, monkeypatch)
+        result = site.run([{
+            "command": "update_text",
+            "page_id": site.home_id,
+            "block_id": block["id"],
+            "field": "heading",
+            "value": "Grillregler",
+        }])
+        assert result.status_code == 200, result.text
+        assert site.get(f"/pages/{site.home_id}").json()["draft"]["content"][0]["grounding"] == "unverified"
+        assert site.post(f"/pages/{site.home_id}/publish", {}).status_code == 409
+
+    def test_moving_or_styling_a_block_does_not_adopt_unverified_body(self, site, monkeypatch):
+        block = self._write_prose(site, monkeypatch)
+        site.run([{
+            "command": "insert_block",
+            "page_id": site.home_id,
+            "type": "Hero",
+            "props": {"heading": "Välkommen"},
+        }]).json()["workspace"]["pages"][0]
+        moved = site.run([{
+            "command": "move_block",
+            "page_id": site.home_id,
+            "block_id": block["id"],
+            "index": 1,
+        }])
+        assert moved.status_code == 200, moved.text
+        styled = site.run([{
+            "command": "update_block",
+            "page_id": site.home_id,
+            "block_id": block["id"],
+            "props": {"width": "narrow"},
+        }])
+        assert styled.status_code == 200, styled.text
+        after = site.get(f"/pages/{site.home_id}").json()["draft"]["content"]
+        assert next(b for b in after if b["id"] == block["id"])["grounding"] == "unverified"
+        assert site.post(f"/pages/{site.home_id}/publish", {}).status_code == 409
+
+    def test_undoing_prose_adoption_restores_the_review_gate(self, site, monkeypatch):
+        block = self._write_prose(site, monkeypatch)
+        result = site.run([{
+            "command": "update_text",
+            "page_id": site.home_id,
+            "block_id": block["id"],
+            "field": "body",
+            "value": "<p>En ny formulering.</p>",
+        }])
+        assert result.status_code == 200, result.text
+        tx = result.json()["transaction"]["id"]
+        assert site.get(f"/pages/{site.home_id}").json()["draft"]["content"][0]["grounding"] == "authored"
+
+        assert site.post(f"/transactions/{tx}/undo").status_code == 200
+        restored = site.get(f"/pages/{site.home_id}").json()["draft"]["content"][0]
+        assert restored["props"]["body"] == block["props"]["body"]
+        assert restored["grounding"] == "unverified"
 
     def test_the_ai_cannot_confirm_its_own_text(self, site, monkeypatch):
         block = self._write_prose(site, monkeypatch)

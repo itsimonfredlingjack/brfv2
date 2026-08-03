@@ -39,7 +39,7 @@ from ..schemas import CitationOut
 # Bumped when the stored shape changes in a way an older installation would
 # misread. Owned here, in the product — never inferred from the editor library's
 # own versioning, which moves for reasons that have nothing to do with this data.
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 
 # Who made a change. Not a formality: the AI partner's work is applied straight
 # into the draft so the board sees it immediately, which is only defensible if
@@ -141,6 +141,24 @@ class PageDraft(BaseModel):
         )
 
 
+class PublishWindow(BaseModel):
+    """When a published page is actually shown.
+
+    The draft keeps its own copy on :class:`SitePage`; this second copy belongs
+    to the immutable publication and is the only one the public endpoint reads.
+    """
+
+    starts: str = ""  # ÅÅÅÅ-MM-DD, inclusive
+    ends: str = ""    # ÅÅÅÅ-MM-DD, inclusive
+
+    def visible_on(self, day: str) -> bool:
+        if self.starts and day < self.starts:
+            return False
+        if self.ends and day > self.ends:
+            return False
+        return True
+
+
 class PageRevision(BaseModel):
     """A published state of a page, written once and never again.
 
@@ -160,6 +178,11 @@ class PageRevision(BaseModel):
     title: str
     slug: str = ""
     content: list[Block] = Field(default_factory=list)
+    # These are page-level public state, not editor metadata. Keeping them in
+    # the revision prevents a draft scheduling or home-page change from
+    # changing what a visitor sees before the next human publication.
+    publish_window: PublishWindow = Field(default_factory=PublishWindow)
+    home: bool = False
     created_at: str
     created_by: str
     note: str = ""
@@ -191,26 +214,6 @@ class Publication(BaseModel):
     # instead of a freshly cut one.
     rollback: bool = False
     note: str = ""
-
-
-class PublishWindow(BaseModel):
-    """When a published page is actually shown.
-
-    Both empty is the ordinary case: published means visible. A window exists
-    for the pages a board writes ahead of time — a stämma page that should not
-    appear until the notice goes out, an entrance-renovation page that should
-    stop being the first thing anyone sees once the work is done.
-    """
-
-    starts: str = ""  # ÅÅÅÅ-MM-DD, inclusive
-    ends: str = ""    # ÅÅÅÅ-MM-DD, inclusive
-
-    def visible_on(self, day: str) -> bool:
-        if self.starts and day < self.starts:
-            return False
-        if self.ends and day > self.ends:
-            return False
-        return True
 
 
 class SitePage(BaseModel):
@@ -249,6 +252,8 @@ class SitePage(BaseModel):
         if revision is None:
             return True
         if revision.slug and revision.slug != self.slug:
+            return True
+        if revision.publish_window != self.publish_window or revision.home != self.home:
             return True
         return self.draft.dirty_against(revision)
 
@@ -315,6 +320,9 @@ class SiteChrome(BaseModel):
 
     navigation: list[NavigationItem] = Field(default_factory=list)
     settings: SiteSettings = Field(default_factory=SiteSettings)
+    # A page's `home` flag is draft state. This id is the one home selection
+    # that was made public by the last human publication action.
+    home_page_id: str = ""
     published_at: str = ""
     published_by: str = ""
 
@@ -412,7 +420,12 @@ class Site(BaseModel):
     def transaction(self, transaction_id: str) -> SiteTransaction | None:
         return next((t for t in self.history if t.id == transaction_id), None)
 
-    def navigation_public(self, items: list[NavigationItem] | None = None) -> list[dict]:
+    def navigation_public(
+        self,
+        items: list[NavigationItem] | None = None,
+        *,
+        revisions: dict[str, PageRevision] | None = None,
+    ) -> list[dict]:
         """The menu with page titles resolved, dropping entries whose page is gone.
 
         Dropping rather than erroring is deliberate: a menu is a view of the
@@ -420,20 +433,24 @@ class Site(BaseModel):
         refuse to show the site.
 
         ``items`` lets the public view pass the *published* menu instead of the
-        draft's; the title still resolves against the pages that exist, because
-        a menu word for a page nobody can reach helps no one.
+        draft's. When ``revisions`` is supplied, titles and addresses resolve
+        against those immutable public revisions too; otherwise this is the
+        editor/workspace view and resolves against the draft.
         """
         rows: list[dict] = []
         for item in (self.navigation if items is None else items):
             page = self.page(item.page_id)
             if page is None:
                 continue
+            revision = revisions.get(page.id) if revisions is not None else None
+            if revisions is not None and revision is None:
+                continue
             rows.append(
                 {
                     "page_id": page.id,
-                    "slug": page.slug,
-                    "label": item.label or page.draft.title,
-                    "published": page.published,
+                    "slug": revision.slug if revision is not None else page.slug,
+                    "label": item.label or (revision.title if revision is not None else page.draft.title),
+                    "published": revision is not None if revisions is not None else page.published,
                 }
             )
         return rows

@@ -367,6 +367,10 @@ class TestPublication:
         assert len(site.get("/published").json()["pages"]) == 1
         site.run([{"command": "set_publish_window", "page_id": site.home_id,
                    "starts": "2099-01-01", "ends": ""}])
+        # Scheduling is draft state too; a human publication action makes the
+        # new window public.
+        assert len(site.get("/published").json()["pages"]) == 1
+        assert site.post(f"/pages/{site.home_id}/publish", {}).status_code == 200
         assert site.get("/published").json()["pages"] == []
 
     def test_unpublishing_keeps_every_revision(self, site):

@@ -625,6 +625,16 @@ def _label(block: Block) -> str:
     return f"{spec.label}" + (f" ”{str(heading)[:40]}”" if heading else "")
 
 
+def _field_carries_prose(component_type: str, field_name: str) -> bool:
+    """Whether changing one field can rewrite text that needs human adoption."""
+    field = field_for(component_type, field_name)
+    if field.kind in ("richtext", "textarea"):
+        return True
+    if field.kind == "list":
+        return any(sub.kind in ("richtext", "textarea") for sub in field.fields.values())
+    return False
+
+
 def apply_command(site: Site, command, ctx: CommandContext) -> Applied:
     """Apply one validated command to the site. Raises :class:`CommandRefused`.
 
@@ -734,33 +744,51 @@ def _update_props(
         # nothing happened is worse than no entry.
         raise CommandRefused("Ingenting ändrades.")
 
+    adopted_review = False
+    if ctx.actor == "human" and block.grounding == "unverified":
+        # A review decision belongs to the prose that needed review. A person
+        # changing a heading, tone, image, link, ordering or other presentation
+        # field has not adopted untouched body text merely by touching the
+        # block. For list-valued fields, the field is claim-bearing when any of
+        # its declared row fields is prose (for example NewsList.items.body).
+        adopted_review = any(_field_carries_prose(block.type, key) for key in before)
+
     block.props = merged
     if ctx.actor == "ai":
         block.grounding = grounding_label(block.type, merged, sources or block.sources)
         if sources:
             block.sources = list(sources)
         block.written_by_transaction = ctx.transaction_id
-    elif block.grounding == "unverified":
-        # A person editing model-written prose *is* adopting it. Requiring a
-        # separate confirmation after they have already rewritten the sentence
-        # would be ceremony, and ceremony is what gets clicked through.
+    elif adopted_review:
+        # Requiring a separate confirmation after a person has actually
+        # rewritten the claim-bearing prose would be ceremony. Presentation
+        # edits deliberately do not enter this branch.
         block.grounding = "authored"
     _touch(page, ctx)
 
     changed_labels = ", ".join(
         field_for(block.type, key).label.lower() for key in sorted(before)
     ) or "innehåll"
+    inverse = [{
+        "command": "update_block",
+        "page_id": page.id,
+        "block_id": block_id,
+        "props": before,
+    }]
+    if adopted_review:
+        # The review state is part of the meaning of this edit. Undo must put
+        # the block back behind the same publication gate, not only restore its
+        # old bytes.
+        inverse.append({
+            "command": "confirm_block",
+            "page_id": page.id,
+            "block_id": block_id,
+            "confirmed": False,
+        })
     return Applied(
         summary=f"Ändrade {changed_labels} i {_label(block)}",
         page_ids=[page.id],
-        inverse=[
-            {
-                "command": "update_block",
-                "page_id": page.id,
-                "block_id": block_id,
-                "props": before,
-            }
-        ],
+        inverse=inverse,
     )
 
 

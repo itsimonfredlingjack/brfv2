@@ -294,10 +294,12 @@ def build_router(
         site = store.website.site()
         day = today().isoformat()
         pages: list[dict] = []
+        published_revisions: dict[str, PageRevision] = {}
         for page in site.pages:
             revision = store.website.published_page(page)
-            if revision is None or not page.publish_window.visible_on(day):
+            if revision is None or not revision.publish_window.visible_on(day):
                 continue
+            published_revisions[page.id] = revision
             pages.append(
                 {
                     "page_id": page.id,
@@ -305,7 +307,9 @@ def build_router(
                     # the editor must not move a published page under the feet of
                     # everyone who has its link.
                     "slug": revision.slug or page.slug,
-                    "home": page.home,
+                    # Home is site-level published state. The draft flag may
+                    # point at a different page until a human publishes it.
+                    "home": False,
                     "title": revision.title,
                     "revision_id": revision.id,
                     "seq": revision.seq,
@@ -319,11 +323,17 @@ def build_router(
         # draft-side change — including one the AI partner made — reach a visitor
         # without anybody publishing anything.
         chrome = site.published_chrome
+        public_home_id = chrome.home_page_id if chrome else ""
+        for page in pages:
+            page["home"] = page["page_id"] == public_home_id
         return {
             "settings": (chrome.settings if chrome else SiteSettings()).model_dump(mode="json"),
             "navigation": [
                 n
-                for n in site.navigation_public(chrome.navigation if chrome else [])
+                for n in site.navigation_public(
+                    chrome.navigation if chrome else [],
+                    revisions=published_revisions,
+                )
                 if n["page_id"] in visible
             ],
             "pages": pages,
@@ -576,6 +586,8 @@ def build_router(
                 seq=seq,
                 title=current.draft.title,
                 slug=current.slug,
+                publish_window=current.publish_window.model_copy(deep=True),
+                home=current.home,
                 # A deep copy so the immutable record cannot be reached through
                 # the draft that keeps being edited after this.
                 content=[
