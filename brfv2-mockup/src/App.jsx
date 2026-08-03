@@ -1,18 +1,14 @@
 import React, { useState } from 'react';
-import { MessageSquare, Folders, Inbox, Receipt, CalendarClock, ClipboardList, Search as SearchIcon, FileText, ArrowRight, Loader2, Sparkles, AlertCircle, Upload, CheckCircle2, AlertTriangle, X, ChevronRight, ChevronDown, CornerDownRight, ArrowLeft, ZoomIn, ZoomOut, ThumbsDown, MessageCircle, Info, Menu, ChevronUp, LogOut, Trash2, Settings } from 'lucide-react';
+import { Folders, Search as SearchIcon, FileText, ArrowRight, Loader2, Sparkles, AlertCircle, Upload, CheckCircle2, AlertTriangle, X, ChevronRight, CornerDownRight, ArrowLeft, ZoomIn, ZoomOut, ThumbsDown, MessageCircle, Info, Trash2 } from 'lucide-react';
 import Login from './components/Login';
 import PdfPane from './components/PdfPane';
 import Setup from './components/Setup';
 import DesktopSettings from './components/DesktopSettings';
-import Integrations from './components/Integrations';
-import Invoices from './components/Invoices';
-import Watches from './components/Watches';
-import Tasks from './components/Tasks';
+import AppNavigation from './components/AppNavigation';
 import { api, desktopApi } from './api';
 import { displayNameForModel, displayNameForProvider } from './modelDisplay';
+import { PRODUCT_WORKSPACES } from './appWorkspaces';
 import './App.css';
-
-const roleLabel = (role) => (role === 'admin' ? 'Admin' : 'Medlem');
 
 // Refusal reasons where the LLM was never invoked (gated on retrieval, not
 // generation) — no model actually produced these responses, so provenance
@@ -79,27 +75,7 @@ const MOCK_SEARCH_RESULTS = {
   ]
 };
 
-// --- CUSTOM HOOKS ---
-function useMediaQuery(query) {
-  const [matches, setMatches] = React.useState(() => {
-    if (typeof window !== 'undefined') {
-      return window.matchMedia(query).matches;
-    }
-    return false;
-  });
-
-  React.useEffect(() => {
-    const mediaQuery = window.matchMedia(query);
-    const handler = (e) => setMatches(e.matches);
-    mediaQuery.addEventListener('change', handler);
-    return () => mediaQuery.removeEventListener('change', handler);
-  }, [query]);
-
-  return matches;
-}
-
 function App() {
-  const isMobile = useMediaQuery('(max-width: 768px)');
   const [documents, setDocuments] = useState([]);
   const [documentsLoading, setDocumentsLoading] = useState(false);
   const [documentsError, setDocumentsError] = useState(null);
@@ -112,20 +88,12 @@ function App() {
   const [user, setUser] = useState(null);
   const [memberships, setMemberships] = useState([]);
   const [activeBrfId, setActiveBrfId] = useState(null);
-  const [showUserMenu, setShowUserMenu] = useState(false);
 
   const activeMembership = memberships.find((m) => m.brf_id === activeBrfId) || null;
   const activeBrfName = activeMembership?.name || '';
   // Backend is the enforcing authority (require_admin on upload/delete) —
   // this only drives whether the frontend offers the controls at all.
   const isAdmin = activeMembership?.role === 'admin';
-  const userInitials = (user?.name || '')
-    .split(' ')
-    .filter(Boolean)
-    .map((w) => w[0].toUpperCase())
-    .slice(0, 2)
-    .join('') || '?';
-
   const handleLoggedIn = (result) => {
     setUser(result.user);
     setMemberships(result.memberships || []);
@@ -138,7 +106,6 @@ function App() {
     setMemberships([]);
     setActiveBrfId(null);
     setAuthState('loggedOut');
-    setShowUserMenu(false);
   };
 
   // Central 401 handling: an expired session drops straight back to login.
@@ -201,6 +168,7 @@ function App() {
   const [currentTab, setCurrentTab] = useState('docs');
   const [selectedDocument, setSelectedDocument] = useState(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const closeMobileMenu = React.useCallback(() => setIsMobileMenuOpen(false), []);
 
   // Upload/delete state — see the [activeBrfId] effect below for how these
   // get invalidated on a tenant switch.
@@ -270,53 +238,6 @@ function App() {
     return () => { cancelledBox.current = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeBrfId]);
-
-  const mobileMenuBtnRef = React.useRef(null);
-  const sidebarRef = React.useRef(null);
-
-  React.useEffect(() => {
-    if (!isMobile && isMobileMenuOpen) {
-      setIsMobileMenuOpen(false);
-    }
-  }, [isMobile, isMobileMenuOpen]);
-
-  React.useEffect(() => {
-    const handleKeyDown = (e) => {
-      if (!isMobile || !isMobileMenuOpen) return;
-      if (e.key === 'Escape') {
-        setIsMobileMenuOpen(false);
-        mobileMenuBtnRef.current?.focus();
-        return;
-      }
-      if (e.key === 'Tab') {
-        const focusableElements = sidebarRef.current?.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-        if (focusableElements && focusableElements.length > 0) {
-          const firstElement = focusableElements[0];
-          const lastElement = focusableElements[focusableElements.length - 1];
-
-          if (e.shiftKey) {
-            if (document.activeElement === firstElement) {
-              lastElement.focus();
-              e.preventDefault();
-            }
-          } else {
-            if (document.activeElement === lastElement) {
-              firstElement.focus();
-              e.preventDefault();
-            }
-          }
-        }
-      }
-    };
-    if (isMobile && isMobileMenuOpen) {
-      document.addEventListener('keydown', handleKeyDown);
-      setTimeout(() => {
-        const firstFocusable = sidebarRef.current?.querySelector('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])');
-        if (firstFocusable) firstFocusable.focus();
-      }, 50);
-    }
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isMobile, isMobileMenuOpen]);
 
   const [toastMessage, setToastMessage] = useState(null);
   const showToast = (message, type = 'info') => {
@@ -790,135 +711,26 @@ function App() {
         Verifierad pilotslinga: förening, dokument, uppladdning, AI-svar, källor och PDF-markering använder den riktiga backenden. Sök, dokumentchatt, kvalitetskontroll och inställningar ingår inte i piloten.
       </div>
 
-      {/* MOBILE TOP NAVIGATION */}
-      {!selectedDocument && (
-        <header className="mobile-top-nav">
-          <div className="logo">BRF <span>Dokument-AI</span></div>
-          <button ref={mobileMenuBtnRef} className="icon-action-btn mobile-menu-btn" onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} aria-label="Meny" aria-expanded={isMobileMenuOpen}>
-            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
-        </header>
-      )}
-
-      <div className="main-layout">
-
-        {isMobile && isMobileMenuOpen && (
-          <div className="sidebar-backdrop" onClick={() => setIsMobileMenuOpen(false)} aria-hidden="true" />
-        )}
-
-        {/* SIDEBAR - Responsive */}
-        {!selectedDocument && (
-          <nav
-            ref={sidebarRef}
-            className={`sidebar ${isMobileMenuOpen ? 'open' : ''}`}
-            aria-hidden={isMobile && !isMobileMenuOpen ? "true" : undefined}
-            inert={isMobile && !isMobileMenuOpen ? true : undefined}
-          >
-            <div className="sidebar-brand desktop-only">
-              <div className="logo">BRF <span>Dokument-AI</span></div>
-            </div>
-
-            <div className="sidebar-menu">
-              <button className={`nav-item ${currentTab === 'docs' ? 'active' : ''}`} onClick={() => { setCurrentTab('docs'); setDocsSearchQuery(''); setIsMobileMenuOpen(false); }}>
-                <Folders size={20} /> Dokument
-              </button>
-              <button className={`nav-item ${currentTab === 'chat' ? 'active' : ''}`} onClick={() => { setCurrentTab('chat'); setIsMobileMenuOpen(false); }}>
-                <MessageSquare size={20} /> AI-chatt
-              </button>
-              {/* Desktop only. /api/desktop/state 404s on the web, so
-                  desktopState stays null there and this entry never renders —
-                  the running backend decides, not a build flag. */}
-              {desktopState && (
-                <button className={`nav-item ${currentTab === 'integrations' ? 'active' : ''}`} onClick={() => { setCurrentTab('integrations'); setIsMobileMenuOpen(false); }}>
-                  <Inbox size={20} /> Inkommande
-                </button>
-              )}
-              {/* Fakturor is its own product area, not a pane inside
-                  Inkommande: an invoice is worked for weeks after the post it
-                  arrived with has been dealt with. */}
-              {desktopState && (
-                <button className={`nav-item ${currentTab === 'invoices' ? 'active' : ''}`} onClick={() => { setCurrentTab('invoices'); setIsMobileMenuOpen(false); }}>
-                  <Receipt size={20} /> Fakturor
-                </button>
-              )}
-              {desktopState && (
-                <button className={`nav-item ${currentTab === 'watches' ? 'active' : ''}`} onClick={() => { setCurrentTab('watches'); setIsMobileMenuOpen(false); }}>
-                  <CalendarClock size={20} /> Bevakningar
-                </button>
-              )}
-              {desktopState && (
-                <button className={`nav-item ${currentTab === 'tasks' ? 'active' : ''}`} onClick={() => { setCurrentTab('tasks'); setIsMobileMenuOpen(false); }}>
-                  <ClipboardList size={20} /> Uppgifter
-                </button>
-              )}
-
-            </div>
-
-            <div className="sidebar-footer">
-              {activeMembership && (
-                <div className={`active-brf-panel ${memberships.length > 1 ? 'switchable' : 'static'}`}>
-                  <div className="active-brf-eyebrow">Aktiv förening</div>
-                  <div className="active-brf-row">
-                    {memberships.length > 1 ? (
-                      <div className="active-brf-select-wrap">
-                        <select
-                          id="tenant-select"
-                          className="active-brf-select"
-                          value={String(activeBrfId ?? '')}
-                          onChange={(e) => switchTenant(e.target.value)}
-                          aria-label="Byt aktiv förening"
-                          title="Byt aktiv förening"
-                        >
-                          {memberships.map((m) => (
-                            <option key={m.brf_id} value={String(m.brf_id)}>{m.name}</option>
-                          ))}
-                        </select>
-                        <ChevronDown size={14} className="active-brf-select-chevron" aria-hidden="true" />
-                      </div>
-                    ) : (
-                      <span className="active-brf-name-static" title={activeBrfName}>{activeBrfName}</span>
-                    )}
-                    <span className={`active-brf-role-badge ${activeMembership.role}`}>
-                      {roleLabel(activeMembership.role)}
-                    </span>
-                  </div>
-                </div>
-              )}
-
-              {showUserMenu && (
-                <div className="user-menu-popover glass-panel">
-                  {desktopState && (
-                    <div
-                      className="user-menu-item"
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => { setShowDesktopSettings(true); setShowUserMenu(false); }}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' || e.key === ' ') {
-                          e.preventDefault();
-                          setShowDesktopSettings(true);
-                          setShowUserMenu(false);
-                        }
-                      }}
-                    >
-                      <Settings size={16} /> Appinställningar
-                    </div>
-                  )}
-                  <div className="user-menu-item text-danger" onClick={handleLogout}><LogOut size={16} /> Logga ut</div>
-                </div>
-              )}
-
-              <div className="user-profile" onClick={() => setShowUserMenu(!showUserMenu)}>
-                <div className="user-avatar">{userInitials}</div>
-                <div className="user-info">
-                  <span className="user-name">{user?.name || user?.email}</span>
-                  <span className="user-email">{user?.email}</span>
-                </div>
-                <ChevronUp size={16} color="var(--text-secondary)" style={{ marginLeft: 'auto', transform: showUserMenu ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
-              </div>
-            </div>
-          </nav>
-        )}
+      <AppNavigation
+        navigationVisible={!selectedDocument}
+        mobileMenuOpen={isMobileMenuOpen}
+        onToggleMobileMenu={() => setIsMobileMenuOpen((open) => !open)}
+        onCloseMobileMenu={closeMobileMenu}
+        currentTab={currentTab}
+        onNavigate={(tab) => {
+          setCurrentTab(tab);
+          if (tab === 'docs') setDocsSearchQuery('');
+        }}
+        desktopState={desktopState}
+        activeMembership={activeMembership}
+        activeBrfId={activeBrfId}
+        activeBrfName={activeBrfName}
+        memberships={memberships}
+        onSwitchTenant={switchTenant}
+        user={user}
+        onOpenDesktopSettings={() => setShowDesktopSettings(true)}
+        onLogout={handleLogout}
+      >
 
         {/* WORKSPACE MODE - Visible when a document is selected */}
         {selectedDocument && (
@@ -1585,50 +1397,19 @@ function App() {
               </div>
             )}
 
-            {currentTab === 'integrations' && desktopState && activeBrfId && (
-              <div className="tab-content">
-                <Integrations
-                  brfId={activeBrfId}
-                  isAdmin={isAdmin}
-                  onOpenDocument={openDocument}
-                  // A decision in the queue can put a document in the archive:
-                  // that is what "ta in" means. Without this the association's
-                  // own document list kept saying the message was not there.
-                  onDocumentsChanged={() => activeBrfId && fetchAndSetDocuments(activeBrfId)}
-                />
-              </div>
-            )}
-
-            {currentTab === 'invoices' && desktopState && activeBrfId && (
-              <div className="tab-content">
-                <Invoices
-                  brfId={activeBrfId}
-                  isAdmin={isAdmin}
-                  onOpenDocument={openDocument}
-                  onOpenCitation={openDocumentFromCitation}
-                />
-              </div>
-            )}
-
-            {currentTab === 'watches' && desktopState && activeBrfId && (
-              <div className="tab-content">
-                <Watches
-                  brfId={activeBrfId}
-                  isAdmin={isAdmin}
-                  onOpenCitation={openDocumentFromCitation}
-                />
-              </div>
-            )}
-
-            {currentTab === 'tasks' && desktopState && activeBrfId && (
-              <div className="tab-content">
-                <Tasks
-                  brfId={activeBrfId}
-                  isAdmin={isAdmin}
-                  onOpenCitation={openDocumentFromCitation}
-                />
-              </div>
-            )}
+            {PRODUCT_WORKSPACES.map((workspace) => (
+              workspace.id === currentTab && desktopState && activeBrfId ? (
+                <div key={workspace.id} className="tab-content">
+                  {workspace.render({
+                    brfId: activeBrfId,
+                    isAdmin,
+                    onOpenDocument: openDocument,
+                    onOpenCitation: openDocumentFromCitation,
+                    onDocumentsChanged: () => activeBrfId && fetchAndSetDocuments(activeBrfId),
+                  })}
+                </div>
+              ) : null
+            ))}
 
             {currentTab === 'settings' && (
               <div className="settings-placeholder" style={{ padding: '24px', background: 'var(--panel-bg)', borderRadius: '12px', border: '1px solid var(--panel-border)', marginTop: '24px' }}>
@@ -1638,7 +1419,7 @@ function App() {
             )}
           </main>
         )}
-      </div>
+      </AppNavigation>
     </div>
   );
 }
