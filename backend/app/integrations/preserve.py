@@ -215,6 +215,16 @@ def preserve_message(
     ingesting a second copy, because two copies of one email would compete in
     retrieval for the same citation — the same defect deduplication exists to
     prevent for attachments.
+
+    That idempotency is only worth something if the check and the write cannot
+    be separated, so the tenant's integration lock is held across all of it: the
+    "have we already?" question, rendering the PDF, ingesting it, and recording
+    which document it became. Outside a lock, two requests both answered "no" —
+    and the association got the same email in its archive twice, competing for
+    the citation the second one would win half the time.
+
+    ``integrations.lock`` before ``Store.lock``, as everywhere: ``add_document``
+    is called from inside it.
     """
     reason = (note or "").strip()
     if not reason:
@@ -222,37 +232,41 @@ def preserve_message(
             "Ange varför meddelandet ska bevaras. Ett dokument som blir en del av "
             "föreningens underlag utan att någon säger varför är inte ett arkiv."
         )
-    event = integrations.get_source_event(event_id)
-    if event is None:
-        raise PreservationError("Okänd källhändelse.")
-    if event.preserved_document_id and event.preserved_document_id in store.documents:
-        return event
-    if not (event.body_text or "").strip():
-        raise PreservationError(
-            "Meddelandet har ingen text att bevara. Lägg bilagan i arkivet i stället."
-        )
-
-    meta = store.add_document(document_name(event), render_pdf(event))
-    try:
-        return integrations.update_source_event(
-            event.model_copy(
-                update={
-                    "preserved_document_id": meta.id,
-                    "preserved_by": user_id,
-                    "preserved_at": utc_now_iso(),
-                    "preservation_note": reason,
-                }
+    with integrations.lock:
+        event = integrations.get_source_event(event_id)
+        if event is None:
+            raise PreservationError("Okänd källhändelse.")
+        if event.preserved_document_id and event.preserved_document_id in store.documents:
+            return event
+        if not (event.body_text or "").strip():
+            raise PreservationError(
+                "Meddelandet har ingen text att bevara. Lägg bilagan i arkivet i stället."
             )
-        )
-    except Exception:
-        # Same discipline as the import path: the document is rolled back
-        # through the product's own delete route, so a failed preservation
-        # leaves no orphan in the archive.
+
+        meta = store.add_document(document_name(event), render_pdf(event))
         try:
-            store.delete_document(meta.id)
-        except Exception:  # pragma: no cover - best effort, already failing
-            logger.error("Kunde inte rulla tillbaka dokument %s efter misslyckad bevaring", meta.id)
-        raise
+            return integrations.mutate_source_event(
+                event_id,
+                lambda current: current.model_copy(
+                    update={
+                        "preserved_document_id": meta.id,
+                        "preserved_by": user_id,
+                        "preserved_at": utc_now_iso(),
+                        "preservation_note": reason,
+                    }
+                ),
+            )
+        except Exception:
+            # Same discipline as the import path: the document is rolled back
+            # through the product's own delete route, so a failed preservation
+            # leaves no orphan in the archive.
+            try:
+                store.delete_document(meta.id)
+            except Exception:  # pragma: no cover - best effort, already failing
+                logger.error(
+                    "Kunde inte rulla tillbaka dokument %s efter misslyckad bevaring", meta.id
+                )
+            raise
 
 
 def citation_for(store: Store, document_id: str, quote: str) -> CitationOut | None:

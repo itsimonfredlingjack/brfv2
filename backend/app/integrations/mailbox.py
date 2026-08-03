@@ -108,23 +108,38 @@ def fetch_new(
     The checkpoint only advances on success, and only to a message that was
     actually taken in or already known. A fetch that failed halfway leaves the
     checkpoint where it was, so the next one re-reads rather than skipping.
+
+    **Two overlapping fetches.** Nothing stops an operator pressing "hämta nytt"
+    twice; the second request does not wait for the first. The mark is therefore
+    merged rather than replaced when it is written
+    (:meth:`~app.integrations.store.IntegrationStore.put_mailbox_checkpoint`) and
+    only ever moves forward — a slow fetch that started earlier and read less can
+    no longer push it back over a fortnight of settled material.
+
+    Monotonicity on its own would have introduced the opposite bug. The clamp
+    below exists so a message that could not be read is offered again, and that
+    clamp *lowers* the mark; against a mark that can only rise it would have done
+    nothing, and the failure would have become permanent and silent — the worst
+    shape a fetch bug can take. So the two facts are stored separately: the mark
+    says how far we have definitely got, ``retry_from`` says what we still owe,
+    and the fetch window opens at whichever is earlier.
     """
     checkpoint = store.integrations.get_mailbox_checkpoint(provider, folder)
     messages = adapter.list_messages(
         limit=limit,
         only_with_attachments=only_with_attachments,
-        since=checkpoint.high_water_mark,
+        since=checkpoint.fetch_from(),
     )
 
     result = FetchResult(seen=len(messages))
     known = known_external_refs(store)
     high_water = checkpoint.high_water_mark
-    # The timestamp of the oldest message this fetch could not read at all. The
-    # checkpoint is never advanced past it, because a message that failed
-    # transiently — a timeout, a throttle, a byte range the mailbox would not
-    # serve — has to be offered again. Without this clamp a later, newer
-    # message would move the mark beyond it and the failure would become
-    # permanent and silent, which is the worst shape a fetch bug can take.
+    # The timestamp of the oldest message this fetch could not read at all. A
+    # message that failed transiently — a timeout, a throttle, a byte range the
+    # mailbox would not serve — has to be offered again, so it is recorded as a
+    # debt (``retry_from``) rather than by dragging the high-water mark
+    # backwards. Re-reading is free: the content hash and ``external_ref``
+    # already make a second sight of a message a no-op.
     stalled_at = ""
 
     # Oldest first: a thread's first message should enter the queue before its
@@ -198,14 +213,15 @@ def fetch_new(
 
         high_water = max(high_water, message.received_at or "")
 
-    if stalled_at:
-        high_water = min(high_water, stalled_at) if high_water else stalled_at
-
     result.checkpoint = store.integrations.put_mailbox_checkpoint(
         MailboxCheckpoint(
             provider=provider,
             folder=folder,
             high_water_mark=high_water,
+            # Empty when this fetch stalled on nothing, which clears any debt a
+            # previous fetch recorded: the window was re-read and everything in
+            # it was taken in or already known.
+            retry_from=stalled_at,
             last_fetched_at=utc_now_iso(),
             last_fetch_by=user_id,
             last_new_count=len(result.imported),

@@ -68,7 +68,7 @@ Per tenant, i tenantens egen katalog:
 
 ```
 tenants/<brf_id>/integrations/
-    meta.json            {"schemaVersion": 5}
+    meta.json            {"schemaVersion": 6}
     source-events.json
     invoices.json
     findings.json
@@ -89,6 +89,69 @@ behöver komma ihåg det.
 
 `Store.integrations` är lat och stämplar `tenant_id` från butiken, aldrig från
 anroparen — samma disciplin som håller `corpus_origin` ärlig i `add_document()`.
+
+## 2b. Vad som gäller när två personer trycker samtidigt
+
+FastAPI kör synkrona endpoints i en trådpool, så "samtidigt" är det vanliga
+fallet på en desktopinstallation med tre styrelseledamöter inloggade — inte ett
+udda undantag. Fyra egenskaper bär den här delen av produkten, och de är
+formulerade som garantier därför att de är testade som garantier
+(`backend/tests/test_concurrency_integrity.py`):
+
+1. **Exakt en cachad domänbutik per tenant.** `Store.integrations`, `.tasks`,
+   `.watches` och `IntegrationStore.credentials` byggs under förälderns lås med
+   dubbelkontroll. En `if x is None: x = ...` utan lås gav sexton samtidiga
+   förstahandsåtkomster mellan fem och femton olika objekt — vart och ett med
+   *sitt eget* `threading.RLock` över samma JSON-filer. Alla skrivningar tog ett
+   lås; inga två tog samma.
+2. **En mutation låser hela läs–validera–ändra–skriv.** Rutterna skickar in ett
+   *kommando* (`mutate_task`, `mutate_watch`, `mutate_source_event`,
+   `mutate_finding`, `cases.mutate`) i stället för ett färdigbyggt objekt de
+   läste innan de köade för låset. Den gamla formen tappade sju av åtta
+   samtidiga kommentarer på en uppgift.
+3. **Identitet är idempotensnyckeln.** Allt som kan skapas två gånger har ett
+   *härlett* id i stället för ett `uuid4`: köposten ur meddelandets innehållshash,
+   uppgiften och bevakningen ur **hela det normaliserade avgörandet** de kom ur
+   (`resolution_key` plus vilket utfall det är), den återkommande bevakningens
+   efterföljare ur sin föregångare. Det är också den enda av de fyra
+   egenskaperna som håller **över processgränsen**.
+
+   Att härleda är inte gratis: härledningen måste täcka allt granskaren faktiskt
+   valde. Uppgiftens id räknades först fram ur tenant, köpost och rubrik, och då
+   pekade "Utred, ansvarig Bo, senast 1 oktober" tyst på den *befintliga*
+   "Utred, ansvarig Anna, senast 1 september". Styrelsen hade fattat ett beslut
+   som systemet tyst avstått från att utföra. Bevakningen hade samma hål på
+   `kind` + datum. Ett smalt härlett id är alltså inte bara en missad
+   dubblettkontroll — det är en tyst återanvändning av fel rad.
+4. **Mänsklig historik är append-only i stark mening.** `app/history.py`
+   jämför posternas id och kräver att den lagrade historiken fortfarande är ett
+   *prefix* av den som skrivs. Den gamla längdkontrollen släppte igenom två
+   lika långa historiker som skrivit över varandra. Ett *avgörande* går samma
+   väg: en avgjord köpost tar bara emot exakt samma begäran igen (och svarar med
+   vad den redan gjorde). En annan begäran ger **409**, inte en överskrivning —
+   vill man ändra sig öppnar man posten igen, och det arkiverar det tidigare
+   beslutet i stället för att släppa det.
+
+**Vad "ett lås" faktiskt ger, och inte.** Ett avgörande skriver in i fyra
+domäner: dokument, uppgifter, bevakningar och kön. Låset serialiserar
+*avgöranden mot varandra* — det gör dem **inte** till en commit. Filerna skrivs
+efter varandra, var och en atomiskt för sig, och en samtidig `GET /tasks` tar
+uppgiftsbutikens lås, inte integrationslåset: den läsaren *kan* se uppgiften
+innan kortet som skapade den säger att den finns. Garantin som faktiskt är
+implementerad och testad är därför den svagare och sanna: **omtagssäker,
+idempotent konvergens över flera JSON-filer inom en process.** Ett avbrott mitt
+i lämnar inget dolt sidoeffektlöst tillstånd, och omtaget landar på samma rader.
+Det är inte en atomisk commit över filerna, och sägs inte vara det.
+
+**Var gränsen faktiskt går, sagt rakt ut.** Allt ovan gäller inom **en process**
+— det är den arkitektur den här backenden dokumenterar och kör. Låsen är
+trådlås över den processens cachade `Store` per tenant. Två processer som
+skriver samma tenant är fortfarande två skribenter över samma fil, och då är det
+bara punkt 3 som bär: de härledda id:na gör att de konvergerar i stället för att
+dubblera, men två samtidiga kommentarer från var sin process kan fortfarande
+förlora en. Det är inte implementerat, inte verifierat, och påstås därför inte.
+En installation som behöver det behöver en riktig transaktionsgräns, inte fler
+lås.
 
 ## 3. Adaptergränsen
 

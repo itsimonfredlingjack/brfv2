@@ -29,7 +29,9 @@ from .models import (
     WATCH_KIND_LABELS,
     WATCH_STATUS_LABELS,
     Watch,
+    successor_id,
 )
+from .store import WatchNotFound
 from ..terms import parse_iso
 
 logger = logging.getLogger("brf.watches.routes")
@@ -127,25 +129,15 @@ def build_router(
             raise HTTPException(
                 status_code=422, detail=f"Ogiltig status. Tillåtna: {', '.join(DECISIONS)}."
             )
-        watch = store.watches.get_watch(watch_id)
-        if watch is None:
-            raise HTTPException(status_code=404, detail="Okänd bevakning.")
-
-        update: dict = {"status": req.status}
-        if req.due_date is not None:
-            if parse_iso(req.due_date) is None:
-                raise HTTPException(status_code=422, detail="Datum ska vara ÅÅÅÅ-MM-DD.")
-            update["due_date"] = req.due_date
-        if req.responsible is not None:
-            update["responsible"] = req.responsible.strip()
-        if req.remind_lead_days is not None:
-            if not 0 <= req.remind_lead_days <= MAX_REMIND_LEAD_DAYS:
-                raise HTTPException(
-                    status_code=422,
-                    detail=f"Påminnelse ska ligga 0–{MAX_REMIND_LEAD_DAYS} dagar före.",
-                )
-            update["remind_lead_days"] = req.remind_lead_days
-
+        if req.due_date is not None and parse_iso(req.due_date) is None:
+            raise HTTPException(status_code=422, detail="Datum ska vara ÅÅÅÅ-MM-DD.")
+        if req.remind_lead_days is not None and not (
+            0 <= req.remind_lead_days <= MAX_REMIND_LEAD_DAYS
+        ):
+            raise HTTPException(
+                status_code=422,
+                detail=f"Påminnelse ska ligga 0–{MAX_REMIND_LEAD_DAYS} dagar före.",
+            )
         note = (req.note or "").strip()
         if req.status == "dismissed" and not note:
             # Same rule as a corrected finding: dismissing an obligation the
@@ -156,46 +148,64 @@ def build_router(
                 status_code=422,
                 detail="Ange varför bevakningen avfärdas — vad gäller i stället?",
             )
-        if req.status != "proposed":
-            update["decided_by"] = user["id"]
-            update["decided_at"] = _now_iso()
-        else:
-            update["decided_by"] = None
-            update["decided_at"] = None
-        update["decision_note"] = note or None
 
-        updated = store.watches.update_watch(watch.model_copy(update=update))
+        def apply(watch: Watch) -> Watch:
+            update: dict = {"status": req.status}
+            if req.due_date is not None:
+                update["due_date"] = req.due_date
+            if req.responsible is not None:
+                update["responsible"] = req.responsible.strip()
+            if req.remind_lead_days is not None:
+                update["remind_lead_days"] = req.remind_lead_days
+            if req.status != "proposed":
+                update["decided_by"] = user["id"]
+                update["decided_at"] = _now_iso()
+            else:
+                update["decided_by"] = None
+                update["decided_at"] = None
+            update["decision_note"] = note or None
+            return watch.model_copy(update=update)
+
+        def successor_of(decided: Watch) -> Watch | None:
+            """The next turn of a recurring obligation, or nothing.
+
+            Completing a recurring watch creates the next turn rather than
+            editing this one, so the history of what was actually done survives.
+
+            The successor's **id is derived** from the predecessor and the date
+            it falls due, not minted at random. That is what makes this
+            convergent: eight people pressing "avklarad" at the same moment, or
+            one person retrying after a timeout, all compute the same id, and
+            :meth:`~app.watches.store.WatchStore.decide_watch` writes one row.
+            The random id it used to have made those eight identical watches.
+            """
+            if decided.status != "done" or decided.recurrence == "none":
+                return None
+            next_due = decided.next_due_after()
+            if not next_due:
+                return None
+            return decided.model_copy(
+                update={
+                    "id": successor_id(decided, next_due),
+                    "status": "approved",
+                    "due_date": next_due,
+                    "derived_due_date": next_due,
+                    "derivation": f"{decided.due_date} plus ett intervall ({decided.recurrence})",
+                    "title": decided.title.replace(decided.due_date, next_due),
+                    "created_at": _now_iso(),
+                    "decided_by": None,
+                    "decided_at": None,
+                    "decision_note": None,
+                    "succeeded_by": None,
+                }
+            )
+
+        try:
+            updated, successor = store.watches.decide_watch(watch_id, apply, successor_of)
+        except WatchNotFound as exc:
+            raise HTTPException(status_code=404, detail="Okänd bevakning.") from exc
+
         now = today()
-
-        # Completing a recurring obligation creates the next turn rather than
-        # editing this one, so the history of what was actually done survives.
-        successor = None
-        if req.status == "done" and updated.recurrence != "none":
-            next_due = updated.next_due_after()
-            if next_due:
-                import uuid
-
-                successor = store.watches.add_watch(
-                    updated.model_copy(
-                        update={
-                            "id": uuid.uuid4().hex[:12],
-                            "status": "approved",
-                            "due_date": next_due,
-                            "derived_due_date": next_due,
-                            "derivation": f"{updated.due_date} plus ett intervall ({updated.recurrence})",
-                            "title": updated.title.replace(updated.due_date, next_due),
-                            "created_at": _now_iso(),
-                            "decided_by": None,
-                            "decided_at": None,
-                            "decision_note": None,
-                            "succeeded_by": None,
-                        }
-                    )
-                )
-                updated = store.watches.update_watch(
-                    updated.model_copy(update={"succeeded_by": successor.id})
-                )
-
         return {
             "watch": updated.public(now),
             "successor": successor.public(now) if successor else None,

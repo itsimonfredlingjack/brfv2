@@ -221,6 +221,26 @@ class UnresolvedObligation(BaseModel):
     created_at: str
 
 
+def successor_id(predecessor: Watch, next_due: str) -> str:
+    """The id of the next turn of a recurring obligation, derived not minted.
+
+    Same argument as :func:`app.invoices.cases.case_id_for`: identity *is* the
+    idempotency key. Two requests that both decide this obligation is complete
+    compute the same successor id and converge on one row; with the ``uuid4``
+    this replaced, eight concurrent completions put eight identical watches on
+    next year's board.
+
+    The tenant is in the digest for the same reason it is there: two
+    associations' stores are already separate, but an id that could collide
+    across them would be a trap for any future code that looked one up without
+    its tenant.
+    """
+    import hashlib
+
+    basis = f"{predecessor.tenant_id}\x00{predecessor.id}\x00{next_due}"
+    return hashlib.sha256(basis.encode("utf-8")).hexdigest()[:12]
+
+
 __all__ = [
     "BUCKET_LABELS",
     "Bucket",
@@ -234,4 +254,5 @@ __all__ = [
     "Watch",
     "WatchKind",
     "WatchStatus",
+    "successor_id",
 ]

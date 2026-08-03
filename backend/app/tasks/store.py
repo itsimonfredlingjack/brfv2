@@ -18,10 +18,11 @@ import os
 import threading
 import uuid
 from pathlib import Path
-from typing import Iterable
+from typing import Callable, Iterable
 
 from pydantic import ValidationError
 
+from ..history import AppendOnlyViolation, check_append_only
 from .models import Task
 
 logger = logging.getLogger("brf.tasks")
@@ -34,6 +35,16 @@ TASKS_FILE = "tasks.json"
 
 class TaskStoreError(RuntimeError):
     """Refusing to operate on this tenant's task data."""
+
+
+class TaskNotFound(TaskStoreError):
+    """No task with that id in this tenant's directory.
+
+    Its own type so a route can answer 404 for "there is no such task" without
+    also answering 404 for "that write would have destroyed history" — two
+    different failures that were previously one exception and would have been
+    reported to the operator as the same thing.
+    """
 
 
 def _atomic_write_json(path: Path, payload) -> None:
@@ -153,29 +164,78 @@ class TaskStore:
             self._write(rows)
         return record
 
+    def ensure_task(self, task: Task) -> tuple[Task, bool]:
+        """Add this task unless its id is already here. Returns ``(task, created)``.
+
+        The difference from :meth:`add_task` is who the duplicate is. ``add_task``
+        refuses one, because two callers minting the same random id means
+        something is badly wrong. Here the id is **derived** from the decision
+        the task came out of (see
+        :func:`app.integrations.resolve.derived_output_id`), so a
+        second arrival under the same id is the same intent arriving twice — an
+        operator pressing "spara" again after a timeout, or a retry after a
+        fault killed the request halfway through. Returning what already exists
+        is the correct answer to that, and it is what keeps a retry from leaving
+        the association with two identical tasks nobody can tell apart.
+        """
+        with self.lock:
+            rows = self._read()
+            existing = next((r for r in rows if r.id == task.id), None)
+            if existing is not None:
+                return existing, False
+            record = task.model_copy(update={"tenant_id": self.tenant_id})
+            rows.append(record)
+            self._write(rows)
+        return record, True
+
+    def mutate_task(self, task_id: str, apply: Callable[[Task], Task]) -> Task:
+        """Change one task, safely against every other request.
+
+        The lock is held across the whole read-modify-write and the version
+        handed to ``apply`` is read from disk *inside* it, so a caller that read
+        the task a second ago cannot write back a version that has since been
+        commented on. That is the whole repair: eight concurrent comments used
+        to leave two, because each request built a complete replacement object
+        from a task it had read before taking the lock, and the last writer won.
+
+        Same shape as :func:`app.invoices.cases.mutate`, deliberately — the two
+        domains have the same problem and should not have two different answers
+        to it.
+        """
+        with self.lock:
+            rows = self._read()
+            for i, existing in enumerate(rows):
+                if existing.id != task_id:
+                    continue
+                record = apply(existing).model_copy(update={"tenant_id": self.tenant_id})
+                if record.id != existing.id:
+                    raise TaskStoreError(
+                        f"En ändring av {task_id} får inte byta id till {record.id}."
+                    )
+                try:
+                    check_append_only(existing.activity, record.activity, what="Uppgiften")
+                except AppendOnlyViolation as exc:
+                    raise TaskStoreError(str(exc)) from exc
+                rows[i] = record
+                self._write(rows)
+                return record
+        raise TaskNotFound(f"Okänd uppgift: {task_id}")
+
     def update_task(self, task: Task) -> Task:
         """Replace a task with a new version of itself.
+
+        Kept for callers that genuinely hold the current version — and narrower
+        than it looks: :func:`app.history.check_append_only` requires the stored
+        activity to still be a *prefix* of what is being written, so a stale
+        complete object is refused rather than silently overwriting a comment
+        somebody else added in the meantime. New code should use
+        :meth:`mutate_task`, which cannot be stale in the first place.
 
         The caller is responsible for having appended the activity events that
         explain the change — the store does not infer them, because a store
         that guessed what happened would produce a history nobody wrote.
         """
-        with self.lock:
-            rows = self._read()
-            record = task.model_copy(update={"tenant_id": self.tenant_id})
-            for i, existing in enumerate(rows):
-                if existing.id == record.id:
-                    if len(record.activity) < len(existing.activity):
-                        raise TaskStoreError(
-                            f"Uppgiften {record.id} skulle skrivas med kortare historik "
-                            "än den redan har. Historiken är append-only."
-                        )
-                    rows[i] = record
-                    break
-            else:
-                raise TaskStoreError(f"Okänd uppgift: {record.id}")
-            self._write(rows)
-        return record
+        return self.mutate_task(task.id, lambda _existing: task)
 
 
-__all__ = ["SCHEMA_VERSION", "TaskStore", "TaskStoreError"]
+__all__ = ["SCHEMA_VERSION", "TaskNotFound", "TaskStore", "TaskStoreError"]

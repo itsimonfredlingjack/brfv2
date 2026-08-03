@@ -31,12 +31,58 @@ the sentence behind the work opens at the right line months later. When it is
 not preserved, they carry no citations at all rather than a reference to
 something unopenable. That asymmetry is deliberate and is what makes the
 citation mean something.
+
+**One button, four domains, and what happens when it fails halfway.** This is
+the only place in the product where a single human act writes into documents,
+tasks, watches *and* the queue. There is no transaction across four JSON files
+and this deliberately does not invent one. What it has instead is three
+properties that together make a partial failure safe to retry:
+
+1. **One writer at a time.** The tenant's integration lock is held across the
+   whole resolution, so no *second resolution* can interleave with this one.
+   (Ordering, as everywhere: ``integrations.lock`` before ``Store.lock``,
+   ``tasks.lock`` and ``watches.lock``.)
+
+   It does **not** make the five writes one commit. The four files are written
+   one after another, each atomically on its own, and a reader looking at a
+   different domain — ``GET /tasks`` while this is running — takes that
+   domain's lock and not this one. Such a reader can therefore see the task
+   before the card that produced it says so. What the lock rules out is a
+   *concurrent writer* observing or extending the half-done state, which is a
+   different and smaller claim than atomicity. The honest description of the
+   guarantee is the one below: retry-safe, idempotent convergence — not an
+   atomic cross-file commit.
+2. **Derived identity for everything created.** The task's id and the watch's
+   id are functions of *which decision they came out of*
+   (:func:`derived_output_id`; preservation is idempotent on the event). So the
+   act is idempotent by construction: repeating it converges on the same rows
+   instead of a second set.
+3. **An idempotency key on the record.** :func:`resolution_key` digests the
+   request, and a replay of the identical request against an event that already
+   carries that key returns what it produced rather than doing it again. A
+   *different* request against a settled item is refused
+   (:class:`ResolutionConflict`) rather than allowed to overwrite the decision
+   that is there — changing a settlement is what :func:`reopen_source_event`
+   is for, and it files the old one instead of dropping it.
+
+Together those answer the failure that used to be real: a fault after the task
+was created but before the event was updated left the task committed and the
+message unresolved, and the operator's retry — the only thing they could
+reasonably do — made a second identical task. Now the retry recomputes the same
+task id, gets the task that already exists, finishes the write, and the
+association ends with one task and one settled card.
+
+What is *not* claimed: this holds within one process. Two processes writing the
+same tenant would still be two writers over one file, and the derived ids are
+what would keep that from duplicating rather than the lock. See
+:mod:`app.integrations.store`.
 """
 
 from __future__ import annotations
 
+import hashlib
+import json
 import logging
-import uuid
 from datetime import date
 
 from ..schemas import CitationOut
@@ -48,11 +94,13 @@ from .intake import AdoptionError, adopt_attachment
 from .models import (
     EXCLUSIVE_RESOLUTIONS,
     RESOLUTION_LABELS,
+    DecisionRecord,
     Resolution,
     ResolutionOutcome,
     SourceEvent,
     utc_now_iso,
 )
+from .store import SourceEventNotFound
 from .preserve import PreservationError, citation_for, preserve_message
 
 logger = logging.getLogger("brf.integrations.resolve")
@@ -65,6 +113,104 @@ MAX_CARRIED_CITATIONS = 3
 
 class ResolutionError(ValueError):
     """The resolution cannot be recorded as asked, and the message says why."""
+
+
+class ResolutionConflict(ResolutionError):
+    """This item is already settled, and this is a *different* settlement.
+
+    Its own type so the route can answer **409** rather than 422: nothing about
+    the request is malformed, and rephrasing it will not help. The item simply
+    already carries a decision, and replacing it silently is the thing this
+    refuses to do. Reopen first — that files the old decision — and then settle
+    it again.
+    """
+
+
+def _digest(*parts: str) -> str:
+    return hashlib.sha256("\x00".join(parts).encode("utf-8")).hexdigest()
+
+
+def _normalized(spec: dict | None) -> dict:
+    """One creation payload reduced to what it actually asks for.
+
+    Strings are stripped and empty fields dropped, so ``{"title": "Utred "}``,
+    ``{"title": "Utred"}`` and ``{"title": "Utred", "responsible": ""}`` are one
+    command rather than three. This is what makes the key canonical over the
+    *normalized* request instead of over its exact bytes — and since every
+    output's identity is derived from the key, it is also what stops a retyped
+    trailing space from producing a second task.
+    """
+    out: dict = {}
+    for name, value in (spec or {}).items():
+        if isinstance(value, str):
+            value = value.strip()
+        if value is None or value == "":
+            continue
+        out[name] = value
+    return out
+
+
+def resolution_key(
+    *,
+    event_id: str,
+    kinds: list[str],
+    note: str,
+    attachment_ids: list[str],
+    task: dict | None,
+    watch: dict | None,
+) -> str:
+    """The idempotency key of one resolution request.
+
+    Everything the request would *do* goes into the digest and nothing that
+    merely describes when it arrived. Two clicks on one button produce the same
+    key; changing the task's title, or who is responsible, or the date produces
+    a different one, because that is genuinely a different decision.
+
+    ``sort_keys`` on the two open dictionaries matters: the task and watch specs
+    arrive as JSON objects whose key order a client is free to vary, and a key
+    that changed with it would recognise nothing.
+    """
+    payload = json.dumps(
+        {
+            "event": event_id,
+            "kinds": sorted(set(kinds)),
+            "note": note,
+            "attachments": sorted(set(attachment_ids)),
+            "task": _normalized(task),
+            "watch": _normalized(watch),
+        },
+        sort_keys=True,
+        ensure_ascii=False,
+    )
+    return _digest("resolution", payload)[:16]
+
+
+def derived_output_id(kind: str, tenant_id: str, key: str) -> str:
+    """The id of a task or a watch created by one resolution, derived not minted.
+
+    Keyed on the **whole normalized decision** (:func:`resolution_key`) and on
+    which output of it this is. A retry of the identical request recomputes the
+    same id and converges on the row that already exists; a decision that
+    differs anywhere that matters gets its own row.
+
+    It used to be keyed on the message and the task's title alone, and that was
+    too narrow to be safe. Settling a message into "Utred" for Anna by 1
+    September, reopening it, and settling it into "Utred" for Bo by 1 October
+    produced *one* task — Anna's — and the second settlement pointed at it. The
+    board had recorded a decision the system had quietly declined to carry out,
+    and nothing anywhere said so. Everything a reviewer actually chose is now
+    part of the identity, so a different choice cannot land on an incompatible
+    row.
+
+    The trade-off, stated rather than hidden: the key covers the whole request,
+    so changing only the watch's date also gives the task a new id, and a
+    reviewer who reopens and adjusts one field gets a second task next to the
+    first. That is the safe direction to err in — two visible rows the board can
+    reconcile, rather than one row that silently disagrees with the decision
+    that produced it — and reopening is a deliberate act, not something that
+    happens by accident.
+    """
+    return _digest("resolution-output", kind, tenant_id, key)[:12]
 
 
 def _text(spec: dict, key: str) -> str:
@@ -213,6 +359,7 @@ def _create_task(
     spec: dict,
     citations: list[CitationOut],
     today: date,
+    key: str,
 ) -> ResolutionOutcome:
     """Take work on, through the tasks domain's own model.
 
@@ -236,8 +383,9 @@ def _create_task(
         document_name = citations[0].document_name
 
     now = utc_now_iso()
+    task_id = derived_output_id("create_task", store.tenant_id, key)
     task = Task(
-        id=uuid.uuid4().hex[:12],
+        id=task_id,
         tenant_id=store.tenant_id,
         title=title[:200],
         description=_text(spec, "description"),
@@ -258,7 +406,10 @@ def _create_task(
         update={
             "activity": [
                 TaskEvent(
-                    id=uuid.uuid4().hex[:12],
+                    # Derived alongside the task, so a retry that reaches
+                    # ``ensure_task`` and finds the task already there does not
+                    # differ from it in a way nobody would ever see.
+                    id=_digest("task-created", task_id)[:12],
                     at=now,
                     by=user_id,
                     kind="created",
@@ -268,7 +419,19 @@ def _create_task(
             ]
         }
     )
-    stored = store.tasks.add_task(task)
+    # ``ensure_task`` rather than ``add_task``: the id is derived from the whole
+    # decision, so a second arrival under it is this same decision arriving
+    # twice — a retry after a fault, a double submit — and the honest answer is
+    # the task that already exists. A different decision derives a different id
+    # and cannot land here at all.
+    stored, created = store.tasks.ensure_task(task)
+    if not created:
+        logger.info(
+            "Uppgiften %s fanns redan för källhändelse %s — återanvänds i stället för "
+            "att dubbleras.",
+            stored.id,
+            event.id,
+        )
     return ResolutionOutcome(
         kind="create_task",
         label=RESOLUTION_LABELS["create_task"],
@@ -284,6 +447,7 @@ def _create_watch(
     spec: dict,
     citations: list[CitationOut],
     today: date,
+    key: str,
 ) -> ResolutionOutcome:
     """Put a date, or an awaited answer, on the board.
 
@@ -316,7 +480,13 @@ def _create_watch(
     remind = _lead_days(spec)
 
     watch = Watch(
-        id=uuid.uuid4().hex[:12],
+        # Derived from the decision this came out of — see
+        # ``derived_output_id``. A retry puts the same obligation on the board
+        # once; the random id it replaced put it there twice. Keying it on the
+        # kind and the date alone was not enough either: two settlements that
+        # agreed on those and disagreed on the title, who is responsible or the
+        # reminder produced one row carrying the *first* one's fields.
+        id=derived_output_id("monitor", store.tenant_id, key),
         tenant_id=store.tenant_id,
         kind=kind,
         status="approved",
@@ -374,87 +544,192 @@ def resolve_source_event(
     resolved item keeps its provenance, its triage and its outcome, because
     "what did we decide about this, and when" is the question the whole record
     exists to answer.
+
+    An item that is **already settled** accepts only the identical request,
+    which returns what that request already did. A different one raises
+    :class:`ResolutionConflict` and nothing is written — because the alternative
+    is overwriting a named person's decision with no trace that it existed.
+    :func:`reopen_source_event` is the operation for changing one's mind, and it
+    keeps the old decision.
     """
     integrations = store.integrations
-    event = integrations.get_source_event(event_id)
-    if event is None:
-        raise ResolutionError("Okänd källhändelse.")
-
     ordered = _validate(kinds)
     reason = (note or "").strip()
-    outcomes: list[ResolutionOutcome] = []
     when = today or date.today()
-
-    if "take_in" in ordered:
-        if not reason:
-            raise ResolutionError(
-                "Ange varför posten ska bevaras. Ett dokument som blir en del av föreningens "
-                "underlag utan att någon säger varför är inte ett arkiv."
-            )
-        event, preserved = _preserve(store, event, user_id, reason, attachment_ids or [])
-        outcomes.extend(preserved)
-
-    citations = _carried_citations(store, event)
-
-    if "create_task" in ordered:
-        outcomes.append(_create_task(store, event, user_id, task or {}, citations, when))
-    if "monitor" in ordered:
-        outcomes.append(_create_watch(store, event, user_id, watch or {}, citations, when))
-    for kind in ("already_handled", "not_relevant"):
-        if kind in ordered:
-            outcomes.append(ResolutionOutcome(kind=kind, label=RESOLUTION_LABELS[kind]))
-
-    # The coarse status the rest of the product already reads stays in step
-    # with the richer record, so a client that only knows `review_status`
-    # (and the mobile app is one) is never shown a settled item as open.
-    review_status = "dismissed" if "not_relevant" in ordered else "approved"
-
-    settled = event.model_copy(
-        update={
-            "resolution": Resolution(
-                outcomes=outcomes,
-                decided_by=user_id,
-                decided_at=utc_now_iso(),
-                note=reason,
-            ),
-            "review_status": review_status,
-            "decided_by": user_id,
-            "decided_at": utc_now_iso(),
-            "decision_note": reason or None,
-        }
+    key = resolution_key(
+        event_id=event_id,
+        kinds=kinds,
+        note=reason,
+        attachment_ids=list(attachment_ids or []),
+        task=task,
+        watch=watch,
     )
-    return integrations.update_source_event(settled)
+
+    # One writer at a time across the whole act. Preserving, adopting, creating
+    # a task, creating a watch and settling the card are five writes into four
+    # different files. The lock serialises *resolutions* against each other; it
+    # is not a transaction over the four files and does not pretend to be one —
+    # a concurrent ``GET /tasks`` takes the task store's lock, not this one, and
+    # can see the task before the card says it made it. What makes that
+    # survivable is not the lock but the two properties below it: every id is
+    # derived, so the act converges when repeated, and the card carries the key
+    # of the request that produced it. See the module docstring.
+    with integrations.lock:
+        event = integrations.get_source_event(event_id)
+        if event is None:
+            raise ResolutionError("Okänd källhändelse.")
+
+        if event.resolution is not None:
+            if event.resolution.key == key:
+                # This exact request already ran. Not an error and not a second
+                # resolution: the operator's client retried, or somebody
+                # double-clicked, and what they asked for is already true.
+                logger.info(
+                    "Källhändelse %s är redan avslutad med samma begäran (%s) — svarar med "
+                    "det som redan skedde.",
+                    event_id,
+                    key,
+                )
+                return event
+            # A *different* settlement of an item that already carries one. This
+            # used to be allowed, and it overwrote the decision that was there:
+            # who had settled it, why, and what it produced were replaced with
+            # no record that they had ever existed — the same erasure `reopen`
+            # was repaired for, reachable through the ordinary settle button.
+            #
+            # Changing a settlement is a real thing a board does, and it has an
+            # operation: reopen, which *files* the old decision, and then settle
+            # again. So this refuses and says which act is missing, rather than
+            # guessing that the newer request was meant to win.
+            logger.info(
+                "Källhändelse %s är redan avslutad (%s) och begäran är en annan (%s) — "
+                "vägrar skriva över beslutet.",
+                event_id,
+                event.resolution.key or "utan nyckel",
+                key,
+            )
+            raise ResolutionConflict(
+                "Posten är redan avgjord, och det här är ett annat beslut än det som står "
+                "på den. Öppna posten igen först — då sparas det tidigare beslutet i "
+                "postens historik — och avgör den sedan på nytt."
+            )
+
+        outcomes: list[ResolutionOutcome] = []
+
+        if "take_in" in ordered:
+            if not reason:
+                raise ResolutionError(
+                    "Ange varför posten ska bevaras. Ett dokument som blir en del av föreningens "
+                    "underlag utan att någon säger varför är inte ett arkiv."
+                )
+            event, preserved = _preserve(store, event, user_id, reason, attachment_ids or [])
+            outcomes.extend(preserved)
+
+        citations = _carried_citations(store, event)
+
+        if "create_task" in ordered:
+            outcomes.append(_create_task(store, event, user_id, task or {}, citations, when, key))
+        if "monitor" in ordered:
+            outcomes.append(_create_watch(store, event, user_id, watch or {}, citations, when, key))
+        for kind in ("already_handled", "not_relevant"):
+            if kind in ordered:
+                outcomes.append(ResolutionOutcome(kind=kind, label=RESOLUTION_LABELS[kind]))
+
+        # The coarse status the rest of the product already reads stays in step
+        # with the richer record, so a client that only knows `review_status`
+        # (and the mobile app is one) is never shown a settled item as open.
+        review_status = "dismissed" if "not_relevant" in ordered else "approved"
+        decided_at = utc_now_iso()
+
+        def settle(current: SourceEvent) -> SourceEvent:
+            """Record the settlement on the version under the lock.
+
+            ``_preserve`` and the two creators have each written to the event or
+            to another domain since it was read, so the update is applied to
+            ``current`` rather than to the copy this function started with —
+            otherwise settling would silently undo the preservation it had just
+            performed.
+            """
+            return current.model_copy(
+                update={
+                    "resolution": Resolution(
+                        outcomes=outcomes,
+                        decided_by=user_id,
+                        decided_at=decided_at,
+                        note=reason,
+                        key=key,
+                    ),
+                    "review_status": review_status,
+                    "decided_by": user_id,
+                    "decided_at": decided_at,
+                    "decision_note": reason or None,
+                }
+            )
+
+        return integrations.mutate_source_event(event_id, settle)
 
 
-def reopen_source_event(*, store: Store, event_id: str) -> SourceEvent:
+def reopen_source_event(
+    *, store: Store, event_id: str, user_id: str = "", note: str = ""
+) -> SourceEvent:
     """Put a settled item back in the queue.
 
-    The outcome record is cleared; what it produced is not. A task made from
-    this message stays a task, a preserved document stays in the archive, and a
-    watch stays on the board — those are records of decisions, and reopening a
-    queue card is not a decision about any of them. The card says what it
-    produced, so a reviewer can go and cancel the task themselves if that is
-    what they meant.
+    What the settlement produced is not touched. A task made from this message
+    stays a task, a preserved document stays in the archive, and a watch stays
+    on the board — those are records of decisions, and reopening a queue card is
+    not a decision about any of them. A reviewer can go and cancel the task
+    themselves if that is what they meant.
+
+    **And the settlement itself is not touched either — it is filed.** This used
+    to set ``resolution`` to ``None`` and null the decider and the date, which
+    read as "put the card back" and was in fact an erasure: after a reopen there
+    was nothing anywhere saying the association had ever settled the item, who
+    settled it, why, or what it created. The tasks it made were still in
+    Uppgifter, with an origin pointing back at a card that now denied making
+    them — and "the card says what it produced", the sentence this function's
+    own docstring used to rest on, was false the moment it was called.
+
+    So the settlement moves into ``decision_history``
+    (:class:`~app.integrations.models.DecisionRecord`) and ``resolution``
+    becomes ``None`` as before. The queue reads exactly as it did; the record
+    survives. It goes on the source event rather than into a new store for the
+    reason this module opens with: there is no email archive here, and a second
+    place to look for what was decided about a message would be one.
     """
     integrations = store.integrations
-    event = integrations.get_source_event(event_id)
-    if event is None:
-        raise ResolutionError("Okänd källhändelse.")
-    return integrations.update_source_event(
-        event.model_copy(
-            update={
-                "resolution": None,
-                "review_status": "open",
-                "decided_by": None,
-                "decided_at": None,
-            }
-        )
-    )
+
+    def apply(event: SourceEvent) -> SourceEvent:
+        update: dict = {
+            "resolution": None,
+            "review_status": "open",
+            "decided_by": None,
+            "decided_at": None,
+        }
+        if event.resolution is not None:
+            update["decision_history"] = [
+                *event.decision_history,
+                DecisionRecord(
+                    resolution=event.resolution,
+                    review_status=event.review_status,
+                    superseded_at=utc_now_iso(),
+                    superseded_by=user_id,
+                    note=(note or "").strip(),
+                ),
+            ]
+        return event.model_copy(update=update)
+
+    try:
+        return integrations.mutate_source_event(event_id, apply)
+    except SourceEventNotFound as exc:
+        raise ResolutionError("Okänd källhändelse.") from exc
 
 
 __all__ = [
     "MAX_CARRIED_CITATIONS",
+    "ResolutionConflict",
     "ResolutionError",
+    "derived_output_id",
     "reopen_source_event",
+    "resolution_key",
     "resolve_source_event",
 ]

@@ -245,19 +245,30 @@ class TestIncrementalFetch:
         assert result.checkpoint.last_skipped[0].code == "unsupported_attachment"
 
     def test_an_unreadable_message_is_not_skipped_forever(self, queue):
-        """A newer message must not move the checkpoint past an older one the
-        fetch could not read — that would turn a transient failure into a
-        permanent, silent one."""
+        """A message the fetch could not read must come back on the next one —
+        otherwise a transient failure becomes a permanent, silent one.
+
+        This asserts the *guarantee* rather than the mechanism, because the
+        mechanism changed. It used to be a clamp: the high-water mark was
+        dragged back below the unreadable message. That could not survive the
+        checkpoint becoming monotonic (which it had to, so two overlapping
+        fetches stop pushing each other backwards over settled material), so the
+        debt is now recorded separately as ``retry_from`` and the fetch window
+        opens at whichever of the two is earlier. What a caller is owed is
+        unchanged, and the second fetch below is what proves it.
+        """
+        failing = {"OLD"}
 
         class Flaky(StubMailbox):
             def get_message_mime(self, message_id):
-                if message_id == "OLD":
+                if message_id in failing:
                     raise TimeoutError("brevlådan svarade inte")
                 return super().get_message_mime(message_id)
 
         mailbox = Flaky([
             {"id": "OLD", "subject": "Äldre", "received_at": "2026-02-03T08:00:00Z",
-             "internet_message_id": "<old@x.example>", "raw": b""},
+             "internet_message_id": "<old@x.example>",
+             "raw": message(subject="Äldre", body="text", message_id="<old@x.example>")},
             {"id": "NEW", "subject": "Nyare", "received_at": "2026-02-04T08:00:00Z",
              "internet_message_id": "<new@x.example>",
              "raw": message(subject="Nyare", body="text", message_id="<new@x.example>")},
@@ -267,9 +278,21 @@ class TestIncrementalFetch:
 
         assert len(result.imported) == 1
         assert result.skipped[0].code == "unreadable"
-        assert result.checkpoint.high_water_mark == "2026-02-03T08:00:00Z", (
-            "checkpointen får inte passera det meddelande som inte gick att läsa"
+        # The mark says how far we definitely got; the debt says what is owed,
+        # and the next fetch asks from the debt.
+        assert result.checkpoint.high_water_mark == "2026-02-04T08:00:00Z"
+        assert result.checkpoint.retry_from == "2026-02-03T08:00:00Z"
+        assert result.checkpoint.fetch_from() == "2026-02-03T08:00:00Z", (
+            "nästa hämtning måste börja före det meddelande som inte gick att läsa"
         )
+
+        # The mailbox recovers, and the message is genuinely offered again.
+        failing.clear()
+        again = fetch_new(store=queue.store, adapter=mailbox, provider="microsoft-graph",
+                          folder="inbox", user_id="admin-1")
+        assert [e.subject for e in again.imported] == ["Äldre"]
+        assert again.checkpoint.retry_from == "", "skulden ska vara kvitterad"
+        assert again.checkpoint.high_water_mark == "2026-02-04T08:00:00Z"
 
     def test_a_failed_fetch_does_not_move_the_checkpoint(self, queue):
         queue.integrations.put_mailbox_checkpoint(
@@ -800,7 +823,13 @@ class TestResolution:
             "en bilaga blir inte arkiv bara för att mejlet bevarades"
         )
 
+        # Adopting it afterwards is a *second* decision about a card that is
+        # already settled, so it goes the way changing one's mind goes: open the
+        # post again — which files the first decision rather than dropping it —
+        # and settle it anew. Settling straight over the first one is refused;
+        # see `TestASettledItemIsNotOverwritten` in the concurrency suite.
         chosen = settled.attachments[0].id
+        reopen_source_event(store=queue.store, event_id=event.id, user_id="admin-1")
         again = resolve_source_event(
             store=queue.store, event_id=event.id, user_id="admin-1",
             kinds=["take_in"], note="Avtalet hör till underlaget.",

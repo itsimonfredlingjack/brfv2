@@ -14,7 +14,7 @@ import os
 import threading
 import uuid
 from pathlib import Path
-from typing import Iterable, TypeVar
+from typing import Callable, Iterable, TypeVar
 
 from pydantic import BaseModel, ValidationError
 
@@ -39,6 +39,11 @@ T = TypeVar("T", bound=BaseModel)
 
 class WatchError(RuntimeError):
     """Refusing to operate on this tenant's watch data."""
+
+
+class WatchNotFound(WatchError):
+    """No watch with that id here — its own type so a route can answer 404
+    for that and not for every other refusal this store makes."""
 
 
 def _atomic_write_json(path: Path, payload) -> None:
@@ -138,25 +143,110 @@ class WatchStore:
         return next((w for w in self.list_watches() if w.id == watch_id), None)
 
     def add_watch(self, watch: Watch) -> Watch:
+        """Add a watch. An id already on disk is returned rather than doubled.
+
+        Idempotent on ``id`` because the two callers that matter now derive
+        theirs rather than minting it: the recurring successor
+        (:meth:`decide_watch`) and a watch created out of reviewed incoming post
+        (:func:`app.integrations.resolve.derived_output_id`). A second arrival
+        under the same id is the same obligation being recorded twice — a retry,
+        a double submit — and appending it would put the same date on the board
+        twice with nothing to say which one the board should act on.
+        """
         with self.lock:
             rows = self._read(WATCHES_FILE, Watch)
+            existing = next((w for w in rows if w.id == watch.id), None)
+            if existing is not None:
+                return existing
             record = self._stamp(watch)
             rows.append(record)
             self._write(WATCHES_FILE, rows)
         return record
 
-    def update_watch(self, watch: Watch) -> Watch:
+    def mutate_watch(self, watch_id: str, apply: Callable[[Watch], Watch]) -> Watch:
+        """Change one watch across a single locked read-modify-write.
+
+        Same repair, same reason as :meth:`app.tasks.store.TaskStore.mutate_task`:
+        the version ``apply`` decides against is the one on disk at that moment,
+        not one the route read before it queued for the lock.
+        """
         with self.lock:
             rows = self._read(WATCHES_FILE, Watch)
-            record = self._stamp(watch)
             for i, existing in enumerate(rows):
-                if existing.id == record.id:
-                    rows[i] = record
-                    break
-            else:
-                raise WatchError(f"Okänd bevakning: {record.id}")
+                if existing.id != watch_id:
+                    continue
+                record = self._stamp(apply(existing))
+                if record.id != existing.id:
+                    raise WatchError(
+                        f"En ändring av {watch_id} får inte byta id till {record.id}."
+                    )
+                rows[i] = record
+                self._write(WATCHES_FILE, rows)
+                return record
+        raise WatchNotFound(f"Okänd bevakning: {watch_id}")
+
+    def decide_watch(
+        self,
+        watch_id: str,
+        apply: Callable[[Watch], Watch],
+        successor: Callable[[Watch], Watch | None] | None = None,
+    ) -> tuple[Watch, Watch | None]:
+        """Record a decision and, for a completed recurring obligation, its next turn.
+
+        One lock, one write, and **at most one successor** — which is the whole
+        point. Completing a yearly obligation used to be four separate store
+        calls from the route (read, update, add successor, update again), and
+        eight people pressing "avklarad" at the same moment produced eight
+        successors: eight identical besiktningar on next year's board, seven of
+        which nobody could account for.
+
+        Two things make one the ceiling. The decision and the successor are
+        written together under this lock, so no second caller can observe the
+        half-done state; and ``succeeded_by`` is checked *inside* it, so a watch
+        that already has a successor never grows another — including on a
+        retry, minutes later, from an operator who never saw the first response.
+        The successor's id is derived by the caller from the predecessor and the
+        new date, so even a store that somehow saw two attempts converges on one
+        row rather than two.
+        """
+        with self.lock:
+            rows = self._read(WATCHES_FILE, Watch)
+            index = next((i for i, w in enumerate(rows) if w.id == watch_id), None)
+            if index is None:
+                raise WatchNotFound(f"Okänd bevakning: {watch_id}")
+
+            decided = self._stamp(apply(rows[index]))
+            if decided.id != watch_id:
+                raise WatchError(f"En ändring av {watch_id} får inte byta id.")
+            rows[index] = decided
+
+            made: Watch | None = None
+            if successor is not None and not decided.succeeded_by:
+                candidate = successor(decided)
+                if candidate is not None:
+                    made = next((w for w in rows if w.id == candidate.id), None)
+                    if made is None:
+                        made = self._stamp(candidate)
+                        rows.append(made)
+                    rows[index] = decided = decided.model_copy(
+                        update={"succeeded_by": made.id}
+                    )
+            elif decided.succeeded_by:
+                # Already succeeded — a retry, or two people pressing at once.
+                # The existing successor is returned so the caller reports what
+                # is really there instead of nothing.
+                made = next((w for w in rows if w.id == decided.succeeded_by), None)
+
             self._write(WATCHES_FILE, rows)
-        return record
+            return decided, made
+
+    def update_watch(self, watch: Watch) -> Watch:
+        """Replace a watch with a version the caller already holds.
+
+        Narrower than it reads: prefer :meth:`mutate_watch`, which cannot be
+        handed a version that went stale while the request waited for the lock.
+        """
+        return self.mutate_watch(watch.id, lambda _existing: watch)
 
     def delete_watch(self, watch_id: str) -> bool:
         with self.lock:
@@ -201,4 +291,4 @@ class WatchStore:
         return sorted(rows, key=lambda u: (u.source_document_name, u.what))
 
 
-__all__ = ["SCHEMA_VERSION", "WatchError", "WatchStore"]
+__all__ = ["SCHEMA_VERSION", "WatchError", "WatchNotFound", "WatchStore"]

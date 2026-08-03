@@ -305,27 +305,31 @@ class ConnectionManager:
     def _store_tokens(
         self, connection: Connection, tokens: TokenSet, *, user_id: str
     ) -> Connection:
-        stored = self.credentials.read_secrets(connection.provider)
-        self.credentials.write_secrets(
-            connection.provider,
-            Secrets(
-                access_token=tokens.access_token,
-                refresh_token=tokens.refresh_token,
-                client_secret=(stored.client_secret if stored else ""),
-                access_expires_epoch=tokens.expires_epoch,
-            ),
-        )
-        updated = connection.model_copy(
-            update={
-                "status": "connected",
-                "granted_scopes": tokens.granted_scopes,
-                "connected_by": user_id or connection.connected_by,
-                "connected_at": utc_now_iso(),
-                "access_expires_at": _iso_at(tokens.expires_epoch),
-                "last_error": None,
-            }
-        )
-        updated = self.credentials.put_connection(updated)
+        # The client secret is read and written back in one locked step. Read
+        # outside the lock, a disconnect landing in between would have this
+        # write resurrect a secret file somebody had just removed.
+        with self.credentials.lock:
+            stored = self.credentials.read_secrets(connection.provider)
+            self.credentials.write_secrets(
+                connection.provider,
+                Secrets(
+                    access_token=tokens.access_token,
+                    refresh_token=tokens.refresh_token,
+                    client_secret=(stored.client_secret if stored else ""),
+                    access_expires_epoch=tokens.expires_epoch,
+                ),
+            )
+            updated = connection.model_copy(
+                update={
+                    "status": "connected",
+                    "granted_scopes": tokens.granted_scopes,
+                    "connected_by": user_id or connection.connected_by,
+                    "connected_at": utc_now_iso(),
+                    "access_expires_at": _iso_at(tokens.expires_epoch),
+                    "last_error": None,
+                }
+            )
+            updated = self.credentials.put_connection(updated)
         # The label is a nice-to-have that requires a live call, so it is taken
         # after the connection is already saved: failing to read a display name
         # must never lose a sign-in that succeeded.
@@ -369,48 +373,70 @@ class ConnectionManager:
     # ---------- use ----------
 
     def access_token(self, provider: str) -> str:
-        """A token that is valid right now, refreshing first if it is not."""
-        connection = self.credentials.get_connection(provider)
-        if connection is None:
-            raise NotConnected(f"{provider} är inte konfigurerad.")
-        secrets = self.credentials.read_secrets(provider)
-        if secrets is None or not secrets.access_token:
-            raise NotConnected(
-                f"{provider} är inte ansluten. En administratör behöver logga in."
+        """A token that is valid right now, refreshing first if it is not.
+
+        **One refresh at a time, per tenant and provider.** Two live calls whose
+        tokens expire in the same minute — an invoice read and a mailbox fetch,
+        which is exactly the pair an operator triggers together — would each see
+        an expired token, and each would redeem the refresh token. Microsoft and
+        Fortnox both *rotate* refresh tokens: redeeming one invalidates it. So
+        the second refresh would present a token the authority had already
+        retired, fail, and mark a perfectly good connection ``expired`` —
+        sending an administrator to sign in again for no reason.
+
+        The lock is held across the network call, which is deliberate and worth
+        the cost. It is one short token request, it is the same lock the
+        secrets file already uses, and serialising two refreshes is precisely
+        the point: the second one arrives after the first has written, sees a
+        token that is valid again, and returns it without asking the authority
+        anything.
+        """
+        with self.credentials.lock:
+            connection = self.credentials.get_connection(provider)
+            if connection is None:
+                raise NotConnected(f"{provider} är inte konfigurerad.")
+            secrets = self.credentials.read_secrets(provider)
+            if secrets is None or not secrets.access_token:
+                raise NotConnected(
+                    f"{provider} är inte ansluten. En administratör behöver logga in."
+                )
+            # Re-read under the lock: whoever held it before us may have just
+            # refreshed, in which case there is nothing left to do.
+            if secrets.access_expires_epoch > time.time():
+                return secrets.access_token
+            app = self._oauth_app(connection, secrets)
+            try:
+                tokens = refresh_tokens(
+                    self.egress(provider), app, refresh_token=secrets.refresh_token
+                )
+            except OAuthError as exc:
+                self.credentials.put_connection(
+                    connection.model_copy(
+                        update={"status": "expired", "last_error": exc.message}
+                    )
+                )
+                raise NotConnected(exc.message) from exc
+            self.credentials.write_secrets(
+                provider,
+                Secrets(
+                    access_token=tokens.access_token,
+                    refresh_token=tokens.refresh_token,
+                    client_secret=secrets.client_secret,
+                    access_expires_epoch=tokens.expires_epoch,
+                ),
             )
-        if secrets.access_expires_epoch > time.time():
-            return secrets.access_token
-        app = self._oauth_app(connection, secrets)
-        try:
-            tokens = refresh_tokens(
-                self.egress(provider), app, refresh_token=secrets.refresh_token
-            )
-        except OAuthError as exc:
             self.credentials.put_connection(
-                connection.model_copy(update={"status": "expired", "last_error": exc.message})
+                connection.model_copy(
+                    update={
+                        "status": "connected",
+                        "granted_scopes": tokens.granted_scopes or connection.granted_scopes,
+                        "access_expires_at": _iso_at(tokens.expires_epoch),
+                        "last_used_at": utc_now_iso(),
+                        "last_error": None,
+                    }
+                )
             )
-            raise NotConnected(exc.message) from exc
-        self.credentials.write_secrets(
-            provider,
-            Secrets(
-                access_token=tokens.access_token,
-                refresh_token=tokens.refresh_token,
-                client_secret=secrets.client_secret,
-                access_expires_epoch=tokens.expires_epoch,
-            ),
-        )
-        self.credentials.put_connection(
-            connection.model_copy(
-                update={
-                    "status": "connected",
-                    "granted_scopes": tokens.granted_scopes or connection.granted_scopes,
-                    "access_expires_at": _iso_at(tokens.expires_epoch),
-                    "last_used_at": utc_now_iso(),
-                    "last_error": None,
-                }
-            )
-        )
-        return tokens.access_token
+            return tokens.access_token
 
     def note_failure(self, provider: str, exc: Exception) -> None:
         """Record why a live call failed, so the UI can stop guessing.

@@ -44,11 +44,19 @@ from .mailbox import FETCH_LIMIT, fetch_new, note_fetch_failure
 from .models import (
     RESOLUTION_LABELS,
     TRIAGE_CATEGORY_LABELS,
+    DecisionRecord,
+    SourceEvent,
     SupplierAlias,
     TriageConfirmation,
     utc_now_iso,
 )
-from .resolve import ResolutionError, reopen_source_event, resolve_source_event
+from .resolve import (
+    ResolutionConflict,
+    ResolutionError,
+    reopen_source_event,
+    resolve_source_event,
+)
+from .store import FindingNotFound, SourceEventNotFound
 from .threads import build_threads
 from .triage import analyze_and_refine
 from .oauth import PendingLogins
@@ -406,12 +414,6 @@ def build_router(
             raise HTTPException(
                 status_code=422, detail=f"Ogiltig status. Tillåtna: {', '.join(allowed)}."
             )
-        integrations = store.integrations
-        event = integrations.get_source_event(event_id)
-        if event is None:
-            raise HTTPException(status_code=404, detail="Okänd källhändelse.")
-
-        links = event.linked_document_ids
         if req.linked_document_ids is not None:
             unknown = [d for d in req.linked_document_ids if d not in store.documents]
             if unknown:
@@ -419,18 +421,44 @@ def build_router(
                     status_code=422,
                     detail=f"Okända dokument: {', '.join(unknown)}.",
                 )
-            links = req.linked_document_ids
 
-        updated = event.model_copy(
-            update={
+        decided_at = utc_now_iso()
+
+        def apply(event: SourceEvent) -> SourceEvent:
+            update: dict = {
                 "review_status": req.status,
-                "linked_document_ids": links,
+                "linked_document_ids": (
+                    req.linked_document_ids
+                    if req.linked_document_ids is not None
+                    else event.linked_document_ids
+                ),
                 "decided_by": user["id"] if req.status != "open" else None,
-                "decided_at": utc_now_iso() if req.status != "open" else None,
+                "decided_at": decided_at if req.status != "open" else None,
                 "decision_note": req.note,
             }
-        )
-        return integrations.update_source_event(updated).model_dump(mode="json")
+            if req.status == "open" and event.resolution is not None:
+                # Setting a settled item back to "open" through the coarse
+                # endpoint is a reopen by another name, and it must not be the
+                # one path that still erases the settlement. Same record, same
+                # place as `reopen_source_event` files it.
+                update["resolution"] = None
+                update["decision_history"] = [
+                    *event.decision_history,
+                    DecisionRecord(
+                        resolution=event.resolution,
+                        review_status=event.review_status,
+                        superseded_at=decided_at,
+                        superseded_by=user["id"],
+                        note=(req.note or "").strip(),
+                    ),
+                ]
+            return event.model_copy(update=update)
+
+        try:
+            updated = store.integrations.mutate_source_event(event_id, apply)
+        except SourceEventNotFound as exc:
+            raise HTTPException(status_code=404, detail="Okänd källhändelse.") from exc
+        return updated.model_dump(mode="json")
 
     @router.delete("/api/brf/{brf_id}/integrations/source-events/{event_id}")
     def delete_source_event(event_id: str, store: Store = Depends(require_admin)) -> dict:
@@ -603,12 +631,15 @@ def build_router(
         A human's confirmed category is never overwritten by this — the
         suggestion is refreshed beside it.
         """
-        event = store.integrations.get_source_event(event_id)
-        if event is None:
-            raise HTTPException(status_code=404, detail="Okänd källhändelse.")
-        updated = store.integrations.update_source_event(
-            event.model_copy(update={"triage": analyze_and_refine(store, event)})
-        )
+        try:
+            updated = store.integrations.mutate_source_event(
+                event_id,
+                lambda event: event.model_copy(
+                    update={"triage": analyze_and_refine(store, event)}
+                ),
+            )
+        except SourceEventNotFound as exc:
+            raise HTTPException(status_code=404, detail="Okänd källhändelse.") from exc
         return updated.model_dump(mode="json")
 
     @router.post("/api/brf/{brf_id}/integrations/source-events/{event_id}/triage/confirm")
@@ -630,22 +661,22 @@ def build_router(
                 status_code=422,
                 detail=f"Okänd kategori. Tillåtna: {', '.join(TRIAGE_CATEGORY_LABELS)}.",
             )
-        event = store.integrations.get_source_event(event_id)
-        if event is None:
-            raise HTTPException(status_code=404, detail="Okänd källhändelse.")
-        updated = store.integrations.update_source_event(
-            event.model_copy(
-                update={
-                    "triage_confirmation": TriageConfirmation(
-                        category=req.category,
-                        category_label=TRIAGE_CATEGORY_LABELS[req.category],
-                        confirmed_by=user["id"],
-                        confirmed_at=utc_now_iso(),
-                        note=(req.note or "").strip(),
-                    )
-                }
-            )
+        confirmation = TriageConfirmation(
+            category=req.category,
+            category_label=TRIAGE_CATEGORY_LABELS[req.category],
+            confirmed_by=user["id"],
+            confirmed_at=utc_now_iso(),
+            note=(req.note or "").strip(),
         )
+        try:
+            updated = store.integrations.mutate_source_event(
+                event_id,
+                lambda event: event.model_copy(
+                    update={"triage_confirmation": confirmation}
+                ),
+            )
+        except SourceEventNotFound as exc:
+            raise HTTPException(status_code=404, detail="Okänd källhändelse.") from exc
         return updated.model_dump(mode="json")
 
     @router.post("/api/brf/{brf_id}/integrations/source-events/{event_id}/resolve")
@@ -661,6 +692,13 @@ def build_router(
         chosen — including "inte relevant". The message stays where it is,
         unread and undeleted; what changes is that this application stops
         asking about it.
+
+        **409** if the item already carries a *different* decision: the request
+        is not malformed, it simply arrived after somebody else settled the
+        card, and overwriting what they decided is the thing this refuses to do.
+        The client's move is to reopen — which files the earlier decision rather
+        than dropping it — and settle again. An identical request is not a
+        conflict; it returns what it already did.
         """
         try:
             event = resolve_source_event(
@@ -673,21 +711,32 @@ def build_router(
                 task=req.task,
                 watch=req.watch,
             )
+        except ResolutionConflict as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
         except ResolutionError as exc:
             status = 404 if str(exc).startswith("Okänd källhändelse") else 422
             raise HTTPException(status_code=status, detail=str(exc)) from exc
         return event.model_dump(mode="json")
 
     @router.post("/api/brf/{brf_id}/integrations/source-events/{event_id}/reopen")
-    def reopen_event(event_id: str, store: Store = Depends(require_admin)) -> dict:
+    def reopen_event(
+        event_id: str,
+        store: Store = Depends(require_admin),
+        user: dict = Depends(current_user),
+    ) -> dict:
         """Put a settled item back in the queue.
 
         What it produced stays: a task made from this message is still a task,
         a preserved document is still in the archive. Those are records of
         decisions, and reopening a card is not a decision about any of them.
+
+        And what was decided stays too, filed rather than deleted — see
+        :func:`app.integrations.resolve.reopen_source_event`. The reopener's id
+        is passed through so the record says who put it back, not only who had
+        settled it.
         """
         try:
-            event = reopen_source_event(store=store, event_id=event_id)
+            event = reopen_source_event(store=store, event_id=event_id, user_id=user["id"])
         except ResolutionError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
         return event.model_dump(mode="json")
@@ -851,10 +900,6 @@ def build_router(
             raise HTTPException(
                 status_code=422, detail=f"Ogiltig status. Tillåtna: {', '.join(allowed)}."
             )
-        integrations = store.integrations
-        finding = integrations.get_finding(finding_id)
-        if finding is None:
-            raise HTTPException(status_code=404, detail="Okänt fynd.")
         if req.status == "corrected" and not (req.note or "").strip():
             # A correction without a note records that someone disagreed and
             # nothing about what is actually true. That is worse than an open
@@ -863,15 +908,22 @@ def build_router(
                 status_code=422,
                 detail="En korrigering måste beskrivas — ange vad som gäller i stället.",
             )
-        updated = finding.model_copy(
-            update={
-                "status": req.status,
-                "decided_by": user["id"] if req.status != "open" else None,
-                "decided_at": utc_now_iso() if req.status != "open" else None,
-                "decision_note": req.note,
-            }
-        )
-        return integrations.update_finding(updated).model_dump(mode="json")
+        decided_at = utc_now_iso()
+        try:
+            updated = store.integrations.mutate_finding(
+                finding_id,
+                lambda finding: finding.model_copy(
+                    update={
+                        "status": req.status,
+                        "decided_by": user["id"] if req.status != "open" else None,
+                        "decided_at": decided_at if req.status != "open" else None,
+                        "decision_note": req.note,
+                    }
+                ),
+            )
+        except FindingNotFound as exc:
+            raise HTTPException(status_code=404, detail="Okänt fynd.") from exc
+        return updated.model_dump(mode="json")
 
     return router
 

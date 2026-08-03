@@ -23,6 +23,7 @@ from pydantic import BaseModel
 
 from ..store import Store
 from ..terms import parse_iso
+from .store import TaskNotFound
 from .models import (
     ACTIVE_STATUSES,
     ORIGIN_LABELS,
@@ -261,12 +262,26 @@ def build_router(
             # has happened to this invoice", so work taken on from it belongs
             # there. The task itself is still the record; this is a pointer —
             # and writing it is what materialises a case nobody had touched yet.
-            from ..invoices.cases import CaseError, note_task
+            from ..invoices.cases import note_task
 
             try:
                 note_task(store, origin.ref_id, task=stored, user_id=user["id"])
-            except CaseError:  # pragma: no cover - the origin was resolved above
-                logger.warning("Kunde inte notera uppgiften på fakturaärendet %s", origin.ref_id)
+            except Exception as exc:
+                # Deliberately broad, and the breadth is the point. The task is
+                # already committed and is the record; the case entry is a
+                # pointer to it. Letting anything thrown here become a 500 would
+                # tell the operator their task was not created, and the only
+                # thing they can reasonably do next — press the button again —
+                # would give the association two identical tasks. Failing to
+                # write a cross-reference is not a reason to lie about the write
+                # that succeeded, so it is logged with the ids needed to repair
+                # it and the created task is returned.
+                logger.warning(
+                    "Uppgiften %s skapades men kunde inte noteras på fakturaärendet %s: %s",
+                    stored.id,
+                    origin.ref_id,
+                    exc,
+                )
         return stored.public(now)
 
     @router.post("/api/brf/{brf_id}/tasks/{task_id}")
@@ -276,69 +291,87 @@ def build_router(
         store: Store = Depends(require_admin),
         user: dict = Depends(current_user),
     ) -> dict:
-        task = store.tasks.get_task(task_id)
-        if task is None:
-            raise HTTPException(status_code=404, detail="Okänd uppgift.")
-
         note = req.note.strip()
-        update: dict = {}
-        events: list[TaskEvent] = []
-
-        if req.status is not None and req.status != task.status:
-            if req.status not in STATUSES:
-                raise HTTPException(
-                    status_code=422, detail=f"Ogiltig status. Tillåtna: {', '.join(STATUSES)}."
-                )
-            if req.status in REASON_REQUIRED and not note:
-                # Blocking and cancelling are where the missing sentence is the
-                # one somebody later wishes had been written. Marking work done
-                # needs no note — the trail already says who closed it and when.
-                raise HTTPException(
-                    status_code=422,
-                    detail="Ange varför uppgiften blockeras eller avbryts.",
-                )
-            update["status"] = req.status
-            events.append(
-                _event(user, "status_changed", from_value=task.status, to_value=req.status, note=note)
+        if req.status is not None and req.status not in STATUSES:
+            raise HTTPException(
+                status_code=422, detail=f"Ogiltig status. Tillåtna: {', '.join(STATUSES)}."
             )
-
-        if req.responsible is not None and req.responsible.strip() != task.responsible:
-            update["responsible"] = req.responsible.strip()
-            events.append(
-                _event(
-                    user,
-                    "assigned",
-                    from_value=task.responsible,
-                    to_value=req.responsible.strip(),
-                )
-            )
-
         if req.due_date is not None:
-            checked = _check_due(req.due_date)
-            if checked != task.due_date:
-                update["due_date"] = checked
+            _check_due(req.due_date)  # a bad date is a 422 before any lock is taken
+
+        def apply(task: Task) -> Task:
+            """What this request changes, decided against the task on disk.
+
+            Every ``!=`` below compares the request with the version read under
+            the store's lock, not with one this route read a moment ago. That is
+            what makes two people editing the same task at the same time produce
+            two events rather than one — and what stops the second write from
+            carrying a copy of the history the first one had already extended.
+            """
+            update: dict = {}
+            events: list[TaskEvent] = []
+
+            if req.status is not None and req.status != task.status:
+                if req.status in REASON_REQUIRED and not note:
+                    # Blocking and cancelling are where the missing sentence is
+                    # the one somebody later wishes had been written. Marking
+                    # work done needs no note — the trail already says who
+                    # closed it and when.
+                    raise HTTPException(
+                        status_code=422,
+                        detail="Ange varför uppgiften blockeras eller avbryts.",
+                    )
+                update["status"] = req.status
                 events.append(
-                    _event(user, "due_changed", from_value=task.due_date or "", to_value=checked or "")
+                    _event(
+                        user, "status_changed", from_value=task.status, to_value=req.status, note=note
+                    )
                 )
 
-        text_changed = False
-        if req.title is not None and req.title.strip() and req.title.strip() != task.title:
-            update["title"] = req.title.strip()[:MAX_TITLE]
-            text_changed = True
-        if req.description is not None and req.description.strip() != task.description:
-            update["description"] = req.description.strip()
-            text_changed = True
-        if text_changed:
-            events.append(_event(user, "edited", to_value=update.get("title", task.title)))
+            if req.responsible is not None and req.responsible.strip() != task.responsible:
+                update["responsible"] = req.responsible.strip()
+                events.append(
+                    _event(
+                        user,
+                        "assigned",
+                        from_value=task.responsible,
+                        to_value=req.responsible.strip(),
+                    )
+                )
 
-        if not events:
-            if note:
-                events.append(_event(user, "noted", note=note))
-            else:
-                raise HTTPException(status_code=422, detail="Inget att ändra.")
+            if req.due_date is not None:
+                checked = _check_due(req.due_date)
+                if checked != task.due_date:
+                    update["due_date"] = checked
+                    events.append(
+                        _event(
+                            user, "due_changed", from_value=task.due_date or "", to_value=checked or ""
+                        )
+                    )
 
-        updated = task.model_copy(update={**update, "activity": [*task.activity, *events]})
-        return store.tasks.update_task(updated).public(today())
+            text_changed = False
+            if req.title is not None and req.title.strip() and req.title.strip() != task.title:
+                update["title"] = req.title.strip()[:MAX_TITLE]
+                text_changed = True
+            if req.description is not None and req.description.strip() != task.description:
+                update["description"] = req.description.strip()
+                text_changed = True
+            if text_changed:
+                events.append(_event(user, "edited", to_value=update.get("title", task.title)))
+
+            if not events:
+                if note:
+                    events.append(_event(user, "noted", note=note))
+                else:
+                    raise HTTPException(status_code=422, detail="Inget att ändra.")
+
+            return task.model_copy(update={**update, "activity": [*task.activity, *events]})
+
+        try:
+            updated = store.tasks.mutate_task(task_id, apply)
+        except TaskNotFound as exc:
+            raise HTTPException(status_code=404, detail="Okänd uppgift.") from exc
+        return updated.public(today())
 
     @router.post("/api/brf/{brf_id}/tasks/{task_id}/comment")
     def comment(
@@ -347,17 +380,26 @@ def build_router(
         store: Store = Depends(require_admin),
         user: dict = Depends(current_user),
     ) -> dict:
-        """Say something about the work without changing it."""
+        """Say something about the work without changing it.
+
+        A comment is the purest case for :meth:`~app.tasks.store.TaskStore.mutate_task`:
+        it needs nothing from the task except the history it is appended to, so
+        reading that history anywhere but inside the lock is how eight comments
+        became two.
+        """
         note = req.note.strip()
         if not note:
             raise HTTPException(status_code=422, detail="Tom kommentar.")
-        task = store.tasks.get_task(task_id)
-        if task is None:
-            raise HTTPException(status_code=404, detail="Okänd uppgift.")
-        updated = task.model_copy(
-            update={"activity": [*task.activity, _event(user, "noted", note=note)]}
-        )
-        return store.tasks.update_task(updated).public(today())
+        try:
+            updated = store.tasks.mutate_task(
+                task_id,
+                lambda task: task.model_copy(
+                    update={"activity": [*task.activity, _event(user, "noted", note=note)]}
+                ),
+            )
+        except TaskNotFound as exc:
+            raise HTTPException(status_code=404, detail="Okänd uppgift.") from exc
+        return updated.public(today())
 
     return router
 

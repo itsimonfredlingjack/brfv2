@@ -37,10 +37,11 @@ import os
 import threading
 import uuid
 from pathlib import Path
-from typing import Iterable, TypeVar
+from typing import Callable, Iterable, TypeVar
 
 from pydantic import BaseModel, ValidationError
 
+from ..history import AppendOnlyViolation, check_append_only
 from ..invoices.models import AnalysisRun, InvoiceCase
 from .models import (
     InvoiceSnapshot,
@@ -85,7 +86,18 @@ logger = logging.getLogger("brf.integrations")
 # drop `analysis_run_id`, and write it back, severing the only link between
 # what is on screen and the record of what it replaced. An audit trail that a
 # downgrade can quietly detach is not one.
-SCHEMA_VERSION = 5
+#
+# 6 adds the decision history a reopen no longer throws away
+# (:class:`~app.integrations.models.DecisionRecord`), the idempotency key on a
+# resolution, and the mailbox checkpoint's retry floor. The version bump is
+# load-bearing for the first of those in a way the others are not: a version-5
+# build that read a reopened event and wrote it back would drop
+# `decision_history` — which is to say it would finish the erasure this version
+# exists to stop, and leave no trace that it had. The migration invents nothing;
+# an event that was reopened under version 5 has a history that is genuinely
+# gone, and a fabricated record of a decision nobody can now describe would be
+# worse than an empty list.
+SCHEMA_VERSION = 6
 
 META_FILE = "meta.json"
 SOURCE_EVENTS_FILE = "source-events.json"
@@ -101,6 +113,31 @@ T = TypeVar("T", bound=BaseModel)
 
 class IntegrationError(RuntimeError):
     """Refusing to operate on this tenant's integration data."""
+
+
+class SourceEventNotFound(IntegrationError):
+    """No queue item with that id here. Its own type so a route can answer 404
+    for that alone, and not for every other refusal this store makes."""
+
+
+class FindingNotFound(IntegrationError):
+    """No finding with that id here. Same argument as :class:`SourceEventNotFound`."""
+
+
+class DuplicateContent(IntegrationError):
+    """These exact bytes are already in this tenant's queue.
+
+    Raised from inside :meth:`IntegrationStore.add_source_event`, under the
+    lock, which is the only place the answer cannot go stale between being
+    computed and being acted on. :func:`app.integrations.intake.import_eml`
+    turns it into the ``DuplicateSourceEvent`` its callers already handle.
+    """
+
+    def __init__(self, existing: SourceEvent) -> None:
+        super().__init__(
+            f"Meddelandet är redan importerat ({existing.received_at}) som {existing.id}."
+        )
+        self.existing = existing
 
 
 def _atomic_write_json(path: Path, payload) -> None:
@@ -202,6 +239,16 @@ class IntegrationStore:
         carries the findings it replaced, saying in as many words that what
         came before them was never recorded. Back-dating a run here would put a
         row in an audit trail that describes a run nobody observed.
+
+        5 → 6 is additive with the same discipline. An event migrated from 5
+        gets an empty ``decision_history`` and a resolution with an empty
+        ``key``. Both are honest: a settlement reopened under version 5 was
+        deleted rather than filed, and there is nothing left to reconstruct it
+        from; a resolution written under 5 has no idempotency key, so a replay
+        of it cannot be recognised and is treated as a fresh act — which is the
+        old behaviour, correctly preserved rather than guessed at. The mailbox
+        checkpoints are rewritten so ``retry_from`` is present on disk rather
+        than implied.
         """
         logger.info(
             "Migrerar integrationsdata för %s från schemaVersion %d till %d.",
@@ -219,6 +266,13 @@ class IntegrationStore:
                     self._write(filename, self._read(filename, model))
         if from_version < 5 and (self.dir / INVOICE_CASES_FILE).exists():
             self._write(INVOICE_CASES_FILE, self._read(INVOICE_CASES_FILE, InvoiceCase))
+        if from_version < 6:
+            for filename, model in (
+                (SOURCE_EVENTS_FILE, SourceEvent),
+                (MAILBOX_FILE, MailboxCheckpoint),
+            ):
+                if (self.dir / filename).exists():
+                    self._write(filename, self._read(filename, model))
 
     # ---------- generic io ----------
 
@@ -281,27 +335,81 @@ class IntegrationStore:
         )
 
     def add_source_event(self, event: SourceEvent) -> SourceEvent:
+        """Write one event, refusing a second one for the same bytes.
+
+        Two guards, and they answer different questions. The id guard catches a
+        second write of the *same event*; the content-hash guard catches a
+        second import of the *same message* under a different id. Both live
+        inside the lock, which is the repair: the hash check used to sit in
+        :func:`app.integrations.intake.import_eml` before this call, and eight
+        concurrent imports of one MIME message all read "no duplicate" before
+        any of them wrote, then appended seven or eight separate events with
+        seven or eight random ids.
+
+        The caller now also derives the id from the content hash, so the two
+        guards agree even across processes, where a lock cannot reach.
+        """
         with self.lock:
             rows = self._read(SOURCE_EVENTS_FILE, SourceEvent)
             record = self._stamp(event)
             if any(r.id == record.id for r in rows):
                 raise IntegrationError(f"Källhändelsen {record.id} finns redan.")
+            clash = next(
+                (r for r in rows if record.content_sha256 and r.content_sha256 == record.content_sha256),
+                None,
+            )
+            if clash is not None:
+                raise DuplicateContent(clash)
             rows.append(record)
             self._write(SOURCE_EVENTS_FILE, rows)
         return record
 
-    def update_source_event(self, event: SourceEvent) -> SourceEvent:
+    def mutate_source_event(
+        self, event_id: str, apply: Callable[[SourceEvent], SourceEvent]
+    ) -> SourceEvent:
+        """Change one queue item across a single locked read-modify-write.
+
+        The same repair as :meth:`app.tasks.store.TaskStore.mutate_task` and
+        :func:`app.invoices.cases.mutate`, and the reason it is needed here is
+        that a queue item is touched from more directions than anything else in
+        the product: a decision, a triage refresh, a confirmation, an
+        attachment adoption, a preservation, a resolution. Each of those used to
+        read the event, build a complete replacement, and write it back — so a
+        triage refresh landing between another request's read and write silently
+        discarded the confirmation that request had just recorded.
+        """
         with self.lock:
             rows = self._read(SOURCE_EVENTS_FILE, SourceEvent)
-            record = self._stamp(event)
             for i, existing in enumerate(rows):
-                if existing.id == record.id:
-                    rows[i] = record
-                    break
-            else:
-                raise IntegrationError(f"Okänd källhändelse: {record.id}")
-            self._write(SOURCE_EVENTS_FILE, rows)
-        return record
+                if existing.id != event_id:
+                    continue
+                record = self._stamp(apply(existing))
+                if record.id != existing.id:
+                    raise IntegrationError(
+                        f"En ändring av {event_id} får inte byta id till {record.id}."
+                    )
+                try:
+                    check_append_only(
+                        existing.decision_history,
+                        record.decision_history,
+                        what="Källhändelsen",
+                    )
+                except AppendOnlyViolation as exc:
+                    raise IntegrationError(str(exc)) from exc
+                rows[i] = record
+                self._write(SOURCE_EVENTS_FILE, rows)
+                return record
+        raise SourceEventNotFound(f"Okänd källhändelse: {event_id}")
+
+    def update_source_event(self, event: SourceEvent) -> SourceEvent:
+        """Replace an event with a version the caller already holds.
+
+        Prefer :meth:`mutate_source_event`. Kept because several callers already
+        hold a version they built under this store's lock, and because the
+        append-only check on ``decision_history`` now refuses the stale-object
+        case this used to wave through.
+        """
+        return self.mutate_source_event(event.id, lambda _existing: event)
 
     def delete_source_event(self, event_id: str) -> bool:
         with self.lock:
@@ -335,13 +443,45 @@ class IntegrationStore:
         return MailboxCheckpoint(provider=provider, folder=folder)
 
     def put_mailbox_checkpoint(self, checkpoint: MailboxCheckpoint) -> MailboxCheckpoint:
+        """Record where a fetch got to. Merged under the lock, never replaced.
+
+        Two fetches of the same folder can overlap — nothing stops an operator
+        pressing "hämta nytt" twice, and the second request does not wait for
+        the first. Whichever *finished* last used to win outright, so a slow
+        fetch that started earlier and read less could push the mark back over
+        material already dealt with, and the queue re-presented a fortnight of
+        it. Merging fixes that without a second lock: the mark takes the later
+        of the two.
+
+        ``retry_from`` merges the other way, to the **earlier** of the two
+        non-empty values, because it is a debt rather than a position. If either
+        fetch could not read a message, that message is still owed, and the
+        conservative answer is the one that re-reads more. It is only cleared by
+        a caller that passes an empty value *and* has itself stalled on nothing
+        — expressed here as: an empty incoming value clears it, because the
+        fetch that wrote it saw the whole window it asked for.
+        """
         with self.lock:
             rows = self._read(MAILBOX_FILE, MailboxCheckpoint)
             key = (checkpoint.provider, checkpoint.folder)
+            existing = next((r for r in rows if (r.provider, r.folder) == key), None)
+            merged = checkpoint
+            if existing is not None:
+                retry = checkpoint.retry_from
+                if retry and existing.retry_from:
+                    retry = min(retry, existing.retry_from)
+                merged = checkpoint.model_copy(
+                    update={
+                        "high_water_mark": max(
+                            existing.high_water_mark, checkpoint.high_water_mark
+                        ),
+                        "retry_from": retry,
+                    }
+                )
             rows = [r for r in rows if (r.provider, r.folder) != key]
-            rows.append(checkpoint)
+            rows.append(merged)
             self._write(MAILBOX_FILE, rows)
-        return checkpoint
+        return merged
 
     # ---------- invoices ----------
 
@@ -584,23 +724,49 @@ class IntegrationStore:
 
         Lazy and cached for the same reason ``Store.integrations`` is: building
         it touches the filesystem, and a tenant that never connects anything
-        should never grow the directory.
+        should never grow the directory. Constructed under this store's lock,
+        double-checked, for the same reason too — a check-then-set here would
+        hand two concurrent callers two ``CredentialStore`` objects with two
+        different locks over one ``connections.json``, and a token refresh
+        racing a disconnect would be writing under neither.
         """
-        if getattr(self, "_credentials", None) is None:
-            from .credentials import CredentialStore
+        current = getattr(self, "_credentials", None)
+        if current is not None:
+            return current
+        with self.lock:
+            if getattr(self, "_credentials", None) is None:
+                from .credentials import CredentialStore
 
-            self._credentials = CredentialStore(self.dir, tenant_id=self.tenant_id)
-        return self._credentials
+                self._credentials = CredentialStore(self.dir, tenant_id=self.tenant_id)
+            return self._credentials
 
-    def update_finding(self, finding: ReviewFinding) -> ReviewFinding:
+    def mutate_finding(
+        self, finding_id: str, apply: Callable[[ReviewFinding], ReviewFinding]
+    ) -> ReviewFinding:
+        """Change one finding across a single locked read-modify-write.
+
+        A finding is decided by one person at a time in practice, but "in
+        practice" is not the guarantee: an analysis re-run
+        (``replace_findings_for_invoice``) touches the same file, and a decision
+        built from a finding read before that run could put a superseded
+        statement back on the invoice under a fresh "approved".
+        """
         with self.lock:
             rows = self._read(FINDINGS_FILE, ReviewFinding)
-            record = self._stamp(finding)
             for i, existing in enumerate(rows):
-                if existing.id == record.id:
-                    rows[i] = record
-                    break
-            else:
-                raise IntegrationError(f"Okänt fynd: {record.id}")
-            self._write(FINDINGS_FILE, rows)
-        return record
+                if existing.id != finding_id:
+                    continue
+                record = self._stamp(apply(existing))
+                if record.id != existing.id:
+                    raise IntegrationError(
+                        f"En ändring av {finding_id} får inte byta id till {record.id}."
+                    )
+                rows[i] = record
+                self._write(FINDINGS_FILE, rows)
+                return record
+        raise FindingNotFound(f"Okänt fynd: {finding_id}")
+
+    def update_finding(self, finding: ReviewFinding) -> ReviewFinding:
+        """Replace a finding with a version the caller holds. Prefer
+        :meth:`mutate_finding`, which cannot be handed a stale one."""
+        return self.mutate_finding(finding.id, lambda _existing: finding)

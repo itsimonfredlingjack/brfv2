@@ -51,6 +51,22 @@ Checkpointen flyttas **bara vid framgång**. Ett misslyckat försök skriver
 `last_error` och lämnar tidsstämpeln orörd, för en hämtning som aldrig kördes får
 inte se ut som en som inte hittade något.
 
+Den flyttas dessutom **bara framåt**. Ingenting hindrar en operatör från att
+trycka "hämta nytt" två gånger, och den andra begäran väntar inte in den första.
+Förr vann den som blev *klar* sist rakt av, så en långsammare hämtning som
+startat tidigare och läst mindre kunde putta märket bakåt — och kön presenterade
+om två veckors redan avklarat material. Skrivningen slås därför ihop i stället
+för att ersätta, och märket tar det senare av de två.
+
+Bara monotont hade dock infört motsatt fel. Ett meddelande som inte gick att
+läsa **måste** erbjudas igen, och det gjordes förr genom att dra märket *bakåt*
+under det — vilket ett märke som bara kan stiga hade tystat bort för alltid. Så
+de två frågorna hålls isär: `high_water_mark` svarar på "hur långt har vi säkert
+kommit" och stiger bara, medan `retry_from` svarar på "vad är vi fortfarande
+skyldiga", sätts till det äldsta meddelande hämtningen misslyckades med, och är
+det nästa hämtning faktiskt frågar ifrån. Att läsa om är gratis: hashen och
+`external_ref` gör en andra syn av ett meddelande till ingenting.
+
 ### Det som inte kunde tas in
 
 `.eml`-formatet är smalt med avsikt: en bilaga som inte är PDF vägrar **hela**
@@ -140,6 +156,54 @@ som uppgiftens och bevakningens citat pekar in i.
 En avgjord post kan öppnas igen. Det den producerat står kvar — en uppgift som
 gjorts av posten är ett beslut i sig, och att öppna ett kort är inget beslut om
 den.
+
+**Och avgörandet självt står också kvar.** Att öppna igen nollställde tidigare
+`resolution`, `decided_by` och `decided_at`. Det lät som "lägg tillbaka kortet"
+och var i praktiken en radering: efteråt fanns ingenstans kvar att föreningen
+någonsin avgjort posten, vem som gjorde det, varför, eller vad det skapade —
+samtidigt som uppgiften det skapade låg kvar i Uppgifter med ett ursprung som
+pekade tillbaka på ett kort som förnekade att ha gjort den. Nu **arkiveras**
+avgörandet i stället, som en `DecisionRecord` i köpostens egen
+`decision_history` (append-only), och `resolution` blir `None` precis som förr.
+Kön läser likadant; historiken finns kvar. Det ligger på köposten och inte i en
+ny lagring, av exakt det skäl kapitel 1 anger: det finns inget e-postarkiv här,
+och ett andra ställe att leta efter vad som beslutats om ett meddelande hade
+varit ett.
+
+Samma sak gäller den grövre vägen `POST .../decision` med status `open`, som är
+en återöppning under ett annat namn och var det sista stället som fortfarande
+raderade.
+
+**Att trycka två gånger är ett beslut, inte två.** En avgörandebegäran har en
+idempotensnyckel (`resolution_key`) som består av allt begäran skulle *göra*.
+Kommer identiskt samma begäran in igen — en klient som gjorde om efter timeout,
+ett dubbelklick — svarar rutten med det som redan skedde i stället för att göra
+det en gång till. Och allt som skapas har härlett id, så ett avbrott mitt i
+(uppgiften skapad, kortet ännu inte avgjort) är säkert att göra om: omtaget
+räknar fram samma uppgifts-id, får uppgiften som redan finns, och avslutar. Förr
+gav samma omtag en andra likadan uppgift.
+
+**Men att trycka två gånger på *olika* saker är två beslut, och då vägrar
+rutten.** En avgjord post tar bara emot exakt samma begäran igen. En annan
+begäran mot ett kort som redan bär ett avgörande ger **409** och skriver
+ingenting alls. Det som annars hände var samma radering som återöppningen just
+lagats för, fast genom den vanliga knappen: två ledamöter som gick igenom kön
+samma söndagskväll, och den andres klick tog bort den förstes beslut, dess
+motivering, vem som fattade det och listan över vad det skapade — utan att något
+någonstans sa att det hänt. Att ändra ett avgörande är en riktig sak en styrelse
+gör; den har en operation, och den operationen (öppna igen, avgör på nytt)
+bevarar det tidigare beslutet i `decision_history`.
+
+**Vad ett nytt beslut skapar är också nytt.** Uppgiftens och bevakningens id
+härleds ur hela det normaliserade avgörandet, inte ur rubriken respektive
+`kind` + datum. "Utred, ansvarig Bo, senast 1 oktober" pekade förr tyst på den
+befintliga "Utred, ansvarig Anna, senast 1 september": styrelsen hade fattat ett
+beslut som systemet avstått från att utföra, utan att säga det. Nu får varje
+genuint annat beslut sin egen rad. Priset, sagt rakt ut: nyckeln täcker hela
+begäran, så en granskare som öppnar igen och justerar *ett* fält får en andra
+uppgift bredvid den första i stället för en ändrad. Det är rätt håll att fela
+åt — två synliga rader går att reda ut, en rad som i tysthet motsäger beslutet
+som skapade den gör det inte.
 
 ## 6. Att bevara meddelandet självt
 

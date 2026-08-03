@@ -14,11 +14,12 @@ only create a second thing to get wrong.
 
 from __future__ import annotations
 
+import hashlib
 from datetime import datetime, timezone
 from decimal import Decimal
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 from ..schemas import CitationOut
 
@@ -382,6 +383,68 @@ class Resolution(BaseModel):
     decided_by: str
     decided_at: str = Field(default_factory=utc_now_iso)
     note: str = ""
+    # The idempotency key of the act that produced this — a digest of the event,
+    # the outcomes asked for, the note and the task/watch specifications
+    # (:func:`app.integrations.resolve.resolution_key`). Stored so that the same
+    # request arriving twice — a retried POST, a double-click, a client that
+    # replayed after a timeout — is recognised as the *same* act and returns
+    # what it already did, instead of making a second task out of one decision.
+    # Empty on rows written before this existed, which correctly means "we
+    # cannot tell", not "this was a different act".
+    key: str = ""
+
+
+class DecisionRecord(BaseModel):
+    """A settlement that was later undone, kept because it happened.
+
+    Reopening a queue item used to set ``resolution`` to ``None`` and null the
+    decider and the date. What that erased was not a draft: it was a named
+    person's decision, its stated reason, and the list of tasks, watches and
+    documents it produced. After a reopen nothing anywhere said the association
+    had ever settled the item — and the tasks it created were still sitting in
+    Uppgifter with an origin pointing back at a card that denied making them.
+
+    So a reopen now *files* the settlement here instead of deleting it, and
+    ``resolution`` goes back to ``None`` as before. The queue reads the same;
+    the history survives. This is a field on the source event and not a second
+    store, for the reason :mod:`app.integrations.resolve` states as a
+    prohibition: there is no email archive in this product, and adding one to
+    hold decision history would be building it by another name.
+    """
+
+    # Derived from what the record *is*, not minted, and filled in below when a
+    # caller leaves it empty. It exists so the history can be checked as
+    # append-only by :func:`app.history.check_append_only`, which compares
+    # entries by identity rather than by length — the check that stops a stale
+    # event object from dropping a filed settlement on its way past.
+    id: str = ""
+
+    # What was decided, exactly as it stood — outcomes, note, decider, key.
+    resolution: Resolution
+    # The coarse status that accompanied it, so a reader does not have to infer
+    # "not relevant" from the absence of outcomes.
+    review_status: ReviewStatus
+    # When this record was filed, and by whom — the reopen, not the decision.
+    superseded_at: str = Field(default_factory=utc_now_iso)
+    superseded_by: str = ""
+    # Why it was reopened, when the reopening said.
+    note: str = ""
+
+    @model_validator(mode="after")
+    def _derive_id(self) -> "DecisionRecord":
+        if not self.id:
+            basis = "\x00".join(
+                [
+                    self.resolution.key,
+                    self.resolution.decided_by,
+                    self.resolution.decided_at,
+                    self.superseded_at,
+                ]
+            )
+            object.__setattr__(
+                self, "id", hashlib.sha256(basis.encode("utf-8")).hexdigest()[:12]
+            )
+        return self
 
 
 class SourceEvent(BaseModel):
@@ -457,6 +520,11 @@ class SourceEvent(BaseModel):
 
     # How it was settled, and what that produced.
     resolution: Resolution | None = None
+    # Settlements that were reopened, oldest first. Append-only: a reopen files
+    # the current resolution here rather than deleting it, so "did we ever
+    # decide this, and what did it create" stays answerable after somebody puts
+    # the card back in the queue. See :class:`DecisionRecord`.
+    decision_history: list[DecisionRecord] = Field(default_factory=list)
 
     # The message text, preserved as an ordinary document of the
     # association's. This is what makes an attachment-less mail answerable
@@ -745,7 +813,26 @@ class MailboxCheckpoint(BaseModel):
     folder: str = ""
     # Empty until a first successful fetch. Empty means "everything the folder
     # will give us", which is the correct first-run behaviour.
+    #
+    # **Monotonic.** :meth:`app.integrations.store.IntegrationStore.put_mailbox_checkpoint`
+    # merges rather than replaces, so this only ever moves forward. Two fetches
+    # overlapping — a slow one started first, a fast one that finished while it
+    # was still reading — used to leave whichever *finished* last, and the older
+    # mark winning meant the queue re-presented a fortnight of settled material.
     high_water_mark: str = ""
+    # The oldest message this folder still owes us, when the last fetch could
+    # not read one. Monotonicity alone would be the wrong fix: clamping the mark
+    # back below a failed message is exactly how the old code re-offered it, and
+    # a mark that can only rise would have skipped it permanently and silently.
+    #
+    # So the two questions are separated. ``high_water_mark`` answers "how far
+    # have we definitely got", and only rises. ``retry_from`` answers "what do we
+    # still owe", is set to the timestamp of the oldest message a fetch failed
+    # on, and is what the next fetch actually asks the mailbox from. It is
+    # cleared by a fetch that stalls on nothing. Re-reading is free: the content
+    # hash and ``external_ref`` already make a second sight of a message a
+    # no-op.
+    retry_from: str = ""
     last_fetched_at: str = ""
     last_fetch_by: str = ""
     # What the last fetch produced, kept so the UI can say it without the
@@ -758,8 +845,21 @@ class MailboxCheckpoint(BaseModel):
     # make a fetch that never ran look like one that found nothing.
     last_error: str = ""
 
+    def fetch_from(self) -> str:
+        """Where the next fetch asks the mailbox to start.
+
+        The retry floor when there is one, otherwise the high-water mark. Never
+        the later of the two: the whole point of the floor is that it is behind
+        the mark, holding the window open over a message that has not been taken
+        in yet.
+        """
+        if self.retry_from and (not self.high_water_mark or self.retry_from < self.high_water_mark):
+            return self.retry_from
+        return self.high_water_mark
+
     def public(self) -> dict:
         return {
             **self.model_dump(mode="json"),
             "hasFetched": bool(self.last_fetched_at),
+            "fetchFrom": self.fetch_from(),
         }

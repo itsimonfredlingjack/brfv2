@@ -104,6 +104,40 @@ class Store:
         self._watches = None
         self._tasks = None
 
+    # ---------- domain stores ----------
+    #
+    # Each of these is lazy, and each is cached *exactly once per tenant*. The
+    # "exactly once" is the part that took a bug to learn. A bare
+    # `if self._x is None: self._x = X(...)` is a check-then-set across a
+    # threadpool: sixteen concurrent first accesses to `Store.integrations`
+    # produced between five and fifteen distinct IntegrationStore objects, each
+    # with its **own** `threading.RLock` over the same JSON files. Every
+    # mutation downstream was locking something, and no two of them were
+    # locking the same thing — which is worse than no lock at all, because the
+    # code reads as if it were safe.
+    #
+    # So construction happens under the parent store's lock, double-checked so
+    # the common (already-built) path stays lock-free.
+    #
+    # **Lock ordering.** A domain store's lock is always taken *before*
+    # `Store.lock`, never after: `import_eml` holds `integrations.lock` across
+    # `Store.add_document`, and `resolve` holds it across task and watch
+    # writes. The only place that order is inverted is here, during
+    # construction — and a constructor touches no other domain store, so there
+    # is no cycle to close. Anything added below that reaches back into another
+    # domain store from a constructor would create one.
+
+    def _domain_store(self, attr: str, build):
+        current = getattr(self, attr, None)
+        if current is not None:
+            return current
+        with self.lock:
+            current = getattr(self, attr, None)
+            if current is None:
+                current = build()
+                setattr(self, attr, current)
+            return current
+
     @property
     def integrations(self):
         """This tenant's integration records, in this tenant's own directory.
@@ -115,15 +149,13 @@ class Store:
         membership to a brf_id, and `registry.delete()` removes this directory
         with everything else in it.
         """
-        if self._integrations is None:
+
+        def build():
             from .integrations.store import IntegrationStore
 
-            self._integrations = IntegrationStore(
-                self.data_dir / "integrations", tenant_id=self.tenant_id
-            )
-        return self._integrations
+            return IntegrationStore(self.data_dir / "integrations", tenant_id=self.tenant_id)
 
-    # ---------- persistence helpers ----------
+        return self._domain_store("_integrations", build)
 
     @property
     def watches(self):
@@ -133,20 +165,26 @@ class Store:
         touches the filesystem, and a tenant nobody has scanned should not grow
         a directory for it.
         """
-        if getattr(self, "_watches", None) is None:
+
+        def build():
             from .watches.store import WatchStore
 
-            self._watches = WatchStore(self.data_dir / "watches", tenant_id=self.tenant_id)
-        return self._watches
+            return WatchStore(self.data_dir / "watches", tenant_id=self.tenant_id)
+
+        return self._domain_store("_watches", build)
 
     @property
     def tasks(self):
         """Work the association has taken on. Lazy, like the rest."""
-        if getattr(self, "_tasks", None) is None:
+
+        def build():
             from .tasks.store import TaskStore
 
-            self._tasks = TaskStore(self.data_dir / "tasks", tenant_id=self.tenant_id)
-        return self._tasks
+            return TaskStore(self.data_dir / "tasks", tenant_id=self.tenant_id)
+
+        return self._domain_store("_tasks", build)
+
+    # ---------- persistence helpers ----------
 
     def _load_or_init_corpus_origin(self, corpus_origin: CorpusOrigin | None) -> CorpusOrigin:
         """tenant_meta.json — a sibling record to documents.json/settings.json
