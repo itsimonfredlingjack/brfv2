@@ -37,6 +37,21 @@ auditfiler.
 ssh -N -L 8000:127.0.0.1:8000 agenntserver
 ```
 
+**Icke-interaktiva körningar använder LAN-aliaset.** `agenntserver` går över
+tailnet, där Tailscale SSH tar över anslutningen och kräver en interaktiv
+webbinloggning (`https://login.tailscale.com/a/...`). En människa vid en
+terminal klarar det; en acceptanskörning, ett skript eller en agent gör det
+inte — anslutningen hänger tills den timear ut, och skälet syns bara i
+`ssh -vv`. Öppna tunneln över LAN i de fallen:
+
+```bash
+ssh -N -L 8000:127.0.0.1:8000 agenntserver-lan
+```
+
+**Samma värd, samma modelltjänst** — `agenntserver-lan` är bara
+`~/.ssh/config`-aliaset för LAN-adressen med nyckelautentisering. Vilket alias
+som användes ändrar ingenting i vad som testas.
+
 I en annan terminal:
 
 ```bash

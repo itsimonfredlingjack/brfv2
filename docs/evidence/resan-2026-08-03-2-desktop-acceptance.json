@@ -1,0 +1,991 @@
+{
+  "application": "<checkout>/src-tauri/target/release/brfv2-desktop",
+  "applicationIdentity": {
+    "bytes": 3429824,
+    "path": "<checkout>/src-tauri/target/release/brfv2-desktop",
+    "sha256": "460686a0c964fb05481ef59da74db24ac005a5f6259c0c17ff96015f2a6d0c49"
+  },
+  "bundle": {
+    "deliveryTree": "b92ed5d0820ba461a720d490b1e14a681c18607ae5654d2a1d93edded65ef8c0",
+    "embedder": {
+      "bundled": true,
+      "modelId": "minishlab/potion-multilingual-128M",
+      "revision": "73908c3438cf03b6a01bcb9611d62b23d0726f08"
+    },
+    "pins": {
+      "embedder": {
+        "files": {
+          "config.json": {
+            "bytes": 271,
+            "sha256": "595e4cab2093732efd5dbe084fd5c1826b5eea693b73b4c1fd971672867d2e54"
+          },
+          "model.safetensors": {
+            "bytes": 512361560,
+            "sha256": "14b5eb39cb4ce5666da8ad1f3dc6be4346e9b2d601c073302fa0a31bf7943397"
+          },
+          "modules.json": {
+            "bytes": 278,
+            "sha256": "a68dcbed0429dcdd5bfdca92b0b03cc30d09122c0a3fcf4758787d4b244e45b2"
+          },
+          "special_tokens_map.json": {
+            "bytes": 167,
+            "sha256": "d05497f1da52c5e09554c0cd874037a083e1dc1b9cfd48034d1c717f1afc07a7"
+          },
+          "tokenizer.json": {
+            "bytes": 18616131,
+            "sha256": "19f1909063da3cfe3bd83a782381f040dccea475f4816de11116444a73e1b6a1"
+          },
+          "tokenizer_config.json": {
+            "bytes": 1898,
+            "sha256": "bd0e8c3a56aeac5078a6445e6b04425cd17b41bcc8d382ae925b5dbca287f8eb"
+          },
+          "vocab.txt": {
+            "bytes": 6355735,
+            "sha256": "090a91cb4ec3969e9dd3bf9f0fb4bd88006a857737f4144c64acc03ed13db53b"
+          }
+        },
+        "repoId": "minishlab/potion-multilingual-128M",
+        "revision": "73908c3438cf03b6a01bcb9611d62b23d0726f08",
+        "urlTemplate": "https://huggingface.co/{repoId}/resolve/{revision}/{file}",
+        "verifiedBy": "ops/fetch_pinned.py embedder (SHA-256 + storlek per fil)"
+      },
+      "python": {
+        "archive": "cpython-3.12.13+20260718-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz",
+        "build": "20260718",
+        "distribution": "astral-sh/python-build-standalone",
+        "implementation": "cpython",
+        "sha256": "5854aa6ec71cad00334d5065633c210b2e7feb40956767a59a91791cadcf0b79",
+        "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20260718/cpython-3.12.13%2B20260718-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz",
+        "verifiedBy": "ops/fetch_pinned.py python (SHA-256 före uppackning)",
+        "version": "3.12.13"
+      },
+      "schema": "brfv2-desktop-pins/v1",
+      "uv": {
+        "sha256": "aab924fd522efd06f1c5f3b93a243864fc453132c94b2dc49f1371b528a4b967",
+        "url": "https://github.com/astral-sh/uv/releases/download/0.11.32/uv-x86_64-unknown-linux-gnu.tar.gz",
+        "verifiedBy": "ops/fetch_pinned.py uv (SHA-256 + uv --version)",
+        "version": "0.11.32"
+      }
+    },
+    "providerExclusion": {
+      "checks": [
+        {
+          "method": "presence of a payload component",
+          "result": "out-of-scope",
+          "rule": "scope",
+          "target": "usr/bin/brfv2-desktop",
+          "why": "The compiled shell."
+        },
+        {
+          "method": "presence of a payload component",
+          "result": "out-of-scope",
+          "rule": "scope",
+          "target": "usr/lib/BRF Dokument-AI/ui",
+          "why": "The built desktop UI."
+        },
+        {
+          "method": "presence of a payload component",
+          "result": "pass",
+          "rule": "scope",
+          "target": "usr/lib/BRF Dokument-AI/runtime",
+          "why": "The packaged Python runtime."
+        },
+        {
+          "count": 38,
+          "distributions": [
+            "annotated-doc",
+            "annotated-types",
+            "anyio",
+            "certifi",
+            "charset-normalizer",
+            "click",
+            "distro",
+            "docstring-parser",
+            "fastapi",
+            "filelock",
+            "fsspec",
+            "h11",
+            "httpcore",
+            "httpx",
+            "huggingface-hub",
+            "idna",
+            "jinja2",
+            "jiter",
+            "joblib",
+            "markupsafe",
+            "model2vec",
+            "numpy",
+            "packaging",
+            "pydantic",
+            "pydantic-core",
+            "pymupdf",
+            "python-multipart",
+            "pyyaml",
+            "requests",
+            "safetensors",
+            "sniffio",
+            "starlette",
+            "tokenizers",
+            "tqdm",
+            "typing-extensions",
+            "typing-inspection",
+            "urllib3",
+            "uvicorn"
+          ],
+          "method": "parsed Name: from every *.dist-info/*.egg-info METADATA in the payload",
+          "result": "pass",
+          "rule": "distribution-inventory",
+          "target": "usr/lib/BRF Dokument-AI/runtime/python/lib/python3.12/site-packages"
+        },
+        {
+          "method": "distribution name present among the payload's parsed metadata",
+          "result": "absent",
+          "rule": "distribution",
+          "target": "anthropic",
+          "why": "Network client for a third-party model API. The desktop product must have no code path to a model somebody else runs, so neither the package nor its .dist-info may be in the payload."
+        },
+        {
+          "method": "distribution name present among the payload's parsed metadata",
+          "result": "absent",
+          "rule": "distribution",
+          "target": "hf_xet",
+          "why": "Hugging Face Xet transfer backend. It exists only to download model data at runtime; a packaged, offline application ships its weights and must never fetch any."
+        },
+        {
+          "method": "distribution name present among the payload's parsed metadata",
+          "result": "absent",
+          "rule": "distribution",
+          "target": "pip",
+          "why": "Installs more software at runtime into a tree that is read-only on the target."
+        },
+        {
+          "method": "distribution name present among the payload's parsed metadata",
+          "result": "absent",
+          "rule": "distribution",
+          "target": "setuptools",
+          "why": "Build-time machinery; nothing in the packaged application builds anything."
+        },
+        {
+          "matchCount": 0,
+          "matches": [],
+          "method": "glob over every file in the payload",
+          "result": "absent",
+          "rule": "path-pattern",
+          "target": "**/huggingface_hub/inference/**",
+          "why": "Adapter sources and bytecode for the hosted inference providers."
+        },
+        {
+          "matchCount": 0,
+          "matches": [],
+          "method": "glob over every file in the payload",
+          "result": "absent",
+          "rule": "path-pattern",
+          "target": "**/huggingface_hub/inference_api.py*",
+          "why": "Legacy hosted inference client module and its bytecode."
+        },
+        {
+          "matchCount": 0,
+          "matches": [],
+          "method": "glob over every file in the payload",
+          "result": "absent",
+          "rule": "path-pattern",
+          "target": "**/anthropic/**",
+          "why": "Hosted Anthropic SDK package contents."
+        },
+        {
+          "matchCount": 0,
+          "matches": [],
+          "method": "glob over every file in the payload",
+          "result": "absent",
+          "rule": "path-pattern",
+          "target": "**/hf_xet/**",
+          "why": "Runtime download backend contents."
+        },
+        {
+          "matchCount": 0,
+          "matches": [],
+          "method": "glob over every file in the payload",
+          "result": "absent",
+          "rule": "path-pattern",
+          "target": "**/app/llm_hosted.py*",
+          "why": "The hosted plug-in module and its bytecode."
+        },
+        {
+          "matchCount": 0,
+          "matches": [],
+          "method": "regex over every path in the payload",
+          "result": "absent",
+          "rule": "filename-scan",
+          "target": "(?i)((^|/)(anthropic|hf_xet|llm_hosted)[^/]*(/|$)|/huggingface_hub/inference(/|_api\\.py))",
+          "why": "Every path in the whole payload — package directories, modules, bytecode, metadata directories, data files — swept for a forbidden name. Cheap, exhaustive, and it cannot be satisfied by anything except the files actually being gone. Scoped to huggingface_hub's inference tree rather than any directory called `inference`, because model2vec ships a local `model2vec/inference` head-pipeline that runs entirely on this machine and is not a hosted path."
+        },
+        {
+          "entryPoints": [
+            "anyio-4.14.2.dist-info:[pytest11] anyio = anyio.pytest_plugin",
+            "charset_normalizer-3.4.9.dist-info:[console_scripts] normalizer = charset_normalizer.cli:cli_detect",
+            "distro-1.9.0.dist-info:[console_scripts] distro = distro.distro:main",
+            "fastapi-0.139.0.dist-info:[console_scripts] fastapi = fastapi.cli:main",
+            "httpx-0.28.1.dist-info:[console_scripts] httpx = httpx:main",
+            "huggingface_hub-0.36.2.dist-info:[console_scripts] hf = huggingface_hub.cli.hf:main",
+            "huggingface_hub-0.36.2.dist-info:[console_scripts] huggingface-cli = huggingface_hub.commands.huggingface_cli:main",
+            "huggingface_hub-0.36.2.dist-info:[fsspec.specs] hf = huggingface_hub.HfFileSystem",
+            "idna-3.18.dist-info:[console_scripts] idna=idna.cli:main",
+            "jinja2-3.1.6.dist-info:[babel.extractors] jinja2=jinja2.ext:babel_extract[i18n]",
+            "numpy-2.5.1.dist-info:[array_api] numpy = numpy",
+            "numpy-2.5.1.dist-info:[console_scripts] f2py = numpy.f2py.f2py2e:main",
+            "numpy-2.5.1.dist-info:[console_scripts] numpy-config = numpy._configtool:main",
+            "numpy-2.5.1.dist-info:[pkg_config] numpy = numpy._core.lib.pkgconfig",
+            "numpy-2.5.1.dist-info:[pyinstaller40] hook-dirs = numpy:_pyinstaller_hooks_dir",
+            "pymupdf-1.28.0.dist-info:[console_scripts] pymupdf = pymupdf.__main__:main",
+            "tqdm-4.68.4.dist-info:[console_scripts] tqdm = tqdm.cli:main",
+            "uvicorn-0.51.0.dist-info:[console_scripts] uvicorn = uvicorn.main:main"
+          ],
+          "files": 13,
+          "method": "parsed every *.dist-info/entry_points.txt in the payload",
+          "result": "pass",
+          "rule": "entry-point-inventory",
+          "target": "usr/lib/BRF Dokument-AI/runtime/python/lib/python3.12/site-packages"
+        },
+        {
+          "matchCount": 0,
+          "matches": [],
+          "method": "regex over every declared entry point in the payload",
+          "result": "absent",
+          "rule": "entry-point",
+          "target": "(?i)anthropic|claude|(^|[^a-z])hf_xet|huggingface_hub\\.inference|tiny-agents",
+          "why": "An entry point is a registration: it names an implementation a plug-in host can load without the application ever importing it explicitly. None may point at a hosted provider, at a hosted inference CLI, or at the removed inference tree."
+        },
+        {
+          "files": 48,
+          "matches": 1,
+          "method": "regex over the contents of 48 readable file(s)",
+          "result": "absent",
+          "rule": "text-scan",
+          "target": "usr/lib/BRF Dokument-AI/runtime/backend",
+          "undeclared": [],
+          "why": "The product code that ships."
+        },
+        {
+          "method": "regex over file contents",
+          "result": "out-of-scope",
+          "rule": "text-scan",
+          "target": "usr/lib/BRF Dokument-AI/ui",
+          "why": "The built desktop UI. A shipped provider label would be an exposed hosted identifier even though it is not an implementation."
+        },
+        {
+          "method": "occurrence count in the artifact",
+          "result": "out-of-scope",
+          "rule": "declared-reference",
+          "target": "usr/bin/brfv2-desktop",
+          "why": "src-tauri/src/main.rs removes ANTHROPIC_API_KEY from the backend child process's environment. The literal is therefore present in the compiled binary as the name of a variable being DELETED, not as an implementation, an import, a registration or a selectable identifier. It is declared here so the inspection reports it explicitly instead of quietly not looking; the count is asserted, so a second, undeclared occurrence still fails."
+        },
+        {
+          "classification": "default value of the per-tenant `aiModel` setting",
+          "declaredOccurrences": 1,
+          "expected": 1,
+          "method": "counted occurrences of the declared literal and of every forbidden name in the same file",
+          "result": "pass",
+          "rule": "declared-reference",
+          "target": "usr/lib/BRF Dokument-AI/runtime/backend/app/schemas.py :: claude-opus-4-8",
+          "totalForbiddenNameOccurrences": 1,
+          "why": "Settings.aiModel is a tenant preference, not a provider: it names no implementation, registers nothing, and selects no provider. The desktop never uses it for generation — app.desktop.apply_model_runtime always exports the configured ModelRuntimeConfig.model (default gemma4:e12b) and app.answer prefers the provider's own model over the setting — and the desktop UI has no control that displays it. The selection probes below assert the reported generation model, so the claim is checked rather than argued."
+        },
+        {
+          "error": "ModuleNotFoundError",
+          "message": "No module named 'anthropic'",
+          "method": "import attempted in the packaged interpreter",
+          "result": "absent",
+          "rule": "module-import",
+          "target": "anthropic",
+          "why": "The hosted Anthropic SDK. Must not be importable from the packaged interpreter."
+        },
+        {
+          "error": "ModuleNotFoundError",
+          "message": "No module named 'hf_xet'",
+          "method": "import attempted in the packaged interpreter",
+          "result": "absent",
+          "rule": "module-import",
+          "target": "hf_xet",
+          "why": "Runtime download backend; not required by the approved self-hosted runtime (model2vec loads the bundled weights from disk)."
+        },
+        {
+          "error": "ModuleNotFoundError",
+          "message": "No module named 'huggingface_hub.inference'",
+          "method": "import attempted in the packaged interpreter",
+          "result": "absent",
+          "rule": "module-import",
+          "target": "huggingface_hub.inference",
+          "why": "InferenceClient/AsyncInferenceClient and the whole hosted inference surface, including huggingface_hub.inference._providers — a registry of ~20 third-party inference-provider adapters (together, replicate, fal_ai, openai, cohere, groq, ...). Every one of them is a hosted generation path."
+        },
+        {
+          "error": "ModuleNotFoundError",
+          "message": "No module named 'huggingface_hub.inference'",
+          "method": "import attempted in the packaged interpreter",
+          "result": "absent",
+          "rule": "module-import",
+          "target": "huggingface_hub.inference._providers",
+          "why": "The hosted inference-provider registry itself, named separately so its absence is asserted in its own right and not only as a consequence of its parent package."
+        },
+        {
+          "error": "ModuleNotFoundError",
+          "message": "No module named 'huggingface_hub.inference_api'",
+          "method": "import attempted in the packaged interpreter",
+          "result": "absent",
+          "rule": "module-import",
+          "target": "huggingface_hub.inference_api",
+          "why": "Legacy hosted InferenceApi client."
+        },
+        {
+          "error": "ModuleNotFoundError",
+          "message": "No module named 'app.llm_hosted'",
+          "method": "import attempted in the packaged interpreter",
+          "result": "absent",
+          "rule": "module-import",
+          "target": "app.llm_hosted",
+          "why": "The repository's hosted-generation plug-in (Anthropic SDK provider and Claude CLI provider). Present for the web product, deliberately not copied into the desktop payload; app.llm discovers it at selection time, so its absence removes the implementations, the registration and the selection keys together."
+        },
+        {
+          "error": "ModuleNotFoundError",
+          "method": "attribute access attempted in the packaged interpreter",
+          "result": "absent",
+          "rule": "module-attribute",
+          "target": "huggingface_hub.InferenceClient",
+          "why": "huggingface_hub exposes its hosted client through a lazy module __getattr__, so file absence alone does not prove the attribute cannot be reached. Access must raise."
+        },
+        {
+          "error": "ModuleNotFoundError",
+          "method": "attribute access attempted in the packaged interpreter",
+          "result": "absent",
+          "rule": "module-attribute",
+          "target": "huggingface_hub.AsyncInferenceClient",
+          "why": "Same lazy-attribute surface, async variant."
+        },
+        {
+          "error": "",
+          "method": "import attempted in the packaged interpreter",
+          "result": "pass",
+          "rule": "required-module",
+          "target": "model2vec",
+          "version": "0.8.2",
+          "why": "The approved self-hosted embedder. The exclusions must not have damaged it."
+        },
+        {
+          "error": "",
+          "method": "import attempted in the packaged interpreter",
+          "result": "pass",
+          "rule": "required-module",
+          "target": "huggingface_hub",
+          "version": "0.36.2",
+          "why": "model2vec imports it (model cards, persistence). Pruning the hosted inference surface must leave the package itself working."
+        },
+        {
+          "error": "",
+          "method": "import attempted in the packaged interpreter",
+          "result": "pass",
+          "rule": "required-module",
+          "target": "huggingface_hub.hf_api",
+          "version": "",
+          "why": "Reached transitively by model2vec's persistence path. It imports huggingface_hub._inference_endpoints at module scope, which is why that one module is retained — see retainedModules."
+        },
+        {
+          "error": "",
+          "method": "import attempted in the packaged interpreter",
+          "result": "pass",
+          "rule": "required-module",
+          "target": "app.llm",
+          "version": "",
+          "why": "The provider registry that ships."
+        },
+        {
+          "error": "",
+          "method": "import attempted in the packaged interpreter",
+          "result": "pass",
+          "rule": "required-module",
+          "target": "app.desktop",
+          "version": "",
+          "why": "The desktop backend entry point."
+        },
+        {
+          "available": false,
+          "error": "",
+          "hostImportable": true,
+          "method": "imported the host module and called its availability probe",
+          "result": "pass",
+          "rule": "guarded-optional-import",
+          "target": "huggingface_hub.file_download -> hf_xet",
+          "why": "huggingface_hub imports hf_xet lazily behind an availability check, so its sources still name it. With the distribution absent the check is False and the import is unreachable; this probe proves that rather than asserting it."
+        },
+        {
+          "method": "read the source of every member that can hand out a hosted client and attempted each import it performs, in the packaged interpreter",
+          "probe": {
+            "async_client": {
+              "imports": [
+                {
+                  "error": "ModuleNotFoundError",
+                  "importable": false,
+                  "message": "No module named 'huggingface_hub.inference'",
+                  "module": "huggingface_hub.inference._generated._async_client"
+                }
+              ],
+              "raised": true
+            },
+            "client": {
+              "imports": [
+                {
+                  "error": "ModuleNotFoundError",
+                  "importable": false,
+                  "message": "No module named 'huggingface_hub.inference'",
+                  "module": "huggingface_hub.inference._client"
+                }
+              ],
+              "raised": true
+            }
+          },
+          "result": "pass",
+          "rule": "retained-module-inert",
+          "target": "huggingface_hub._inference_endpoints",
+          "why": "A management dataclass for HF Inference Endpoints, not an inference-provider adapter. huggingface_hub.hf_api imports it at module scope, and model2vec reaches hf_api through its model-card path, so removing it breaks the approved embedder outright (verified: ModuleNotFoundError from model2vec.persistence)."
+        },
+        {
+          "method": "called the registry the packaged code uses to discover hosted providers",
+          "registered": [],
+          "result": "pass",
+          "rule": "hosted-plugin-registry",
+          "target": "app.llm.hosted_providers()",
+          "why": "A hosted plug-in registered in the packaged runtime would be an implementation the application could select at any time."
+        },
+        {
+          "env": {
+            "ANTHROPIC_API_KEY": "sk-ant-must-never-be-used",
+            "BRF_LLM": "auto"
+          },
+          "error": "",
+          "expected": "none",
+          "fakeClaudeOnPath": false,
+          "method": "called app.llm.pick_provider() in the packaged interpreter under that environment",
+          "model": "",
+          "result": "pass",
+          "rule": "provider-selection",
+          "selected": "none",
+          "target": "auto with a hosted API key exported"
+        },
+        {
+          "env": {
+            "BRF_LLM": "auto"
+          },
+          "error": "",
+          "expected": "none",
+          "fakeClaudeOnPath": true,
+          "method": "called app.llm.pick_provider() in the packaged interpreter under that environment",
+          "model": "",
+          "result": "pass",
+          "rule": "provider-selection",
+          "selected": "none",
+          "target": "auto with a `claude` executable on PATH"
+        },
+        {
+          "env": {
+            "ANTHROPIC_API_KEY": "sk-ant-must-never-be-used",
+            "BRF_LLM": "api"
+          },
+          "error": "",
+          "expected": "none",
+          "fakeClaudeOnPath": false,
+          "method": "called app.llm.pick_provider() in the packaged interpreter under that environment",
+          "model": "",
+          "result": "pass",
+          "rule": "provider-selection",
+          "selected": "none",
+          "target": "forced hosted API key"
+        },
+        {
+          "env": {
+            "BRF_LLM": "cli"
+          },
+          "error": "",
+          "expected": "none",
+          "fakeClaudeOnPath": true,
+          "method": "called app.llm.pick_provider() in the packaged interpreter under that environment",
+          "model": "",
+          "result": "pass",
+          "rule": "provider-selection",
+          "selected": "none",
+          "target": "forced hosted CLI"
+        },
+        {
+          "env": {
+            "BRF_LLM": "api"
+          },
+          "error": "",
+          "expected": "none",
+          "fakeClaudeOnPath": true,
+          "method": "called app.llm.pick_provider() in the packaged interpreter under that environment",
+          "model": "",
+          "result": "pass",
+          "rule": "provider-selection",
+          "selected": "none",
+          "target": "BRF_LLM=api (declared selection key)"
+        },
+        {
+          "env": {
+            "BRF_LLM": "cli"
+          },
+          "error": "",
+          "expected": "none",
+          "fakeClaudeOnPath": true,
+          "method": "called app.llm.pick_provider() in the packaged interpreter under that environment",
+          "model": "",
+          "result": "pass",
+          "rule": "provider-selection",
+          "selected": "none",
+          "target": "BRF_LLM=cli (declared selection key)"
+        },
+        {
+          "env": {
+            "BRF_LLM": "selfhosted",
+            "BRF_LLM_BASE_URL": "http://127.0.0.1:8000/v1",
+            "BRF_LLM_MODEL": "gemma4:e12b"
+          },
+          "error": "",
+          "expected": "selfhosted",
+          "fakeClaudeOnPath": false,
+          "method": "called app.llm.pick_provider() in the packaged interpreter under that environment",
+          "model": "gemma4:e12b",
+          "result": "pass",
+          "rule": "provider-selection",
+          "selected": "selfhosted",
+          "target": "the approved self-hosted provider is still selectable"
+        },
+        {
+          "error": "",
+          "method": "classified third-party and loopback endpoints in the packaged interpreter",
+          "result": "pass",
+          "rule": "endpoint-policy",
+          "target": "app.model_endpoint.classify_endpoint",
+          "verdicts": {
+            "http://127.0.0.1:8000/v1": true,
+            "https://api.anthropic.com/v1": false,
+            "https://api.openai.com/v1": false
+          },
+          "why": "The packaged code must carry the same endpoint policy the tests proved."
+        },
+        {
+          "dim": 256,
+          "error": "",
+          "method": "loaded the bundled weights and embedded a Swedish sentence, offline",
+          "name": "model2vec:potion-multilingual-128M",
+          "result": "pass",
+          "rule": "model2vec",
+          "target": "app.embeddings.Model2VecEmbedder",
+          "why": "The exclusions must not have damaged the approved self-hosted embedder."
+        }
+      ],
+      "counts": {
+        "absent": 20,
+        "checks": 45,
+        "findings": 0,
+        "outOfScope": 4,
+        "pass": 21
+      },
+      "derivedFrom": "inspection of the payload named in `inspected`; no rule is answered from a stored result",
+      "findings": [],
+      "inspected": {
+        "bytes": 805161249,
+        "covers": [
+          "usr/lib/BRF Dokument-AI/runtime"
+        ],
+        "excludedFromHash": [
+          "usr/lib/BRF Dokument-AI/runtime/BUNDLE.json",
+          "usr/lib/BRF Dokument-AI/runtime/requirements.lock.txt"
+        ],
+        "files": 4720,
+        "payloadSha256": "995a0bec7c80de72d958dc4e0ba0a8773c0345c11ca6d3c68e1debac38453d84",
+        "scope": "staged-runtime"
+      },
+      "ok": true,
+      "rules": {
+        "sha256": "500e8c852a3539b6cb1c4036f1ee10ce9af5c6d85894e7172b6fb286b3fb109f",
+        "source": "ops/forbidden_providers.json"
+      },
+      "schema": "brfv2-desktop-provider-exclusion/v1"
+    },
+    "python": {
+      "sha256": "5854aa6ec71cad00334d5065633c210b2e7feb40956767a59a91791cadcf0b79",
+      "source": "astral-sh/python-build-standalone@20260718",
+      "version": "3.12.13"
+    },
+    "requirements": {
+      "sha256": "f0b3b31384ca27c35d38d1d88961469b65249fca8bb430dce4807185f3281f9f",
+      "source": "backend/uv.lock (uv export --frozen --no-dev)",
+      "verifiedBy": "uv pip install --require-hashes"
+    },
+    "schema": "brfv2-desktop-bundle/v2",
+    "sizes": {
+      "backendBytes": 1278495,
+      "modelsBytes": 537336040,
+      "pythonBytes": 360999238
+    },
+    "sourceDateEpoch": 1785196800
+  },
+  "durationSeconds": 119.7,
+  "failureSurfaces": {
+    "backendDied": {
+      "killedPid": 164741,
+      "logCaptured": true,
+      "logPath": "<isolated-xdg-home>/xdg-data/se.brfdokumentai.desktop/logs/backend.log",
+      "orphans": 0,
+      "portClosed": true,
+      "shellStayedUpToExplain": true
+    },
+    "startupFailure": {
+      "skipped": "an installation is present at /usr/lib/BRF Dokument-AI, so a detached copy of the binary still resolves a valid runtime; this surface is verified against the checkout build instead"
+    }
+  },
+  "isolatedXdgHome": "<isolated-xdg-home>",
+  "lifecycle": {
+    "abruptTermination": {
+      "closed": true,
+      "orphans": 0,
+      "port": 42631
+    },
+    "backupRestore": {
+      "afterRestore": [
+        "brf-gjutformen-12",
+        "brf-sjoutsikten-7"
+      ],
+      "backup": {
+        "bytes": 26066,
+        "files": 16,
+        "name": "brfv2-backup-20260803-065922-41d5.zip",
+        "tenants": [
+          {
+            "brf_id": "brf-gjutformen-12",
+            "documents": 2,
+            "name": "Brf Gjutformen 12"
+          },
+          {
+            "brf_id": "brf-sjoutsikten-7",
+            "documents": 0,
+            "name": "Brf Sjöutsikten 7"
+          }
+        ]
+      },
+      "beforeRestore": [
+        "brf-efter-kopian",
+        "brf-gjutformen-12",
+        "brf-sjoutsikten-7"
+      ],
+      "documents": [
+        "Serviceavtal hiss 2026.pdf",
+        "Stadgar Brf Gjutformen 12.pdf"
+      ],
+      "lastRestore": {
+        "appVersion": "0.2.0",
+        "at": "2026-08-03T06:59:23.298802+00:00",
+        "createdAt": "2026-08-03T06:59:22.003610+00:00",
+        "status": "restored"
+      },
+      "restartExitCode": 86,
+      "restartRespawnsUnderANewPid": true
+    },
+    "cleanShutdown": {
+      "closed": true,
+      "orphans": 0,
+      "port": 46679
+    },
+    "modelRuntimeUnavailable": {
+      "answer": "Tekniskt fel vid svarsgenerering — försök igen om en stund.",
+      "citations": 0,
+      "probe": {
+        "detail": "Kunde inte nå modelltjänsten: ConnectError: [Errno 111] Connection refused",
+        "latencyMs": 12,
+        "ok": false
+      },
+      "refusalReason": "provider_error"
+    },
+    "retainedState": {
+      "documents": [
+        "Serviceavtal hiss 2026.pdf",
+        "Stadgar Brf Gjutformen 12.pdf"
+      ],
+      "memberships": [
+        "brf-gjutformen-12",
+        "brf-sjoutsikten-7"
+      ],
+      "modelRuntime": {
+        "display_name": "Gemma 4 12B",
+        "model": "gemma4:e12b",
+        "provider": "selfhosted",
+        "ready": true,
+        "runtime_label": "agenntserver"
+      },
+      "provisioned": true
+    }
+  },
+  "modelService": {
+    "baseUrl": "http://127.0.0.1:8000/v1",
+    "served": [
+      "/root/.cache/huggingface/hub/models--unsloth--gemma-4-12b-it-GGUF/snapshots/d997c805aafe035a8024f961c6e1afd6b30d79a5/gemma-4-12b-it-UD-Q4_K_XL.gguf"
+    ]
+  },
+  "paths": {
+    "isolatedXdgHomePattern": "/tmp/brfv2-acceptance-*",
+    "note": "Machine-local locations are replaced by stable placeholders: this checkout reads as <checkout>, the throwaway XDG home this run used reads as <isolated-xdg-home>, and the operator's home directory reads as ~. Nothing else is rewritten."
+  },
+  "schema": "brfv2-desktop-acceptance/v2",
+  "securityBoundary": {
+    "approvedEndpoint": {
+      "deploymentClass": "loopback",
+      "probeOk": true,
+      "served": [
+        "/root/.cache/huggingface/hub/models--unsloth--gemma-4-12b-it-GGUF/snapshots/d997c805aafe035a8024f961c6e1afd6b30d79a5/gemma-4-12b-it-UD-Q4_K_XL.gguf"
+      ]
+    },
+    "ordinaryAccount": {
+      "associationRole": "admin",
+      "configurationUnchanged": true,
+      "email": "kassor@acceptans.example",
+      "installationAdmin": false,
+      "probeModelRuntime": 403,
+      "putDetail": "Ändringar av modelltjänsten kräver installationsadministratör — det kontot som konfigurerade den här installationen.",
+      "putModelRuntime": 403,
+      "readBaseUrl": "http://127.0.0.1:8000/v1",
+      "readModelRuntime": 200,
+      "userId": "7ab6c33d37db"
+    },
+    "policy": {
+      "authority": "installation-administrator",
+      "default": "deny",
+      "deploymentClasses": [
+        {
+          "hosts": [
+            "localhost",
+            "127.0.0.0/8",
+            "::1/128"
+          ],
+          "name": "loopback",
+          "schemes": [
+            "http",
+            "https"
+          ],
+          "why": "Trafiken lämnar aldrig datorn; täcker pilotens SSH-forward."
+        },
+        {
+          "hosts": [
+            "10.0.0.0/8",
+            "172.16.0.0/12",
+            "192.168.0.0/16",
+            "fc00::/7"
+          ],
+          "name": "private-network",
+          "schemes": [
+            "https"
+          ],
+          "why": "Självhostad tjänst på eget nät; klartext får inte korsa ett nätsegment."
+        }
+      ],
+      "id": "brfv2-model-endpoint-policy/v1",
+      "servedMatchesState": true
+    },
+    "recoveredAfterTamper": {
+      "provider": "selfhosted",
+      "ready": true
+    },
+    "rejectedEndpoints": [
+      {
+        "code": "hostname_not_allowed",
+        "detail": "Endast localhost eller en IP-adress i det egna nätet är tillåten — ett domännamn pekar dit namnuppslagningen råkar peka.",
+        "status": 422,
+        "url": "https://api.openai.com/v1"
+      },
+      {
+        "code": "hostname_not_allowed",
+        "detail": "Endast localhost eller en IP-adress i det egna nätet är tillåten — ett domännamn pekar dit namnuppslagningen råkar peka.",
+        "status": 422,
+        "url": "https://api.anthropic.com/v1"
+      },
+      {
+        "code": "address_not_self_hosted",
+        "detail": "Adressen ligger utanför den här datorn och det egna privata nätet. Produkten får bara nå en självhostad modelltjänst.",
+        "status": 422,
+        "url": "https://8.8.8.8/v1"
+      },
+      {
+        "code": "plaintext_off_host",
+        "detail": "En modelltjänst utanför den här datorn kräver https — frågan och ordagranna utdrag ur föreningens dokument får inte gå i klartext över nätet.",
+        "status": 422,
+        "url": "http://192.168.13.13:8000/v1"
+      },
+      {
+        "code": "link_local_address",
+        "detail": "Länklokala adresser är inte tillåtna.",
+        "status": 422,
+        "url": "http://169.254.169.254/latest/meta-data"
+      },
+      {
+        "code": "scheme_not_allowed",
+        "detail": "Modelltjänstens adress måste börja med http:// eller https://.",
+        "status": 422,
+        "url": "file:///etc/passwd"
+      }
+    ],
+    "tamperedConfigFile": {
+      "configured": false,
+      "provider": "none",
+      "ready": false,
+      "wrote": "https://api.openai.com/v1"
+    }
+  },
+  "uiJourney": {
+    "associations": [
+      "brf-gjutformen-12",
+      "brf-sjoutsikten-7",
+      "brf-gjutformen-12"
+    ],
+    "backup": {
+      "count": 1,
+      "first": "3 aug. 2026 08:59 25 kB · brfv2-backup-20260803-065918-7c7d.zip Återställ  "
+    },
+    "cleanup": {
+      "closed": true,
+      "port": 54771
+    },
+    "compactWindow": {
+      "layout": {
+        "devicePixelRatio": 1,
+        "horizontalOverflow": false,
+        "innerHeight": 700,
+        "innerWidth": 1000,
+        "verticalScrollable": true
+      },
+      "rect": {
+        "height": 700,
+        "width": 1000,
+        "x": 26,
+        "y": 23
+      }
+    },
+    "firstRun": {
+      "association": "Brf Gjutformen 12",
+      "dataDir": "<isolated-xdg-home>/xdg-data/se.brfdokumentai.desktop/data",
+      "embedding": {
+        "provider": "model2vec:potion-multilingual-128M"
+      },
+      "ocr": {
+        "available": true,
+        "language": "swe"
+      },
+      "owner": "styrelsen@acceptans.example",
+      "singleAssociationRendersStaticName": "Brf Gjutformen 12"
+    },
+    "ingestion": {
+      "document": "Stadgar Brf Gjutformen 12.pdf",
+      "seconds": 0.3
+    },
+    "keyboard": {
+      "chatSubmit": "Enter",
+      "mode": "WebKit DOM events",
+      "nativeWaylandAutomation": "blocked by this KWin/WebKit automation environment",
+      "nativeWebDriverElementValue": "unsupported by WebKitWebDriver for WRY"
+    },
+    "modelRuntime": {
+      "baseUrl": "http://127.0.0.1:8000/v1",
+      "label": "agenntserver",
+      "model": "gemma4:e12b",
+      "provider": "selfhosted",
+      "ready": true
+    },
+    "origin": "http://127.0.0.1:54771",
+    "pdfZoom": {
+      "after": "110%",
+      "before": "100%"
+    },
+    "platform": {
+      "desktop": "KDE",
+      "devicePixelRatio": 1,
+      "sessionType": "wayland",
+      "userAgent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/60.5 Safari/605.1.15"
+    },
+    "refusal": {
+      "citations": 0,
+      "question": "Vilka öppettider har föreningens planetarium?",
+      "text": "OTILLRÄCKLIGT UNDERLAG\nInformation om föreningens planetarium och dess öppettider saknas i de tillhandahållna utdragen."
+    },
+    "screenshots": [
+      "docs/evidence/resan-2026-08-03-2-desktop-setup.png",
+      "docs/evidence/resan-2026-08-03-2-desktop-documents.png",
+      "docs/evidence/resan-2026-08-03-2-desktop-answer-highlight.png",
+      "docs/evidence/resan-2026-08-03-2-desktop-refusal.png",
+      "docs/evidence/resan-2026-08-03-2-desktop-watches.png",
+      "docs/evidence/resan-2026-08-03-2-desktop-tasks.png",
+      "docs/evidence/resan-2026-08-03-2-desktop-settings.png"
+    ],
+    "security": {
+      "cookie": {
+        "httpOnly": true,
+        "namePrefix": "brf_desktop_",
+        "path": "/api/",
+        "sameSite": "Lax",
+        "webdriverEnumerated": 0
+      },
+      "csp": "default-src 'none'; base-uri 'self'; connect-src 'self'; font-src 'self'; form-action 'self'; frame-ancestors 'none'; img-src 'self' data: blob:; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; worker-src 'self' blob:",
+      "exactHostStatus": 200,
+      "foreignHostStatus": 403,
+      "foreignOriginRequest": {
+        "reached": false,
+        "reason": "blocked",
+        "url": "http://127.0.0.1:8000/v1/models",
+        "violation": {
+          "blockedURI": "http://127.0.0.1:8000/v1/models",
+          "directive": "connect-src"
+        }
+      },
+      "globalTauri": {
+        "global": "undefined",
+        "internals": "object"
+      },
+      "remoteIpcSetTitle": {
+        "allowed": false,
+        "result": "Command plugin:window|set_title not allowed by ACL"
+      },
+      "runtimeErrors": []
+    },
+    "supportedAnswer": {
+      "answer": "Styrelsen har sitt säte i Göteborgs kommun.\n[1]\n\"Styrelsen har sitt säte i Göteborgs kommun.\"\n— Stadgar Brf Gjutformen 12.pdf s.1",
+      "citations": [
+        {
+          "quote": "\"Styrelsen har sitt säte i Göteborgs kommun.\"",
+          "source": "— Stadgar Brf Gjutformen 12.pdf s.1"
+        }
+      ],
+      "highlight": {
+        "page": "Sida 1 av 3",
+        "rect": {
+          "height": 13.734375,
+          "width": 101.140625,
+          "x": 600.046875,
+          "y": 313.34375
+        }
+      },
+      "provenance": "Gemma 4 12B · Self-hosted",
+      "question": "Var har styrelsen sitt säte?"
+    },
+    "tasks": {
+      "activeTasks": 1,
+      "activityEvents": 1,
+      "citationsCarried": 1,
+      "createdFrom": "watch",
+      "responsible": "Jonas Berg"
+    },
+    "transportRetries": 0,
+    "watches": {
+      "bucketAfterApproval": "Senare",
+      "document": "Serviceavtal hiss 2026.pdf",
+      "expectedDue": "2027-07-31",
+      "proposalTitle": "Säg upp eller ompröva avtalet senast 2027-07-31",
+      "proposalsAfterApproval": 0,
+      "proposalsBeforeApproval": 1,
+      "responsible": "Karin Lindqvist"
+    }
+  }
+}

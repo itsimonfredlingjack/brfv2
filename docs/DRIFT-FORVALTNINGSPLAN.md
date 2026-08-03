@@ -39,6 +39,10 @@ Lokal SQLite (data/auth.db) + JSON-korpus         GGUF-vikter i HF-cache, restar
   exponeras oskyddad mot internet (se [DEPLOY-SELFHOSTED-LLM.md](DEPLOY-SELFHOSTED-LLM.md)).
   Nätverksrevisorn (`--network-audit`) verifierar vid varje formell gate att
   endast loopback/den valda selfhosted-endpointen förekommer.
+  **Utan människa vid terminalen: `agenntserver-lan`.** Tailnet-aliaset går
+  genom Tailscale SSH, som kräver en interaktiv webbinloggning och därför
+  hänger i en acceptanskörning eller ett skript. LAN-aliaset är samma värd och
+  samma modelltjänst, med nyckelautentisering.
 - **Portgränser**: 8787 (backend), 5173 (frontend), 8000 (tunnlad
   modellport, endast loopback på Fedora-sidan).
 
@@ -235,6 +239,7 @@ Före varje pilotpass:
 
 - [ ] `git status` rent, `main` uppdaterad
 - [ ] SSH-tunnel öppen: `ssh -N -L 8000:127.0.0.1:8000 agenntserver`
+      (`agenntserver-lan` om ingen kan klara Tailscale-inloggningen — samma värd)
 - [ ] `ops/demo.sh check-tunnel` grön (annonserar Gemma 4 12B)
 - [ ] `make demo` klar, `Demo igång:` visad
 - [ ] `/api/health` visar `mode=pilot, llm_provider=selfhosted, model=gemma4:e12b, ready=true`
