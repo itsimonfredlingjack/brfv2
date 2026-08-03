@@ -43,18 +43,22 @@ future editor failures.
 
 ## Passing real acceptance
 
-`make website-acceptance RUN_LABEL=2026-08-03-webkit-fixed-final` started a fresh
-`tauri-driver`, `WebKitWebDriver`, sidecar backend, and release app. It passed
-the complete journey: authenticated startup, empty site, same-origin iframe,
-light site stylesheet, block insertion, editing/history, 390px mobile canvas,
-publication boundary, rollback, model-less AI refusal, and append-only undo.
+`make website-acceptance RUN_LABEL=2026-08-03-webkit-boundary-complete` started a
+fresh `tauri-driver`, `WebKitWebDriver`, sidecar backend, and release app after
+an explicit process/port preflight. It passed the complete journey:
+authenticated startup, empty site, same-origin iframe, light site stylesheet,
+block insertion, editing/history, 390px mobile canvas, immutable slug and
+publication behavior, draft home/navigation isolation, publish-window isolation
+and application, rollback, AI refusal to hide a page, an unverified AI block
+being rejected with `409`, human confirmation publishing it, model-free refusal,
+all other product workspaces, and append-only undo.
 
 The machine-readable receipt and screenshots are:
 
-- `2026-08-03-webkit-fixed-final-website-acceptance.json`
-- `2026-08-03-webkit-fixed-final-website-empty.png`
-- `2026-08-03-webkit-fixed-final-website-canvas.png`
-- `2026-08-03-webkit-fixed-final-website-selected.png`
-- `2026-08-03-webkit-fixed-final-website-mobile.png`
-- `2026-08-03-webkit-fixed-final-website-published.png`
-- `2026-08-03-webkit-fixed-final-website-versions.png`
+- `2026-08-03-webkit-boundary-complete-website-acceptance.json`
+- `2026-08-03-webkit-boundary-complete-website-empty.png`
+- `2026-08-03-webkit-boundary-complete-website-canvas.png`
+- `2026-08-03-webkit-boundary-complete-website-selected.png`
+- `2026-08-03-webkit-boundary-complete-website-mobile.png`
+- `2026-08-03-webkit-boundary-complete-website-published.png`
+- `2026-08-03-webkit-boundary-complete-website-versions.png`

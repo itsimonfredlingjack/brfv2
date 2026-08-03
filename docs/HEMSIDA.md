@@ -285,28 +285,32 @@ regel som backend uttrycker med en 403, sagd en gång till där den syns.
 | `brfv2-mockup/src/components/website/` | arbetsytan, blocken, översättningen |
 | `backend/scripts/website_acceptance.py` | resan genom den riktiga applikationen |
 
-## 8. Känd begränsning: redigeraren i skrivbordsskalet
+## 8. Redigeraren kör i skrivbordsskalet
 
-Redigeraren körs i dag **inte** i Tauri-skalets WebKitGTK (2.52 / JavaScriptCore
-"Safari 60"). En transitiv beroendekedja — Puck → `@dnd-kit` →
-`@preact/signals-core` — kastar `TypeError: Attempted to assign to readonly
-property` när modulen körs, och samma kod fungerar i Chromium.
+Tauri-skalet har `freezePrototype: true`. I WebKitGTK 2.52 kastade den tidigare
+transitiva kedjan Puck → `@dnd-kit` → `@preact/signals-core` då
+`TypeError: Attempted to assign to readonly property`: Signals och Pucks
+`object-hash` försökte skriva ärvda prototypmetoder efter att
+`Object.prototype` frysts. När det var korrigerat återstod en WebKitGTK-specifik
+`srcdoc`-skillnad där Pucks iframe kunde vara färdig utan `load`-händelse eller
+`#frame-root`.
 
-Två saker gör att det inte är produktens problem längre, och båda behövs:
+`brfv2-mockup/src/webkitCompat.js` är därför en smal Vite-transform som bara
+gäller de berörda dependency-modulerna: den använder
+`Object.defineProperty` för de berörda prototypmetoderna och låter Pucks 0.22.4
+`AutoFrame` vänta på och återställa sin tomma mountpunkt. Säkerhetskontrollen
+förblir aktiv. Den lata importen och `WorkspaceBoundary` finns kvar som
+oberoende inneslutning för framtida fel.
 
-- Arbetsytan laddas **när någon öppnar den**, inte vid start. Importerad med de
-  andra arbetsytorna tog felet ned *hela applikationen* — ett tomt fönster före
-  inloggningsrutan.
-- Den ligger bakom en felgräns (`WorkspaceBoundary`), så ett fel där blir en
-  skärm som säger vad som hände medan dokument, fakturor, post och uppgifter
-  fortsätter fungera.
+Detta är verifierat i den riktiga Tauri/WebKitGTK-resan:
+`make website-acceptance` öppnar arbetsytan, visar canvasen, lägger till och
+redigerar block, byter till mobil bredd, publicerar, provar publiceringsgränsen
+och återställer en äldre version. Den permanenta körningen och felsökningen
+finns i `docs/evidence/2026-08-03-webkit-boundary.md`.
 
-Backend, kommandomotorn, grundningen och publiceringsmodellen är oberoende av
-detta och verifieras av `backend/tests/test_website*.py`. Webbleveransen
-(Chromium) kör hela arbetsytan. `make website-acceptance` går igenom resan i den
-riktiga applikationen och **felar i dag** vid steget som öppnar arbetsytan —
-avsiktligt: den är kvitto på när begränsningen är löst, inte en resa som tystats
-ned.
+Transformen är medvetet versionstät mot Puck 0.22.4. Vid en Puck-uppgradering
+ska produktionsbundle och WebKit-resan köras igen; ändras AutoFrame-chunkens
+struktur behöver patchens marker återinspelas.
 
 Funktionen finns bara i det kanoniska gränssnittet (webb/skrivbord). Den mobila
 PWA:n och Android-appen har den inte, av samma skäl som de inte har Fakturor: en

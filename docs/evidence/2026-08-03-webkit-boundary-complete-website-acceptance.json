@@ -1,0 +1,117 @@
+{
+  "schema": "brfv2-website-acceptance/v1",
+  "runLabel": "2026-08-03-webkit-boundary-complete",
+  "ok": true,
+  "startedAt": "2026-08-03T22:47:55+0200",
+  "durationSeconds": 24.8,
+  "application": {
+    "path": "/home/aidev/Projects/brfv2/src-tauri/target/release/brfv2-desktop",
+    "sha256": "460686a0c964fb05481ef59da74db24ac005a5f6259c0c17ff96015f2a6d0c49",
+    "bytes": 3429824
+  },
+  "transportRetries": 0,
+  "steps": {
+    "processPreflight": {
+      "tauri-driver": [],
+      "WebKitWebDriver": [],
+      "brfv2-desktop": []
+    },
+    "withoutModel": {
+      "mode": "desktop",
+      "llm": {
+        "display_name": "",
+        "model": "",
+        "runtime_label": "",
+        "ready": false,
+        "provider": "none"
+      }
+    },
+    "emptyWorkspace": {
+      "create": true,
+      "says": "Bygg den sida medlemmarna faktiskt läser — i samma system som dokumenten, posten och uppgifterna. Sakuppgifter hämtas ur föreningens egna handlingar, med källhänvisning, och det som inte går att belägga skrivs inte.",
+      "canvas": false,
+      "pagesAfterRead": 0
+    },
+    "canvas": {
+      "sameOrigin": true,
+      "appBackground": "rgb(11, 12, 16)",
+      "width": 1094,
+      "siteBackground": "rgb(251, 250, 248)"
+    },
+    "blockAdded": {
+      "blocks": 1,
+      "summary": "La till Toppsektion"
+    },
+    "edited": {
+      "heading": "Välkommen till Brf Gjutformen 12"
+    },
+    "mobileViewport": {
+      "canvasWidth": 390,
+      "frameWidth": 388,
+      "heroColumns": "348px"
+    },
+    "published": {
+      "seq": 1,
+      "slug": "start"
+    },
+    "draftStaysInTheDraft": {
+      "publishedSlug": "start",
+      "draftSlug": "hem",
+      "draftTextLeaked": false
+    },
+    "publishedAgain": {
+      "seq": 2,
+      "slug": "hem"
+    },
+    "rolledBack": {
+      "publicSeq": 1,
+      "draftKeptItsText": true,
+      "revisions": 2
+    },
+    "homeAndNavigationBoundary": {
+      "draftHomeDidNotLeak": true,
+      "publicHomeAfterPublish": "page-7b6b79b6f2",
+      "publicHomeCount": 1,
+      "navigationStayedDraftOnly": true
+    },
+    "publishWindowBoundary": {
+      "draftHideDidNotLeak": true,
+      "publishedFutureWindowHid": true,
+      "draftRevealDidNotLeak": true,
+      "publishedOpenWindowRevealed": true
+    },
+    "aiPublicationBoundary": {
+      "aiCouldNotHidePublicPage": true,
+      "unverifiedPublishStatus": 409,
+      "humanConfirmationPublished": true,
+      "modelCalls": 2
+    },
+    "aiRefusesWithoutModel": {
+      "applied": false,
+      "refusal": "AI-assistenten svarade med något som inte gick att tolka som ändringar. Ingenting skrevs. Försök formulera om."
+    },
+    "otherWorkspaces": {
+      "opened": [
+        "Dokument",
+        "Inkommande",
+        "Fakturor",
+        "Bevakningar",
+        "Uppgifter"
+      ]
+    },
+    "historyAppendOnly": {
+      "undid": "Bekräftade AI-texten som människa",
+      "entriesBefore": 22,
+      "entriesAfter": 23,
+      "undoTransaction": "Ångrade: Bekräftade AI-texten som människa"
+    }
+  },
+  "screenshots": [
+    "docs/evidence/2026-08-03-webkit-boundary-complete-website-empty.png",
+    "docs/evidence/2026-08-03-webkit-boundary-complete-website-canvas.png",
+    "docs/evidence/2026-08-03-webkit-boundary-complete-website-selected.png",
+    "docs/evidence/2026-08-03-webkit-boundary-complete-website-mobile.png",
+    "docs/evidence/2026-08-03-webkit-boundary-complete-website-published.png",
+    "docs/evidence/2026-08-03-webkit-boundary-complete-website-versions.png"
+  ]
+}

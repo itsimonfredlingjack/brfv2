@@ -11,12 +11,12 @@ website feature is *for* —
 
     utkast → block → redigering → publicering → utkastet ändras igen → återställning
 
-**No model is required**, and as with the intake journey that is a property of
-the feature rather than a convenience of the script: building and publishing a
-page is deterministic end to end. The AI partner is asked for exactly one thing
-here — to prove it refuses when there is no model to ask — because "refuse
-rather than guess" is the behaviour that must survive an installation that never
-configured generation.
+**No model is required for startup or the editor journey.** The final AI
+boundary checks use a loopback OpenAI-compatible fixture configured through the
+same installation-admin setting as a real self-hosted runtime; no external
+service or document leaves the machine. The fixture first attempts a forbidden
+visibility command, then writes unsupported prose so the real AI route,
+publication gate and human confirmation can be checked in the desktop shell.
 
 What it asserts, in order:
 
@@ -33,15 +33,17 @@ What it asserts, in order:
    the same stylesheet the published page uses.
 6. Publishing puts the page in front of the public.
 7. **The draft cannot reach the public.** Editing after publication — including
-   moving the page's address — changes nothing a visitor sees until somebody
-   publishes again. This is the boundary the feature is built around, and it is
-   asserted from the outside, through the product's own published view.
-8. Rollback republishes an earlier version without rewriting anything, and the
+   its address — changes nothing a visitor sees until somebody publishes again.
+8. Navigation, the home page and the publish window are likewise draft-only
+   until a human publication action; the public view keeps exactly one home.
+9. Rollback republishes an earlier version without rewriting anything, and the
    draft is left alone.
-9. The AI partner, on an installation with no model, **writes nothing and says
-   so**.
-10. The history is append-only in fact: undoing a change appends, and never
+10. The AI cannot hide a public page; unsupported AI prose blocks publication
+    until a human confirms it, after which publication succeeds.
+11. Clearing the fixture runtime restores the model-free refusal path.
+12. The history is append-only in fact: undoing a change appends, and never
     edits what is already recorded.
+13. Leaving Hemsidan still opens the other product workspaces.
 
 **Where the evidence goes.** ``docs/evidence`` by default, under the run's own
 label — ``<label>-website-<view>.png`` beside a machine-readable
@@ -59,6 +61,7 @@ import sys
 import tempfile
 import threading
 import time
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
@@ -72,6 +75,7 @@ from scripts.desktop_acceptance import (  # noqa: E402
     WebDriver,
     application_identity,
     isolated_environment,
+    port_is_closed,
     wait_until,
 )
 
@@ -94,6 +98,7 @@ FIRST_HEADING = "Brf Gjutformen 12"
 EDITED_HEADING = "Välkommen till Brf Gjutformen 12"
 DRAFT_ONLY_HEADING = "Den här texten är bara ett utkast"
 MOVED_SLUG = "hem"
+UNVERIFIED_AI_BODY = "<p>Grillning är förbjuden i föreningen.</p>"
 
 results: dict = {}
 
@@ -119,6 +124,129 @@ def api(driver: WebDriver, path: str) -> dict:
         """,
         [path],
     )
+
+
+def api_write(driver: WebDriver, method: str, path: str, payload: dict) -> dict:
+    """Write through the application's own same-origin HTTP surface."""
+    return driver.execute_async(
+        """
+        const done = arguments[arguments.length - 1];
+        fetch(arguments[0], {
+          method: arguments[1], credentials: 'include',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(arguments[2]),
+        }).then(async (r) => {
+          const raw = await r.text();
+          let body;
+          try { body = JSON.parse(raw); } catch { body = raw; }
+          done({ status: r.status, body });
+        }).catch((error) => done({ error: String(error) }));
+        """,
+        [path, method, payload],
+    )
+
+
+def start_scripted_model(page_id: str) -> tuple[ThreadingHTTPServer, type[BaseHTTPRequestHandler]]:
+    """Start a loopback OpenAI-compatible fixture for the AI review proof.
+
+    The product remains model-free for startup and all editor work. The fixture
+    is enabled only for the two explicit AI boundary checks below, through the
+    same installation-admin runtime setting a real self-hosted model uses. It
+    returns a forbidden visibility command first, then an unsupported prose
+    block, so the real desktop route and command engine—not a test-only backend
+    seam—decide both outcomes.
+    """
+
+    class Handler(BaseHTTPRequestHandler):
+        calls = 0
+
+        def _reply(self, status: int, body: dict) -> None:
+            encoded = json.dumps(body, ensure_ascii=False).encode("utf-8")
+            self.send_response(status)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(encoded)))
+            self.end_headers()
+            self.wfile.write(encoded)
+
+        def do_GET(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API
+            if self.path == "/v1/models":
+                self._reply(200, {"data": [{"id": "website-acceptance"}]})
+                return
+            self._reply(404, {"error": "not found"})
+
+        def do_POST(self) -> None:  # noqa: N802 - BaseHTTPRequestHandler API
+            length = int(self.headers.get("Content-Length", "0"))
+            self.rfile.read(length)
+            if self.path != "/v1/chat/completions":
+                self._reply(404, {"error": "not found"})
+                return
+            if Handler.calls == 0:
+                operations = [{
+                    "command": "set_publish_window",
+                    "page_id": page_id,
+                    "starts": "2099-01-01",
+                    "ends": "",
+                }]
+                summary = "Försöker dölja sidan"
+                message = "Detta ska stoppas av produktens AI-behörighet."
+            elif Handler.calls == 1:
+                operations = [{
+                    "command": "insert_block",
+                    "page_id": page_id,
+                    "type": "TextSection",
+                    "props": {
+                        "heading": "AI-granskning",
+                        "body": UNVERIFIED_AI_BODY,
+                    },
+                }]
+                summary = "Skrev obevisad text"
+                message = "Texten väntar på en mänsklig bekräftelse."
+            else:
+                operations = []
+                summary = "Ingen ändring"
+                message = "Testservern har inga fler svar."
+            Handler.calls += 1
+            content = json.dumps(
+                {"summary": summary, "message": message, "operations": operations},
+                ensure_ascii=False,
+            )
+            self._reply(200, {"choices": [{"message": {"content": content}}]})
+
+        def log_message(self, _format: str, *args) -> None:
+            return
+
+    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    return server, Handler
+
+
+def acceptance_processes() -> dict[str, list[str]]:
+    """Inspect only processes relevant to the WebDriver acceptance boundary."""
+    found = {"tauri-driver": [], "WebKitWebDriver": [], "brfv2-desktop": []}
+    proc_root = Path("/proc")
+    for entry in proc_root.iterdir() if proc_root.is_dir() else []:
+        if not entry.name.isdigit():
+            continue
+        try:
+            raw = (entry / "cmdline").read_bytes().replace(b"\0", b" ").decode(errors="replace").strip()
+        except OSError:
+            continue
+        for marker in found:
+            if marker in raw:
+                found[marker].append(f"pid={entry.name} {raw[:240]}")
+    return found
+
+
+def preflight_driver() -> dict[str, list[str]]:
+    """Refuse an occupied WebDriver port without killing an unknown process."""
+    processes = acceptance_processes()
+    if not port_is_closed(4444):
+        raise AcceptanceError(
+            "WebDriver port 4444 is occupied. Existing relevant processes were "
+            f"inspected but none was stopped: {processes!r}. Stop only a stale "
+            "process clearly belonging to this repository's prior run, then retry."
+        )
+    return processes
 
 
 def brf_id(driver: WebDriver) -> str:
@@ -238,6 +366,7 @@ def main(argv: list[str] | None = None) -> int:
     if not args.application.is_file():
         raise AcceptanceError(f"Application missing: {args.application}; run make desktop-build")
 
+    note("processPreflight", preflight_driver())
     home = Path(tempfile.mkdtemp(prefix="brfv2-website-acceptance-"))
     started = time.time()
     environment = isolated_environment(home)
@@ -261,6 +390,8 @@ def main(argv: list[str] | None = None) -> int:
 
     threading.Thread(target=drain, daemon=True).start()
     driver = WebDriver(DRIVER_ORIGIN)
+    scripted_server: ThreadingHTTPServer | None = None
+    scripted_handler: type[BaseHTTPRequestHandler] | None = None
 
     try:
         wait_until("tauri-driver", lambda: driver.request("GET", "/status"), timeout=20)
@@ -524,7 +655,202 @@ def main(argv: list[str] | None = None) -> int:
             ),
         })
 
-        # -- 9. no model means no invention ----------------------------------
+        def write(method: str, path: str, payload: dict) -> dict:
+            result = api_write(driver, method, path, payload)
+            if result.get("error") or result.get("status") not in (200, 201):
+                raise AcceptanceError(f"{method} {path} failed: {result!r}")
+            return result["body"]
+
+        def public_page(public: dict, page_id: str) -> dict | None:
+            return next((candidate for candidate in public["pages"] if candidate["page_id"] == page_id), None)
+
+        # -- 9. home and navigation stay in the draft ------------------------
+        # A new draft home must not take over the public root. Publishing that
+        # page does, and the public snapshot must still name exactly one home.
+        created = write(
+            "POST",
+            f"/api/brf/{tenant}/website/commands",
+            {"operations": [{
+                "command": "create_page",
+                "title": "För boende",
+                "slug": "for-boende",
+                "home": True,
+            }], "summary": "Skapade ny startsida i utkastet"},
+        )
+        new_page = next(
+            candidate for candidate in created["workspace"]["pages"] if candidate["slug"] == "for-boende"
+        )
+        new_page_id = new_page["id"]
+        write(
+            "POST",
+            f"/api/brf/{tenant}/website/commands",
+            {"operations": [{
+                "command": "update_navigation",
+                "action": "add",
+                "page_id": new_page_id,
+            }], "summary": "La ny sida i utkastets meny"},
+        )
+        write(
+            "POST",
+            f"/api/brf/{tenant}/website/commands",
+            {"operations": [{
+                "command": "insert_block",
+                "page_id": new_page_id,
+                "type": "TextSection",
+                "props": {"heading": "För boende"},
+            }], "summary": "Fyllde den nya sidan"},
+        )
+        public_before_home = api(driver, f"/api/brf/{tenant}/website/published")["body"]
+        old_public = public_page(public_before_home, page["id"])
+        if not old_public or not old_public["home"] or len(public_before_home["pages"]) != 1:
+            raise AcceptanceError(f"A draft home change leaked into the public site: {public_before_home!r}")
+        if [item["page_id"] for item in public_before_home["navigation"]] != [page["id"]]:
+            raise AcceptanceError(f"A draft navigation change leaked into the public site: {public_before_home!r}")
+
+        write("POST", f"/api/brf/{tenant}/website/pages/{new_page_id}/publish", {})
+        public_after_home = api(driver, f"/api/brf/{tenant}/website/published")["body"]
+        homes = [candidate for candidate in public_after_home["pages"] if candidate["home"]]
+        if len(homes) != 1 or homes[0]["page_id"] != new_page_id:
+            raise AcceptanceError(f"Publishing the new home did not produce one public home: {public_after_home!r}")
+        public_navigation_before_remove = [item["page_id"] for item in public_after_home["navigation"]]
+        if public_navigation_before_remove != [page["id"], new_page_id]:
+            raise AcceptanceError(f"Publishing the new page did not publish its navigation entry: {public_after_home!r}")
+
+        write(
+            "POST",
+            f"/api/brf/{tenant}/website/commands",
+            {"operations": [{
+                "command": "update_navigation",
+                "action": "remove",
+                "page_id": new_page_id,
+            }], "summary": "Tog bort sidan ur utkastets meny"},
+        )
+        public_after_nav_draft = api(driver, f"/api/brf/{tenant}/website/published")["body"]
+        if [item["page_id"] for item in public_after_nav_draft["navigation"]] != public_navigation_before_remove:
+            raise AcceptanceError(f"Removing a draft navigation entry leaked into the public site: {public_after_nav_draft!r}")
+        write("POST", f"/api/brf/{tenant}/website/pages/{new_page_id}/publish", {})
+        public_after_nav_publish = api(driver, f"/api/brf/{tenant}/website/published")["body"]
+        if [item["page_id"] for item in public_after_nav_publish["navigation"]] != [page["id"]]:
+            raise AcceptanceError(f"The published navigation did not apply: {public_after_nav_publish!r}")
+        note("homeAndNavigationBoundary", {
+            "draftHomeDidNotLeak": True,
+            "publicHomeAfterPublish": new_page_id,
+            "publicHomeCount": len([candidate for candidate in public_after_home["pages"] if candidate["home"]]),
+            "navigationStayedDraftOnly": True,
+        })
+
+        # -- 10. publish windows are part of the immutable public revision ----
+        future_window = {
+            "operations": [{
+                "command": "set_publish_window",
+                "page_id": page["id"],
+                "starts": "2099-01-01",
+                "ends": "",
+            }],
+            "summary": "Schemalade sidan i utkastet",
+        }
+        write("POST", f"/api/brf/{tenant}/website/commands", future_window)
+        public_before_window_publish = api(driver, f"/api/brf/{tenant}/website/published")["body"]
+        if public_page(public_before_window_publish, page["id"]) is None:
+            raise AcceptanceError("Changing the draft publish window hid the public page")
+        write("POST", f"/api/brf/{tenant}/website/pages/{page['id']}/publish", {})
+        public_after_window_publish = api(driver, f"/api/brf/{tenant}/website/published")["body"]
+        if public_page(public_after_window_publish, page["id"]) is not None:
+            raise AcceptanceError("Publishing the future window did not hide the page")
+
+        write(
+            "POST",
+            f"/api/brf/{tenant}/website/commands",
+            {"operations": [{
+                "command": "set_publish_window",
+                "page_id": page["id"],
+                "starts": "",
+                "ends": "",
+            }], "summary": "Visar sidan igen i utkastet"},
+        )
+        public_before_window_reveal = api(driver, f"/api/brf/{tenant}/website/published")["body"]
+        if public_page(public_before_window_reveal, page["id"]) is not None:
+            raise AcceptanceError("Changing the draft publish window revealed the public page")
+        write("POST", f"/api/brf/{tenant}/website/pages/{page['id']}/publish", {})
+        public_after_window_reveal = api(driver, f"/api/brf/{tenant}/website/published")["body"]
+        if public_page(public_after_window_reveal, page["id"]) is None:
+            raise AcceptanceError("Publishing the open window did not reveal the page")
+        note("publishWindowBoundary", {
+            "draftHideDidNotLeak": True,
+            "publishedFutureWindowHid": True,
+            "draftRevealDidNotLeak": True,
+            "publishedOpenWindowRevealed": True,
+        })
+
+        # -- 11. the real AI route cannot hide, and prose needs adoption ------
+        scripted_server, scripted_handler = start_scripted_model(page["id"])
+        runtime = write(
+            "PUT",
+            "/api/desktop/model-runtime",
+            {
+                "baseUrl": f"http://127.0.0.1:{scripted_server.server_address[1]}/v1",
+                "model": "website-acceptance",
+                "label": "loopback acceptance fixture",
+                "timeoutS": 10,
+            },
+        )
+        if not runtime.get("configured"):
+            raise AcceptanceError(f"The loopback model runtime was not configured: {runtime!r}")
+        ai_hide = write(
+            "POST",
+            f"/api/brf/{tenant}/website/ai",
+            {"instruction": "Dölj startsidan", "page_id": page["id"]},
+        )
+        public_after_ai_hide = api(driver, f"/api/brf/{tenant}/website/published")["body"]
+        if ai_hide.get("applied") or public_page(public_after_ai_hide, page["id"]) is None:
+            raise AcceptanceError(f"The AI reached the public visibility control: {ai_hide!r}, {public_after_ai_hide!r}")
+
+        ai_prose = write(
+            "POST",
+            f"/api/brf/{tenant}/website/ai",
+            {"instruction": "Skriv en text om grillregler", "page_id": page["id"]},
+        )
+        if not ai_prose.get("applied"):
+            raise AcceptanceError(f"The loopback AI fixture did not create its test prose: {ai_prose!r}")
+        draft_with_ai = api(driver, f"/api/brf/{tenant}/website/pages/{page['id']}")["body"]
+        ai_block = next(
+            (candidate for candidate in draft_with_ai["draft"]["content"] if candidate["props"].get("body") == UNVERIFIED_AI_BODY),
+            None,
+        )
+        if not ai_block or ai_block["grounding"] != "unverified":
+            raise AcceptanceError(f"AI prose was not marked unverified: {draft_with_ai!r}")
+        blocked = api_write(driver, "POST", f"/api/brf/{tenant}/website/pages/{page['id']}/publish", {})
+        if blocked.get("status") != 409:
+            raise AcceptanceError(f"An unverified AI block was publishable: {blocked!r}")
+        public_before_confirmation = api(driver, f"/api/brf/{tenant}/website/published")["body"]
+        if UNVERIFIED_AI_BODY in json.dumps(public_before_confirmation, ensure_ascii=False):
+            raise AcceptanceError("Unverified AI prose reached the public page")
+        write(
+            "POST",
+            f"/api/brf/{tenant}/website/commands",
+            {"operations": [{
+                "command": "confirm_block",
+                "page_id": page["id"],
+                "block_id": ai_block["id"],
+            }], "summary": "Bekräftade AI-texten som människa"},
+        )
+        confirmed_publication = write("POST", f"/api/brf/{tenant}/website/pages/{page['id']}/publish", {})
+        public_after_confirmation = api(driver, f"/api/brf/{tenant}/website/published")["body"]
+        if confirmed_publication.get("revision") is None or UNVERIFIED_AI_BODY not in json.dumps(public_after_confirmation, ensure_ascii=False):
+            raise AcceptanceError(f"Human confirmation did not unlock publication: {confirmed_publication!r}")
+        note("aiPublicationBoundary", {
+            "aiCouldNotHidePublicPage": True,
+            "unverifiedPublishStatus": blocked["status"],
+            "humanConfirmationPublished": True,
+            "modelCalls": scripted_handler.calls if scripted_handler else 0,
+        })
+
+        # -- 12. no model means no invention ----------------------------------
+        write(
+            "PUT",
+            "/api/desktop/model-runtime",
+            {"baseUrl": "", "model": "website-acceptance", "label": "", "timeoutS": 300},
+        )
         refusal = driver.execute_async(
             """
             const done = arguments[arguments.length - 1];
@@ -545,7 +871,36 @@ def main(argv: list[str] | None = None) -> int:
             "refusal": (refusal.get("refusal") or refusal.get("message") or "")[:200],
         })
 
-        # -- 10. the history is append-only in fact --------------------------
+        # -- 13. other workspaces survive entering and leaving Hemsidan --------
+        other_workspaces = []
+        for label, marker in (
+            ("Dokument", "Dokument"),
+            ("Inkommande", "Inkommande post"),
+            ("Fakturor", "Fakturor"),
+            ("Bevakningar", "Bevakningar"),
+            ("Uppgifter", "Uppgifter"),
+        ):
+            driver.click_text(label)
+            state = wait_until(
+                f"the {label} workspace after website use",
+                lambda: driver.execute(
+                    """
+                    const active = document.querySelector('.nav-item.active');
+                    return {
+                      active: active?.textContent.trim() || '',
+                      marker: document.body.innerText.includes(arguments[0]),
+                    };
+                    """,
+                    [marker],
+                ) if driver.execute("return Boolean(document.querySelector('.nav-item.active'));") else False,
+                timeout=60,
+            )
+            if state["active"] != label or not state["marker"]:
+                raise AcceptanceError(f"Workspace navigation failed after Hemsidan: {label!r}, {state!r}")
+            other_workspaces.append(label)
+        note("otherWorkspaces", {"opened": other_workspaces})
+
+        # -- 14. the history is append-only in fact --------------------------
         workspace = api(driver, f"/api/brf/{tenant}/website")["body"]
         undoable = next((t for t in workspace["history"] if t["undoable"]), None)
         if undoable is None:
@@ -602,6 +957,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"\nReceipt: {failed}")
         return 1
     finally:
+        if scripted_server is not None:
+            scripted_server.shutdown()
+            scripted_server.server_close()
         try:
             driver.close()
         except Exception:  # noqa: BLE001
