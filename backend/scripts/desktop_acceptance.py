@@ -176,10 +176,60 @@ def port_is_closed(port: int) -> bool:
 # ---------------------------------------------------------------------------
 
 
+# A request that died with no HTTP response at all, as opposed to a WebDriver
+# error or a product failure. tauri-driver keeps pooled connections to
+# WebKitWebDriver and WebKitWebDriver closes idle ones, so a request can be sent
+# down a connection the far side has already dropped. The session is untouched
+# by it — the next request on a fresh connection works — but a journey that
+# treats one lost packet as a failed acceptance cannot be run twice in a row.
+TRANSPORT_DROP = re.compile(
+    r"Remote end closed connection without response"
+    r"|Connection reset by peer"
+    r"|RemoteDisconnected"
+    r"|\[Errno 104\]"
+    r"|\[Errno 32\]"
+)
+
+# Every script the harness runs leaves a signed record of its own completion in
+# the page. That is what makes repeating a lost request safe: the marker says
+# whether the far side ran it, so a retry either recovers the result of the one
+# execution that happened or sends a script that provably never ran. Retrying
+# blind would double a click, and a double click on this product is a second
+# decision, not a second attempt.
+_SYNC_WRAPPER = (
+    "const __brfBody = function () {\n%s\n};\n"
+    "const __brfValue = __brfBody.apply(this, arguments);\n"
+    "window.__brfLastScript = { marker: %s, value: __brfValue };\n"
+    "return __brfValue;\n"
+)
+_ASYNC_WRAPPER = (
+    "const __brfArgs = Array.prototype.slice.call(arguments);\n"
+    "const __brfDone = __brfArgs.pop();\n"
+    "__brfArgs.push(function (value) {\n"
+    "  window.__brfLastScript = { marker: %s, value: value };\n"
+    "  __brfDone(value);\n"
+    "});\n"
+    "const __brfBody = function () {\n%s\n};\n"
+    "__brfBody.apply(this, __brfArgs);\n"
+)
+_READ_LAST_SCRIPT = "return window.__brfLastScript || null;"
+
+_MISSING = object()
+
+
+def is_transport_drop(exc: Exception) -> bool:
+    return bool(TRANSPORT_DROP.search(str(exc)))
+
+
 class WebDriver:
     def __init__(self, origin: str) -> None:
         self.origin = origin
         self.session_id: str | None = None
+        # Counted, not swallowed: a run that needed the transport repaired says
+        # so in its receipt, so this can never quietly hide a driver that has
+        # started dropping every other request.
+        self.transport_retries = 0
+        self._script_seq = 0
 
     def request(self, method: str, path: str, body: dict[str, Any] | None = None) -> Any:
         status, payload, _ = http(method, f"{self.origin}{path}", body=body, timeout=180)
@@ -193,6 +243,62 @@ class WebDriver:
         if status >= 400:
             raise AcceptanceError(f"WebDriver {method} {path}: HTTP {status}: {payload!r}")
         return value
+
+    def read_request(
+        self, method: str, path: str, body: dict[str, Any] | None = None, attempts: int = 3
+    ) -> Any:
+        """A request that changes nothing, so a dropped connection may be repeated.
+
+        Only for reads — screenshots, cookies, driver status. Anything that acts
+        on the product goes through :meth:`_run_script`, which establishes what
+        happened before it decides to send anything a second time.
+        """
+        for attempt in range(attempts):
+            try:
+                return self.request(method, path, body)
+            except AcceptanceError as exc:
+                if attempt == attempts - 1 or not is_transport_drop(exc):
+                    raise
+                self.transport_retries += 1
+                time.sleep(0.2)
+        raise AcceptanceError("unreachable")
+
+    def _run_script(
+        self, endpoint: str, script: str, args: list[Any], attempts: int = 3
+    ) -> Any:
+        """Run one script exactly once, even if the transport loses a request."""
+        self._script_seq += 1
+        marker = json.dumps(f"brf-{self._script_seq}")
+        if endpoint == "/execute/async":
+            wrapped = _ASYNC_WRAPPER % (marker, script)
+        else:
+            wrapped = _SYNC_WRAPPER % (script, marker)
+        for attempt in range(attempts):
+            try:
+                return self.request("POST", self._path(endpoint), {"script": wrapped, "args": args})
+            except AcceptanceError as exc:
+                if attempt == attempts - 1 or not is_transport_drop(exc):
+                    raise
+                self.transport_retries += 1
+                landed = self._completed_script(marker)
+                if landed is not _MISSING:
+                    # It ran; only the answer was lost. Taking the value the page
+                    # kept is the one way to honour a click that already happened.
+                    return landed
+                time.sleep(0.2)
+        raise AcceptanceError("unreachable")
+
+    def _completed_script(self, marker: str) -> Any:
+        """The value of the marked script if it finished, else :data:`_MISSING`."""
+        try:
+            record = self.read_request(
+                "POST", self._path("/execute/sync"), {"script": _READ_LAST_SCRIPT, "args": []}
+            )
+        except AcceptanceError:
+            return _MISSING
+        if isinstance(record, dict) and json.dumps(record.get("marker")) == marker:
+            return record.get("value")
+        return _MISSING
 
     def create_session(self, application: Path) -> None:
         value = self.request(
@@ -218,10 +324,10 @@ class WebDriver:
         return f"/session/{self.session_id}{suffix}"
 
     def execute(self, script: str, args: list[Any] | None = None) -> Any:
-        return self.request("POST", self._path("/execute/sync"), {"script": script, "args": args or []})
+        return self._run_script("/execute/sync", script, args or [])
 
     def execute_async(self, script: str, args: list[Any] | None = None) -> Any:
-        return self.request("POST", self._path("/execute/async"), {"script": script, "args": args or []})
+        return self._run_script("/execute/async", script, args or [])
 
     def type(self, selector: str, text: str) -> None:
         changed = self.execute(
@@ -254,25 +360,32 @@ class WebDriver:
             timeout=5,
         )
 
-    def type_labelled(self, label: str, text: str) -> None:
-        """Set an input identified by its visible label text."""
-        changed = self.execute(
-            """
-            const wanted = arguments[0];
-            const field = [...document.querySelectorAll('label')]
-              .find((candidate) => candidate.querySelector('span')?.textContent.trim() === wanted)
-              ?.querySelector('input');
-            if (!field) return false;
-            Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')
-              .set.call(field, arguments[1]);
-            field.dispatchEvent(new InputEvent('input', { bubbles: true }));
-            field.dispatchEvent(new Event('change', { bubbles: true }));
-            return field.value === arguments[1];
-            """,
-            [label, text],
+    def type_labelled(self, label: str, text: str, timeout: float = 30.0) -> None:
+        """Set an input identified by its visible label text.
+
+        Waits for the field the way :meth:`_press` waits for a control, and for
+        the same reason: a form that has not finished rendering is a normal
+        state to arrive in, while a field that took no value is a defect.
+        """
+        wait_until(
+            f"the field labelled {label!r}",
+            lambda: self.execute(
+                """
+                const wanted = arguments[0];
+                const field = [...document.querySelectorAll('label')]
+                  .find((candidate) => candidate.querySelector('span')?.textContent.trim() === wanted)
+                  ?.querySelector('input');
+                if (!field || field.disabled) return false;
+                Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')
+                  .set.call(field, arguments[1]);
+                field.dispatchEvent(new InputEvent('input', { bubbles: true }));
+                field.dispatchEvent(new Event('change', { bubbles: true }));
+                return field.value === arguments[1];
+                """,
+                [label, text],
+            ),
+            timeout=timeout,
         )
-        if not changed:
-            raise AcceptanceError(f"Could not fill the field labelled {label!r}")
 
     def press_enter(self, selector: str) -> None:
         handled = self.execute(
@@ -292,45 +405,101 @@ class WebDriver:
         if handled is None:
             raise AcceptanceError(f"Could not dispatch Enter to {selector!r}")
 
-    def click(self, selector: str) -> None:
-        clicked = self.execute(
-            """
-            const element = document.querySelector(arguments[0]);
-            if (!element) return false;
-            element.click();
-            return true;
-            """,
-            [selector],
-        )
-        if not clicked:
-            raise AcceptanceError(f"Could not click {selector!r}")
+    def _press(self, find: str, args: list[Any], described: str, timeout: float) -> None:
+        """Press a control and prove the press landed.
 
-    def click_text(self, label: str) -> None:
-        clicked = self.execute(
+        This used to call ``element.click()`` and report success as soon as it
+        had *found* something to call it on. A disabled control swallows
+        ``click()`` silently — no event is dispatched at all — so a press that
+        never happened read exactly like a press that did, and the journey then
+        sat out its whole timeout waiting for a consequence nothing was ever
+        going to produce. That is what made the watch journey look like a slow
+        engine: ``Läs om arkivet`` is disabled while the board loads, the click
+        was swallowed, no scan ran, and no proposal could appear however long
+        the wait was. A longer timeout could not have fixed it, because there
+        was nothing in flight to wait for.
+
+        So two things are separated here. A control that is not *yet* pressable
+        is normal — these screens disable their buttons while the view loads —
+        and is waited for. A control that was pressed and dispatched nothing is
+        a defect, and it is reported the moment it happens, naming the state the
+        control was in.
+        """
+        deadline = time.monotonic() + timeout
+        state: Any = None
+        while True:
+            state = self.execute(
+                # .apply(this, arguments) so the finder sees the caller's
+                # arguments[0], not the wrapper function's empty ones.
+                "const element = (function () {\n" + find + "\n}).apply(this, arguments);\n"
+                """
+                if (!element) return { found: false };
+                const disabled = element.disabled === true
+                  || element.getAttribute('aria-disabled') === 'true';
+                if (disabled) {
+                  return { found: true, ready: false, disabled: true,
+                           text: element.textContent.trim().slice(0, 60) };
+                }
+                let fired = false;
+                const spy = () => { fired = true; };
+                element.addEventListener('click', spy, true);
+                try { element.click(); } finally {
+                  element.removeEventListener('click', spy, true);
+                }
+                return {
+                  found: true, ready: true, fired,
+                  text: element.textContent.trim().slice(0, 60),
+                };
+                """,
+                args,
+            )
+            if state.get("ready") and state.get("fired"):
+                return
+            if state.get("ready") and not state.get("fired"):
+                raise AcceptanceError(
+                    f"{described} was pressed but dispatched no click event: {state!r}. "
+                    "The control is on screen and enabled, so the product swallowed it."
+                )
+            if time.monotonic() >= deadline:
+                break
+            time.sleep(0.25)
+        if not state.get("found"):
+            raise AcceptanceError(f"Could not find {described}")
+        raise AcceptanceError(
+            f"{described} never became pressable within {timeout:.0f}s: {state!r}"
+        )
+
+    def click(self, selector: str, timeout: float = 30.0) -> None:
+        self._press(
+            "return document.querySelector(arguments[0]);",
+            [selector],
+            f"the control {selector!r}",
+            timeout,
+        )
+
+    def click_text(self, label: str, timeout: float = 30.0) -> None:
+        self._press(
             """
             const label = arguments[0];
-            const element = [...document.querySelectorAll('button,[role="button"]')]
+            return [...document.querySelectorAll('button,[role="button"]')]
               .find((candidate) =>
                 candidate.getAttribute('aria-label') === label ||
                 candidate.textContent.trim().includes(label));
-            if (!element) return false;
-            element.click();
-            return true;
             """,
             [label],
+            f"the control labelled {label!r}",
+            timeout,
         )
-        if not clicked:
-            raise AcceptanceError(f"Could not find control labelled {label!r}")
 
     def screenshot(self, target: Path) -> None:
-        encoded = self.request("GET", self._path("/screenshot"))
+        encoded = self.read_request("GET", self._path("/screenshot"))
         if not isinstance(encoded, str):
             raise AcceptanceError("WebDriver did not return a screenshot")
         target.parent.mkdir(parents=True, exist_ok=True)
         target.write_bytes(base64.b64decode(encoded))
 
     def cookies(self) -> list[dict[str, Any]]:
-        value = self.request("GET", self._path("/cookie"))
+        value = self.read_request("GET", self._path("/cookie"))
         if not isinstance(value, list):
             raise AcceptanceError(f"Unexpected cookie response: {value!r}")
         return value
@@ -421,6 +590,17 @@ def isolated_environment(root: Path) -> dict[str, str]:
             # its weights are bundled and HF_HUB_OFFLINE is set.
             "HF_HOME": os.environ.get("HF_HOME")
             or str(Path.home() / ".cache" / "huggingface"),
+            # And pointing at the cache is not enough: with the weights already
+            # in it, model2vec still asks Hugging Face about them on every load.
+            # Measured on this checkout, that is 2.3s when the answer comes back
+            # and 137s when it does not — against a 240s wait for the first
+            # association, whose creation is what loads the embedder. So an
+            # acceptance run could fail on somebody else's network, having
+            # tested nothing about this product. The packaged application sets
+            # this for the same reason; the development-checkout run had simply
+            # never been given it, and the invoice journey had been setting it
+            # by hand to compensate.
+            "HF_HUB_OFFLINE": "1",
         }
     )
     return environment
@@ -888,9 +1068,15 @@ def ui_journey(
         )
 
         driver.click_text("Bevakningar")
+        # The board, not merely the button. `.watches-scan` is in the first
+        # paint and disabled until the board arrives, so waiting for it to
+        # *exist* is waiting for nothing: the scan control is only usable once
+        # the view has the board it renders. `.watches-board` is behind
+        # `!loading && board`, which is the actual precondition.
         wait_until(
-            "watch view",
-            lambda: driver.execute("return Boolean(document.querySelector('.watches-scan'));"),
+            "the watch board loaded",
+            lambda: driver.execute("return Boolean(document.querySelector('.watches-board'));"),
+            timeout=60,
         )
         driver.click_text("Läs om arkivet")
         proposal = wait_until(
@@ -1205,6 +1391,10 @@ def ui_journey(
                 "nativeWaylandAutomation": "blocked by this KWin/WebKit automation environment",
             },
             "screenshots": [evidence.reference(name) for name in UI_SCREENSHOTS],
+            # Requests the transport lost and the harness re-established without
+            # repeating any work. Nonzero is not a failure; it is the number
+            # being visible instead of the run silently ending on one.
+            "transportRetries": driver.transport_retries,
         }
     finally:
         try:

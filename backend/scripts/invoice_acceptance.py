@@ -173,7 +173,13 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
-def write_receipt(evidence: Evidence, application: Path, started: float, ok: bool) -> Path:
+def write_receipt(
+    evidence: Evidence,
+    application: Path,
+    started: float,
+    ok: bool,
+    transport_retries: int = 0,
+) -> Path:
     """The machine-readable half of the record, written whether or not it passed.
 
     A failing run's receipt is the more useful of the two, so it is not
@@ -192,6 +198,10 @@ def write_receipt(evidence: Evidence, application: Path, started: float, ok: boo
         # because the invoice review is deterministic end to end.
         "modelRequired": False,
         "engineVersion": ANALYSIS_ENGINE_VERSION,
+        # Requests the transport lost and the harness re-established without
+        # repeating any work. Recorded so a driver that has started dropping
+        # every other request shows up as a number rather than as nothing.
+        "transportRetries": transport_retries,
         "screenshots": [
             evidence.reference(name)
             for name in INVOICE_SCREENSHOTS
@@ -972,7 +982,10 @@ def main(argv: list[str] | None = None) -> int:
         if any("Faktura" in t for t in tabs):
             raise AcceptanceError(f"Inkommande still reviews invoices: {tabs!r}")
 
-        receipt = write_receipt(evidence, args.application, started, ok=True)
+        receipt = write_receipt(
+            evidence, args.application, started, ok=True,
+            transport_retries=driver.transport_retries,
+        )
         print(f"\nJOURNEY OK\nEvidence: {evidence.dir}\nReceipt:  {receipt}")
         return 0
     except Exception as exc:  # noqa: BLE001 - this is a driver script
@@ -983,7 +996,11 @@ def main(argv: list[str] | None = None) -> int:
         except Exception:  # noqa: BLE001
             pass
         print("\nDriver tail:\n" + "\n".join(driver_logs[-25:]))
-        print(f"\nReceipt: {write_receipt(evidence, args.application, started, ok=False)}")
+        failed = write_receipt(
+            evidence, args.application, started, ok=False,
+            transport_retries=driver.transport_retries,
+        )
+        print(f"\nReceipt: {failed}")
         return 1
     finally:
         try:

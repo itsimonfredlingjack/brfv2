@@ -1,6 +1,6 @@
 .PHONY: setup backend backend-pilot require-pilot-llm frontend frontend-legacy mobile mobile-build mobile-test \
         desktop-runtime desktop-build desktop-run desktop-check desktop-package desktop-install desktop-uninstall desktop-acceptance \
-        invoice-acceptance desktop-acceptance-full invoice-rules-lock \
+        invoice-acceptance intake-acceptance desktop-acceptance-full invoice-rules-lock \
         test test-isolation eval eval-b eval-fast eval-sweep \
         eval-selfhosted eval-b-selfhosted desktop-acceptance-installed desktop-verify-reproducible demo demo-stop demo-status demo-reset \
         build build-legacy model-readiness model-readiness-selftest \
@@ -96,13 +96,23 @@ invoice-acceptance: desktop-build  ## Fakturaresan mot riktig Tauri/WebKitGTK (i
 	  --run-label $(RUN_LABEL) \
 	  $(if $(INVOICE_EVIDENCE),--evidence-dir $(INVOICE_EVIDENCE),)
 
-# Hela acceptansen på en maskin där tunneln till agenntserver är uppe: först
-# fakturaresan, som är modellfri och därför felar snabbt och billigt, sedan den
-# fulla resan som kräver den självhostade modellen. Två kvitton, två
-# skärmbildsserier, en etikett — `<etikett>-invoice-*` och `<etikett>-desktop-*`
+# Inkommande post-resan behöver lika lite en modell som fakturaresan, och av
+# samma skäl: köns läsning är deterministisk — kategori, datum, belopp och
+# leverantör kommer ur regler över texten med produktens egna läsare. Att den
+# resan går igenom på en maskin utan GPU är alltså ett påstående om funktionen,
+# inte om skriptet.
+intake-acceptance: desktop-build  ## Inkommande post-resan mot riktig Tauri/WebKitGTK (ingen modell krävs)
+	backend/.venv/bin/python backend/scripts/intake_acceptance.py \
+	  --run-label $(RUN_LABEL) \
+	  $(if $(INTAKE_EVIDENCE),--evidence-dir $(INTAKE_EVIDENCE),)
+
+# Hela acceptansen på en maskin där tunneln till agenntserver är uppe: först de
+# två modellfria resorna, som felar snabbt och billigt, sedan den fulla resan
+# som kräver den självhostade modellen. Tre kvitton, tre skärmbildsserier, en
+# etikett — `<etikett>-invoice-*`, `<etikett>-intake-*` och `<etikett>-desktop-*`
 # kan aldrig skriva över varandra.
-desktop-acceptance-full: invoice-acceptance desktop-acceptance  ## Faktura- + full journey-acceptans (kräver modelltunneln)
-	@echo "Båda acceptanserna klara. Evidens: docs/evidence/$(RUN_LABEL)-invoice-* och $(RUN_LABEL)-desktop-*"
+desktop-acceptance-full: invoice-acceptance intake-acceptance desktop-acceptance  ## Faktura- + post- + full journey-acceptans (kräver modelltunneln)
+	@echo "Alla tre acceptanserna klara. Evidens: docs/evidence/$(RUN_LABEL)-{invoice,intake,desktop}-*"
 
 invoice-rules-lock:  ## Spela in granskningsreglernas fingeravtryck för nuvarande ANALYSIS_ENGINE_VERSION
 	cd backend && .venv/bin/python -m app.invoices.rules --write

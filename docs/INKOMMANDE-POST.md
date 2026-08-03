@@ -271,3 +271,28 @@ Tester: `backend/tests/test_intake_queue.py` och
 `brfv2-mockup/src/IntakeQueue.test.jsx`. Ingen av dem behöver inloggning, nät
 eller modell — vilket är en del av det som påstås: en kö som krävde det vore en
 kö som inte gick att granska offline.
+
+## 9. Resan genom den riktiga applikationen
+
+Enhetstesterna visar att delarna gör rätt sak. `make intake-acceptance`
+(`backend/scripts/intake_acceptance.py`) visar något annat: att **kedjan** går
+att gå, av en människa, i det installerade Tauri/WebKitGTK-fönstret. Den kör
+hela sträckan kapitel 1 ritar upp — en `.eml` någon plockat fram, proveniensen,
+läsningen med sina citat, ett beslut som bevarar meddelandet *och* gör en
+uppgift av det, den bevarade texten öppnad i arkivet på sidan citatet pekar på,
+en återöppning, och ett nytt beslut.
+
+Tre av påståendena går bara att kontrollera här och inte i en enhetstest:
+
+- **Uppgiften bär ett verifierat citat in i det bevarade meddelandet.** Det är
+  hela skälet till att ordningen är "bevara först" (kapitel 5).
+- **Att öppna igen raderar ingenting.** Uppgiften står kvar, och det tidigare
+  avgörandet ligger i postens `decision_history` medan `resolution` är tom.
+- **Ett nytt beslut bevarar inte meddelandet en andra gång.** Arkivet växer inte
+  med en dubblett, och `preserved_document_id` är samma som förut.
+
+Ingen modell krävs, och det är avsiktligt: resan är grön på en maskin som aldrig
+konfigurerat generering, vilket är samma påstående som kapitel 4 gör om golvet.
+Evidensen — skärmbilder och ett maskinläsbart kvitto — hamnar i `docs/evidence`
+under körningens etikett, och committad evidens skrivs aldrig över utan att
+`--overwrite-evidence` begärs uttryckligen.
