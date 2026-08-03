@@ -10,9 +10,17 @@ respektive lämnades kvar.
 | Linje | Ref | Roll |
 | -- | -- | -- |
 | Fedora-pilotens frysta släpplinje | `bp6/fedora-pilot-closeout`, taggen `v0.2.0-fedora-pilot` | Avslutad, kallgranskad pilot. Historisk evidens. Ingen fortsatt utveckling. |
-| Publicerad produktbas | `feat/kalla-mobile-pwa` = `3bc78bdaaf8c252864ea31684272e10b5eb27693`, taggen `traff-mobile-rc1` | Cookie-only-auth, page-image-route, `/m`-servering, Träff Mobile RC1. |
+| Publicerad produktbas | `feat/produktbas` (hette `feat/kalla-mobile-pwa` till 2026-08-03) = `3bc78bdaaf8c252864ea31684272e10b5eb27693`, taggen `traff-mobile-rc1` | Cookie-only-auth, page-image-route, `/m`-servering, Träff Mobile RC1. |
 | Fortsatt desktopprodukt | `feat/desktop-styrelsearbetsyta` | Den här grenen. Produktbasen + desktopens produktförmågor. |
 | `main` | `acd39de0ce7e46e94786ba3aafa33fb22ee20ad7` | Orörd av desktoparbetet. |
+
+Produktbasgrenen bytte namn 2026-08-03. `feat/kalla-mobile-pwa` var namnet den
+fick när mobilklienten byggdes på den, och det stämde i en vecka: därefter bar
+den fakturaärendena, samtidighetsreparationen och desktopacceptansen, alltså
+arbete som inte har med mobilen att göra. Ett namn som säger fel sak om vad en
+gren innehåller är inte en kosmetisk fråga — det som står på spel är om nästa
+läsare vågar tro på grenen den står på. Commit-id:na och taggarna i tabellen är
+oförändrade och är fortfarande de hållbara ankarna; bara namnet flyttade.
 
 Pilotgrenen och produktbasen delar bascommit `1cd65cae755b72f753b1d36ab4a1d5314fe2ea79`
 men divergerar därifrån. De slås aldrig ihop: BP6 är ett dokument-only avslut på
