@@ -1,0 +1,85 @@
+{
+  "schema": "brfv2-website-acceptance/v1",
+  "runLabel": "2026-08-03-webkit-fixed-final",
+  "ok": true,
+  "startedAt": "2026-08-03T22:27:25+0200",
+  "durationSeconds": 22.4,
+  "application": {
+    "path": "/home/aidev/Projects/brfv2/src-tauri/target/release/brfv2-desktop",
+    "sha256": "460686a0c964fb05481ef59da74db24ac005a5f6259c0c17ff96015f2a6d0c49",
+    "bytes": 3429824
+  },
+  "transportRetries": 0,
+  "steps": {
+    "withoutModel": {
+      "mode": "desktop",
+      "llm": {
+        "display_name": "",
+        "model": "",
+        "runtime_label": "",
+        "ready": false,
+        "provider": "none"
+      }
+    },
+    "emptyWorkspace": {
+      "create": true,
+      "says": "Bygg den sida medlemmarna faktiskt läser — i samma system som dokumenten, posten och uppgifterna. Sakuppgifter hämtas ur föreningens egna handlingar, med källhänvisning, och det som inte går att belägga skrivs inte.",
+      "canvas": false,
+      "pagesAfterRead": 0
+    },
+    "canvas": {
+      "sameOrigin": true,
+      "appBackground": "rgb(11, 12, 16)",
+      "width": 1094,
+      "siteBackground": "rgb(251, 250, 248)"
+    },
+    "blockAdded": {
+      "blocks": 1,
+      "summary": "La till Toppsektion"
+    },
+    "edited": {
+      "heading": "Välkommen till Brf Gjutformen 12"
+    },
+    "mobileViewport": {
+      "canvasWidth": 390,
+      "frameWidth": 388,
+      "heroColumns": "348px"
+    },
+    "published": {
+      "seq": 1,
+      "slug": "start"
+    },
+    "draftStaysInTheDraft": {
+      "publishedSlug": "start",
+      "draftSlug": "hem",
+      "draftTextLeaked": false
+    },
+    "publishedAgain": {
+      "seq": 2,
+      "slug": "hem"
+    },
+    "rolledBack": {
+      "publicSeq": 1,
+      "draftKeptItsText": true,
+      "revisions": 2
+    },
+    "aiRefusesWithoutModel": {
+      "applied": false,
+      "refusal": "AI-assistenten svarade med något som inte gick att tolka som ändringar. Ingenting skrevs. Försök formulera om."
+    },
+    "historyAppendOnly": {
+      "undid": "Ändrade text",
+      "entriesBefore": 9,
+      "entriesAfter": 10,
+      "undoTransaction": "Ångrade: Ändrade text"
+    }
+  },
+  "screenshots": [
+    "docs/evidence/2026-08-03-webkit-fixed-final-website-empty.png",
+    "docs/evidence/2026-08-03-webkit-fixed-final-website-canvas.png",
+    "docs/evidence/2026-08-03-webkit-fixed-final-website-selected.png",
+    "docs/evidence/2026-08-03-webkit-fixed-final-website-mobile.png",
+    "docs/evidence/2026-08-03-webkit-fixed-final-website-published.png",
+    "docs/evidence/2026-08-03-webkit-fixed-final-website-versions.png"
+  ]
+}

@@ -1,4 +1,4 @@
-# WebKitGTK website-editor boundary — 2026-08-03
+# WebKitGTK website-editor repair — 2026-08-03
 
 ## Reproduction
 
@@ -10,46 +10,51 @@ Environment:
 - dnd-kit state: `0.4.0`
 - Signals: `@preact/signals-core 1.14.4`
 
-`make website-acceptance RUN_LABEL=2026-08-03-webkit-investigation` started a
-fresh `tauri-driver`, `WebKitWebDriver`, sidecar backend, and release app. It
-reached the authenticated product and the Hemsidan workspace, then the lazy
-editor import rejected before the empty-workspace card rendered:
+The original failure had two layers:
 
-`TypeError: Attempted to assign to readonly property.`
+1. `src-tauri/tauri.conf.json` enabled Tauri's `freezePrototype`, which injects
+   `Object.freeze(Object.prototype)` before application modules run. Signals
+   assigned `Signal.prototype.valueOf`, and Puck's `object-hash` browser bundle
+   assigned `Buffer.prototype.toString` and `toJSON`. Those names are inherited
+   non-writable properties after the freeze, so strict module evaluation threw
+   `TypeError: Attempted to assign to readonly property.`
+2. After that was repaired, WebKitGTK exposed Puck's `srcdoc` iframe but left its
+   document body empty and did not dispatch the iframe `load` event. Puck's
+   `AutoFrame` therefore never found `#frame-root` and never mounted the preview.
 
-The machine-readable receipt and screenshot are:
+The generated line/column in the first failure pointed near Signals' prototype
+setup. JavaScriptCore reports module readonly-assignment locations incorrectly
+in this case; see [WebKit bug 275145](https://bugs.webkit.org/show_bug.cgi?id=275145).
 
-- `2026-08-03-webkit-investigation-website-acceptance.json`
-- `2026-08-03-webkit-investigation-website-failure.png`
+## Repair
 
-A diagnostic build temporarily displayed the JavaScript stack. It identified
-the generated `Website` chunk at line 2, column 7595. A Vite source-map build
-mapped that generated position into
-`@preact/signals-core/dist/signals-core.module.js`, near its prototype setup.
-That position is not treated as the exact write: JavaScriptCore has a known
-module-mode bug that reports readonly-assignment errors at an earlier source
-position; see [WebKit bug 275145](https://bugs.webkit.org/show_bug.cgi?id=275145).
+`brfv2-mockup/src/webkitCompat.js` is a narrowly scoped Vite compatibility
+plugin. It:
 
-Isolated checks narrowed the boundary but did not produce a safe production
-repair:
+- rewrites only Signals' and `object-hash`'s inherited-method assignments to
+  equivalent `Object.defineProperty` calls, preserving writable/configurable
+  behavior and keeping `freezePrototype: true`;
+- patches only Puck 0.22.4's AutoFrame module to poll for the completed iframe,
+  recreate Puck's inert `frame-root` when WebKit exposed an empty `srcdoc`
+  body, and then let normal React portals render into it.
 
-1. Direct JSC evaluation of Signals passed.
-2. A Vite-built dnd-kit `ValueHistory` entry passed JSC.
-3. A Vite-built Puck entry passed JSC with minimal browser stubs.
-4. The full real Tauri/WebKitGTK application still fails when the website
-   workspace is opened.
+The lazy import and `WorkspaceBoundary` remain as independent containment for
+future editor failures.
 
-## Repair attempts
+## Passing real acceptance
 
-Two compatibility candidates were built and exercised through the real
-acceptance harness, then reverted because both reproduced the same failure:
+`make website-acceptance RUN_LABEL=2026-08-03-webkit-fixed-final` started a fresh
+`tauri-driver`, `WebKitWebDriver`, sidecar backend, and release app. It passed
+the complete journey: authenticated startup, empty site, same-origin iframe,
+light site stylesheet, block insertion, editing/history, 390px mobile canvas,
+publication boundary, rollback, model-less AI refusal, and append-only undo.
 
-- `2026-08-03-webkit-es2019-website-acceptance.json`: Vite target lowered to
-  ES2019; failed before the empty workspace.
-- `2026-08-03-webkit-cjs-signals-website-acceptance.json`: Signals aliased to
-  its CommonJS distribution; failed before the empty workspace.
+The machine-readable receipt and screenshots are:
 
-The committed Vite configuration remains unchanged. The existing lazy import
-and `WorkspaceBoundary` remain in place as containment, but they are not
-counted as a fix: the real Tauri acceptance is intentionally recorded as
-failed until the editor module can start in WebKitGTK.
+- `2026-08-03-webkit-fixed-final-website-acceptance.json`
+- `2026-08-03-webkit-fixed-final-website-empty.png`
+- `2026-08-03-webkit-fixed-final-website-canvas.png`
+- `2026-08-03-webkit-fixed-final-website-selected.png`
+- `2026-08-03-webkit-fixed-final-website-mobile.png`
+- `2026-08-03-webkit-fixed-final-website-published.png`
+- `2026-08-03-webkit-fixed-final-website-versions.png`
