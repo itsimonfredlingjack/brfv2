@@ -228,8 +228,12 @@ function App() {
     setDocumentsError(null);
     return api.listDocuments(brfId)
       .then((docs) => {
-        if (cancelledBox.current) return;
-        setDocuments(docs.map(mapDocument));
+        if (cancelledBox.current) return [];
+        const mapped = docs.map(mapDocument);
+        setDocuments(mapped);
+        // Returned as well as stored: a caller that needs to act on the
+        // refreshed list cannot read it back out of state in the same tick.
+        return mapped;
       })
       .catch((e) => {
         if (cancelledBox.current) return;
@@ -412,8 +416,8 @@ function App() {
   };
 
   const openDocument = (docId, initialPage = 1, initialTab = 'read') => {
-    const doc = documents.find(d => d.id === docId);
-    if (doc) {
+    const show = (doc) => {
+      if (!doc) return;
       setSelectedDocument(doc);
       setPdfPage(initialPage);
       setWorkspaceTab(initialTab);
@@ -422,7 +426,22 @@ function App() {
       setPdfHighlight(null);
       setWorkspaceChatMessages([]);
       setIsMobileMenuOpen(false);
+    };
+    const known = documents.find(d => d.id === docId);
+    if (known) {
+      show(known);
+      return;
     }
+    // Not in the list this workspace loaded — which is a normal state, not a
+    // missing document. The review queue creates documents while the workspace
+    // is open: preserving a message makes one, adopting an attachment makes
+    // another, and the card then offers to open exactly that. This used to
+    // return silently, so the control that said "Öppna dokumentet" did nothing
+    // at all until the association was switched or the application restarted.
+    // Fetch the list again and open it from there; if it genuinely is not
+    // there, `show` still does nothing and nothing is invented.
+    if (!activeBrfId) return;
+    fetchAndSetDocuments(activeBrfId).then((docs) => show((docs || []).find(d => d.id === docId)));
   };
 
   // Citations only carry document_id/document_name (never inferred) — look
@@ -1572,6 +1591,10 @@ function App() {
                   brfId={activeBrfId}
                   isAdmin={isAdmin}
                   onOpenDocument={openDocument}
+                  // A decision in the queue can put a document in the archive:
+                  // that is what "ta in" means. Without this the association's
+                  // own document list kept saying the message was not there.
+                  onDocumentsChanged={() => activeBrfId && fetchAndSetDocuments(activeBrfId)}
                 />
               </div>
             )}

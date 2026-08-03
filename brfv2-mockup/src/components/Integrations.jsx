@@ -34,7 +34,7 @@ function Banner({ tone, children, onDismiss }) {
   );
 }
 
-export default function Integrations({ brfId, isAdmin = false, onOpenDocument }) {
+export default function Integrations({ brfId, isAdmin = false, onOpenDocument, onDocumentsChanged }) {
   const [pane, setPane] = useState('inbox');
 
   const [events, setEvents] = useState([]);
@@ -120,7 +120,7 @@ export default function Integrations({ brfId, isAdmin = false, onOpenDocument })
             mailboxConnected={mailboxReady}
             format={format}
             onOpenDocument={onOpenDocument}
-            onChanged={refresh}
+            onChanged={() => { refresh(); onDocumentsChanged?.(); }}
           />
         </section>
       )}
