@@ -14,6 +14,13 @@ respektive lämnades kvar.
 | Fortsatt desktopprodukt | `feat/desktop-styrelsearbetsyta` | Den här grenen. Produktbasen + desktopens produktförmågor. |
 | `main` | `acd39de0ce7e46e94786ba3aafa33fb22ee20ad7` | Orörd av desktoparbetet. |
 
+**Tabellen ovan är en ögonblicksbild från BP6-avstämningen, inte dagens läge.**
+Raden "Fortsatt desktopprodukt" skrevs när det här dokumentet låg på
+`feat/desktop-styrelsearbetsyta`; sedan dess har den linjen förts vidare och
+arbetet pågår på `feat/produktbas`. Vilken gren som är aktuell står i
+[README](../README.md#grenar--läs-det-här-om-en-fil-verkar-saknas); commit-id:na
+och taggarna här är oförändrade och är det som gör ögonblicksbilden användbar.
+
 Produktbasgrenen bytte namn 2026-08-03. `feat/kalla-mobile-pwa` var namnet den
 fick när mobilklienten byggdes på den, och det stämde i en vecka: därefter bar
 den fakturaärendena, samtidighetsreparationen och desktopacceptansen, alltså

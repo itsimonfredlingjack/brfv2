@@ -34,6 +34,25 @@ komplett — ingen nästlad utcheckning, ingen submodul, inget att hämta separa
   citatverifiering, men bara den slingan som är värd att ha i fickan: fråga →
   grundat svar → källa med markerad passage. Se
   [xs_mobilapp/README.md](xs_mobilapp/README.md).
+- `kalla-native/` är **Träff, den nativa Android-appen** (Expo Router + React
+  Native) över samma backendkontrakt som PWA:n. Byggd under namnet Källa,
+  släppt som Träff — se [kalla-native/README.md](kalla-native/README.md).
+- `src-tauri/` är skrivbordsskalet som paketerar frontend + backend till en
+  installerbar Fedora-RPM. Det äger fönstret och sidecar-livscykeln, ingen
+  produktlogik.
+
+De tre klienterna är **inte** i paritet, och gapen är avsiktliga — en telefon är
+inte där en förening granskar sin post eller sina fakturor:
+
+| | webb/desktop | PWA | Android |
+| -- | -- | -- | -- |
+| Fråga → grundat svar → citat | ✅ | ✅ | ✅ |
+| Dokument | ✅ | ✅ | ✅ |
+| Granskning · Bevakningar · Uppgifter | ✅ | ✅ | — |
+| Inkommande post · Fakturor · Anslutningar | ✅ | — | — |
+
+Backendkontraktet delas oavsett: en ruttändring prövas mot alla tre, inte bara
+mot den klient som råkar ha skärmen.
 
 Fram till juli 2026 var `brfv2-mockup/` ett separat, gitignorerat repo, vilket
 gjorde att en ren klon inte gick att köra. Den historiken finns kvar på
@@ -43,6 +62,30 @@ Rotens React-app i `src/` är en äldre backendkopplad prototyp. Den är inte de
 avsedda pilotfrontenden och ska inte få nya produktintegrationer. Rotens
 frontendtester och bygge behålls som regressionsskydd tills prototypen kan
 arkiveras separat.
+
+## Grenar — läs det här om en fil verkar saknas
+
+Produktlinjerna har inte alltid slagits ihop i takt med att de utvecklats, så
+**vilken gren utcheckningen står på avgör vilka funktioner som finns.** Det är
+nästan alltid förklaringen när en katalog som dokumentationen beskriver inte
+går att hitta.
+
+| Gren | Roll |
+| -- | -- |
+| `feat/produktbas` | **Här pågår arbetet.** Ligger före `main` med fakturaärendena som ärenden, samtidighets- och tillståndsreparationen, och acceptansresorna genom den riktiga desktopappen. |
+| `main` | Produktbas: backend, kanonisk frontend, mobil-PWA, Android-app, Tauri-skal, Fortnox, Microsoft Graph, Bevakningar, Uppgifter. |
+| `bp6/fedora-pilot-closeout` (taggen `v0.2.0-fedora-pilot`) | Frusen pilotevidens. Ingen fortsatt utveckling sker på den linjen. |
+
+Konkret: `backend/app/invoices/`, `backend/app/history.py`,
+`backend/tests/test_concurrency_integrity.py` och
+`backend/scripts/intake_acceptance.py` finns **bara** på `feat/produktbas`. En
+utcheckning utan dem står på `main` — det är inte en trasig klon.
+
+Grenen hette `feat/kalla-mobile-pwa` fram till 2026-08-03. Namnet var sant den
+vecka mobilklienten byggdes på den och missvisande därefter, eftersom den sedan
+bar fakturor, samtidighet och desktopacceptans. Hela resonemanget om varför
+linjerna divergerade och hur de fördes ihop:
+[docs/POST-BP6-PRODUKTBAS.md](docs/POST-BP6-PRODUKTBAS.md).
 
 ## Uppsättning
 
@@ -199,6 +242,24 @@ make desktop-package    # -> dist/brf-dokument-ai-<version>.x86_64.rpm
 make desktop-install    # dnf install (drar in tesseract + webkit2gtk4.1)
 make desktop-acceptance # full journey mot riktig Tauri/WebKitGTK + självhostad modell
 ```
+
+Tre resor drivs genom det riktiga Tauri/WebKitGTK-fönstret, och två av dem
+behöver **ingen modell** — vilket är en egenskap hos funktionerna och inte hos
+skripten, eftersom både fakturagranskningen och postköns läsning är
+deterministiska hela vägen:
+
+```bash
+make invoice-acceptance  # fakturaresan (ingen modell)
+make intake-acceptance   # inkommande post: .eml → bevarat citerbart dokument
+                         # → uppgift/bevakning → öppna igen → nytt beslut
+make desktop-acceptance-full RUN_LABEL=<etikett>   # alla tre, en etikett
+```
+
+Evidensen hamnar i `docs/evidence/<etikett>-{invoice,intake,desktop}-*` —
+skärmbilder plus ett maskinläsbart kvitto. Evidens som redan är committad
+skrivs aldrig över utan att `--overwrite-evidence` begärs uttryckligen; se
+[docs/evidence/acceptansresan-2026-08-03.md](docs/evidence/acceptansresan-2026-08-03.md)
+för den senaste körningen.
 
 ### Inkommande underlag och fakturagranskning
 
