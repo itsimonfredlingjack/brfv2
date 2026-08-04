@@ -8,7 +8,7 @@ const detail = document.getElementById('detail');
 if (typeof failure.headline === 'string' && failure.headline.trim()) {
   const headline = document.getElementById('headline');
   headline.textContent = failure.headline;
-  document.title = `BRF Dokument-AI — ${failure.headline}`;
+  document.title = `Träff — ${failure.headline}`;
 }
 
 // Flip data-state exactly once, so neither a reader nor the acceptance harness

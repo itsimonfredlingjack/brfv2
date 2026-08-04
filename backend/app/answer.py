@@ -178,8 +178,7 @@ def ask(
     if low_relevance and s.insufficientDataBehavior == "refuse":
         return _refusal(
             "low_relevance",
-            "Jag hittar inget i de uppladdade dokumenten som verkar besvara den frågan, "
-            "så jag avstår hellre än att gissa.",
+            "Det står inte i något av era dokument.",
             retrieval=hits,
             provider=provider.name,
             model=model,
@@ -294,8 +293,7 @@ def ask(
             if s.requireSources and parsed["citations"] and not citations:
                 return _refusal(
                     "grounding_failed",
-                    "Jag kunde inte verifiera svarets källhänvisningar mot dokumenten, "
-                    "så jag visar hellre inget svar än ett ogrundat.",
+                    "Jag kunde inte belägga svaret i era dokument. Då visar jag det inte.",
                     retrieval=hits,
                     provider=provider.name,
                     model=model,
@@ -306,7 +304,7 @@ def ask(
                 answer=message,
                 citations=citations,
                 rejected_citations=rejected,
-                warning="Svaret är osäkert: underlaget bedömdes otillräckligt.",
+                warning="Svaret är osäkert. Underlaget är tunt.",
                 retrieval=hits,
                 provider=provider.name,
                 model=model,
@@ -315,8 +313,7 @@ def ask(
         if s.requireSources and parsed["citations"] and not citations:
             return _refusal(
                 "grounding_failed",
-                "Jag kunde inte verifiera svarets källhänvisningar mot dokumenten, "
-                "så jag visar hellre inget svar än ett ogrundat.",
+                "Jag kunde inte belägga svaret i era dokument. Då visar jag det inte.",
                 retrieval=hits,
                 provider=provider.name,
                 model=model,
@@ -335,7 +332,7 @@ def ask(
         if rejected:
             warning = f"{len(rejected)} källhänvisning(ar) kunde inte verifieras och har tagits bort."
         if low_relevance:
-            warning = ((warning + " ") if warning else "") + "Osäkert underlag: träffarna hade låg relevans."
+            warning = ((warning + " ") if warning else "") + "Osäkert underlag: träffarna låg långt från frågan."
 
         return AskResponse(
             answer=parsed["answer"],
@@ -397,8 +394,7 @@ def ask(
     )
     return _refusal(
         "numeric_grounding_failed",
-        "Jag kunde inte bekräfta att alla siffror i svaret stämmer exakt med källorna, "
-        "så jag visar hellre inget svar än ett siffermässigt felaktigt.",
+        "Siffrorna i svaret stämmer inte exakt med källan. Då visar jag det inte.",
         retrieval=hits,
         provider=provider.name,
         model=model,

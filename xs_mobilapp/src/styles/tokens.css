@@ -1,49 +1,117 @@
-/* Källa — design tokens.
+/* Träff — design tokens, mobile.
  *
- * Light-first and paper-forward, because the artifact the user is looking at
- * is a white page from a real document. Dark mode dims the CHROME only: the
- * page image is never inverted or recolored. It is the evidence.
+ * Same identity as the desktop ("Träff · visuell identitet v2", juli 2026),
+ * same six meanings, same three cuts — but this is the phone the identity was
+ * actually written for, so the values are the identity's own rather than a
+ * paper inversion of them.
+ *
+ * Light-first and paper-forward, because the artifact the user is looking at is
+ * a white page from a real document. Dark mode is the identity's §06 shell:
+ * skal #07080B with the state colours at their mid-tone values, which is the
+ * form the identity specifies for exactly this screen. The page image is never
+ * inverted or recoloured in either mode. It is the evidence.
+ *
+ * The typefaces are vendored beside this file rather than fetched: a Google
+ * Fonts link would hand every reader's IP address to a third party, and the
+ * desktop shell that serves the same product forbids it outright under
+ * `font-src 'self'`. Licences in ../assets/fonts.
  */
 
-:root {
-  /* Ground */
-  --paper: #fbfaf8;
-  --surface: #ffffff;
-  --surface-sunken: #f3f1ed;
-  --hairline: #e6e3de;
-  --hairline-strong: #d3cec6;
+/* The explanation. Interface, body text, buttons. */
+@font-face {
+  font-family: 'Instrument Sans';
+  src: url('../assets/fonts/instrument-sans-latin-wght-normal.woff2') format('woff2');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
 
-  /* Ink */
-  --ink: #14161a;
-  --ink-2: #4a5058;
+@font-face {
+  font-family: 'Instrument Sans';
+  src: url('../assets/fonts/instrument-sans-latin-ext-wght-normal.woff2') format('woff2');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0,
+    U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* The assertion. The answer, and — in italic — the document's own words. */
+@font-face {
+  font-family: 'Instrument Serif';
+  src: url('../assets/fonts/instrument-serif-latin-400-normal.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Instrument Serif';
+  src: url('../assets/fonts/instrument-serif-latin-400-italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* The measurement. Page numbers, states, scores. */
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('../assets/fonts/jetbrains-mono-latin-wght-normal.woff2') format('woff2');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* Ground — the identity's paper, the same warm family as the desktop so the
+   * two halves of one product do not look like two products. */
+  --paper: #f7f5f3;
+  --surface: #ffffff;
+  --surface-sunken: #efece8;
+  --hairline: #e4e0dc;
+  --hairline-strong: #cdc7c1;
+
+  /* Bläck — warm near-black, never #000. */
+  --ink: #37322f;
+  --ink-2: #605a57;
   /* Meta text. Measured, not eyeballed: the first pick (#767d87) came in at
    * 4.16:1 on white — under the 4.5:1 floor for body-size text, and axe
-   * caught it. This is 5.5:1 on --surface and 5.1:1 on --paper. */
-  --ink-3: #626a75;
+   * caught it. This is 5.3:1 on --surface and 4.9:1 on --paper. */
+  --ink-3: #6f6a66;
   --on-accent: #ffffff;
 
-  /* One accent */
-  --action: #1f4fd8;
-  --action-press: #1740b0;
-  --action-wash: #eef2fe;
+  /* Handling — buttons and links. Never a state (§06). */
+  --action: #1a4fd0;
+  --action-press: #123ca8;
+  --action-wash: #e9eefb;
 
-  /* Meaning. A refusal is CORRECT behavior — amber, never red. Red is
-   * reserved for things that are genuinely broken. */
-  --grounded: #0e7c5a;
-  --grounded-wash: #e8f5f0;
-  --refusal: #8a5a00;
-  --refusal-wash: #fdf4e3;
-  --refusal-edge: #e5c98d;
-  --error: #b3261e;
-  --error-wash: #fdeceb;
+  /* Meaning, locked. Belagt is not "success": it means a passage was verified
+   * verbatim against source text. Vägran is not "warning": it means no proof
+   * exists, which is the product working. Red is neither — it is Avbrott, the
+   * machinery, and it never describes a document. */
+  --grounded: #137855;
+  --grounded-wash: #e7f3ed;
+  --refusal: #8a5d06;
+  --refusal-wash: #faf1df;
+  --refusal-edge: #e0c793;
+  --error: #a82f22;
+  --error-wash: #fbebe8;
 
-  /* The highlighter. Over a white page it has to actually be yellow. */
+  /* The highlighter. §06: remsgul #FFD600, and it lives only inside the paper. */
   --hl-fill: rgba(255, 214, 0, 0.38);
   --hl-edge: #c9a227;
 
-  /* Type */
-  --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-  --t-answer: 1.1875rem; /* 19px — set larger than the chrome: this is the text read aloud */
+  /* Type — three cuts, three jobs, never mixed (§07). */
+  --font: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-serif: 'Instrument Serif', 'Iowan Old Style', Georgia, 'Times New Roman', serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  /* §07 puts the serif at 22px and above. The answer is the one thing on this
+   * screen the product asserts, so it is the one thing set in it. */
+  --t-answer: 1.375rem; /* 22px */
   --t-title: 1.5rem;
   --t-body: 1rem;
   --t-quote: 0.9375rem;
@@ -80,29 +148,35 @@
   color-scheme: light;
 }
 
+/* §06 in its primary form: "Mörkt skal, lysande papper." This is the phone the
+ * identity was written for, so dark mode uses the identity's own values rather
+ * than a dimmed version of the light ones — skal #07080B, and the four state
+ * colours at the mid-tones the document specifies. The page image is still
+ * never inverted: it stays the one white thing on screen, because it is the
+ * evidence. */
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: #16181c;
-    --surface: #1e2126;
-    --surface-sunken: #121417;
-    --hairline: #2c3037;
-    --hairline-strong: #3a3f48;
+    --paper: #07080b;
+    --surface: #14161b;
+    --surface-sunken: #0d0f13;
+    --hairline: #23262d;
+    --hairline-strong: #363a43;
 
     --ink: #ecedef;
     --ink-2: #b3b8c0;
-    --ink-3: #878d97;
+    --ink-3: #949aa4;
 
     --action: #7ea2ff;
     --action-press: #9db8ff;
-    --action-wash: #1c2740;
+    --action-wash: #16203a;
 
     --grounded: #4fc79c;
-    --grounded-wash: #142a23;
+    --grounded-wash: #10241d;
     --refusal: #e5b45c;
-    --refusal-wash: #2a2113;
+    --refusal-wash: #241c10;
     --refusal-edge: #5a4620;
     --error: #f2837b;
-    --error-wash: #2d1715;
+    --error-wash: #2a1513;
 
     color-scheme: dark;
   }
@@ -128,6 +202,11 @@ body {
   background: var(--paper);
   -webkit-font-smoothing: antialiased;
   overscroll-behavior-y: none;
+  /* Instrument Serif ships one weight. Without this a `font-weight: 600` on a
+     serif element does not fail — the browser smears the 400 outlines into a
+     fake bold. Off globally: the sans and the mono carry real 400–700, so
+     nothing legitimate is synthesised. */
+  font-synthesis-weight: none;
 }
 
 button,

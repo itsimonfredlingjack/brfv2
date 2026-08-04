@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build the Fedora distribution artifact (RPM) for BRF Dokument-AI.
+# Build the Fedora distribution artifact (RPM) for Träff.
 #
 #   ops/package-desktop.sh             build only
 #   ops/package-desktop.sh --install   build, then install with dnf (needs sudo)
@@ -31,7 +31,7 @@ cd "$ROOT"
 # shellcheck source=ops/lib/repro.sh
 source "$ROOT/ops/lib/repro.sh"
 
-APPNAME="BRF Dokument-AI"
+APPNAME="Träff"
 BINNAME="brfv2-desktop"
 PKGNAME="brf-dokument-ai"
 
@@ -125,8 +125,8 @@ done
 step "Buildroot"
 # ---------------------------------------------------------------------------
 # The layout is not free-form: tauri-utils resolves resources to
-# /usr/lib/<productName> at runtime, so that exact path — spaces and all — is
-# what the application will look in.
+# /usr/lib/<productName> at runtime, so that exact path — diacritics and all —
+# is what the application will look in.
 BUILD="$ROOT/src-tauri/target/rpm"
 BUILDROOT="$BUILD/buildroot"
 rm -rf "$BUILD"

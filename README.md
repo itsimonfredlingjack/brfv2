@@ -1,4 +1,4 @@
-# BRF Dokument-AI
+# Träff
 
 Grundad dokument-Q&A för bostadsrättsföreningar. Varje godkänd källa kan öppnas
 på rätt PDF-sida med den citerade passagen markerad. Frågor som saknar stöd i

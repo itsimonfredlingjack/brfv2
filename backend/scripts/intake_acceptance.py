@@ -133,13 +133,14 @@ def note(step: str, payload) -> None:
 
 # Getting to one message's own pane, re-established on every single poll.
 #
-# Four things stand between the queue and a settled message, and every one of
-# them is correct product behaviour: the default filter shows only what still
-# needs a decision, so a card that was just decided leaves the list; a resolved
-# card renders collapsed; the messages inside it are ``<details>``; and the
-# surrounding Inkommande pane reloads — unmounting the queue and resetting its
-# filter — after every write, because a decision changes what the other pane
-# shows too.
+# The queue is master–detail: threads are chosen in the list on the left and
+# worked in the pane on the right, where the messages, the reading and the
+# decision form all live. Two things still stand between the queue and a settled
+# message, and both are correct product behaviour: the default filter shows only
+# what still needs a decision, so a thread that was just decided leaves the list;
+# and the surrounding Inkommande pane reloads — unmounting the queue and
+# resetting its filter and its selection — after every write, because a decision
+# changes what the other pane shows too.
 #
 # So this is not a step the journey performs once. It is the preamble to every
 # read and every interaction, and it repairs whatever the last re-render undid
@@ -147,23 +148,21 @@ def note(step: str, payload) -> None:
 ENSURE_CARD = """
 const subject = arguments[0];
 if (!document.querySelector('.intake')) return null;
-let article = [...document.querySelectorAll('.intake article.thread')]
-  .find((c) => c.innerText.includes(subject));
-if (!article) {
+const row = [...document.querySelectorAll('.intake-list .thread-row')]
+  .find((r) => r.innerText.includes(subject));
+if (!row) {
   const all = [...document.querySelectorAll('.intake-counts button')]
     .find((b) => b.textContent.includes('Alla trådar'));
   if (all && all.getAttribute('aria-pressed') !== 'true') all.click();
   return null;
 }
-const head = article.querySelector('.thread-head');
-if (head && head.getAttribute('aria-expanded') !== 'true') {
-  head.click();
+if (row.getAttribute('aria-current') !== 'true') {
+  row.click();
   return null;
 }
-const message = article.querySelector('.thread-messages details.message');
-if (!message) return null;
-message.open = true;
-return article;
+const detail = document.querySelector('.intake-detail .thread-detail');
+if (!detail || !detail.innerText.includes(subject)) return null;
+return detail;
 """
 
 
@@ -204,7 +203,7 @@ fetch('/api/auth/me', { credentials: 'include' })
 
 
 def on_card(driver: WebDriver, subject: str, body: str, args: list | None = None):
-    """Run *body* against the message's card, having first made it reachable.
+    """Run *body* against the thread's detail pane, having first opened it.
 
     One round trip, so the state this establishes cannot be undone between
     establishing it and using it.
@@ -508,7 +507,7 @@ def main(argv: list[str] | None = None) -> int:
                 if (!empty) return false;
                 return {
                   says: empty.textContent.trim(),
-                  cards: document.querySelectorAll('.intake article.thread').length,
+                  cards: document.querySelectorAll('.intake-list .thread-row').length,
                   importControl: Boolean(document.querySelector('#intake-eml-import')),
                 };
                 """
@@ -550,16 +549,24 @@ def main(argv: list[str] | None = None) -> int:
             "the imported message as a card",
             lambda: driver.execute(
                 """
-                const article = [...document.querySelectorAll('.intake article.thread')]
-                  .find((c) => c.innerText.includes(arguments[0]));
-                if (!article) return false;
+                const subject = arguments[0];
+                const row = [...document.querySelectorAll('.intake-list .thread-row')]
+                  .find((r) => r.innerText.includes(subject));
+                if (!row) return false;
+                if (row.getAttribute('aria-current') !== 'true') { row.click(); return false; }
+                const detail = document.querySelector('.intake-detail .thread-detail');
+                if (!detail || !detail.innerText.includes(subject)) return false;
+                // Every reading, not only the first few the panel shows before it
+                // is asked: the promise being checked is about all of them.
+                const more = detail.querySelector('.signals-more');
+                if (more && more.textContent.includes('Visa alla')) { more.click(); return false; }
                 return {
-                  subject: article.querySelector('.thread-subject')?.textContent.trim(),
-                  meta: article.querySelector('.thread-meta')?.textContent.trim(),
-                  badges: [...article.querySelectorAll('.thread-badges .badge')]
+                  subject: row.querySelector('.thread-subject')?.textContent.trim(),
+                  meta: row.querySelector('.thread-meta')?.textContent.trim(),
+                  badges: [...row.querySelectorAll('.thread-row-tags .tag')]
                     .map((b) => b.textContent.trim()),
-                  suggestedBy: article.querySelector('.triage-by')?.textContent.trim(),
-                  signals: [...article.querySelectorAll('.triage-signals li')].map((li) => ({
+                  suggestedBy: detail.querySelector('.reading-by')?.textContent.trim(),
+                  signals: [...detail.querySelectorAll('.reading-signals li')].map((li) => ({
                     kind: li.querySelector('.signal-kind')?.textContent.trim(),
                     value: li.querySelector('.signal-value')?.textContent.trim(),
                     quote: li.querySelector('.signal-quote')?.textContent.trim(),
@@ -777,7 +784,7 @@ def main(argv: list[str] | None = None) -> int:
                 if (article.querySelector('.resolution')) return false;
                 if (!article.querySelector('.resolve')) return false;
                 return {
-                  badges: [...article.querySelectorAll('.thread-badges .badge')]
+                  badges: [...article.querySelectorAll('.detail-head-tags .tag')]
                     .map((b) => b.textContent.trim()),
                   offersOutcomes: article.querySelectorAll('.resolve-options label').length,
                 };

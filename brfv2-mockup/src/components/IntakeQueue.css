@@ -1,39 +1,37 @@
 /* The review queue for incoming post.
  *
- * Same rule as the invoice review's stylesheet, applied to a different screen:
- * the visual hierarchy carries the epistemic one. What was *read out of the
- * message* is data — a labelled value with the quote it came from, in a plain
- * block. What the product *believes* is prose in a tinted block under a heading
- * that says it is a belief. What it could *not* establish is prose in a warmer
- * block that cannot be skimmed past. And a category a human confirmed is
- * visually distinct from one the engine guessed, with the guess still visible
- * beside it.
+ * The whole screen is one rule applied over and over: the visual hierarchy
+ * carries the epistemic one. **What arrived** is the message itself, set as
+ * text on the plain surface, with its sender, its date and its hash. **What the
+ * app read out of it** sits under a heading that says so, attributed, quieter
+ * than the message and never in a colour that could pass for a status. **What a
+ * person decides** is the only block on the screen with a filled button in it.
  *
- * If those four ever look alike, a reader stops being able to tell what the
- * product knows from what it is proposing — which is the whole thing this
- * product is for. */
+ * Nothing here uses colour to mean "AI". The previous version tinted the
+ * machine's reading in violet-blue and its uncertainty in amber, which made a
+ * guess look like a system state; the reading is now separated by position,
+ * heading and attribution — the things that survive being read quickly.
+ *
+ * The one thing that is still coloured is uncertainty, because a reader
+ * skimming must not slide past it.
+ */
 
 .intake {
-  max-width: 1100px;
-  margin: 0 auto;
-  padding: 0 4px 48px;
-}
-
-.intake-intro h3 {
   display: flex;
-  align-items: center;
-  gap: 9px;
-  font-size: 17px;
-  margin: 0 0 6px;
-  color: var(--text-primary);
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+  padding-bottom: 8px;
 }
 
-.intake-intro p {
-  margin: 0 0 18px;
-  color: var(--text-secondary);
-  font-size: 13.5px;
+/* ---------- header ---------- */
+
+.intake-intro {
+  max-width: 72ch;
+  margin-bottom: 14px;
+  color: var(--muted-foreground);
+  font-size: var(--text-base);
   line-height: 1.6;
-  max-width: 74ch;
 }
 
 /* ---------- banners ---------- */
@@ -43,124 +41,85 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  padding: 11px 14px;
-  border-radius: 10px;
-  margin-bottom: 14px;
-  font-size: 13.5px;
-  line-height: 1.5;
+  margin-bottom: 12px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2xl);
+  font-size: var(--text-base);
+  line-height: 1.55;
 }
 
-.intake-banner.error {
-  background: rgba(220, 78, 78, 0.12);
-  border: 1px solid rgba(220, 78, 78, 0.4);
-  color: var(--text-primary);
-}
-
-.intake-banner.ok {
-  background: rgba(64, 168, 110, 0.12);
-  border: 1px solid rgba(64, 168, 110, 0.36);
-  color: var(--text-primary);
-}
+.intake-banner.error { background: var(--danger-soft); border-color: var(--danger-border); }
+.intake-banner.ok { background: var(--card); border-color: var(--border-strong); }
 
 .intake-banner .banner-dismiss {
-  background: none;
-  border: none;
-  color: var(--text-secondary);
-  cursor: pointer;
-  padding: 2px;
-}
-
-/* ---------- fetching ---------- */
-
-.intake-fetch {
-  border: 1px solid var(--panel-border);
-  border-radius: 12px;
-  padding: 14px 16px;
-  margin-bottom: 12px;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 12px 18px;
-  align-items: start;
-}
-
-.intake-fetch h4 {
   display: flex;
-  align-items: center;
+  flex-shrink: 0;
+  padding: 2px;
+  border: none;
+  background: none;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+
+/* ---------- where the post comes from ---------- */
+
+.intake-source {
+  margin-bottom: 12px;
+  padding: 11px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-3xl);
+  background: var(--card);
+}
+
+.intake-source-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+.intake-source-state {
+  display: flex;
+  align-items: flex-start;
   gap: 8px;
-  font-size: 14px;
-  margin: 0 0 6px;
-  color: var(--text-primary);
-}
-
-.intake-fetch p {
-  margin: 0;
-  font-size: 13px;
+  flex: 1 1 420px;
+  min-width: 0;
+  color: var(--muted-foreground);
+  font-size: var(--text-base);
   line-height: 1.55;
-  max-width: 70ch;
 }
 
-.intake-fetch .fetch-error {
-  margin-top: 8px;
-  padding: 8px 10px;
-  border-radius: 8px;
-  background: rgba(220, 78, 78, 0.1);
-  border: 1px solid rgba(220, 78, 78, 0.3);
-  color: var(--text-primary);
-}
+.intake-source-state > svg { flex-shrink: 0; margin-top: 3px; }
+.intake-source-state code { font-family: var(--font-mono); font-size: 0.92em; }
+.intake-source-state strong { color: var(--foreground); font-weight: 500; }
 
-.fetch-button {
+.intake-source-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+.intake-format-note { margin-top: 8px; max-width: 82ch; }
+
+/* A label, not a button, so the file input stays the real control and the
+   keyboard path is the input's own. */
+.intake .import-button {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 9px 15px;
-  border-radius: 10px;
-  border: 1px solid var(--accent, #6384ff);
-  background: var(--accent-soft, rgba(99, 132, 255, 0.14));
-  color: var(--text-primary);
-  font-size: 13.5px;
-  font-weight: 600;
+  gap: 7px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-2xl);
+  background: var(--field);
+  color: var(--foreground);
+  font-size: var(--text-base);
+  font-weight: 500;
+  white-space: nowrap;
   cursor: pointer;
+  transition: background-color 0.14s ease;
 }
 
-.fetch-button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.fetch-result {
-  grid-column: 1 / -1;
-  border-top: 1px dashed var(--panel-border);
-  padding-top: 10px;
-  font-size: 13px;
-}
-
-.fetch-result p { margin: 0; }
-
-/* Refused messages are not an error display — they are the queue being honest
- * that it is not the mailbox. Neutral, readable, not red. */
-.fetch-skipped {
-  margin-top: 8px;
-}
-
-.fetch-skipped summary {
-  cursor: pointer;
-  color: var(--text-secondary);
-}
-
-.fetch-skipped ul {
-  margin: 8px 0 0;
-  padding-left: 18px;
-  line-height: 1.6;
-}
-
-.intake-manual {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-  margin-bottom: 18px;
-  font-size: 12.5px;
-}
+.intake .import-button:hover { background: var(--surface-3); }
+.intake .import-button.busy { opacity: 0.6; cursor: progress; }
 
 .intake .hidden-file-input {
   position: absolute;
@@ -170,404 +129,290 @@
   pointer-events: none;
 }
 
-.intake .import-button {
+.hidden-file-input:focus-visible + .import-button {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px var(--ring-glow);
+}
+
+/* Reading post in and importing a file by hand are the same weight of act, so
+   they are the same control. Neither is the primary thing on this screen —
+   deciding is. */
+.fetch-button {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 14px;
-  border-radius: 10px;
-  border: 1px solid var(--panel-border);
-  color: var(--text-primary);
-  font-size: 13px;
+  gap: 7px;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-2xl);
+  background: var(--field);
+  color: var(--foreground);
+  font-size: var(--text-base);
+  font-weight: 500;
+  white-space: nowrap;
   cursor: pointer;
+  transition: background-color 0.14s ease;
 }
 
-.intake .import-button.busy { opacity: 0.6; cursor: progress; }
+.fetch-button:hover:not(:disabled) { background: var(--surface-3); }
+.fetch-button:disabled { opacity: 0.5; cursor: not-allowed; }
 
-/* ---------- filters ---------- */
+.intake-source .fetch-error {
+  margin-top: 9px;
+  padding: 8px 11px;
+  border: 1px solid var(--danger-border);
+  border-radius: var(--radius-2xl);
+  background: var(--danger-soft);
+  font-size: var(--text-base);
+  line-height: 1.55;
+}
 
-.intake-counts {
+.fetch-result {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  font-size: var(--text-base);
+}
+
+/* Refused messages are not an error display — they are the queue being honest
+ * that it is not the mailbox. Neutral, readable, not red. */
+.fetch-skipped { margin-top: 8px; }
+.fetch-skipped summary { cursor: pointer; color: var(--muted-foreground); }
+.fetch-skipped ul { margin: 8px 0 0; padding-left: 18px; line-height: 1.6; color: var(--muted-foreground); }
+.fetch-skipped strong { color: var(--foreground); font-weight: 500; }
+
+/* ---------- toolbar ---------- */
+
+.intake-toolbar {
   display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 16px;
-}
-
-.intake-counts button {
-  display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 13px;
-  border-radius: 10px;
-  border: 1px solid var(--panel-border);
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 13px;
-  cursor: pointer;
-}
-
-.intake-counts button.active {
-  background: var(--accent-soft, rgba(99, 132, 255, 0.14));
-  border-color: var(--accent, #6384ff);
-  color: var(--text-primary);
-}
-
-.intake-counts .pill {
-  min-width: 20px;
-  padding: 1px 6px;
-  border-radius: 999px;
-  background: var(--accent, #6384ff);
-  color: #fff;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.intake-counts .refresh { margin-left: auto; }
-
-.intake-loading,
-.intake .empty {
-  color: var(--text-secondary);
-  font-size: 13.5px;
-  padding: 18px 2px;
-}
-
-.intake .spin { animation: intake-spin 1s linear infinite; }
-
-@keyframes intake-spin { to { transform: rotate(360deg); } }
-
-/* ---------- thread cards ---------- */
-
-.thread {
-  border: 1px solid var(--panel-border);
-  border-radius: 12px;
-  margin-bottom: 12px;
-  overflow: hidden;
-}
-
-.thread.resolved { opacity: 0.82; }
-
-.thread-head {
-  display: flex;
-  align-items: flex-start;
+  justify-content: space-between;
   gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.intake-counts button { gap: 8px; }
+
+.intake-loading {
+  color: var(--muted-foreground);
+  font-size: var(--text-base);
+  padding: 18px 4px;
+}
+
+.intake-empty {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-3xl);
+  background: var(--card);
+}
+
+.intake-empty .empty { max-width: 46ch; font-size: var(--text-base); line-height: 1.6; color: var(--muted-foreground); }
+
+/* ---------- master / detail ---------- */
+
+.intake-layout {
+  display: grid;
+  grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+  min-height: 0;
+}
+
+/* The list keeps its place while the detail scrolls: knowing how much is left
+   is half of what a queue is for. */
+.intake-list {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: calc(100vh - 190px);
+  overflow-y: auto;
+  padding-right: 2px;
+}
+
+.thread-row {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
   width: 100%;
-  padding: 14px 16px;
+  padding: 11px 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-3xl);
   background: transparent;
-  border: none;
+  color: var(--foreground);
   text-align: left;
   cursor: pointer;
-  color: var(--text-primary);
+  outline: none;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
 }
 
-.thread-chevron { padding-top: 2px; color: var(--text-secondary); }
+.thread-row:hover { background: var(--surface-2); }
 
-.thread-main { flex: 1; min-width: 0; }
+/* Selection is a filled surface with a border, not a coloured bar: the row is
+   the thing being worked on, and it should read as raised rather than tagged. */
+.thread-row.selected {
+  background: var(--card);
+  border-color: var(--border-strong);
+}
+
+.thread-row:focus-visible { border-color: var(--ring); box-shadow: 0 0 0 3px var(--ring-glow); }
+.thread-row.resolved .thread-subject { color: var(--muted-foreground); font-weight: 500; }
+
+.thread-row-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
 
 .thread-subject {
-  display: block;
-  font-size: 14.5px;
+  font-size: var(--text-md);
   font-weight: 600;
-  margin-bottom: 4px;
+  line-height: 1.35;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
+
+.thread-row-state {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex-shrink: 0;
+  min-width: 20px;
+  height: 18px;
+  padding: 0 6px;
+  border-radius: 999px;
+  font-size: var(--text-xs);
+  font-weight: 600;
+}
+
+.thread-row-state.open { background: var(--secondary); color: var(--foreground); }
+.thread-row-state.settled { background: transparent; color: var(--muted-foreground); font-weight: 500; }
 
 .thread-meta {
-  display: block;
-  font-size: 12.5px;
-  color: var(--text-secondary);
-  line-height: 1.5;
+  font-size: var(--text-sm);
+  color: var(--muted-foreground);
+  line-height: 1.45;
 }
 
-.thread-badges {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  justify-content: flex-end;
-  max-width: 42%;
+.thread-row-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+
+/* ---------- tags ---------- */
+
+.intake .tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 1px 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  color: var(--muted-foreground);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  white-space: nowrap;
 }
+
+/* The category is the engine's reading, so it is an outline and never a filled
+   chip: a filled chip reads as a fact, and this is a proposal until somebody
+   confirms it. */
+.intake .tag.category { color: var(--foreground); }
+.intake .tag.awaiting { border-color: var(--warn-border); color: var(--warn); }
+.intake .tag.open { background: var(--secondary); border-color: transparent; color: var(--foreground); }
+.intake .tag.settled { border-color: var(--border-strong); color: var(--muted-foreground); }
 
 .intake .badge {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  padding: 3px 9px;
+  padding: 1px 8px;
+  border: 1px solid var(--border-strong);
   border-radius: 999px;
-  font-size: 11.5px;
-  font-weight: 600;
-  border: 1px solid var(--panel-border);
-  color: var(--text-secondary);
+  color: var(--muted-foreground);
+  font-size: var(--text-xs);
+  font-weight: 500;
   white-space: nowrap;
 }
 
-/* The category badge is the engine's reading. Tinted, never solid: a solid
- * chip reads as a fact, and this is a proposal until somebody confirms it. */
-.intake .badge.category {
-  background: var(--accent-soft, rgba(99, 132, 255, 0.12));
-  border-color: var(--accent, #6384ff);
-  color: var(--text-primary);
+/* "förslag" and "bekräftad av människa" must never look alike. */
+.intake .badge.proposed { border-style: dashed; }
+.intake .badge.confirmed { background: var(--muted); border-color: transparent; color: var(--foreground); }
+.intake .badge.dedup { background: var(--muted); border-color: transparent; }
+
+/* ---------- detail ---------- */
+
+.intake-detail {
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-3xl);
+  background: var(--card);
 }
 
-.intake .badge.awaiting {
-  background: rgba(226, 155, 42, 0.14);
-  border-color: rgba(226, 155, 42, 0.5);
-  color: var(--text-primary);
+.thread-detail { display: flex; flex-direction: column; }
+
+.detail-head { padding: 18px 20px 16px; border-bottom: 1px solid var(--border); }
+
+.detail-head h3 {
+  font-family: var(--font-serif);
+  font-size: var(--text-xl);
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  line-height: 1.2;
 }
 
-.intake .badge.open {
-  background: rgba(99, 132, 255, 0.1);
+.detail-head-count { color: var(--muted-foreground); font-size: var(--text-md); font-weight: 400; }
+
+.detail-head-meta {
+  margin-top: 5px;
+  color: var(--muted-foreground);
+  font-size: var(--text-base);
 }
 
-.intake .badge.done {
-  background: rgba(64, 168, 110, 0.12);
-  border-color: rgba(64, 168, 110, 0.4);
-}
+.detail-head-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 11px; }
 
-/* "förslag" vs "bekräftad av människa" must never look alike. */
-.intake .badge.proposed {
-  background: transparent;
-  border-style: dashed;
-  font-weight: 500;
-}
+.detail-section { padding: 18px 20px; border-bottom: 1px solid var(--border); }
+.detail-section:last-child { border-bottom: none; }
 
-.intake .badge.confirmed {
-  background: rgba(64, 168, 110, 0.12);
-  border-color: rgba(64, 168, 110, 0.4);
-  color: var(--text-primary);
-}
-
-.intake .badge.dedup {
-  background: rgba(148, 148, 160, 0.14);
-  font-weight: 500;
-}
-
-.thread-body {
-  padding: 0 16px 16px;
-  border-top: 1px solid var(--panel-border);
-}
-
-/* ---------- triage ---------- */
-
-.triage {
-  margin: 14px 0 18px;
-  padding: 13px 15px;
-  border-radius: 10px;
-  background: var(--accent-soft, rgba(99, 132, 255, 0.07));
-  border: 1px solid rgba(99, 132, 255, 0.24);
-}
-
-.triage-head {
+.detail-section-head {
   display: flex;
   align-items: baseline;
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
+  margin-bottom: 12px;
 }
 
-.triage h5 {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  margin: 0 0 8px;
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-secondary);
-}
-
-/* Who produced the reading. Always visible, never emphasised: it is a
- * provenance note, and "regelmotor" and "regelmotor + språkmodell" are
- * different assurances a reader is entitled to see. */
-.triage-by {
-  font-size: 11.5px;
-  color: var(--text-secondary);
-  font-style: italic;
-}
-
-.triage-headline {
-  margin: 0 0 6px;
-  font-size: 14px;
-  color: var(--text-primary);
-  line-height: 1.5;
-}
-
-.triage-why,
-.triage-action {
-  margin: 0 0 6px;
-  font-size: 13px;
-  color: var(--text-secondary);
-  line-height: 1.55;
-  display: flex;
-  align-items: baseline;
-  gap: 7px;
-}
-
-/* Warmer than the rest of the block, and deliberately unskimmable. */
-.triage-uncertainty {
-  display: flex;
-  align-items: baseline;
-  gap: 7px;
-  margin: 10px 0 0;
-  padding: 9px 11px;
-  border-radius: 8px;
-  background: rgba(226, 155, 42, 0.13);
-  border: 1px solid rgba(226, 155, 42, 0.42);
-  font-size: 12.5px;
-  line-height: 1.55;
-  color: var(--text-primary);
-}
-
-.triage h6 {
-  margin: 14px 0 7px;
-  font-size: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-secondary);
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.triage-signals ul,
-.triage-related ul {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  gap: 7px;
-}
-
-.triage-signals li {
-  display: grid;
-  grid-template-columns: auto auto 1fr;
-  gap: 4px 8px;
-  align-items: baseline;
-  font-size: 12.5px;
-}
-
-.signal-kind {
-  padding: 2px 7px;
-  border-radius: 6px;
-  background: rgba(148, 148, 160, 0.16);
-  font-size: 11px;
+.detail-section-head h4 {
+  font-size: var(--text-md);
   font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--foreground);
 }
 
-/* Values read out of the message are data, and read as data. */
-.signal-value {
-  font-family: ui-monospace, "SF Mono", Menlo, monospace;
-  font-size: 12.5px;
-  color: var(--text-primary);
-}
+/* ---------- the message: what actually arrived ---------- */
 
-/* The words the value was read from. Without this, every value above is an
- * unverifiable claim. */
-.signal-quote {
-  grid-column: 1 / -1;
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-  padding: 5px 9px;
-  border-left: 2px solid var(--panel-border);
-  color: var(--text-secondary);
-  font-size: 12px;
-  line-height: 1.5;
-  quotes: "»" "«";
-}
+.message { padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid var(--border); }
+.message:last-child { padding-bottom: 0; margin-bottom: 0; border-bottom: none; }
 
-.triage-related li {
-  display: flex;
-  align-items: baseline;
-  gap: 7px;
-  flex-wrap: wrap;
-  font-size: 12.5px;
-  color: var(--text-secondary);
-}
+.message-head { margin-bottom: 9px; }
+.message-head h5 { font-size: var(--text-md); font-weight: 600; }
+.message-from { display: block; margin-top: 2px; font-size: var(--text-sm); color: var(--muted-foreground); }
 
-.triage-related strong { color: var(--text-primary); font-weight: 600; }
-
-.triage-category { margin-top: 14px; }
-
-.category-confirmed {
-  display: flex;
-  align-items: baseline;
-  gap: 7px;
-  flex-wrap: wrap;
-  margin: 0;
-  padding: 9px 11px;
-  border-radius: 8px;
-  background: rgba(64, 168, 110, 0.1);
-  border: 1px solid rgba(64, 168, 110, 0.34);
-  font-size: 12.5px;
-  line-height: 1.55;
-  color: var(--text-primary);
-}
-
-.category-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: none;
-  border: none;
-  padding: 0;
-  color: var(--text-secondary);
-  font-size: 12.5px;
-  cursor: pointer;
-}
-
-.category-form {
-  display: flex;
-  gap: 9px;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  margin-top: 9px;
-}
-
-/* ---------- messages ---------- */
-
-.thread-messages h5 {
-  margin: 0 0 9px;
-  font-size: 13px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--text-secondary);
-}
-
-.message {
-  border: 1px solid var(--panel-border);
-  border-radius: 10px;
-  padding: 11px 13px;
-  margin-bottom: 9px;
-}
-
-.message.settled { background: rgba(64, 168, 110, 0.05); }
-
-.message summary {
-  cursor: pointer;
-  font-size: 13.5px;
-  line-height: 1.5;
-}
-
-.message-provenance {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 6px 16px;
-  margin: 11px 0;
-  font-size: 12px;
-}
-
-.message-provenance dt { color: var(--text-secondary); }
-.message-provenance dd { margin: 0 0 4px; color: var(--text-primary); }
-
+/* The message text is the evidence, so it is set as text — a readable measure,
+   the body font, no monospace. It is not code, and typesetting it as code was
+   the screen telling a board member their post is a machine artefact. */
 .message-body {
-  margin: 10px 0;
-  padding: 11px 13px;
-  border-radius: 8px;
-  background: rgba(148, 148, 160, 0.09);
-  font-size: 12.5px;
-  line-height: 1.6;
+  margin: 0 0 12px;
+  padding: 12px 14px;
+  border-left: 2px solid var(--border-strong);
+  border-radius: 0 var(--radius-block) var(--radius-block) 0;
+  background: var(--surface-2);
+  font-family: inherit;
+  font-size: var(--text-md);
+  line-height: 1.65;
+  color: var(--foreground);
   white-space: pre-wrap;
   word-break: break-word;
-  max-height: 320px;
+  max-width: 78ch;
+  max-height: 340px;
   overflow: auto;
 }
 
@@ -575,7 +420,8 @@
   list-style: none;
   margin: 0 0 10px;
   padding: 0;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 6px;
 }
 
@@ -584,256 +430,501 @@
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
-  font-size: 12.5px;
+  font-size: var(--text-base);
 }
 
 .intake .link {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  background: none;
-  border: none;
   padding: 0;
-  color: var(--accent, #6384ff);
-  font-size: inherit;
+  border: none;
+  background: none;
+  color: var(--accent-fg);
+  font: inherit;
   cursor: pointer;
   text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
-.intake .link:disabled { color: var(--text-secondary); cursor: not-allowed; text-decoration: none; }
+.intake .link:disabled { color: var(--muted-foreground); cursor: not-allowed; text-decoration: none; }
 
 .message-preserved {
   display: flex;
   align-items: baseline;
   gap: 7px;
   flex-wrap: wrap;
-  margin: 10px 0;
-  padding: 9px 11px;
-  border-radius: 8px;
-  background: rgba(64, 168, 110, 0.1);
-  border: 1px solid rgba(64, 168, 110, 0.34);
-  font-size: 12.5px;
+  margin: 0 0 10px;
+  padding: 8px 11px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-2xl);
+  background: var(--card);
+  font-size: var(--text-base);
   line-height: 1.55;
 }
+
+.message-foot { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+
+.message-provenance-toggle summary {
+  color: var(--muted-foreground);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  list-style: none;
+}
+
+.message-provenance-toggle summary::-webkit-details-marker { display: none; }
+.message-provenance-toggle summary::before { content: '▸ '; }
+.message-provenance-toggle[open] summary::before { content: '▾ '; }
+
+.message-provenance {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+  gap: 6px 16px;
+  margin: 10px 0 0;
+  font-size: var(--text-sm);
+}
+
+.message-provenance dt { color: var(--muted-foreground); }
+.message-provenance dd { margin: 0 0 4px; color: var(--foreground); overflow-wrap: anywhere; }
+.message-provenance code { font-family: var(--font-mono); font-size: 0.94em; }
 
 .retriage {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  margin-top: 8px;
-  background: none;
-  border: none;
   padding: 0;
-  color: var(--text-secondary);
-  font-size: 12px;
+  border: none;
+  background: none;
+  color: var(--muted-foreground);
+  font-size: var(--text-sm);
   cursor: pointer;
 }
 
-/* ---------- resolving ---------- */
+.retriage:hover { color: var(--foreground); }
+.retriage:disabled { opacity: 0.5; cursor: not-allowed; }
 
-.resolve {
-  margin-top: 12px;
-  padding: 13px 15px;
-  border-radius: 10px;
-  border: 1px solid var(--panel-border);
+/* ---------- the reading: what the app believes ---------- */
+
+.detail-section.reading { background: var(--surface-1); }
+
+.reading-by { font-size: var(--text-sm); color: var(--muted-foreground); }
+
+.reading-headline { font-size: var(--text-md); line-height: 1.55; }
+.reading-why,
+.reading-action {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  margin-top: 6px;
+  font-size: var(--text-base);
+  line-height: 1.6;
+  color: var(--muted-foreground);
 }
+
+.reading-action > svg { flex-shrink: 0; }
+
+/* Warmer than everything around it, on purpose: this is the one block a
+   hurried reader must not slide past. */
+.reading-uncertainty {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 11px;
+  padding: 9px 12px;
+  border: 1px solid var(--warn-border);
+  border-radius: var(--radius-2xl);
+  background: var(--warn-soft);
+  font-size: var(--text-base);
+  line-height: 1.55;
+}
+
+.reading-uncertainty > svg { flex-shrink: 0; color: var(--warn); }
+
+.reading h6 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 16px 0 8px;
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--muted-foreground);
+}
+
+.reading-signals ul,
+.reading-related ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.reading-signals li {
+  display: grid;
+  grid-template-columns: auto minmax(0, auto) minmax(0, 1fr);
+  gap: 3px 8px;
+  align-items: baseline;
+  min-width: 0;
+  font-size: var(--text-base);
+}
+
+.signal-kind {
+  flex-shrink: 0;
+  padding: 1px 7px;
+  border-radius: var(--radius-md);
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+/* A value read out of the message is data, and reads as data. */
+.signal-value {
+  min-width: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  letter-spacing: 0.02em;
+  color: var(--foreground);
+  overflow-wrap: anywhere;
+}
+
+/* The words the value was read from. Without this, every value above is an
+ * unverifiable claim — so it is never truncated away, only ever measured. */
+.signal-quote {
+  grid-column: 1 / -1;
+  display: block;
+  min-width: 0;
+  max-width: 90ch;
+  padding: 4px 0 0 9px;
+  border-left: 2px solid var(--border-strong);
+  color: var(--muted-foreground);
+  /* The message's own words, in the message's own voice. Deliberately below
+     §07's 22px floor: a reading can produce a dozen of these in one list, and a
+     dozen 22px quotations is a panel nobody can scan. */
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: var(--text-lg);
+  line-height: 1.42;
+  letter-spacing: -0.01em;
+  overflow-wrap: anywhere;
+  quotes: '»' '«';
+}
+
+/* A message whose attachment was read produces a reading per figure, and a PDF
+   quotes long. Four is enough to judge the reading by; the rest are one press
+   away rather than a wall the decision sits underneath. */
+.signals-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 9px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--muted-foreground);
+  font-size: var(--text-base);
+  cursor: pointer;
+}
+
+.signals-more:hover { color: var(--foreground); }
+
+.reading h6 .h6-count {
+  padding: 0 6px;
+  border-radius: 999px;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.reading-related li {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  flex-wrap: wrap;
+  font-size: var(--text-base);
+  color: var(--muted-foreground);
+}
+
+.reading-related strong { color: var(--foreground); font-weight: 500; }
+
+.reading-category { margin-top: 16px; }
+
+.category-confirmed {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  flex-wrap: wrap;
+  padding: 9px 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-2xl);
+  background: var(--card);
+  font-size: var(--text-base);
+  line-height: 1.55;
+}
+
+.category-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--muted-foreground);
+  font-size: var(--text-base);
+  cursor: pointer;
+}
+
+.category-toggle:hover { color: var(--foreground); }
+
+.category-form {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  margin-top: 10px;
+}
+
+.category-form label,
+.resolve-section label,
+.resolve-note {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: var(--text-base);
+  color: var(--muted-foreground);
+}
+
+/* Text fields only. Without the exclusion this also sized every checkbox in
+   the form to 190 × 34 pixels, which is not a checkbox — it is a grey slab
+   that pushed the panel past its own container. */
+.category-form input:not([type='checkbox']),
+.category-form select,
+.resolve-section input:not([type='checkbox']),
+.resolve-section select,
+.resolve-note input {
+  height: 32px;
+  min-width: 190px;
+  max-width: 100%;
+  padding: 0 10px;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-2xl);
+  background: var(--field);
+  color: var(--foreground);
+  font-size: var(--text-md);
+  outline: none;
+  transition: border-color 0.14s ease, box-shadow 0.14s ease;
+}
+
+.category-form input:not([type='checkbox']):focus-visible,
+.category-form select:focus-visible,
+.resolve-section input:not([type='checkbox']):focus-visible,
+.resolve-section select:focus-visible,
+.resolve-note input:focus-visible {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px var(--ring-glow);
+}
+
+.category-save {
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-2xl);
+  background: var(--field);
+  color: var(--foreground);
+  font-size: var(--text-base);
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.category-save:hover:not(:disabled) { background: var(--surface-3); }
+.category-save:disabled { opacity: 0.5; cursor: not-allowed; }
+
+/* ---------- the decision: the only place with a filled button ---------- */
+
+.detail-section.decision { background: var(--surface-2); }
+
+.decision-for { margin-bottom: 8px; font-size: var(--text-sm); color: var(--muted-foreground); }
 
 .resolve h5 {
-  margin: 0 0 10px;
-  font-size: 13.5px;
-  color: var(--text-primary);
-  text-transform: none;
-  letter-spacing: 0;
+  margin-bottom: 12px;
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--foreground);
 }
 
-.resolve-options {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
-}
+.resolve-options { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 12px; }
 
 .resolve-options label {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 8px 13px;
-  border-radius: 10px;
-  border: 1px solid var(--panel-border);
-  font-size: 13px;
+  gap: 8px;
+  height: 32px;
+  padding: 0 13px;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-2xl);
+  background: var(--surface-2);
+  font-size: var(--text-base);
   cursor: pointer;
+  transition: background-color 0.12s ease, border-color 0.12s ease;
 }
 
-.resolve-options label.chosen {
-  background: var(--accent-soft, rgba(99, 132, 255, 0.14));
-  border-color: var(--accent, #6384ff);
-  color: var(--text-primary);
-}
+.resolve-options label:hover { background: var(--surface-3); }
+.resolve-options label.chosen { background: var(--secondary); border-color: var(--border-strong); color: var(--foreground); }
+.resolve-options input[type='checkbox'] { accent-color: var(--handling); }
 
 .resolve-section {
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
   align-items: flex-end;
-  padding: 11px 13px;
+  min-width: 0;
   margin-bottom: 10px;
-  border-radius: 9px;
-  background: rgba(148, 148, 160, 0.07);
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-block);
+  background: var(--background);
 }
+
+.resolve-section > * { min-width: 0; }
 
 .resolve-section p {
   flex-basis: 100%;
-  margin: 0 0 4px;
-  font-size: 12.5px;
-  line-height: 1.55;
-  max-width: 74ch;
+  margin-bottom: 2px;
+  max-width: 76ch;
+  font-size: var(--text-base);
+  line-height: 1.6;
 }
 
-.resolve-section label,
-.resolve-note,
-.category-form label {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-  font-size: 12px;
-  color: var(--text-secondary);
-}
-
-.resolve-note { margin-bottom: 12px; }
-
-.resolve-section input,
-.resolve-section select,
-.resolve-note input,
-.category-form input,
-.category-form select {
-  padding: 7px 10px;
-  border-radius: 8px;
-  border: 1px solid var(--panel-border);
-  background: transparent;
-  color: var(--text-primary);
-  font-size: 13px;
-  min-width: 180px;
-}
+.resolve-section input[type='checkbox'] { accent-color: var(--handling); }
 
 .resolve-attachments {
   flex-basis: 100%;
   list-style: none;
   margin: 0;
   padding: 0;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 6px;
 }
 
-.resolve-attachments li {
-  display: flex;
-  align-items: center;
-  gap: 9px;
-  font-size: 12.5px;
-}
+.resolve-attachments li { display: flex; align-items: center; gap: 9px; font-size: var(--text-base); }
 
 .resolve-attachments label {
   flex-direction: row;
   align-items: center;
   gap: 7px;
-  color: var(--text-primary);
-  font-size: 12.5px;
+  color: var(--foreground);
 }
 
-.date-suggestions {
-  flex-basis: 100%;
-  margin: 0;
-  font-size: 12px;
-  color: var(--text-secondary);
-}
+.date-suggestions { flex-basis: 100%; margin: 0; font-size: var(--text-base); color: var(--muted-foreground); }
 
 /* Dates the engine read, offered as chips — pressing one is still the human
  * choosing it, which is why they are buttons and not a prefilled field. */
 .date-chip {
   margin: 0 4px;
-  padding: 3px 9px;
+  padding: 2px 9px;
+  border: 1px dashed var(--border-strong);
   border-radius: 999px;
-  border: 1px dashed var(--panel-border);
   background: transparent;
-  color: var(--text-primary);
-  font-family: ui-monospace, "SF Mono", Menlo, monospace;
-  font-size: 12px;
+  color: var(--foreground);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
   cursor: pointer;
 }
 
-.resolve-actions {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-}
+.date-chip:hover { background: var(--surface-accent); }
+
+.resolve-note { margin-bottom: 14px; max-width: 520px; }
+
+.resolve-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 
 .resolve-submit {
-  padding: 9px 17px;
-  border-radius: 10px;
-  border: 1px solid var(--accent, #6384ff);
-  background: var(--accent-soft, rgba(99, 132, 255, 0.16));
-  color: var(--text-primary);
-  font-size: 13.5px;
+  height: 32px;
+  padding: 0 18px;
+  border: none;
+  border-radius: var(--radius-2xl);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: var(--text-md);
   font-weight: 600;
   cursor: pointer;
+  transition: background-color 0.14s ease;
 }
 
-.resolve-submit:disabled { opacity: 0.5; cursor: not-allowed; }
+.resolve-submit:hover:not(:disabled) { background: var(--primary-action-hover); }
+.resolve-submit:disabled { opacity: 0.45; cursor: not-allowed; }
 
+/* ---------- a decided item ---------- */
+
+/* "Det blev uppgift X." A decision is a record of what a person did, not a
+   verification of a passage — §06 keeps Belagt for the latter alone. */
 .resolution {
-  margin-top: 12px;
   padding: 13px 15px;
-  border-radius: 10px;
-  background: rgba(64, 168, 110, 0.09);
-  border: 1px solid rgba(64, 168, 110, 0.34);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-2xl);
+  background: var(--card);
 }
 
 .resolution h5 {
   display: flex;
   align-items: center;
   gap: 7px;
-  margin: 0 0 9px;
-  font-size: 13px;
-  color: var(--text-primary);
-  text-transform: none;
-  letter-spacing: 0;
+  margin-bottom: 10px;
+  font-size: var(--text-base);
+  font-weight: 600;
+  color: var(--foreground);
 }
 
 .resolution ul {
   list-style: none;
-  margin: 0 0 9px;
+  margin: 0 0 10px;
   padding: 0;
-  display: grid;
+  display: flex;
+  flex-direction: column;
   gap: 6px;
-  font-size: 12.5px;
+  font-size: var(--text-base);
   line-height: 1.55;
 }
 
 .resolution li { display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; }
-
-.resolution-note {
-  margin: 0 0 9px;
-  font-size: 12.5px;
-  color: var(--text-secondary);
-}
+.resolution-note { margin-bottom: 10px; font-size: var(--text-base); color: var(--muted-foreground); }
+.resolution-foot { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
 
 .reopen {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 12px;
-  border-radius: 9px;
-  border: 1px solid var(--panel-border);
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 12.5px;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-2xl);
+  background: var(--field);
+  color: var(--foreground);
+  font-size: var(--text-base);
   cursor: pointer;
 }
 
-.intake .muted { color: var(--text-secondary); font-size: 12.5px; }
+.reopen:hover:not(:disabled) { background: var(--surface-3); }
+.reopen:disabled { opacity: 0.5; cursor: not-allowed; }
+
+.intake .muted { color: var(--muted-foreground); font-size: var(--text-base); }
+
+/* ---------- narrower ---------- */
+
+/* Below this the two panes stop being two panes: 300px of list next to 380px of
+   decision form is worse than one column of each. */
+@media (max-width: 1100px) {
+  .intake-layout { grid-template-columns: minmax(0, 1fr); }
+  /* Stacked, the list is above the detail rather than beside it, and a sticky
+     block at the top of the page would sit on top of what is being read. */
+  .intake-list { position: static; max-height: 320px; }
+}
 
 @media (max-width: 760px) {
-  .intake-fetch { grid-template-columns: 1fr; }
-  .thread-head { flex-wrap: wrap; }
-  .thread-badges { max-width: 100%; justify-content: flex-start; }
+  .intake-source-row { flex-direction: column; align-items: stretch; }
+  .intake-source-actions { justify-content: flex-start; }
+  .reading-signals li { grid-template-columns: 1fr; }
 }

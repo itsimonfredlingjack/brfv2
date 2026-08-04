@@ -76,7 +76,7 @@ const notADesktop = () => {
 
 const DESKTOP_STATE = {
   schema: 'brfv2-desktop-state/v1',
-  app: { name: 'BRF Dokument-AI', version: '0.2.0' },
+  app: { name: 'Träff', version: '0.2.0' },
   provisioned: true,
   storage: {
     dataDir: '/home/anvandare/.local/share/se.brfdokumentai.desktop/data',
@@ -229,7 +229,7 @@ describe('tenant switching', () => {
     render(<App />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'AI-chatt' }));
-    const input = await screen.findByPlaceholderText('Ställ en generell fråga till AI:n...');
+    const input = await screen.findByPlaceholderText('Fråga rakt in i högen…');
     fireEvent.change(input, { target: { value: 'Hej?' } });
     fireEvent.click(screen.getByRole('button', { name: 'Skicka fråga' }));
 
@@ -338,7 +338,7 @@ describe('answer-level provenance', () => {
     const { container } = render(<App />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'AI-chatt' }));
-    const input = await screen.findByPlaceholderText('Ställ en generell fråga till AI:n...');
+    const input = await screen.findByPlaceholderText('Fråga rakt in i högen…');
     fireEvent.change(input, { target: { value: 'Vilket regelverk gäller?' } });
     fireEvent.click(screen.getByRole('button', { name: 'Skicka fråga' }));
 
@@ -372,7 +372,7 @@ describe('answer-level provenance', () => {
     render(<App />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'AI-chatt' }));
-    const input = await screen.findByPlaceholderText('Ställ en generell fråga till AI:n...');
+    const input = await screen.findByPlaceholderText('Fråga rakt in i högen…');
     fireEvent.change(input, { target: { value: 'Finns det dokument?' } });
     fireEvent.click(screen.getByRole('button', { name: 'Skicka fråga' }));
 
@@ -393,7 +393,7 @@ describe('answer-level provenance', () => {
     render(<App />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'AI-chatt' }));
-    const input = await screen.findByPlaceholderText('Ställ en generell fråga till AI:n...');
+    const input = await screen.findByPlaceholderText('Fråga rakt in i högen…');
     fireEvent.change(input, { target: { value: 'Något komplext?' } });
     fireEvent.click(screen.getByRole('button', { name: 'Skicka fråga' }));
 

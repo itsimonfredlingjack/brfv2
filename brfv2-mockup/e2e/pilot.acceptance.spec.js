@@ -24,12 +24,12 @@ async function login(page, account = max) {
 
 async function openChat(page) {
   await page.getByRole('button', { name: 'AI-chatt' }).click();
-  await expect(page.getByRole('heading', { name: 'Global AI-assistent' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Fråga dokumenten' })).toBeVisible();
 }
 
 async function ask(page, question) {
   await openChat(page);
-  const input = page.getByPlaceholder('Ställ en generell fråga till AI:n...');
+  const input = page.getByPlaceholder('Fråga rakt in i högen…');
   await input.fill(question);
   const responsePromise = page.waitForResponse((response) =>
     response.url().includes('/api/brf/')
@@ -123,7 +123,7 @@ test.describe.serial('BRF Eken pilot acceptance contract', () => {
     expect(body.refusal).toBe(true);
     expect(['low_relevance', 'insufficient_data']).toContain(body.refusal_reason);
     expect(body.citations).toHaveLength(0);
-    await expect(page.getByText('Otillräckligt underlag')).toBeVisible();
+    await expect(page.getByText('Ej belagt')).toBeVisible();
     await expect(page.locator('.chat-citations')).toHaveCount(0);
   });
 
@@ -193,15 +193,15 @@ test.describe.serial('BRF Eken pilot acceptance contract', () => {
     expect(completed.citations[0].document_name).toBe('Stadgar Brf Gjutformen 12.pdf');
     await expect(page.getByText(/Stadgar Brf Gjutformen 12\.pdf s\.1/)).toBeVisible();
 
-    const input = page.getByPlaceholder('Ställ en generell fråga till AI:n...');
+    const input = page.getByPlaceholder('Fråga rakt in i högen…');
     await input.fill('När ska årsavgiften betalas?');
     await page.getByRole('button', { name: 'Skicka fråga' }).click();
-    await expect(page.getByText('Genererar svar…')).toBeVisible();
+    await expect(page.getByText('Söker i högen…')).toBeVisible();
 
     const association = page.getByRole('combobox', { name: 'Byt aktiv förening' });
     await association.selectOption('sjoutsikten-7');
     await expect(association).toHaveValue('sjoutsikten-7');
-    await expect(page.getByText('Genererar svar…')).toHaveCount(0);
+    await expect(page.getByText('Söker i högen…')).toHaveCount(0);
     await expect(page.getByText(/Stadgar Brf Gjutformen 12\.pdf s\.1/)).toHaveCount(0);
     await page.waitForTimeout(900);
     await expect(page.getByText(/Årsavgiften betalas månadsvis/)).toHaveCount(0);

@@ -1,9 +1,77 @@
-/* Källa — component styles. Structure comes from hairlines and background
- * steps; the only drop shadow in the app is the Källa sheet lifting off. */
+/* Träff — component styles. Structure comes from hairlines and background
+ * steps; the only drop shadow in the app is the source sheet lifting off.
+ *
+ * The three cuts carry three jobs and are never mixed (§07): the serif is what
+ * the product *asserts* — the answer, and in italic the document's own words —
+ * the sans explains the interface around it, and the mono measures. That
+ * separation is how a reader tells the product's words from the document's,
+ * and it is the whole reason this app stopped running on one system face. */
 
 #root {
   min-height: 100dvh;
 }
+
+/* ----------------------------------------------------------------- mark */
+/* §02 Geometrin. The gap is always empty — no tone plate, no gradient: it is
+   the distance between the question and the proof. */
+
+.mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  box-sizing: border-box;
+  border-style: solid;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.mark__core { border-radius: 50%; background: currentColor; }
+
+/* A · Varumärket — complete, monochrome, never a state colour. */
+.mark--brand { border-color: var(--ink); color: var(--ink); }
+
+/* B · Statusmärket — empty until the proof exists. */
+.mark--vila { border-color: var(--ink); opacity: 0.3; }
+.mark--soker { border-color: var(--action); }
+.mark--belagt { border-color: var(--grounded); color: var(--grounded); }
+.mark--ejbelagt { border-color: var(--refusal); }
+
+.mark--dot { display: inline-block; border-radius: 50%; background: currentColor; }
+
+/* §05 Lockup: the mark stands before the name at cap height, and the gap is the
+   diameter of the core. */
+.lockup {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--ink);
+}
+
+.lockup__name {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  /* The diacritic belongs to the name and is never clipped by a tight line
+     box (§05 Diakriten Ä). */
+  line-height: 1.1;
+  padding-top: 0.04em;
+}
+
+/* The state of one answer, said in the mark and in the word beside it. */
+.answer-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: var(--t-label);
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--ink-3);
+}
+
+.answer-state--belagt { color: var(--grounded); }
+.answer-state--ejbelagt { color: var(--refusal); }
 
 /* ---------------------------------------------------------------- frame */
 
@@ -130,10 +198,11 @@
 }
 
 .screen__title {
+  font-family: var(--font-serif);
   font-size: var(--t-title);
-  font-weight: 660;
-  letter-spacing: -0.02em;
-  line-height: 1.25;
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
 }
 
 .screen__lede {
@@ -142,9 +211,10 @@
 }
 
 .label {
+  font-family: var(--font-mono);
   font-size: var(--t-label);
-  font-weight: 620;
-  letter-spacing: 0.06em;
+  font-weight: 600;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--ink-3);
 }
@@ -390,8 +460,10 @@
 
 .answer__text {
   margin-top: var(--s3);
+  font-family: var(--font-serif);
   font-size: var(--t-answer);
-  line-height: 1.5;
+  line-height: 1.36;
+  letter-spacing: -0.015em;
   white-space: pre-wrap;
 }
 
@@ -404,7 +476,9 @@
 
 .answer__meta {
   margin-top: var(--s4);
-  font-size: var(--t-meta);
+  font-family: var(--font-mono);
+  font-size: var(--t-label);
+  letter-spacing: 0.04em;
   color: var(--ink-3);
 }
 
@@ -459,11 +533,17 @@
   white-space: nowrap;
 }
 
+/* Deliberately below §07's 22px floor: a citation list can hold several of
+   these on a phone, and a column of 22px quotations is a screen nobody can
+   scan. The italic serif and the quotation marks still say whose words they
+   are, which is what the rule is protecting. */
 .cite__quote {
   margin-top: var(--s2);
+  font-family: var(--font-serif);
   font-size: var(--t-quote);
   font-style: italic;
-  line-height: 1.4;
+  line-height: 1.42;
+  letter-spacing: -0.01em;
   color: var(--ink-2);
 }
 

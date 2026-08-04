@@ -46,7 +46,7 @@ import pytest
 REPO = Path(__file__).resolve().parents[2]
 INSPECTOR = REPO / "ops" / "inspect_payload.py"
 RULES = json.loads((REPO / "ops" / "forbidden_providers.json").read_text(encoding="utf-8"))
-INSTALLED_ROOT = Path("/usr/lib/BRF Dokument-AI")
+INSTALLED_ROOT = Path("/usr/lib/Träff")
 
 pytestmark = pytest.mark.artifact
 
@@ -148,8 +148,8 @@ def _assert_answered(checks: dict[str, dict], target: str, rule: str) -> dict:
 
 def test_inspection_covers_the_whole_installed_layout(artifact_inspection):
     scope = _by_rule(artifact_inspection, "scope")
-    for component in ("usr/bin/brfv2-desktop", "usr/lib/BRF Dokument-AI/ui",
-                      "usr/lib/BRF Dokument-AI/runtime"):
+    for component in ("usr/bin/brfv2-desktop", "usr/lib/Träff/ui",
+                      "usr/lib/Träff/runtime"):
         check = _assert_answered(scope, component, "scope")
         assert check["result"] == "pass", f"{component} saknas i artefakten: {check}"
 
@@ -298,7 +298,7 @@ def test_the_declared_shell_reference_is_only_the_environment_scrub(artifact_ins
 
 def test_the_packaged_product_code_names_no_hosted_provider(artifact_inspection):
     checks = _by_rule(artifact_inspection, "text-scan")
-    for target in ("usr/lib/BRF Dokument-AI/runtime/backend", "usr/lib/BRF Dokument-AI/ui"):
+    for target in ("usr/lib/Träff/runtime/backend", "usr/lib/Träff/ui"):
         check = _assert_answered(checks, target, "text-scan")
         assert check["result"] == "absent", (
             f"odeklarerade förbjudna namn i {target}: {check['undeclared']}"

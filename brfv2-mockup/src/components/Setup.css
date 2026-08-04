@@ -1,3 +1,16 @@
+/* First run.
+ *
+ * This is the first screen a new association ever sees, and until now it was
+ * the one screen still built for a dark shell: an opaque near-black panel, a
+ * blue halo behind a shield, a green gradient on success. None of that is in
+ * the identity, and the halo in particular said "AI product" before the product
+ * had said anything at all.
+ *
+ * So it is now the same paper as everything else, and it opens the way §05 says
+ * the product introduces itself — the mark before the name, at cap height. The
+ * only ornament is the lockup.
+ */
+
 .setup-screen {
   min-height: 100vh;
   width: 100vw;
@@ -6,50 +19,56 @@
   justify-content: center;
   padding: 24px;
   overflow-y: auto;
+  background: var(--background);
 }
 
 .setup-panel {
   width: 100%;
-  max-width: 520px;
-  padding: 40px 36px 32px;
+  max-width: 540px;
+  padding: 40px 40px 32px;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  /* Same reasoning as the settings dialog: an opaque surface, since this
-     screen owns the whole viewport rather than floating on content. */
-  background: #12141a;
+  background: var(--card);
+  box-shadow: var(--shadow-md);
 }
 
-.setup-mark {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary-action), #9b72e3);
+/* §05 Lockup, primary horizontal. The gap is the diameter of the core. */
+.setup-lockup {
   display: flex;
   align-items: center;
-  justify-content: center;
-  color: #fff;
-  margin-bottom: 18px;
-  box-shadow: 0 0 25px rgba(59, 130, 246, 0.45);
+  gap: 14px;
+  margin-bottom: 22px;
+  color: var(--foreground);
 }
 
-.setup-mark.done {
-  background: linear-gradient(135deg, #34a853, #2f8f49);
-  box-shadow: 0 0 25px rgba(52, 168, 83, 0.4);
+.setup-lockup-name {
+  font-family: var(--font-serif);
+  font-size: 2.25rem;   /* 36px */
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  /* The diacritic belongs to the name and is never clipped (§05). */
+  line-height: 1.1;
+  padding-top: 0.04em;
 }
 
+/* §07: the serif asserts. A page title is an assertion. */
 .setup-title {
-  font-size: 25px;
-  font-weight: 600;
+  font-family: var(--font-serif);
+  font-size: var(--text-2xl);
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
   margin-bottom: 8px;
-  color: var(--text-primary);
+  color: var(--foreground);
 }
 
 .setup-subtitle {
-  font-size: 14px;
-  line-height: 1.5;
-  color: var(--text-secondary);
+  max-width: 46ch;
+  font-size: var(--text-md);
+  line-height: 1.6;
+  color: var(--muted-foreground);
   margin-bottom: 26px;
 }
 
@@ -77,72 +96,88 @@
   text-align: left;
 }
 
+/* Sentence case, not shouted small caps: a field label explains, and §07 puts
+   what explains in the sans at ordinary size. */
 .setup-field > span {
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-secondary);
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--foreground);
 }
 
 .setup-field input {
   width: 100%;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--panel-border);
-  border-radius: 12px;
-  padding: 12px 16px;
-  font-size: 14px;
+  padding: 9px 14px;
+  background: var(--field);
+  border: 1px solid var(--input);
+  border-radius: var(--radius-block);
+  font-size: var(--text-md);
   font-family: inherit;
-  color: var(--text-primary);
+  color: var(--foreground);
   outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.14s ease, box-shadow 0.14s ease;
 }
 
 .setup-field input::placeholder {
-  color: rgba(255, 255, 255, 0.25);
+  color: var(--subtle-foreground);
 }
 
-.setup-field input:focus {
-  border-color: var(--primary-action);
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+.setup-field input:focus-visible {
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px var(--ring-glow);
 }
 
 .setup-field small {
-  font-size: 11.5px;
-  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  line-height: 1.5;
+  color: var(--muted-foreground);
 }
 
+.setup-field small code {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+}
+
+/* A rule that has not been met yet: no support for what was typed. */
 .setup-field small.warn {
-  color: #f0b429;
+  color: var(--warn);
+  font-weight: 500;
 }
 
 .setup-error,
 .setup-probe {
   display: flex;
   align-items: flex-start;
-  gap: 8px;
+  gap: 9px;
   padding: 10px 14px;
-  border-radius: 10px;
-  font-size: 13px;
+  border-radius: var(--radius-xl);
+  font-size: var(--text-base);
+  line-height: 1.5;
   text-align: left;
 }
 
+.setup-error > svg,
+.setup-probe > svg { flex-shrink: 0; margin-top: 2px; }
+
+/* The model host could not be reached, or provisioning failed: Avbrott, the one
+   thing red means in this product. */
 .setup-error,
 .setup-probe.bad {
-  border: 1px solid rgba(248, 113, 113, 0.4);
-  background: rgba(248, 113, 113, 0.08);
-  color: #f87171;
+  border: 1px solid var(--avbrott-border);
+  background: var(--avbrott-soft);
+  color: var(--avbrott);
 }
 
+/* Reaching the host proves nothing about any document, so it is not Belagt.
+   It is a fact, stated in ink. */
 .setup-probe.ok {
-  border: 1px solid rgba(52, 168, 83, 0.4);
-  background: rgba(52, 168, 83, 0.1);
-  color: #6ee7a0;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-3);
+  color: var(--foreground);
 }
 
 .setup-actions {
   display: flex;
-  gap: 12px;
+  gap: 10px;
   margin-top: 2px;
 }
 
@@ -152,46 +187,55 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border-radius: 24px;
-  padding: 13px 18px;
-  font-size: 15px;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: var(--radius-2xl);
+  font-size: var(--text-md);
   font-family: inherit;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: background-color 0.14s ease, border-color 0.14s ease, color 0.14s ease;
   flex: 1 1 0;
 }
 
 .setup-submit {
-  background: var(--text-primary);
-  color: var(--bg-color);
-  border: none;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  border: 1px solid transparent;
   margin-top: 4px;
 }
 
+/* The button does not grow under the pointer. A control that changes size is a
+   control that moves the thing you were about to click. */
 .setup-submit:hover:not(:disabled) {
-  transform: scale(1.02);
-  box-shadow: 0 4px 15px rgba(255, 255, 255, 0.1);
+  background: var(--primary-action-hover);
+}
+
+.setup-submit:focus-visible,
+.setup-secondary:focus-visible {
+  outline: none;
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px var(--ring-glow);
 }
 
 .setup-submit:disabled,
 .setup-secondary:disabled {
-  opacity: 0.55;
-  cursor: default;
-  transform: none;
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .setup-secondary {
-  background: transparent;
-  color: var(--text-secondary);
-  border: 1px solid var(--panel-border);
+  background: var(--field);
+  color: var(--muted-foreground);
+  border: 1px solid var(--input);
   margin-top: 4px;
   flex: 0 0 auto;
   padding-inline: 22px;
 }
 
 .setup-secondary:hover:not(:disabled) {
-  color: var(--text-primary);
+  background: var(--surface-3);
+  color: var(--foreground);
 }
 
 .setup-submit .spin {
@@ -199,24 +243,40 @@
 }
 
 .setup-note {
-  font-size: 12px;
-  line-height: 1.5;
-  color: var(--text-secondary);
+  font-size: var(--text-base);
+  line-height: 1.6;
+  color: var(--muted-foreground);
   text-align: left;
   margin: 2px 0 0;
 }
 
+/* Where the association's own material will live. A path is measured, so it is
+   set in the mono (§07). */
 .setup-storage {
-  margin-top: 22px;
+  margin-top: 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  width: 100%;
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
-  font-size: 11.5px;
-  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  color: var(--muted-foreground);
   max-width: 100%;
 }
 
+.setup-storage > svg { flex-shrink: 0; }
+
 .setup-storage code {
-  font-size: 11px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  color: var(--foreground);
   overflow-wrap: anywhere;
+}
+
+@media (max-width: 560px) {
+  .setup-panel { padding: 28px 20px 24px; }
+  .setup-row { flex-direction: column; }
+  .setup-lockup-name { font-size: 1.75rem; }
 }

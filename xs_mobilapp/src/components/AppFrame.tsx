@@ -28,7 +28,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
     <div className="frame">
       <header className="frame__header">
         <div className="frame__tenant">
-          <div className="frame__tenant-name">{active?.name ?? 'Källa'}</div>
+          <div className="frame__tenant-name">{active?.name ?? 'Träff'}</div>
           <div className="frame__tenant-sub">
             {active ? (active.role === 'admin' ? 'Administratör' : 'Styrelseledamot') : 'Ingen förening vald'}
           </div>

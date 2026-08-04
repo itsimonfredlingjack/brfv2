@@ -1,9 +1,24 @@
 import React, { useState } from 'react';
-import { Loader2, AlertCircle, CheckCircle2, HardDrive, ShieldCheck } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle2, HardDrive } from 'lucide-react';
+import TraffMark from './TraffMark';
 import { desktopApi } from '../api';
 import './Setup.css';
 
 const MIN_PASSWORD_LENGTH = 12;
+
+/**
+ * §05 Lockup, primary horizontal: the mark stands before the name at cap
+ * height. This is the first screen the product is ever seen on, so it is the
+ * one place the full lockup earns its space.
+ */
+function Lockup() {
+  return (
+    <div className="setup-lockup">
+      <TraffMark size={32} />
+      <span className="setup-lockup-name">Träff</span>
+    </div>
+  );
+}
 
 /**
  * First-run provisioning for the installed application.
@@ -84,7 +99,7 @@ function Setup({ state, onProvisioned }) {
     return (
       <div className="setup-screen">
         <div className="setup-panel glass-panel">
-          <div className="setup-mark done"><CheckCircle2 size={22} /></div>
+          <Lockup />
           <h1 className="setup-title">Föreningen är skapad</h1>
           <p className="setup-subtitle">
             Sista steget: peka ut den självhostade modelltjänst som ska generera
@@ -104,7 +119,7 @@ function Setup({ state, onProvisioned }) {
                 disabled={busy}
               />
               <small>
-                OpenAI-kompatibel endpoint på den här datorn (<code>localhost</code>,
+                OpenAI-kompatibel adress på den här datorn (<code>localhost</code>,
                 {' '}<code>127.0.0.0/8</code> — till exempel en SSH-forward) eller en
                 självhostad tjänst på ditt eget privata nät över https. Domännamn
                 och publika adresser avvisas.
@@ -169,7 +184,7 @@ function Setup({ state, onProvisioned }) {
   return (
     <div className="setup-screen">
       <div className="setup-panel glass-panel">
-        <div className="setup-mark"><ShieldCheck size={22} /></div>
+        <Lockup />
         <h1 className="setup-title">Välkommen</h1>
         <p className="setup-subtitle">
           Den här datorn har ingen förening ännu. Skapa ditt administratörskonto

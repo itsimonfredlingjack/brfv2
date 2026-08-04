@@ -95,9 +95,14 @@ export default function Integrations({ brfId, isAdmin = false, onOpenDocument, o
             <Plug size={16} /> Anslutningar
           </button>
         </div>
-        <button type="button" className="refresh" onClick={refresh} disabled={loading}>
-          <RefreshCw size={15} /> Uppdatera
-        </button>
+        {/* The queue refreshes itself, from its own toolbar. A second control
+            with the same word on the same screen is a reader's problem, not a
+            convenience — so this one only exists where nothing else offers it. */}
+        {pane === 'connections' && (
+          <button type="button" className="refresh" onClick={refresh} disabled={loading}>
+            <RefreshCw size={15} /> Uppdatera
+          </button>
+        )}
       </div>
 
       <Banner tone="error" onDismiss={() => setError('')}>{error}</Banner>

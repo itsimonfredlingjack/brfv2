@@ -72,7 +72,7 @@ def create_app(
                 f"(aktiv leverantör: {provider.name})."
             )
 
-    app = FastAPI(title="BRF Dokument-AI")
+    app = FastAPI(title="Träff")
     app.add_middleware(
         CORSMiddleware,
         allow_origins=[

@@ -1,4 +1,4 @@
-//! BRF Dokument-AI — Fedora desktop shell.
+//! Träff — Fedora desktop shell.
 //!
 //! The shell owns exactly three things: the packaged Python runtime's
 //! lifecycle, the webview that talks to it over a random loopback origin, and
@@ -524,7 +524,7 @@ fn show_failure(app: &AppHandle, headline: &str, detail: &str) {
         return;
     }
     let built = WebviewWindowBuilder::new(app, "failure", WebviewUrl::App("index.html".into()))
-        .title("BRF Dokument-AI — kunde inte starta")
+        .title("Träff — kunde inte starta")
         .inner_size(720.0, 520.0)
         .min_inner_size(520.0, 380.0)
         .resizable(true)
@@ -599,7 +599,7 @@ fn supervise(
         shutting_down.store(true, Ordering::SeqCst);
         let detail = format!(
             "Bakgrundstjänsten {}. Inga data har gått förlorade — dina dokument och \
-             inställningar ligger kvar lokalt. Stäng fönstret och starta BRF Dokument-AI igen.\n\n\
+             inställningar ligger kvar lokalt. Stäng fönstret och starta Träff igen.\n\n\
              Teknisk logg: {}",
             describe_exit(status),
             log_file.display()
@@ -643,7 +643,7 @@ fn run() -> Result<(), BoxError> {
                 // nobody is watching.
                 show_failure(
                     &handle,
-                    "BRF Dokument-AI kunde inte starta",
+                    "Träff kunde inte starta",
                     &error.to_string(),
                 );
             }
@@ -685,7 +685,7 @@ fn start_product(
 
     let geometry = load_geometry(app);
     WebviewWindowBuilder::new(app, "main", WebviewUrl::External(url))
-        .title("BRF Dokument-AI")
+        .title("Träff")
         .inner_size(geometry.width, geometry.height)
         .min_inner_size(MIN_WIDTH, MIN_HEIGHT)
         .resizable(true)

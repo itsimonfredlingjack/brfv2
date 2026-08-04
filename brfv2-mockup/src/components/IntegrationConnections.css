@@ -19,14 +19,16 @@
   color: var(--text-primary);
 }
 
+/* Connecting to a system the association already has proves nothing about any
+   document, so it is not Belagt. Failing to reach one is Avbrott. */
 .ic-banner.ok {
-  background: rgba(80, 190, 130, 0.13);
-  border: 1px solid rgba(80, 190, 130, 0.35);
+  background: var(--surface-3);
+  border: 1px solid var(--border-strong);
 }
 
 .ic-banner.bad {
-  background: rgba(220, 90, 90, 0.14);
-  border: 1px solid rgba(220, 90, 90, 0.4);
+  background: var(--avbrott-soft);
+  border: 1px solid var(--avbrott-border);
 }
 
 .ic-provider {
@@ -34,7 +36,7 @@
   border-radius: 14px;
   padding: 18px 20px;
   margin-bottom: 16px;
-  background: var(--panel-bg, rgba(255, 255, 255, 0.02));
+  background: var(--panel-bg, var(--surface-2));
 }
 
 .ic-head {
@@ -65,19 +67,24 @@
   white-space: nowrap;
 }
 
+/* A connection's state: connected (filled, ink), needs attention (Vägran —
+   something the association has to supply is missing), unreachable (Avbrott). */
 .ic-status.ok {
-  background: rgba(80, 190, 130, 0.16);
-  border-color: rgba(80, 190, 130, 0.4);
+  background: var(--surface-3);
+  border-color: var(--border-strong);
+  color: var(--foreground);
 }
 
 .ic-status.warn {
-  background: rgba(230, 180, 70, 0.12);
-  border-color: rgba(230, 180, 70, 0.35);
+  background: var(--warn-soft);
+  border-color: var(--warn-border);
+  color: var(--warn);
 }
 
 .ic-status.bad {
-  background: rgba(220, 90, 90, 0.14);
-  border-color: rgba(220, 90, 90, 0.4);
+  background: var(--avbrott-soft);
+  border-color: var(--avbrott-border);
+  color: var(--avbrott);
 }
 
 .ic-step {
@@ -130,7 +137,7 @@
   padding: 9px 11px;
   border-radius: 9px;
   border: 1px solid var(--panel-border);
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--surface-2);
   color: var(--text-primary);
   font-size: 13px;
   font-family: inherit;
@@ -146,7 +153,7 @@
 
 .ic-field small code,
 .ic-check small code {
-  font-size: 11px;
+  font-size: var(--text-xs);
   padding: 0 3px;
 }
 
@@ -157,8 +164,8 @@
   margin-top: 14px;
   padding: 12px 14px;
   border-radius: 10px;
-  border: 1px solid rgba(230, 180, 70, 0.3);
-  background: rgba(230, 180, 70, 0.08);
+  border: 1px solid var(--warn-border);
+  background: var(--warn-soft);
 }
 
 .ic-check strong {
@@ -188,11 +195,14 @@
   cursor: pointer;
 }
 
+/* The primary action is the ink, as it is everywhere else in the product.
+   Handling stays what the identity reserves it for — links and text actions. */
 .ic-primary {
-  border: 1px solid var(--accent, #6384ff);
-  background: var(--accent, #6384ff);
-  color: #fff;
+  border: 1px solid transparent;
+  background: var(--primary);
+  color: var(--primary-foreground);
 }
+.ic-primary:hover:not(:disabled) { background: var(--primary-action-hover); }
 
 .ic-secondary {
   border: 1px solid var(--panel-border);
@@ -200,14 +210,16 @@
   color: var(--text-primary);
 }
 
+/* Disconnecting deletes stored credentials, which is a destruction. */
 .ic-primary.danger {
-  background: rgba(220, 90, 90, 0.85);
-  border-color: rgba(220, 90, 90, 0.9);
+  background: var(--avbrott-soft);
+  border-color: var(--avbrott-border);
+  color: var(--avbrott);
 }
 
 .ic-secondary.danger {
-  border-color: rgba(220, 90, 90, 0.45);
-  color: var(--text-primary);
+  border-color: var(--avbrott-border);
+  color: var(--avbrott);
 }
 
 .ic-primary:disabled,
@@ -220,8 +232,8 @@
   margin-top: 12px;
   padding: 14px 16px;
   border-radius: 11px;
-  border: 1px solid rgba(99, 132, 255, 0.28);
-  background: rgba(99, 132, 255, 0.09);
+  border: 1px solid var(--border-strong);
+  background: var(--surface-1);
 }
 
 .ic-device p {
@@ -297,16 +309,16 @@
 
 .ic-lasterror {
   margin: 0 0 12px;
-  font-size: 13px;
-  color: rgb(230, 140, 140);
+  font-size: var(--text-sm);
+  color: var(--avbrott);
 }
 
 .ic-confirm {
   margin-top: 12px;
   padding: 14px 16px;
   border-radius: 11px;
-  border: 1px solid rgba(220, 90, 90, 0.4);
-  background: rgba(220, 90, 90, 0.1);
+  border: 1px solid var(--avbrott-border);
+  background: var(--avbrott-soft);
 }
 
 .ic-confirm p {

@@ -5,6 +5,7 @@ import { CitationChip } from '../components/CitationChip'
 import { KallaSheet } from '../components/KallaSheet'
 import type { KallaTarget } from '../components/KallaSheet'
 import { Notice, RefusalCard } from '../components/Notice'
+import { TraffMark } from '../components/TraffMark'
 import { ChevronLeft } from '../components/icons'
 import { formatMoment, formatProvenance } from '../lib/format'
 import { getEntry } from '../state/localStore'
@@ -84,6 +85,16 @@ export function Svar({ brfId, entryId }: { brfId: string; entryId: string }) {
             </div>
           ) : (
             <>
+              {/* The core is drawn if and only if a citation survived
+                  verification. An answer this app could not prove never
+                  reaches this line — "en fylld kärna utan citat är en lögn i
+                  formspråket". */}
+              {entry.citations.length > 0 && (
+                <p className="answer-state answer-state--belagt" style={{ marginTop: 'var(--s3)' }}>
+                  <TraffMark size={17} variant="status" state="belagt" decorative />
+                  <span>Belagt</span>
+                </p>
+              )}
               <p className="answer__text" data-testid="answer-text">
                 {entry.answer}
               </p>

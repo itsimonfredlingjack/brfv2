@@ -431,7 +431,7 @@ def read_backup_manifest(archive_path: Path) -> dict:
             except KeyError as exc:
                 raise ValueError("Filen saknar säkerhetskopians innehållsförteckning.") from exc
             if not isinstance(manifest, dict) or manifest.get("schema") != BACKUP_SCHEMA:
-                raise ValueError("Filen är inte en säkerhetskopia från BRF Dokument-AI.")
+                raise ValueError("Filen är inte en säkerhetskopia från Träff.")
             for info in archive.infolist():
                 if info.filename == BACKUP_MANIFEST:
                     continue
@@ -792,7 +792,7 @@ def create_desktop_app(
         runtime = app.state.desktop_config.llm
         return {
             "schema": STATE_SCHEMA,
-            "app": {"name": "BRF Dokument-AI", "version": APP_VERSION},
+            "app": {"name": "Träff", "version": APP_VERSION},
             # Pre-login truth the setup screen needs, and nothing more: a
             # boolean, never an account list.
             "provisioned": bool(auth.list_tenants()),

@@ -27,7 +27,7 @@
   padding: 9px 11px;
   border-radius: 9px;
   border: 1px solid var(--panel-border);
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--surface-2);
   color: var(--text-primary);
   font-size: 13px;
   font-family: inherit;
@@ -56,7 +56,7 @@
   border: 1px solid var(--panel-border);
   border-radius: 14px;
   padding: 18px 20px;
-  background: var(--panel-bg, rgba(255, 255, 255, 0.02));
+  background: var(--panel-bg, var(--surface-2));
   overflow-x: auto;
 }
 
@@ -71,8 +71,8 @@
   margin: 10px 0 0;
   padding: 11px 13px;
   border-radius: 10px;
-  background: rgba(99, 132, 255, 0.09);
-  border: 1px solid rgba(99, 132, 255, 0.22);
+  background: var(--surface-1);
+  border: 1px solid var(--border-strong);
   font-size: 13px;
   line-height: 1.6;
   color: var(--text-primary);
@@ -113,7 +113,7 @@
 }
 
 .mp-fields tr.unmatched {
-  background: rgba(230, 180, 70, 0.08);
+  background: var(--warn-soft);
 }
 
 .mp-target {
@@ -123,7 +123,7 @@
 
 .mp-target code,
 .mp-source code {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--text-secondary);
 }
 
@@ -135,7 +135,7 @@
 .mp-source {
   display: block;
   margin-top: 3px;
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--text-secondary);
 }
 
@@ -148,8 +148,11 @@
   white-space: nowrap;
 }
 
-.mp-flag.ok { color: rgb(120, 210, 160); }
-.mp-flag.missing { color: rgb(235, 190, 95); }
+/* A field that was read is a fact about the file, not a verified passage — so
+   it is ink, not Belagt. A field that is missing has no support behind it,
+   which is exactly what Vägran means. */
+.mp-flag.ok { color: var(--foreground); }
+.mp-flag.missing { color: var(--warn); }
 
 .mp-fieldnote {
   display: block;

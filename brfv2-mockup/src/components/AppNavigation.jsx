@@ -8,6 +8,7 @@ import {
   X,
 } from 'lucide-react';
 import { NAV_ITEMS } from '../appWorkspaces';
+import TraffMark from './TraffMark';
 
 const roleLabel = (role) => (role === 'admin' ? 'Admin' : 'Medlem');
 
@@ -110,9 +111,14 @@ export default function AppNavigation({
     <>
       {navigationVisible && (
         <header className="mobile-top-nav">
-          <div className="logo">BRF <span>Dokument-AI</span></div>
+          <div className="sidebar-brand-inline">
+            <TraffMark size={18} />
+            <div className="logo">
+              <span className="logo-name">Träff</span>
+            </div>
+          </div>
           <button ref={mobileMenuBtnRef} className="icon-action-btn mobile-menu-btn" onClick={onToggleMobileMenu} aria-label="Meny" aria-expanded={mobileMenuOpen}>
-            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         </header>
       )}
@@ -130,17 +136,34 @@ export default function AppNavigation({
             inert={isMobile && !mobileMenuOpen ? true : undefined}
           >
             <div className="sidebar-brand desktop-only">
-              <div className="logo">BRF <span>Dokument-AI</span></div>
+              <TraffMark size={22} />
+              <div className="logo">
+                <span className="logo-name">Träff</span>
+                <span className="logo-qualifier">BRF &amp; styrelse</span>
+              </div>
             </div>
 
             <div className="sidebar-menu">
-              {NAV_ITEMS.map(({ id, label, icon, desktopOnly }) => {
+              {NAV_ITEMS.map(({ id, label, icon, desktopOnly }, index) => {
                 if (desktopOnly && !desktopState) return null;
                 const Icon = icon;
+                // The product areas are a different kind of thing from the two
+                // that come before them — asking a question and reading the
+                // archive are always available; these are places work is
+                // handled. One quiet label is cheaper for a reader than eight
+                // undifferentiated rows.
+                const startsWorkspaces = desktopOnly && !NAV_ITEMS[index - 1]?.desktopOnly;
                 return (
-                  <button key={id} className={`nav-item ${currentTab === id ? 'active' : ''}`} onClick={() => selectTab(id)}>
-                    <Icon size={20} /> {label}
-                  </button>
+                  <React.Fragment key={id}>
+                    {startsWorkspaces && <div className="sidebar-section-label">Arbetsytor</div>}
+                    <button
+                      className={`nav-item ${currentTab === id ? 'active' : ''}`}
+                      onClick={() => selectTab(id)}
+                      aria-current={currentTab === id ? 'page' : undefined}
+                    >
+                      <Icon size={16} /> <span className="nav-item-label">{label}</span>
+                    </button>
+                  </React.Fragment>
                 );
               })}
             </div>
@@ -148,10 +171,13 @@ export default function AppNavigation({
             <div className="sidebar-footer">
               {activeMembership && (
                 <div className={`active-brf-panel ${memberships.length > 1 ? 'switchable' : 'static'}`}>
-                  <div className="active-brf-eyebrow">Aktiv förening</div>
-                  <div className="active-brf-row">
+                  <span className="active-brf-tile" aria-hidden="true">
+                    {(activeBrfName || '?').replace(/^Brf\s+/i, '').charAt(0).toUpperCase()}
+                  </span>
+                  <span className="active-brf-body">
+                    <span className="active-brf-eyebrow">Aktiv förening</span>
                     {memberships.length > 1 ? (
-                      <div className="active-brf-select-wrap">
+                      <span className="active-brf-select-wrap">
                         <select
                           id="tenant-select"
                           className="active-brf-select"
@@ -164,15 +190,17 @@ export default function AppNavigation({
                             <option key={membership.brf_id} value={String(membership.brf_id)}>{membership.name}</option>
                           ))}
                         </select>
-                        <ChevronDown size={14} className="active-brf-select-chevron" aria-hidden="true" />
-                      </div>
+                        <ChevronDown size={13} className="active-brf-select-chevron" aria-hidden="true" />
+                      </span>
                     ) : (
                       <span className="active-brf-name-static" title={activeBrfName}>{activeBrfName}</span>
                     )}
-                    <span className={`active-brf-role-badge ${activeMembership.role}`}>
+                    {/* The role is a sentence about the signed-in person, not a
+                        chip floating beside a name with nothing to attach to. */}
+                    <span className={`active-brf-role ${activeMembership.role}`}>
                       {roleLabel(activeMembership.role)}
                     </span>
-                  </div>
+                  </span>
                 </div>
               )}
 
@@ -205,7 +233,7 @@ export default function AppNavigation({
                   <span className="user-name">{user?.name || user?.email}</span>
                   <span className="user-email">{user?.email}</span>
                 </div>
-                <ChevronUp size={16} color="var(--text-secondary)" style={{ marginLeft: 'auto', transform: showUserMenu ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
+                <ChevronUp size={14} color="var(--muted-foreground)" style={{ marginLeft: 'auto', flexShrink: 0, transform: showUserMenu ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }} />
               </div>
             </div>
           </nav>

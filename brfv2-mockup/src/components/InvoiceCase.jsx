@@ -14,11 +14,12 @@ import {
   MessageSquare,
   Paperclip,
   RefreshCw,
-  Sparkles,
+  SearchCheck,
   Trash2,
   User,
 } from 'lucide-react';
 import { integrationsApi, invoicesApi } from '../api';
+import TraffMark from './TraffMark';
 import CreateTask from './CreateTask';
 import { formatAmount } from './money';
 import PdfPane from './PdfPane';
@@ -61,10 +62,18 @@ const VERDICT_TONE = {
   cannot_be_verified: 'unknown',
 };
 
+// The status mark reports one thing: whether a passage has been verified
+// verbatim. Two of the three verdicts are exactly the identity's own states —
+// belagt and ej belagt — so they are drawn as the mark. A possible deviation is
+// neither: it *rests* on a citation and still differs from it, and giving it a
+// state colour would spend a meaning that is already spoken for.
+const VERDICT_MARK = {
+  matches: 'belagt',
+  cannot_be_verified: 'ejbelagt',
+};
+
 const VERDICT_ICON = {
-  matches: CheckCircle2,
   possible_deviation: AlertTriangle,
-  cannot_be_verified: HelpCircle,
 };
 
 // What the three verdicts mean in the words this workspace uses. The product
@@ -121,8 +130,8 @@ const OBSERVATION_LABEL = {
 const EVENT_ICON = {
   case_opened: FileText,
   observation_added: Link2,
-  analysis_run: Sparkles,
-  finding_recorded: Sparkles,
+  analysis_run: SearchCheck,
+  finding_recorded: SearchCheck,
   status_changed: CheckCircle2,
   assigned: User,
   commented: MessageSquare,
@@ -267,6 +276,7 @@ function Finding({
   onDecide, onOpenCitation, onConfirmAlias, onRerun, onTaskCreated,
 }) {
   const tone = VERDICT_TONE[finding.verdict] || 'unknown';
+  const markState = VERDICT_MARK[finding.verdict];
   const Icon = VERDICT_ICON[finding.verdict] || HelpCircle;
   const invoiceFacts = finding.verified_facts.filter((f) => f.source === 'invoice');
   const documentFacts = finding.verified_facts.filter((f) => f.source === 'document');
@@ -277,7 +287,10 @@ function Finding({
     <article className={`finding ${tone} ${finding.status !== 'open' ? 'decided' : ''}`}>
       <header className="finding-head">
         <span className={`verdict ${tone}`}>
-          <Icon size={16} /> {finding.verdict_label}
+          {markState
+            ? <TraffMark size={16} variant="status" state={markState} />
+            : <Icon size={15} />}
+          {finding.verdict_label}
         </span>
         <span className="finding-status">{STATUS_LABEL[finding.status] || finding.status}</span>
       </header>
@@ -488,7 +501,10 @@ function ReviewStatusForm({ caseData, labels, busy, canDecide, onSave }) {
       {caseData.review_status_note && (
         <p className="case-status-note">{caseData.review_status_note}</p>
       )}
-      <p className="case-status-caveat">{caseData.review_status_caveat}</p>
+      {/* What this status does not mean is said once, in the status card at the
+          top of the case. Repeating it here put the same amber paragraph on the
+          screen twice, which is how a caveat stops being read at all. What this
+          form does show is the caveat for the status being *chosen*, below. */}
 
       {canDecide && (
         <>
@@ -668,7 +684,7 @@ function Timeline({ events }) {
       <h4><History size={15} /> Allt som hänt</h4>
       <ol>
         {events.map((event) => {
-          const Icon = EVENT_ICON[event.kind] || Sparkles;
+          const Icon = EVENT_ICON[event.kind] || SearchCheck;
           return (
             <li key={event.id} className={event.human ? 'human' : 'engine'}>
               <span className="event-icon"><Icon size={13} /></span>
@@ -839,12 +855,17 @@ export default function InvoiceCase({
       )}
 
       <div className="case-columns">
-        {/* ---- what arrived ---- */}
-        <section className="case-column evidence">
+        {/* ---- what arrived, then what the product thinks of it ----
+             One column, in that order. Three columns side by side gave the
+             original handling 340 pixels on a normal window, which is not a
+             document — it is a thumbnail of one. */}
+        <section className="case-column main">
           <OriginalPane brfId={brfId} documents={documents} onOpenDocument={onOpenDocument} />
 
-          <div className="case-panel">
-            <h4><FileText size={15} /> Fakturans fält</h4>
+          {/* The normalised fields are a *reading* of the document above, so
+              they open on demand rather than competing with it. */}
+          <details className="case-panel case-disclosure" open>
+            <summary><h4><FileText size={15} /> Fakturans fält</h4></summary>
             <dl className="case-fields">
               <div><dt>Leverantör</dt><dd>{kase.supplier_name || '—'}</dd></div>
               <div><dt>Leverantörsreferens</dt><dd>{kase.supplier_ref || '—'}</dd></div>
@@ -871,10 +892,12 @@ export default function InvoiceCase({
                 </tbody>
               </table>
             )}
-          </div>
+          </details>
 
-          <div className="case-panel">
-            <h4><Link2 size={15} /> Källor och härkomst</h4>
+          {/* Provenance is what makes the case auditable, and it is not what a
+              reviewer reads first. Present, one press away. */}
+          <details className="case-panel case-disclosure">
+            <summary><h4><Link2 size={15} /> Källor och härkomst</h4></summary>
             <ul className="case-observations">
               {kase.observations.map((observation) => {
                 const Icon = OBSERVATION_ICON[observation.kind] || FileText;
@@ -905,11 +928,11 @@ export default function InvoiceCase({
                 hash <code>{invoice.content_sha256.slice(0, 24)}…</code>
               </p>
             )}
-          </div>
+          </details>
 
           {sourceEvent && (
-            <div className="case-panel">
-              <h4><Mail size={15} /> Mejlet fakturan kom med</h4>
+            <details className="case-panel case-disclosure">
+              <summary><h4><Mail size={15} /> Mejlet fakturan kom med</h4></summary>
               <p className="case-mail-meta">
                 {sourceEvent.origin_display
                   ? `${sourceEvent.origin_display} <${sourceEvent.origin}>`
@@ -918,12 +941,9 @@ export default function InvoiceCase({
               </p>
               <p className="case-mail-subject"><strong>{sourceEvent.subject || '(utan ämne)'}</strong></p>
               {sourceEvent.body_text && <pre className="case-mail-body">{sourceEvent.body_text}</pre>}
-            </div>
+            </details>
           )}
-        </section>
 
-        {/* ---- what the product thinks ---- */}
-        <section className="case-column analysis">
           {kase.analysis_outdated && (
             <p className="analysis-outdated" role="status">
               Fynden nedan är producerade med regelversion {kase.analysis_engine_version}.
@@ -934,7 +954,7 @@ export default function InvoiceCase({
 
           <div className="case-panel">
             <div className="case-panel-head">
-              <h4><Sparkles size={15} /> Granskning mot föreningens dokument</h4>
+              <h4><SearchCheck size={15} /> Granskning mot föreningens dokument</h4>
             </div>
             {documentFindings.length === 0 ? (
               <p className="muted">
@@ -1017,10 +1037,9 @@ export default function InvoiceCase({
           {/* The engine's own history. A finding nobody formally decided on may
               still have been the reason somebody rang the supplier, so a run
               that replaced one has to leave a record — not a silent overwrite. */}
-          <div className="case-panel case-analyses">
-            <div className="case-panel-head">
-              <h4><History size={15} /> Analyshistorik</h4>
-            </div>
+          <div className="case-panel case-analyses case-disclosure-wrap">
+            <details>
+              <summary><h4><History size={15} /> Analyshistorik</h4></summary>
             <p className="muted case-history-note">
               Varje granskning som ändrade något ligger kvar här: vad den läste, vilka
               regler som körde, vad som skilde mot förra gången, och de fynd den ersatte.
@@ -1043,6 +1062,7 @@ export default function InvoiceCase({
                 ))}
               </ol>
             )}
+            </details>
           </div>
         </section>
 

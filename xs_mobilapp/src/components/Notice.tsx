@@ -3,6 +3,7 @@ import type { ReactNode } from 'react'
 import type { RefusalReason, RejectedCitation } from '../api/types'
 import { GROUNDING_PROMISE, refusalCopy, rejectCopy } from '../lib/refusals'
 import { AlertIcon } from './icons'
+import { TraffMark } from './TraffMark'
 
 export function Notice({
   tone,
@@ -18,7 +19,13 @@ export function Notice({
   return (
     <div className={`notice notice--${tone}`} role={tone === 'error' ? 'alert' : 'status'}>
       <div className="notice__head">
-        <AlertIcon />
+        {/* §01: the status mark is the app's primary visual state indicator. A
+            refusal is a state of the evidence — the ring with nothing in it —
+            not a warning triangle. An actual failure is machinery, and keeps
+            the triangle. */}
+        {tone === 'refusal'
+          ? <TraffMark size={17} variant="status" state="ejbelagt" decorative />
+          : <AlertIcon />}
         {title}
       </div>
       <div className="notice__body">{children}</div>

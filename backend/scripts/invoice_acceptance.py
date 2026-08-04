@@ -777,9 +777,17 @@ def main(argv: list[str] | None = None) -> int:
         )
         note("analysisVersionTwo", replaced)
         # Bring the panel into view before the shot: evidence of a claim about
-        # what a screen shows should show it.
+        # what a screen shows should show it. The audit trail is a disclosure —
+        # it is what the engine *used* to say, so the case does not open with it
+        # — and a screenshot of a collapsed panel would evidence nothing.
         driver.execute(
-            "document.querySelector('.case-analyses').scrollIntoView({block: 'start'}); return true;"
+            """
+            const panel = document.querySelector('.case-analyses');
+            const disclosure = panel?.querySelector('details');
+            if (disclosure) disclosure.open = true;
+            panel?.scrollIntoView({block: 'start'});
+            return true;
+            """
         )
         time.sleep(0.4)
         driver.screenshot(evidence.path("analysis-history"))
@@ -945,15 +953,18 @@ def main(argv: list[str] | None = None) -> int:
                 if (rows.length < 3) return false;
                 return rows.map((r) => {
                   const cells = [...r.querySelectorAll('td')].map(c => c.textContent.trim());
+                  // Where a case has been seen is part of its identity and is
+                  // read in the first cell beside the invoice number, rather
+                  // than in a column of its own.
                   return {
                     invoice: cells[0],
                     amount: cells[1],
                     due: cells[2],
-                    source: cells[3],
-                    accounting: cells[4],
-                    review: cells[5],
-                    signal: cells[6],
-                    responsible: cells[7],
+                    accounting: cells[3],
+                    review: cells[4],
+                    signal: cells[5],
+                    responsible: cells[6],
+                    lastActivity: cells[7],
                   };
                 });
                 """

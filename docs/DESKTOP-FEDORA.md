@@ -1,4 +1,4 @@
-# BRF Dokument-AI — skrivbordsapplikationen för Fedora
+# Träff — skrivbordsapplikationen för Fedora
 
 Den installerade applikationen är samma produkt som webbleveransen: samma
 React-gränssnitt, samma Python-backend, samma grundningsgarantier. Skillnaden
@@ -18,7 +18,7 @@ sudo dnf install ./brf-dokument-ai-0.2.0-1.x86_64.rpm
 inskannade PDF:er inte tolkas, så paketet vägrar installera sig utan det i
 stället för att fallera först när ett dokument laddas upp.
 
-Starta sedan **BRF Dokument-AI** från applikationsmenyn.
+Starta sedan **Träff** från applikationsmenyn.
 
 ### Första gången
 

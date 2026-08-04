@@ -17,30 +17,40 @@
   text-align: center;
 }
 
-.login-mark {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--primary-action), #9b72e3);
+/* A mark, not a glowing orb. The gradient-and-halo treatment said "AI product"
+   before the product had said anything at all — and the plate that replaced it
+   was still a tone behind the gap, which §02 forbids outright: "Mellanrummet —
+   alltid tomt. Ingen tonplatta, ingen gradient. Det är avståndet mellan frågan
+   och belägget." So the mark now sits on the panel itself, with the frizon its
+   own margin. */
+.login-lockup {
   display: flex;
   align-items: center;
-  justify-content: center;
-  color: #fff;
-  margin-bottom: 20px;
-  box-shadow: 0 0 25px rgba(59, 130, 246, 0.45);
+  /* §05: the gap is the diameter of the core. */
+  /* §05: the mark stands at the name's cap height — the identity's own ratio
+     is a 50px mark against 56px of Instrument Serif. */
+  gap: 15px;
+  margin-bottom: 14px;
+  color: var(--foreground);
 }
 
 .login-title {
-  font-size: 26px;
-  font-weight: 600;
-  margin-bottom: 8px;
-  color: var(--text-primary);
+  font-family: var(--font-serif);
+  font-size: 2.125rem;   /* 34px */
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  /* The diacritic belongs to the name and is never clipped (§05). */
+  line-height: 1.1;
+  padding-top: 0.04em;
+  color: var(--foreground);
 }
 
 .login-subtitle {
-  font-size: 14px;
-  color: var(--text-secondary);
-  margin-bottom: 28px;
+  max-width: 34ch;
+  font-size: var(--text-md);
+  line-height: 1.55;
+  color: var(--muted-foreground);
+  margin-bottom: 26px;
 }
 
 .login-form {
@@ -58,31 +68,30 @@
 }
 
 .login-field span {
-  font-size: 12px;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  color: var(--text-secondary);
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--muted-foreground);
 }
 
 .login-field input {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid var(--panel-border);
-  border-radius: 12px;
-  padding: 12px 16px;
-  font-size: 14px;
-  color: var(--text-primary);
+  height: 40px;
+  padding: 0 14px;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-2xl);
+  background: var(--field);
+  color: var(--foreground);
+  font-size: var(--text-md);
   outline: none;
-  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.14s ease, box-shadow 0.14s ease;
 }
 
 .login-field input::placeholder {
-  color: rgba(255, 255, 255, 0.25);
+  color: var(--subtle-foreground);
 }
 
 .login-field input:focus {
-  border-color: var(--primary-action);
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px var(--ring-glow);
 }
 
 .login-error {
@@ -90,11 +99,11 @@
   align-items: center;
   gap: 8px;
   padding: 10px 14px;
-  border-radius: 10px;
-  border: 1px solid rgba(248, 113, 113, 0.4);
-  background: rgba(248, 113, 113, 0.08);
-  color: #f87171;
-  font-size: 13px;
+  border: 1px solid var(--avbrott-border);
+  border-radius: var(--radius-2xl);
+  background: var(--avbrott-soft);
+  color: var(--avbrott);
+  font-size: var(--text-base);
   text-align: left;
 }
 
@@ -103,21 +112,20 @@
   align-items: center;
   justify-content: center;
   gap: 8px;
-  background: var(--text-primary);
-  color: var(--bg-color);
+  height: 40px;
+  margin-top: 4px;
   border: none;
-  padding: 13px;
-  border-radius: 24px;
-  font-size: 15px;
+  border-radius: var(--radius-2xl);
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-size: var(--text-md);
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s ease;
-  margin-top: 4px;
+  transition: background-color 0.14s ease;
 }
 
 .login-submit:hover:not(:disabled) {
-  transform: scale(1.02);
-  box-shadow: 0 4px 15px rgba(255, 255, 255, 0.1);
+  background: var(--primary-action-hover);
 }
 
 .login-submit:disabled {
@@ -131,11 +139,12 @@
 }
 
 .login-demo-hint {
-  margin-top: 24px;
-  font-size: 12px;
-  color: var(--text-secondary);
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px dashed var(--panel-border);
-  border-radius: 10px;
+  margin-top: 22px;
   padding: 8px 14px;
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--radius-2xl);
+  color: var(--subtle-foreground);
+  font-size: var(--text-sm);
 }
+
+.login-panel { border-radius: var(--radius-3xl); }

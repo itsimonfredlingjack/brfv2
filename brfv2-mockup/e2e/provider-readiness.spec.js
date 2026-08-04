@@ -30,7 +30,7 @@ const cases = [
 for (const readiness of cases) {
   test(`provider readiness: ${readiness.name}`, async ({ page }) => {
     await page.goto(readiness.url);
-    await expect(page.getByRole('heading', { name: 'Logga in' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Träff' })).toBeVisible();
     await expect(page.getByText(readiness.primary, { exact: true })).toBeVisible();
     if (readiness.secondary) {
       await expect(page.getByText(readiness.secondary, { exact: true })).toBeVisible();

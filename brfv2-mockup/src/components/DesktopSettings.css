@@ -7,9 +7,12 @@
   overflow: hidden;
   /* .glass-panel is translucent by design — it is meant to sit on a page
      background, not over one. A full-height dialog needs its own opaque
-     surface, or the page behind it reads straight through the text. */
-  background: #12141a;
-  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.55);
+     surface, or the page behind it reads straight through the text. The value
+     this replaced was a near-black left over from the dark shell, so the one
+     dialog in the product arrived from a different design. */
+  background: var(--popover);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-lg);
 }
 
 .ds-header {
@@ -22,9 +25,12 @@
   flex: 0 0 auto;
 }
 
+/* Below §07's 22px floor the serif stops being a voice and becomes small
+   print, so a dialog header labels the interface in the sans instead. */
 .ds-header h2 {
   margin: 0;
-  font-size: 18px;
+  font-family: var(--font-sans);
+  font-size: var(--text-lg);
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -41,7 +47,7 @@
 
 .ds-close:hover {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--surface-3);
 }
 
 .ds-body {
@@ -83,7 +89,7 @@
 
 .ds-hint code,
 .ds-facts code {
-  font-size: 11.5px;
+  font-size: var(--text-xs);
   overflow-wrap: anywhere;
 }
 
@@ -105,7 +111,7 @@
 }
 
 .ds-field > span {
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: 0.5px;
   text-transform: uppercase;
@@ -115,7 +121,7 @@
 .ds-field input,
 .ds-inline-form input {
   width: 100%;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--surface-3);
   border: 1px solid var(--panel-border);
   border-radius: 10px;
   padding: 10px 13px;
@@ -127,12 +133,12 @@
 
 .ds-field input:focus,
 .ds-inline-form input:focus {
-  border-color: var(--primary-action);
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px var(--ring-glow);
 }
 
 .ds-field small {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--text-secondary);
 }
 
@@ -148,21 +154,21 @@
 }
 
 .ds-banner.ok {
-  border: 1px solid rgba(52, 168, 83, 0.4);
-  background: rgba(52, 168, 83, 0.1);
-  color: #6ee7a0;
+  border: 1px solid var(--border-strong);
+  background: var(--surface-3);
+  color: var(--foreground);
 }
 
 .ds-banner.bad {
-  border: 1px solid rgba(248, 113, 113, 0.4);
-  background: rgba(248, 113, 113, 0.08);
-  color: #f87171;
+  border: 1px solid var(--avbrott-border);
+  background: var(--avbrott-soft);
+  color: var(--avbrott);
 }
 
 .ds-banner.warn {
-  border: 1px solid rgba(245, 179, 66, 0.4);
-  background: rgba(245, 179, 66, 0.08);
-  color: #f5b342;
+  border: 1px solid var(--warn-border);
+  background: var(--warn-soft);
+  color: var(--warn);
 }
 
 .ds-actions {
@@ -178,8 +184,11 @@
   margin-right: auto;
 }
 
-.ds-state.ok { color: #6ee7a0; }
-.ds-state.warn { color: #f0b429; }
+/* Reaching the configured model host is a fact about the machine, not about a
+   document, so it is ink rather than Belagt. Not reaching it is Vägran only in
+   the sense that something the association must supply is still missing. */
+.ds-state.ok { color: var(--foreground); font-weight: 600; }
+.ds-state.warn { color: var(--warn); }
 
 .ds-primary,
 .ds-secondary {
@@ -202,10 +211,15 @@
   border: none;
 }
 
+/* Restoring a backup destroys everything added since it was made, which is one
+   of the exactly two things Avbrott means here. Same treatment as every other
+   destructive control in the product — tinted, not a solid red slab. */
 .ds-primary.danger {
-  background: #e05656;
-  color: #fff;
+  background: var(--avbrott-soft);
+  border: 1px solid var(--avbrott-border);
+  color: var(--avbrott);
 }
+.ds-primary.danger:hover:not(:disabled) { background: var(--avbrott-soft-hover); }
 
 .ds-secondary {
   background: transparent;
@@ -245,7 +259,7 @@
   padding: 10px 12px;
   border: 1px solid var(--panel-border);
   border-radius: 10px;
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--surface-2);
 }
 
 .ds-backup-meta {
@@ -263,7 +277,7 @@
 }
 
 .ds-backup-meta span {
-  font-size: 11px;
+  font-size: var(--text-xs);
   color: var(--text-secondary);
   overflow: hidden;
   text-overflow: ellipsis;
@@ -291,15 +305,15 @@
 }
 
 .ds-backup-actions button:hover:not(:disabled) { color: var(--text-primary); }
-.ds-backup-actions button.danger:hover:not(:disabled) { color: #f87171; }
+.ds-backup-actions button.danger:hover:not(:disabled) { color: var(--avbrott); background: var(--avbrott-soft); }
 .ds-backup-actions button:disabled { opacity: 0.5; cursor: default; }
 
 .ds-confirm {
   margin-top: 14px;
   padding: 14px;
-  border: 1px solid rgba(224, 86, 86, 0.45);
+  border: 1px solid var(--avbrott-border);
   border-radius: 12px;
-  background: rgba(224, 86, 86, 0.08);
+  background: var(--avbrott-soft);
 }
 
 .ds-confirm p {

@@ -1,0 +1,828 @@
+/* The Träff visual identity, implemented.
+ *
+ * Source: the "Träff Visual Identity System" design project, document
+ * `Traff-identitet-v2.dc.html` (Identitet v2 · juli 2026). The values here are
+ * that document's, not an interpretation of it. Its three hardest rules are the
+ * ones this file exists to keep:
+ *
+ * 1. **Colour is locked to meaning and never lent to decoration.** Green is not
+ *    "success"; it means a passage was verified verbatim against source text.
+ *    Amber is not "warning"; it has one meaning, that no proof exists. Blue is
+ *    links and text actions, never a state — and, here, never a button either:
+ *    the primary action is ink, for the reason written at `--primary`. A colour
+ *    spent on anything else empties the meaning it was carrying. One colour has
+ *    been added to the identity's six — Avbrott — and its role is written where
+ *    it is defined below.
+ * 2. **Three cuts, three jobs, never mixed.** Serif states, sans explains, mono
+ *    measures. That separation is how a reader tells the product's words from
+ *    the document's.
+ * 3. **On paper, with the documents still the only white thing.** The identity
+ *    states this rule as "mörkt skal, lysande papper", and that form is the
+ *    right one on a phone: `xs_mobilapp` and `kalla-native` both run the dark
+ *    shell. This file is the desktop, and it runs the identity's *other*
+ *    specified ground — `--papper`, warm and never pure white — because a board
+ *    reads an invoice case, a queue of post and a full-size PDF here for an hour
+ *    at a time, and an A4 sheet glowing out of near-black is the thing that was
+ *    hard to read. The relationship the rule protects is intact and inverted:
+ *    the workspace is warm paper, and a document is the one surface that is
+ *    `#FFFFFF`. There is no `--skal` token in this file, and adding one would be
+ *    a change of product, not a change of theme. The full reasoning, including
+ *    why the state colours are the identity's paper values rather than
+ *    lightened mid-tones, is in the `:root` block below.
+ *
+ * The typefaces are vendored beside this file rather than fetched. The desktop
+ * shell serves the application under `font-src 'self'`, so a Google Fonts link
+ * would be a blocked request and a console error; on the web it would hand
+ * every reader's IP address to a third party. Licences in ./assets/fonts.
+ */
+
+@font-face {
+  font-family: 'Instrument Sans';
+  src: url('./assets/fonts/instrument-sans-latin-wght-normal.woff2') format('woff2');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193,
+    U+2212, U+2215, U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: 'Instrument Sans';
+  src: url('./assets/fonts/instrument-sans-latin-ext-wght-normal.woff2') format('woff2');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+  unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF,
+    U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0,
+    U+2113, U+2C60-2C7F, U+A720-A7FF;
+}
+
+/* The assertion. Regular and italic — the italic is what a quotation is set in,
+   because the document's words belong to the document, never to the product. */
+@font-face {
+  font-family: 'Instrument Serif';
+  src: url('./assets/fonts/instrument-serif-latin-400-normal.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Instrument Serif';
+  src: url('./assets/fonts/instrument-serif-latin-400-italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+/* The measurement. Page numbers, paragraph marks, states, scores. */
+@font-face {
+  font-family: 'JetBrains Mono';
+  src: url('./assets/fonts/jetbrains-mono-latin-wght-normal.woff2') format('woff2');
+  font-weight: 400 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  color-scheme: light;
+
+  /* ---- the six locked colours (§06 Färg som betydelse), on paper ----
+   * (and, further down, the one this product adds: Avbrott.)
+   *
+   * The identity's shell is dark, and that was written for a phone whose whole
+   * screen is one question and one answer. This is the desktop: a board reads an
+   * invoice case, a queue of post and a full-size PDF here, for an hour at a
+   * time. "Dokumenten är det enda i gränssnittet som är vitt" means, on a large
+   * screen, an A4 sheet glowing out of near-black — which is the thing that was
+   * hard to read.
+   *
+   * So the workspace runs on the identity's other ground, the one it specifies
+   * itself: **på papper**. Warm, not clinical. Same mark, same three cuts, same
+   * six meanings — inverted, which the identity document treats as a legitimate
+   * form rather than a departure.
+   *
+   * The state colours are the identity's own paper values (#137855, #8A5D06),
+   * not lightened guesses: the mid-tone versions are unreadable as text on a
+   * light ground, and a colour nobody can read is a colour that has stopped
+   * carrying its meaning.
+   */
+
+  /* Papper — the ground. Warm, never pure white. */
+  --papper: #F7F5F3;
+  --surface-1: #FBFAF9;   /* a hair off the ground: a quiet section */
+  --surface-2: #F7F5F3;   /* the ground itself, used as an inset */
+  --surface-3: #EFECE8;   /* pressed, hovered, or genuinely inert */
+  --field: #FFFFFF;       /* inputs and cards lift *off* the paper */
+
+  /* Bläck — warm near-black, never #000. */
+  --black: #37322F;
+  --ink: #37322F;
+  --ink-muted: #605A57;
+  --ink-subtle: #6F6A66;
+
+  /* Sökljus — work in progress only: sweeping, reading, indexing. Drawn as a
+     ring, never set as text: on paper it measures 4.34:1, which clears the 3:1
+     a graphic needs and misses the 4.5:1 a word needs. If it ever has to carry
+     a word, use --sokljus-text. */
+  --sokljus: #3A6FD8;
+  --sokljus-text: #2C5CBE;
+  /* Belagt — verified against source text. Never a general success colour. */
+  --belagt: #137855;
+  /* Vägran — one meaning: no proof exists. */
+  --vagran: #8A5D06;
+  /* Handling — links and text actions. Never a state. */
+  --handling: #1A4FD0;
+  --handling-hover: #123CA8;
+  /* The marked passage inside a document. Lives only within the paper. */
+  --remsgul: #FFD600;
+
+  /* ---- surfaces & text ---- */
+  --background: var(--papper);
+  --foreground: var(--ink);
+  --card: var(--field);
+  --card-foreground: var(--ink);
+  --card-hover: var(--surface-1);
+  --popover: #FFFFFF;
+  --popover-foreground: var(--ink);
+  --muted: var(--surface-3);
+  --muted-foreground: var(--ink-muted);
+  --subtle-foreground: var(--ink-subtle);
+  --secondary: var(--surface-3);
+  --secondary-foreground: var(--ink);
+  --surface-accent: var(--surface-3);
+  --surface-accent-foreground: var(--ink);
+  --border: #E4E0DC;
+  --border-strong: #CDC7C1;
+  --input: #DAD5D0;
+  --ring: var(--handling);
+  --ring-glow: rgb(26 79 208 / 20%);
+  --muted-hover: #E6E2DD;
+
+  /* The primary action is the ink, as it is on paper. Handling stays what the
+     identity reserves it for — links and text actions — rather than becoming
+     the generic blue button every product already has.
+     Its hover is therefore a darker ink, not a change of hue: a control does
+     not become a different kind of thing under the pointer. */
+  --primary: var(--ink);
+  --primary-hover: #262220;
+  --primary-foreground: #FFFFFF;
+
+  --sidebar: #FFFFFF;
+  --sidebar-foreground: var(--ink);
+  --sidebar-accent: var(--surface-3);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: #E4E0DC;
+  --sidebar-ring: var(--ring);
+
+  /* ---- the state colours, as states ---- */
+  --ok: var(--belagt);
+  --ok-soft: #E7F3ED;
+  --ok-border: #A9D6C3;
+
+  --warn: var(--vagran);
+  --warn-soft: #FAF1DF;
+  --warn-border: #E0C793;
+
+  /* ---- the seventh colour: Avbrott ----
+   *
+   * The identity has no red, because it was written for a product whose states
+   * are belagt, ej belagt, söker and vila — four things the engine can know
+   * about *evidence*. This product also has machinery, and machinery breaks:
+   * an upload fails, the model host is unreachable, a session expires, a
+   * document is about to be destroyed. Those are not states of the evidence and
+   * they must never be said in a colour that is.
+   *
+   * So one colour is added, and its role is drawn as tightly as the other six:
+   *
+   *   **Avbrott — the machinery, never the evidence.** An operation that
+   *   failed, or one that is about to destroy something. It says nothing about
+   *   what a document contains, and it can therefore never appear on an answer,
+   *   a citation, a finding, a signal or a date.
+   *
+   * Two consequences follow, and both were violations before this rule existed:
+   *
+   *   - A **refusal is not red.** "Det står inte i era dokument" is the product
+   *     working exactly as promised; it is Vägran (#8A5D06), the same amber as
+   *     an empty mark. Red there would say the product broke when it did the
+   *     one thing it exists to do.
+   *   - **Overdue is not red.** A date that has passed is a *measurement*, and
+   *     §07 gives measurements to the mono, not to a hue. Overdue reads as
+   *     ink-strength mono against muted surroundings (see .matt--overdue), plus
+   *     the word itself. Nothing is broken; a day went by.
+   *
+   * The value is unchanged from the undecided token it replaces — measured at
+   * 6.24:1 on paper, the same band as Handling and the muted ink, so it is
+   * legible without being the loudest thing on a screen it should rarely be on
+   * at all.
+   */
+  --avbrott: #A82F22;
+  --avbrott-soft: #FBEBE8;
+  --avbrott-soft-hover: #F6DAD4;
+  --avbrott-border: #E3B0A8;
+
+  /* Aliases. `--danger` reads better at call sites; `--destructive` is kept so
+     older rules resolve. Both mean Avbrott and nothing else. */
+  --destructive: var(--avbrott);
+  --danger: var(--avbrott);
+  --danger-soft: var(--avbrott-soft);
+  --danger-border: var(--avbrott-border);
+
+  /* Links and interactive text: Handling. */
+  --accent-fg: var(--handling);
+  --accent-soft-bg: #E9EEFB;
+  --accent-border: #B9C8F0;
+
+  /* The mark on paper is monochrome ink — §05 "PÅ PAPPER · INVERTERAD:
+     enfärgat svart. Aldrig tillståndsfärg." */
+  --brand: var(--ink);
+  --brand-soft: #EFECE8;
+  --brand-border: #CDC7C1;
+
+  /* ---- geometry: the signature ---- */
+  --radius: 0.625rem;
+  --radius-sm: calc(var(--radius) - 4px);   /*  6px */
+  --radius-md: calc(var(--radius) - 2px);   /*  8px */
+  --radius-lg: var(--radius);               /* 10px */
+  --radius-xl: calc(var(--radius) + 4px);   /* 14px */
+  --radius-2xl: calc(var(--radius) + 8px);  /* 18px — controls */
+  --radius-3xl: calc(var(--radius) + 14px); /* 24px — cards */
+  --radius-pill: 999px;
+  /* Multi-line content — prose, a quote, a textarea, a tall prompt button — is
+     not a control and must not be shaped like one. A 64px-tall pill is what
+     makes an operational screen read as a toy. */
+  --radius-block: 0.75rem;                  /* 12px */
+
+  --shadow-xs: 0 1px 2px 0 rgb(55 50 47 / 0.05);
+  --shadow-sm: 0 1px 3px 0 rgb(55 50 47 / 0.07), 0 1px 2px -1px rgb(55 50 47 / 0.06);
+  --shadow-md: 0 4px 12px -2px rgb(55 50 47 / 0.09);
+  --shadow-lg: 0 16px 40px -12px rgb(55 50 47 / 0.18);
+
+  /* ---- type: three cuts, three jobs, never mixed (§07) ---- */
+  --font-sans: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', Cantarell,
+    'Noto Sans', sans-serif;
+  --font-serif: 'Instrument Serif', 'Iowan Old Style', Georgia, 'Times New Roman', serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  /* §07 puts the sans between 12 and 17px. The first pass lived at the floor
+     of that range and set almost everything at 13–14, which is why the screen
+     read as one flat grey block: a ramp needs steps a reader can feel. */
+  --text-xs: 0.75rem;     /* 12px — micro-labels only, never prose */
+  --text-sm: 0.875rem;    /* 14px — secondary */
+  --text-base: 0.9375rem; /* 15px — the interface's size */
+  --text-md: 0.9375rem;
+  --text-lg: 1.0625rem;   /* 17px — the top of the sans range */
+  --text-xl: 1.5rem;      /* 24px */
+  --text-2xl: 1.875rem;   /* 30px */
+
+  /* ---- legacy aliases ---- */
+  --bg-color: var(--background);
+  --bg-workspace: var(--background);
+  --text-primary: var(--foreground);
+  --text-secondary: var(--muted-foreground);
+  --text-muted: var(--subtle-foreground);
+  --text-tertiary: var(--subtle-foreground);
+
+  --panel-bg: var(--card);
+  --panel-bg-soft: rgb(255 255 255 / 3%);
+  --panel-border: var(--border);
+  --panel-hover: var(--card-hover);
+
+  --primary-action: var(--primary);
+  /* Ink, darkened — never Handling. This pointed at --handling-hover, which
+     turned every black primary button in the product blue on hover and
+     contradicted the rule three lines above it. Roughly forty controls read
+     this token, including Puck's own interactive-hover inside Hemsidan. */
+  --primary-action-hover: var(--primary-hover);
+
+  --status-ok: var(--ok);
+  --status-ok-dim: var(--ok-soft);
+  --status-warning: var(--warn);
+  --status-warning-dim: var(--warn-soft);
+  --status-error: var(--danger);
+  --status-error-dim: var(--danger-soft);
+  --warn-bg: var(--warn-soft);
+
+  --accent: var(--accent-fg);
+  --accent-soft: var(--accent-soft-bg);
+  --ai-accent: var(--accent-fg);
+  --ai-accent-dim: var(--accent-soft-bg);
+}
+
+/* ========================================================================= */
+/* Base                                                                      */
+/* ========================================================================= */
+
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  /* Instrument Serif ships one weight. Without this, `font-weight: 600` on a
+     serif heading does not fail — the browser smears the 400 outlines into a
+     fake bold, which is why several headings looked slightly out of focus and
+     lost their tracking. Off globally: the sans and the mono carry real
+     400–700, so nothing legitimate is synthesised anyway, and a future mistake
+     now shows up as "not bold" instead of as a damaged typeface. */
+  font-synthesis-weight: none;
+  /* §07: 1.5–1.65. Light text on a near-black ground needs the upper half of
+     that — the tighter setting is what made paragraphs read as a wall. */
+  line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+
+/* §07: the serif is what the product *asserts* — answers, page titles, the
+   words of a document. It is set at −1…−4.5% tracking and never below 22px,
+   because below that the serif stops being a voice and becomes small print.
+   h3 is not in this group: in this product it is a *sub*heading that labels a
+   part of the interface, and an interface label explains rather than asserts. */
+h1, h2 {
+  margin: 0;
+  font-family: var(--font-serif);
+  font-weight: 400;
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+}
+
+/* h3–h6 label parts of the interface rather than assert anything, so they stay
+   in the sans. Mixing the roles is the one thing §07 forbids outright. */
+h3, h4, h5, h6 {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  line-height: 1.3;
+  letter-spacing: -0.005em;
+}
+
+/* The measurement: page numbers, paragraph marks, states, scores. Uppercase at
+   +0.10…+0.20em, and always as data rather than as prose. */
+.matt {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+}
+
+/* A date that has passed.
+ *
+ * This is the shape "overdue" takes in this product, and the reason it has a
+ * shape rather than a colour is written beside --avbrott: a passed date is not
+ * a broken machine and not an unproven claim, so neither of those two colours
+ * may say it. It is arithmetic — and §07 gives arithmetic to the mono.
+ *
+ * What makes it findable at a glance is therefore contrast of *weight*, not of
+ * hue: full-strength ink and a boxed measurement, in a row where every other
+ * cell is muted. The surrounding rule (.rule-overdue) is the same idea at the
+ * scale of a card or a column. */
+.matt--overdue {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 7px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--surface-3);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;   /* 11px — a measurement, set below the prose */
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--foreground);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+/* The one edge that says "this one first". Ink, because ink is the strongest
+   thing on paper and the only emphasis that claims nothing. */
+.rule-overdue { box-shadow: inset 3px 0 0 var(--ink); }
+
+/* A quotation is the document speaking. Serif italic, and never paraphrased
+   inside the quotation marks (§09 Röst). */
+.citat {
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 1.375rem;   /* 22px — §07's floor for the serif */
+  line-height: 1.42;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+}
+
+p { margin: 0; }
+
+button, input, select, textarea { font: inherit; color: inherit; }
+
+.tabular,
+td.numeric,
+.amount { font-variant-numeric: tabular-nums; }
+
+code, pre, kbd, samp { font-family: var(--font-mono); }
+
+/* ---- scrollbars ---- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--surface-3);
+  border: 3px solid transparent;
+  background-clip: content-box;
+  border-radius: var(--radius-pill);
+}
+::-webkit-scrollbar-thumb:hover { background: #B3ACA6; background-clip: content-box; }
+
+/* ---- one focus treatment for the whole product ---- */
+:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* ========================================================================= */
+/* The mark (§02 Geometrin, §03 Tillstånden)                                 */
+/* ========================================================================= */
+
+.traff-mark {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  box-sizing: border-box;
+  border-style: solid;
+  border-radius: 50%;
+  /* The gap is always empty. No tint, no gradient — it is the search. */
+  background: transparent;
+}
+
+.traff-mark-core { border-radius: 50%; background: currentColor; }
+
+/* A · Varumärket — complete, monochrome, never a state colour. */
+.traff-mark--brand { border-color: var(--foreground); color: var(--foreground); }
+
+/* B · Statusmärket — empty until the proof exists. */
+.traff-mark--vila { border-color: var(--foreground); opacity: 0.3; }
+.traff-mark--soker { border-color: var(--sokljus); }
+.traff-mark--belagt { border-color: var(--belagt); color: var(--belagt); }
+.traff-mark--ejbelagt { border-color: var(--vagran); }
+
+/* Below the minimum size the ring stops reading, and the identity's own
+   fallback is the solid dot without a ring. */
+.traff-mark--dot { display: inline-block; border-radius: 50%; background: currentColor; }
+
+/* ========================================================================= */
+/* Controls — the site's own metrics                                         */
+/* ========================================================================= */
+
+.ui-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex-shrink: 0;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-2xl);
+  background: transparent;
+  background-clip: padding-box;
+  color: var(--foreground);
+  font-size: var(--text-base);
+  font-weight: 500;
+  line-height: 1.25;
+  white-space: nowrap;
+  cursor: pointer;
+  outline: none;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.ui-btn > svg { flex-shrink: 0; width: 16px; height: 16px; }
+
+.ui-btn:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.ui-btn:disabled,
+.ui-btn[aria-disabled='true'] { opacity: 0.5; pointer-events: none; }
+
+.ui-btn--primary { background: var(--primary); color: var(--primary-foreground); }
+.ui-btn--primary:hover { background: var(--primary-action-hover); }
+
+.ui-btn--outline { border-color: var(--input); }
+.ui-btn--outline:hover { background: var(--surface-accent); }
+
+.ui-btn--secondary { background: var(--secondary); color: var(--secondary-foreground); }
+.ui-btn--secondary:hover { background: var(--muted-hover); }
+
+.ui-btn--ghost { color: var(--muted-foreground); }
+.ui-btn--ghost:hover { background: var(--surface-accent); color: var(--foreground); }
+
+/* Avbrott, and only ever for the two things it means: an operation that failed,
+   or one that is about to destroy something. */
+.ui-btn--destructive {
+  background: var(--avbrott-soft);
+  border-color: var(--avbrott-border);
+  color: var(--avbrott);
+}
+.ui-btn--destructive:hover { background: var(--avbrott-soft-hover); }
+
+.ui-btn--sm { height: 28px; padding: 0 10px; font-size: var(--text-sm); }
+.ui-btn--sm > svg { width: 14px; height: 14px; }
+.ui-btn--xs { height: 24px; padding: 0 9px; font-size: var(--text-xs); }
+.ui-btn--xs > svg { width: 13px; height: 13px; }
+
+.ui-btn--icon { width: 32px; padding: 0; }
+.ui-btn--icon.ui-btn--sm { width: 28px; }
+.ui-btn--icon.ui-btn--xs { width: 24px; }
+
+.ui-link {
+  display: inline;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--accent-fg);
+  font: inherit;
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  /* A link underline on paper should be a shadow of the link, not a second
+     line competing with it. (The value this replaced was a pale blue mixed for
+     a near-black ground and read as a scratch on this one.) */
+  text-decoration-color: rgb(26 79 208 / 40%);
+  cursor: pointer;
+}
+/* Handling darkens on hover — the pair --handling/--handling-hover exists for
+   exactly this, and a text action that only changes its underline is a text
+   action most readers never notice is one. */
+.ui-link:hover { color: var(--handling-hover); text-decoration-color: currentColor; }
+.ui-link:disabled { color: var(--subtle-foreground); text-decoration: none; cursor: not-allowed; }
+
+/* ---- fields ---- */
+.ui-input,
+.ui-select,
+.ui-textarea {
+  width: 100%;
+  min-width: 0;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-2xl);
+  background: transparent;
+  color: var(--foreground);
+  font-size: var(--text-base);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.ui-textarea {
+  height: auto;
+  min-height: 64px;
+  padding: 8px 12px;
+  border-radius: var(--radius-block);
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.ui-input::placeholder,
+.ui-textarea::placeholder { color: var(--subtle-foreground); }
+
+.ui-input:focus-visible,
+.ui-select:focus-visible,
+.ui-textarea:focus-visible {
+  outline: none;
+  border-color: var(--ring);
+  box-shadow: 0 0 0 3px var(--ring-glow);
+}
+
+.ui-input:disabled,
+.ui-select:disabled,
+.ui-textarea:disabled { opacity: 0.55; cursor: not-allowed; }
+
+/* WebKitGTK draws a closed <select> with the platform widget: without
+   `color-scheme` that is near-black text on a near-black panel and the control
+   renders empty, and without explicit option colours the drop-down it opens
+   does the same. Both are needed, on every select in the product. */
+select, input, textarea { color-scheme: light; }
+select option { background: #FFFFFF; color: var(--ink); }
+
+.ui-select {
+  appearance: none;
+  padding-right: 30px;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted-foreground) 50%),
+                    linear-gradient(135deg, var(--muted-foreground) 50%, transparent 50%);
+  background-position: calc(100% - 15px) 14px, calc(100% - 11px) 14px;
+  background-size: 4px 4px, 4px 4px;
+  background-repeat: no-repeat;
+  cursor: pointer;
+}
+
+.ui-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+
+.ui-field > span,
+.ui-label {
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--foreground);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.ui-hint { font-size: var(--text-base); line-height: 1.5; color: var(--muted-foreground); }
+
+/* ---- badges: pills, 20px tall, 12px ---- */
+.ui-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  width: fit-content;
+  flex-shrink: 0;
+  height: 20px;
+  padding: 0 8px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+.ui-badge > svg { width: 12px; height: 12px; flex-shrink: 0; }
+
+.ui-badge--outline { border-color: var(--border-strong); color: var(--muted-foreground); }
+.ui-badge--muted { background: var(--muted); color: var(--muted-foreground); }
+.ui-badge--ok { background: var(--ok-soft); border-color: var(--ok-border); color: var(--ok); }
+.ui-badge--warn { background: var(--warn-soft); border-color: var(--warn-border); color: var(--warn); }
+.ui-badge--danger { background: var(--avbrott-soft); border-color: var(--avbrott-border); color: var(--avbrott); }
+.ui-badge--accent { background: var(--accent-soft-bg); border-color: var(--accent-border); color: var(--accent-fg); }
+
+.ui-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 7px;
+  border-radius: var(--radius-pill);
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- segmented control ---- */
+.ui-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 38px;
+  padding: 3px;
+  border-radius: var(--radius-pill);
+  background: var(--muted);
+}
+
+.ui-tabs button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  height: 100%;
+  padding: 0 14px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--muted-foreground);
+  font-size: var(--text-base);
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.ui-tabs button:hover { color: var(--foreground); }
+.ui-tabs button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.ui-tabs button[aria-selected='true'],
+.ui-tabs button.active {
+  background: var(--surface-accent);
+  color: var(--foreground);
+}
+.ui-tabs button > svg { width: 15px; height: 15px; }
+
+/* ---- surfaces ---- */
+.ui-card {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-3xl);
+  background: var(--card);
+}
+
+.ui-separator { height: 1px; background: var(--border); border: 0; }
+
+/* ---- table ---- */
+.ui-table { width: 100%; border-collapse: collapse; font-size: var(--text-base); }
+
+.ui-table th {
+  height: 40px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+  color: var(--muted-foreground);
+  font-size: var(--text-base);
+  font-weight: 400;
+  text-align: left;
+  white-space: nowrap;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.ui-table td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.ui-table tbody tr:last-child td { border-bottom: none; }
+.ui-table tbody tr { transition: background-color 0.12s ease; }
+.ui-table tbody tr:hover { background: var(--surface-2); }
+
+/* ---- empty state ---- */
+.ui-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 56px 24px;
+  text-align: center;
+}
+
+.ui-empty-media {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  margin-bottom: 10px;
+  border-radius: var(--radius-xl);
+  background: var(--muted);
+  color: var(--muted-foreground);
+}
+
+.ui-empty h3 { font-size: var(--text-lg); font-weight: 500; letter-spacing: -0.01em; color: var(--foreground); }
+.ui-empty p { max-width: 46ch; font-size: var(--text-base); line-height: 1.5; color: var(--muted-foreground); }
+.ui-empty .ui-btn { margin-top: 10px; }
+
+/* ---- loading ---- */
+.ui-loading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 20px 2px;
+  color: var(--muted-foreground);
+  font-size: var(--text-base);
+}
+
+.ui-skeleton { border-radius: var(--radius-2xl); background: var(--muted); animation: ui-pulse 1.8s ease-in-out infinite; }
+@keyframes ui-pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.45; } }
+
+.spin { animation: ui-spin 1s linear infinite; }
+@keyframes ui-spin { to { transform: rotate(360deg); } }
+
+/* ---- notices ---- */
+.ui-notice {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--card);
+  font-size: var(--text-base);
+  line-height: 1.5;
+}
+
+.ui-notice--error { background: var(--danger-soft); border-color: var(--danger-border); }
+.ui-notice--ok { background: var(--ok-soft); border-color: var(--ok-border); }
+.ui-notice--warn { background: var(--warn-soft); border-color: var(--warn-border); }
+
+/* ---- section heading ---- */
+/* §07 puts the serif between 22 and 200px. Below that it stops being a voice
+   and turns into small print, which is exactly how the 17px version read. */
+.ui-section-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--font-serif);
+  font-size: var(--text-xl);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  color: var(--foreground);
+}
+
+.ui-section-title > svg { width: 18px; height: 18px; }
+
+.ui-section-title > svg { color: var(--muted-foreground); flex-shrink: 0; }
+
+.ui-eyebrow { font-size: var(--text-xs); font-weight: 500; color: var(--subtle-foreground); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

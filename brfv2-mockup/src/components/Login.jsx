@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Loader2, AlertCircle, Sparkles } from 'lucide-react';
+import { Loader2, AlertCircle } from 'lucide-react';
+import TraffMark from './TraffMark';
 import { api } from '../api';
 import './Login.css';
 
@@ -29,9 +30,14 @@ function Login({ onLoggedIn, modelStatus = null }) {
   return (
     <div className="login-screen">
       <div className="login-panel glass-panel">
-        <div className="login-mark"><Sparkles size={22} /></div>
-        <h1 className="login-title">Logga in</h1>
-        <p className="login-subtitle">Fortsätt till din förenings dokumentarbetsyta.</p>
+        {/* §05 Lockup: the mark stands before the name at cap height. This is
+            the first thing anyone sees, so it says who is speaking before it
+            asks for anything. */}
+        <div className="login-lockup">
+          <TraffMark size={30} decorative />
+          <h1 className="login-title">Träff</h1>
+        </div>
+        <p className="login-subtitle">Frågor om föreningens dokument, besvarade ur föreningens dokument.</p>
         {modelStatus && <div className="login-model-status">{modelStatus}</div>}
 
         <form className="login-form" onSubmit={handleSubmit}>

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { Folders, Search as SearchIcon, FileText, ArrowRight, Loader2, Sparkles, AlertCircle, Upload, CheckCircle2, AlertTriangle, X, ChevronRight, CornerDownRight, ArrowLeft, ZoomIn, ZoomOut, ThumbsDown, MessageCircle, Info, Trash2 } from 'lucide-react';
+import { Folders, Search as SearchIcon, FileText, ArrowRight, Loader2, AlertCircle, Upload, CheckCircle2, AlertTriangle, X, ChevronRight, CornerDownRight, ArrowLeft, ZoomIn, ZoomOut, ThumbsDown, MessageCircle, Info, Trash2 } from 'lucide-react';
+import TraffMark from './components/TraffMark';
 import Login from './components/Login';
 import PdfPane from './components/PdfPane';
 import Setup from './components/Setup';
@@ -15,6 +16,40 @@ import './App.css';
 // must not be shown alongside them even though AskResponse still carries
 // provider/model for logging purposes.
 const NO_MODEL_REFUSAL_REASONS = ['no_documents', 'low_relevance'];
+
+/**
+ * The state of one answer, said the way the identity says it (§01, §03).
+ *
+ * The mark is the primary indicator and never the only one: the mono label
+ * beside it carries the same state in words, so nothing here depends on telling
+ * green from amber. Which state is shown is decided by evidence and by nothing
+ * else — the core is drawn if and only if a citation survived verification,
+ * because "en fylld kärna utan citat är en lögn i formspråket".
+ */
+const STATE_TEXT = {
+  soker: 'Söker',
+  belagt: 'Belagt',
+  ejbelagt: 'Ej belagt',
+  avbrott: 'Avbrott',
+};
+
+function AnswerState({ state }) {
+  return (
+    <p className={`answer-state answer-state--${state}`}>
+      {state === 'avbrott'
+        ? <AlertTriangle size={14} aria-hidden="true" />
+        : <TraffMark size={16} variant="status" state={state} decorative />}
+      <span>{STATE_TEXT[state]}</span>
+    </p>
+  );
+}
+
+/** Belagt only where a verified citation exists; never on the strength of prose. */
+const answerState = (msg) => {
+  if (msg.pending) return 'soker';
+  if (msg.refusal) return 'ejbelagt';
+  return msg.citations?.length ? 'belagt' : null;
+};
 
 function ModelStatusBadge({ status }) {
   const primary =
@@ -526,7 +561,7 @@ function App() {
     setWorkspaceChatInput('');
 
     const newUserMsg = { role: 'user', content: query };
-    const pendingAiMsg = { role: 'ai', pending: true, content: 'Analyserar dokumentet (MOCK)...' };
+    const pendingAiMsg = { role: 'ai', pending: true, content: 'Söker i dokumentet…' };
 
     setWorkspaceChatMessages(prev => [...prev, newUserMsg, pendingAiMsg]);
     setWorkspaceChatBusy(true);
@@ -538,7 +573,7 @@ function App() {
         if (demoState === 'no-answer') {
            return [...withoutPending, {
              role: 'ai',
-             content: 'Jag hittar ingen information i det här dokumentet som besvarar din fråga. Jag avstår från att svara för att undvika gissningar.',
+             content: 'Det står inte i det här dokumentet.',
              refusal: true
            }];
         }
@@ -546,7 +581,7 @@ function App() {
         if (demoState === 'conflict') {
            return [...withoutPending, {
              role: 'ai',
-             content: 'Det finns motstridig information i dokumentet. På sida 1 står det att jouren startar 15 november, men ett senare tillägg på sida 2 antyder att den kan starta 1 december vid mildväder. Det rekommenderas att verifiera detta med styrelsen.',
+             content: 'Dokumentet säger två olika saker. Sida 1 anger 15 november. Ett tillägg på sida 2 anger 1 december vid mildväder. Styrelsen får avgöra vilken som gäller.',
              refusal: true,
              warning: true,
              citations: [
@@ -589,7 +624,7 @@ function App() {
     setIsMobileMenuOpen(false);
     setChatError(null);
 
-    setChatMessages(prev => [...prev, { role: 'user', content: question }, { role: 'ai', pending: true, content: 'Genererar svar…' }]);
+    setChatMessages(prev => [...prev, { role: 'user', content: question }, { role: 'ai', pending: true, content: 'Söker i högen…' }]);
     setChatBusy(true);
 
     api.ask(brfId, question)
@@ -677,7 +712,7 @@ function App() {
         />
       )}
       {toastMessage && (
-        <div role="status" aria-live="polite" style={{ position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)', background: toastMessage.type === 'success' ? 'var(--status-ok)' : 'var(--panel-bg)', color: toastMessage.type === 'success' ? '#000' : '#fff', padding: '12px 24px', borderRadius: '8px', zIndex: 1000, display: 'flex', alignItems: 'center', gap: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.5)', border: toastMessage.type !== 'success' ? '1px solid var(--panel-border)' : 'none' }}>
+        <div role="status" aria-live="polite" style={{ position: 'fixed', bottom: '24px', left: '50%', transform: 'translateX(-50%)', background: 'var(--popover)', color: 'var(--foreground)', padding: '12px 20px', borderRadius: 'var(--radius-2xl)', zIndex: 1000, display: 'flex', alignItems: 'center', gap: '8px', boxShadow: 'var(--shadow-lg)', border: '1px solid var(--border-strong)' }}>
           {toastMessage.type === 'success' ? <CheckCircle2 size={18} /> : <AlertCircle size={18} />}
           <span style={{ fontWeight: '500', fontSize: '14px' }}>{toastMessage.message}</span>
         </div>
@@ -708,7 +743,7 @@ function App() {
 
       <div className="mock-banner-compact">
         <span className="mock-badge-inline">PILOT</span>
-        Verifierad pilotslinga: förening, dokument, uppladdning, AI-svar, källor och PDF-markering använder den riktiga backenden. Sök, dokumentchatt, kvalitetskontroll och inställningar ingår inte i piloten.
+        Verifierad pilotslinga: förening, dokument, uppladdning, AI-svar, källor och PDF-markering använder den riktiga tjänsten. Sök, dokumentchatt, kvalitetskontroll och inställningar ingår inte i piloten.
       </div>
 
       <AppNavigation
@@ -820,7 +855,7 @@ function App() {
 
                     <div className="panel-section pilot-unavailable-note">
                       <h3>Utanför pilotens omfattning</h3>
-                      <p>Kvalitetskontroll är inte tillgänglig i den verifierade pilotvyn. Bevakningar finns i den installerade applikationen, under Bevakningar i menyn.</p>
+                      <p>Kvalitetskontroll ingår inte i den verifierade pilotvyn. Bevakningar finns i den installerade applikationen, under Bevakningar i menyn.</p>
                     </div>
                   </div>
                 </div>
@@ -852,7 +887,7 @@ function App() {
                     </div>
                     <div className="extraction-content">
                       <div className="extracted-text-box empty">
-                         Textextraktionsvyn är inte kopplad till den riktiga backenden än.
+                         Den utlästa texten är inte kopplad till den riktiga tjänsten än.
                       </div>
                     </div>
 
@@ -891,16 +926,13 @@ function App() {
 
                   <div className="workspace-chat-container half full-width-mobile">
                     <div className="workspace-chat-header">
-                       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', color: 'var(--ai-accent)' }}>
-                         <Sparkles size={18} />
-                         <span style={{ fontWeight: '500' }}>AI-chatt för detta dokument</span>
-                       </div>
+                       <span style={{ fontWeight: 500 }}>AI-chatt för detta dokument</span>
 
                        <div className="demo-state-fence">
                          <span className="demo-state-fence-label">Dev</span>
                          <select value={demoState} onChange={e => setDemoState(e.target.value)} title="Ändra vilket svar AI:n tvingas ge i mockupen." aria-label="Välj AI svarstillstånd">
                            <option value="standard">Svar med citat</option>
-                           <option value="no-answer">Otillräckligt underlag</option>
+                           <option value="no-answer">Utan belägg</option>
                            <option value="conflict">Motstridiga källor</option>
                          </select>
                        </div>
@@ -927,16 +959,22 @@ function App() {
                         workspaceChatMessages.map((msg, idx) => (
                           <div key={idx} className={`chat-message ${msg.role}`}>
                             <div className="chat-avatar">
-                              {msg.role === 'ai' ? (msg.pending ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />) : 'DU'}
+                              {msg.role === 'ai' ? (msg.pending ? <Loader2 size={14} className="spin" /> : 'AI') : 'DU'}
                             </div>
                             <div style={{ flex: 1 }}>
-                              <div className="chat-content" style={{ borderColor: msg.refusal ? 'var(--status-error-dim)' : (msg.warning ? 'var(--status-warning-dim)' : '') }}>
-                                {msg.refusal && !msg.warning && <div className="chat-refusal-header"><AlertCircle size={14} /> Otillräckligt underlag</div>}
-                                {msg.warning && <div className="chat-refusal-header warning"><AlertTriangle size={14} /> Motstridiga källor</div>}
-                                {msg.content}
+                              <div className={`chat-content chat-content--answer${msg.refusal ? ' is-ejbelagt' : ''}`}>
+                                {msg.refusal && !msg.warning && <AnswerState state="ejbelagt" />}
+                                {msg.warning && (
+                                  <p className="answer-state answer-state--ejbelagt">
+                                    <AlertTriangle size={14} aria-hidden="true" />
+                                    <span>Motstridiga källor</span>
+                                  </p>
+                                )}
+                                <div className="answer-body">{msg.content}</div>
 
                                 {msg.citations && (
                                   <div className="chat-citations">
+                                    <p className="chat-citations-head">Hämtat ur högen</p>
                                     {msg.citations.map((c, i) => (
                                       <div key={i} className="citation-pill interactive" onClick={() => setPdfPage(c.page)} title={`Gå till sida ${c.page}`} tabIndex={0} role="button" onKeyDown={e => e.key === 'Enter' && setPdfPage(c.page)}>
                                         <span className="citation-number">[{i + 1}]</span>
@@ -970,7 +1008,7 @@ function App() {
                           value={workspaceChatInput}
                           onChange={(e) => setWorkspaceChatInput(e.target.value)}
                           onKeyDown={(e) => e.key === 'Enter' && executeWorkspaceChat()}
-                          placeholder={`Fråga om ${selectedDocument.name}...`}
+                          placeholder={`Fråga om ${selectedDocument.name}…`}
                           disabled={workspaceChatBusy}
                         />
                         <button className="chat-send-btn" onClick={() => executeWorkspaceChat()} disabled={workspaceChatBusy || !workspaceChatInput.trim()} aria-label="Skicka fråga">
@@ -1002,7 +1040,7 @@ function App() {
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && executeSearch(searchQuery)}
-                      placeholder="Sök efter avtal, paragrafer eller ämnen..."
+                      placeholder="Sök efter avtal, paragrafer eller ämnen…"
                       style={{ fontSize: '16px' }}
                     />
                     <button className="search-action-btn primary" onClick={() => executeSearch(searchQuery)}>
@@ -1052,8 +1090,16 @@ function App() {
               <div className="tab-content docs-overview" style={{ maxWidth: '1200px' }}>
                 <header className="page-header">
                   <div className="page-header-text">
-                    <h2 style={{ fontSize: '24px', fontWeight: '600', margin: 0 }}>Dokument</h2>
-                    <p style={{ color: 'var(--text-secondary)', fontSize: '14px', margin: '4px 0 0 0' }}>{activeBrfName ? `Dokument för ${activeBrfName}.` : 'Hantera dokument.'}</p>
+                    <h2 className="page-title">Dokument</h2>
+                    <p className="page-header-sub">
+                      {activeBrfName ? `Dokument för ${activeBrfName}.` : 'Hantera dokument.'}
+                      {documents.length > 0 && (
+                        <span className="page-header-count">
+                          {' · '}{documents.length} dokument{' · '}
+                          {documents.reduce((sum, d) => sum + (d.pages || 0), 0)} sökbara sidor
+                        </span>
+                      )}
+                    </p>
                   </div>
                   {isAdmin && (
                     <>
@@ -1095,7 +1141,7 @@ function App() {
                     <SearchIcon size={16} />
                     <input
                       type="text"
-                      placeholder="Sök dokumentnamn..."
+                      placeholder="Sök dokumentnamn…"
                       value={docsSearchQuery}
                       onChange={(e) => setDocsSearchQuery(e.target.value)}
                       aria-label="Sök dokument"
@@ -1163,8 +1209,13 @@ function App() {
                                 </button>
                               </td>
                               <td className="meta-cell">{doc.date}</td>
+                              {/* Every listed document has this status, because
+                                  ingestion is synchronous — a green badge on
+                                  every row of every library is decoration, and
+                                  decoration is what makes a real badge
+                                  invisible. */}
                               <td>
-                                <span className="status-badge ok"><CheckCircle2 size={12}/> Färdigbehandlad</span>
+                                <span className="status-text muted"><CheckCircle2 size={13}/> Färdigbehandlad</span>
                               </td>
                               {isAdmin && (
                                 <td className="action-col" onClick={(e) => e.stopPropagation()}>
@@ -1236,7 +1287,7 @@ function App() {
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && executeSearch(searchQuery)}
-                      placeholder="Sök i text..."
+                      placeholder="Sök i text…"
                     />
                     <button className="search-action-btn primary" onClick={() => executeSearch(searchQuery)}>
                       {searchIsLoading ? <Loader2 size={16} className="spin" /> : 'Sök'}
@@ -1246,7 +1297,7 @@ function App() {
                   {!searchIsLoading && searchResults && (
                     <div className="search-summary-text" style={{ display: 'flex', justifyContent: 'space-between', marginTop: '16px' }}>
                       <span>Hittade {searchResults.totalPassages} träffar i {searchResults.totalDocuments} dokument.</span>
-                      <button onClick={() => executeGeneralChat(searchQuery)} className="link-button ai">Fråga AI:n istället <Sparkles size={14}/></button>
+                      <button onClick={() => executeGeneralChat(searchQuery)} className="link-button ai">Fråga AI:n istället</button>
                     </div>
                   )}
                 </div>
@@ -1254,7 +1305,7 @@ function App() {
                 {searchIsLoading ? (
                   <div style={{ textAlign: 'center', marginTop: '60px', color: 'var(--text-secondary)' }}>
                     <Loader2 size={32} className="spin" style={{ margin: '0 auto', color: 'var(--primary-action)' }} />
-                    <h3 style={{ marginTop: '16px' }}>Söker i textavsnitt...</h3>
+                    <h3 style={{ marginTop: '16px' }}>Söker i högen…</h3>
                   </div>
                 ) : searchResults && (
                   <div className="search-results-list">
@@ -1274,7 +1325,7 @@ function App() {
                              <button className="small-action-btn ai" onClick={() => {
                                openDocument(res.documentId, res.page, 'chat');
                                setWorkspaceChatInput(`Angående sökningen "${searchQuery}": vad står det mer om detta i dokumentet?`);
-                             }}>Fråga AI i dokument <Sparkles size={12}/></button>
+                             }}>Fråga AI i dokument</button>
                           </div>
                         </div>
                       </div>
@@ -1285,19 +1336,19 @@ function App() {
             )}
 
             {currentTab === 'chat' && (
-              <div className="tab-content">
+              <div className="tab-content tab-content--fill">
                 <div className="chat-container">
                   <div className="chat-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <div>
-                      <h2 style={{ display: 'flex', alignItems: 'center', gap: '8px' }}><Sparkles color="var(--ai-accent)" size={24}/> Global AI-assistent</h2>
-                      <p style={{ color: 'var(--text-secondary)', fontSize: '14px', margin: '4px 0 0 0' }}>Få svar baserade på alla föreningens indexerade dokument.</p>
+                      <h2 className="chat-title">Fråga dokumenten</h2>
+                      <p style={{ color: 'var(--text-secondary)', fontSize: '14px', margin: '4px 0 0 0' }}>Frågan går till föreningens egna dokument. Ingenting annat.</p>
                       <ModelStatusBadge status={llmStatus} />
                     </div>
 
                     <div className="chat-scope-selector desktop-only">
                        <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Söker i:</span>
                        <span className="scope-btn static" aria-label={`Söker i alla ${documents.length} dokument`}>
-                         Alla dokument · {documents.length} dokument
+                         Alla {documents.length} dokument
                        </span>
                     </div>
                   </div>
@@ -1305,8 +1356,10 @@ function App() {
                   <div className="chat-messages-area">
                     {chatMessages.length === 0 ? (
                       <div className="chat-empty-state">
-                         <Sparkles size={40} color="var(--ai-accent)" style={{ marginBottom: '16px', opacity: 0.5 }} />
-                         <h3 style={{ marginBottom: '24px' }}>Vad vill du ha hjälp med?</h3>
+                         <h3 className="chat-empty-title">Ställ en fråga om föreningens dokument</h3>
+                         <p className="chat-empty-hint">
+                           Svaret citerar det dokument det kommer ur, eller uteblir.
+                         </p>
                          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', maxWidth: '400px' }}>
                            <button className="example-prompt-btn" onClick={() => executeGeneralChat('Vad säger stadgarna om andrahandsuthyrning?')} disabled={chatBusy}>
                              Vad säger stadgarna om andrahandsuthyrning?
@@ -1321,16 +1374,17 @@ function App() {
                         {chatMessages.map((msg, idx) => (
                           <div key={idx} className={`chat-message ${msg.role}`}>
                             <div className="chat-avatar">
-                              {msg.role === 'ai' ? (msg.pending ? <Loader2 size={16} className="spin" /> : <Sparkles size={16} />) : 'DU'}
+                              {msg.role === 'ai' ? (msg.pending ? <Loader2 size={14} className="spin" /> : 'AI') : 'DU'}
                             </div>
                             <div style={{ flex: 1 }}>
-                              <div className="chat-content" style={{ borderColor: msg.refusal ? 'var(--status-error-dim)' : '' }}>
-                                {msg.refusal && <div className="chat-refusal-header"><AlertCircle size={14} /> Otillräckligt underlag</div>}
-                                {msg.warning && <div className="chat-refusal-header warning"><Info size={14} /> {msg.warning}</div>}
-                                {msg.content}
+                              <div className={`chat-content${msg.role === 'ai' ? ' chat-content--answer' : ''}${msg.refusal ? ' is-ejbelagt' : ''}`}>
+                                {msg.role === 'ai' && answerState(msg) && <AnswerState state={answerState(msg)} />}
+                                <div className="answer-body">{msg.content}</div>
+                                {msg.warning && <p className="answer-caveat"><Info size={14} aria-hidden="true" /> {msg.warning}</p>}
 
                                 {msg.citations && msg.citations.length > 0 && (
                                   <div className="chat-citations">
+                                    <p className="chat-citations-head">Hämtat ur högen</p>
                                     {msg.citations.map((c, i) => (
                                       <div
                                         key={i}
@@ -1362,8 +1416,8 @@ function App() {
                           <div className="chat-message ai">
                             <div className="chat-avatar"><AlertTriangle size={16} /></div>
                             <div style={{ flex: 1 }}>
-                              <div className="chat-content" style={{ borderColor: 'var(--status-error-dim)' }}>
-                                <div className="chat-refusal-header"><AlertTriangle size={14} /> Kunde inte hämta svar</div>
+                              <div className="chat-content is-avbrott">
+                                <AnswerState state="avbrott" />
                                 {chatError.message}
                               </div>
                               <div className="chat-followups">
@@ -1385,7 +1439,7 @@ function App() {
                         value={chatInput}
                         onChange={(e) => setChatInput(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && executeGeneralChat(chatInput)}
-                        placeholder="Ställ en generell fråga till AI:n..."
+                        placeholder="Fråga rakt in i högen…"
                         disabled={chatBusy}
                       />
                       <button className="chat-send-btn" onClick={() => executeGeneralChat(chatInput)} disabled={chatBusy || !chatInput.trim()} aria-label="Skicka fråga">

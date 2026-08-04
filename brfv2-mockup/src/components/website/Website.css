@@ -178,7 +178,7 @@
 
 .ai-msg--user {
   background: var(--primary-action);
-  color: #fff;
+  color: var(--primary-foreground);
   align-self: flex-end;
   max-width: 92%;
   border-bottom-right-radius: 4px;
@@ -199,20 +199,20 @@
 
 .ai-msg--refusal {
   background: var(--status-warning-dim);
-  border: 1px solid rgba(251, 191, 36, 0.28);
+  border: 1px solid var(--warn-border);
   color: var(--text-primary);
 }
 
 .ai-msg--change {
   background: var(--ai-accent-dim);
-  border: 1px solid rgba(139, 92, 246, 0.3);
+  border: 1px solid var(--accent-border);
 }
 
 .ai-msg__label {
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: 700;
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -239,7 +239,7 @@
 }
 
 .ai-change__meta {
-  font-size: 11.5px;
+  font-size: var(--text-xs);
   color: var(--text-muted);
   margin-top: 6px;
 }
@@ -247,11 +247,11 @@
 .ai-change__sources {
   margin-top: 10px;
   padding-top: 9px;
-  border-top: 1px solid rgba(139, 92, 246, 0.22);
+  border-top: 1px solid var(--accent-border);
 }
 
 .ai-change__sources-label {
-  font-size: 10.5px;
+  font-size: var(--text-xs);
   letter-spacing: 0.07em;
   text-transform: uppercase;
   color: var(--text-muted);
@@ -265,7 +265,7 @@
   gap: 6px;
   width: 100%;
   text-align: left;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--surface-2);
   border: 1px solid var(--panel-border);
   border-radius: 7px;
   padding: 6px 9px;
@@ -286,7 +286,7 @@
   align-items: center;
   gap: 6px;
   margin-top: 11px;
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--surface-3);
   border: 1px solid var(--panel-border);
   border-radius: 8px;
   padding: 7px 11px;
@@ -317,11 +317,11 @@
 .ai-panel__composer {
   border-top: 1px solid var(--panel-border);
   padding: 12px 14px 14px;
-  background: rgba(0, 0, 0, 0.16);
+  background: var(--surface-2);
 }
 
 .ai-context {
-  font-size: 11.5px;
+  font-size: var(--text-xs);
   color: var(--text-muted);
   margin-bottom: 9px;
   padding: 6px 9px;
@@ -335,7 +335,7 @@
 
 .ai-context--active {
   color: var(--ai-accent);
-  border-color: rgba(139, 92, 246, 0.35);
+  border-color: var(--accent-border);
   background: var(--ai-accent-dim);
 }
 
@@ -373,8 +373,8 @@
   height: 38px;
   border-radius: 10px;
   border: 0;
-  background: var(--ai-accent);
-  color: #fff;
+  background: var(--primary);
+  color: var(--primary-foreground);
   display: grid;
   place-items: center;
   cursor: pointer;
@@ -477,7 +477,7 @@
 }
 
 .site-pill {
-  font-size: 11.5px;
+  font-size: var(--text-xs);
   font-weight: 600;
   padding: 4px 9px;
   border-radius: 999px;
@@ -495,9 +495,12 @@
   color: var(--status-warning);
 }
 
+/* "Live" is a fact about publication, not about evidence, so it may not wear
+   Belagt. It is the association's own site being reachable — said in ink. */
 .site-pill--live {
-  background: var(--status-ok-dim);
-  color: var(--status-ok);
+  background: var(--muted);
+  color: var(--foreground);
+  font-weight: 600;
 }
 
 .site-vp {
@@ -548,7 +551,7 @@
 .site-btn--primary {
   background: var(--primary-action);
   border-color: var(--primary-action);
-  color: #fff;
+  color: var(--primary-foreground);
 }
 
 .site-btn--primary:hover:not(:disabled) {
@@ -567,8 +570,8 @@
   justify-content: space-between;
   gap: 12px;
   padding: 9px 16px;
-  background: var(--status-error-dim);
-  border-bottom: 1px solid rgba(239, 68, 68, 0.3);
+  background: var(--avbrott-soft);
+  border-bottom: 1px solid var(--avbrott-border);
   color: var(--text-primary);
   font-size: 13px;
 }
@@ -596,7 +599,7 @@
   /* A faint grid so a narrow viewport reads as a device on a desk rather than
      as a page that failed to fill its container. */
   background:
-    radial-gradient(circle at 1px 1px, rgba(255, 255, 255, 0.045) 1px, transparent 0)
+    radial-gradient(circle at 1px 1px, var(--surface-2) 1px, transparent 0)
     0 0 / 22px 22px,
     var(--bg-workspace);
 }
@@ -604,11 +607,12 @@
 .site-canvas {
   flex: none;
   max-width: 100%;
-  background: #fff;
+  /* The association's own page, which is paper like every document here. */
+  background: var(--field);
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 24px 60px -24px rgba(0, 0, 0, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--surface-3);
   transition: width 0.22s cubic-bezier(0.32, 0.72, 0, 1);
 }
 
@@ -633,11 +637,10 @@
   max-height: calc(100% - 96px);
   display: flex;
   flex-direction: column;
-  background: rgba(18, 19, 24, 0.94);
-  backdrop-filter: blur(14px);
-  border: 1px solid var(--panel-border);
+  background: var(--popover);
+  border: 1px solid var(--border-strong);
   border-radius: 13px;
-  box-shadow: 0 24px 64px -20px rgba(0, 0, 0, 0.8);
+  box-shadow: var(--shadow-lg);
   overflow: hidden;
   z-index: 20;
   animation: site-inspector-in 0.16s ease-out;
@@ -752,7 +755,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -766,7 +769,7 @@
   gap: 6px;
   width: 100%;
   text-align: left;
-  background: rgba(255, 255, 255, 0.04);
+  background: var(--surface-2);
   border: 1px solid var(--panel-border);
   border-radius: 7px;
   padding: 6px 9px;
@@ -787,7 +790,7 @@
 .site-drawer__backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.35);
+  background: var(--surface-3);
   z-index: 25;
 }
 
@@ -798,9 +801,8 @@
   bottom: 0;
   width: 312px;
   z-index: 26;
-  background: rgba(18, 19, 24, 0.97);
-  backdrop-filter: blur(14px);
-  border-left: 1px solid var(--panel-border);
+  background: var(--popover);
+  border-left: 1px solid var(--border-strong);
   display: flex;
   flex-direction: column;
   animation: site-drawer-in 0.18s cubic-bezier(0.32, 0.72, 0, 1);
@@ -819,8 +821,11 @@
   border-bottom: 1px solid var(--panel-border);
 }
 
+/* Under §07's 22px floor the serif is small print, so interface labels stay in
+   the sans (the same rule that keeps h3–h6 sans product-wide). */
 .site-drawer__head h2 {
-  font-size: 14px;
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
   font-weight: 620;
   color: var(--text-primary);
 }
@@ -889,8 +894,9 @@
 }
 
 .site-start__card h1 {
-  font-size: 21px;
-  font-weight: 640;
+  font-size: var(--text-xl);
+  font-weight: 400;
+  letter-spacing: -0.03em;
   color: var(--text-primary);
   margin-bottom: 12px;
 }
@@ -925,7 +931,7 @@
 .site-modal__backdrop {
   position: absolute;
   inset: 0;
-  background: rgba(0, 0, 0, 0.6);
+  background: rgb(55 50 47 / 0.32);
 }
 
 .site-modal__card {
@@ -937,7 +943,7 @@
   border: 1px solid var(--panel-border);
   border-radius: 14px;
   padding: 20px 22px 22px;
-  box-shadow: 0 30px 80px -20px rgba(0, 0, 0, 0.8);
+  box-shadow: var(--shadow-lg);
 }
 
 .site-modal__card header {
@@ -948,7 +954,8 @@
 }
 
 .site-modal__card h2 {
-  font-size: 16px;
+  font-family: var(--font-sans);
+  font-size: var(--text-lg);
   font-weight: 620;
   color: var(--text-primary);
 }
@@ -993,8 +1000,10 @@
   background: var(--panel-bg);
 }
 
+/* Which revision is current is a position in a list, not a verified claim. */
 .site-revisions li.current {
-  border-color: var(--status-ok);
+  border-color: var(--border-strong);
+  box-shadow: inset 3px 0 0 var(--ink);
 }
 
 .site-revisions__title {
@@ -1036,8 +1045,8 @@
   --puck-color-grey-08: var(--panel-border);
   --puck-color-grey-09: var(--panel-bg);
   --puck-color-grey-10: var(--panel-bg);
-  --puck-color-grey-11: rgba(255, 255, 255, 0.03);
-  --puck-color-grey-12: rgba(255, 255, 255, 0.02);
+  --puck-color-grey-11: var(--surface-2);
+  --puck-color-grey-12: var(--surface-2);
   --puck-color-white: var(--bg-workspace);
   --puck-color-black: var(--text-primary);
   --puck-font-family: inherit;
@@ -1079,7 +1088,7 @@
 }
 
 .site-drawer__group h3 {
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: 700;
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -1115,7 +1124,7 @@
 .site-drawer__add:hover {
   background: var(--primary-action);
   border-color: var(--primary-action);
-  color: #fff;
+  color: var(--primary-foreground);
 }
 
 /* ---------- the review state ----------
@@ -1136,7 +1145,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 11px;
+  font-size: var(--text-xs);
   font-weight: 700;
   letter-spacing: 0.06em;
   text-transform: uppercase;
@@ -1158,7 +1167,7 @@
   padding: 7px 12px;
   border-radius: 8px;
   border: 1px solid var(--status-warning);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--surface-3);
   color: var(--text-primary);
   font-family: inherit;
   font-size: 12.5px;
@@ -1168,7 +1177,7 @@
 
 .site-review__confirm:hover {
   background: var(--status-warning);
-  color: #1a1400;
+  color: var(--primary-foreground);
 }
 
 .site-pill--review {
@@ -1192,7 +1201,8 @@
 .site-broken svg { color: var(--status-warning); }
 
 .site-broken h1 {
-  font-size: 19px;
+  font-family: var(--font-sans);
+  font-size: var(--text-lg);
   font-weight: 640;
   color: var(--text-primary);
 }

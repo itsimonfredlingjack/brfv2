@@ -21,7 +21,7 @@ function Splash() {
     <div className="frame">
       <main className="frame__main">
         <div className="screen" style={{ justifyContent: 'center', alignItems: 'center' }}>
-          <span className="visually-hidden">Startar Källa…</span>
+          <span className="visually-hidden">Startar Träff…</span>
           <span className="thinking__dot" aria-hidden="true" />
         </div>
       </main>

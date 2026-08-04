@@ -16,10 +16,8 @@ import {
   Mail,
   MessageCircleQuestion,
   Paperclip,
-  Quote,
   RefreshCw,
   RotateCcw,
-  Sparkles,
   Upload,
   X,
 } from 'lucide-react';
@@ -46,6 +44,19 @@ import './IntakeQueue.css';
  *    any of it.
  * 3. **What was decided is shown as where it went.** A resolved card says "det
  *    blev uppgift X" with the record it produced, not "hanterad".
+ *
+ * The layout is master–detail, and the reason is the work rather than the
+ * fashion: a board member goes through a queue item by item, and the decision
+ * form is long — five outcomes, three sub-forms, a required reason. As an
+ * accordion inside the list, opening one item pushed every other item off the
+ * screen and the reviewer lost their place in the only thing that tells them
+ * how much is left. The list stays put on the left; what is being decided
+ * occupies the right.
+ *
+ * Reading order in the detail pane is the argument: **what arrived** first, the
+ * **machine's reading of it** second (under a heading that says whose reading
+ * it is), and the **decision** last. A reader should meet the message before
+ * they meet the interpretation of it.
  */
 
 const CATEGORY_ICON = {
@@ -120,35 +131,61 @@ function Banner({ tone, children, onDismiss }) {
  * message rather than dropping one attachment, and a queue that stayed silent
  * about those would let an operator believe the queue is the mailbox.
  */
-function FetchBar({ mailbox, connected, busy, onFetch, lastResult }) {
+function FetchBar({ mailbox, connected, busy, onFetch, onImportFile, format, lastResult }) {
   return (
-    <div className="intake-fetch">
-      <div className="fetch-state">
-        <h4><Mail size={15} /> Ansluten brevlåda</h4>
-        {connected ? (
-          <p className="muted">
-            {mailbox?.hasFetched
-              ? `Senast hämtat ${formatDateTime(mailbox.last_fetched_at)} — ${mailbox.last_new_count} nya.`
-              : 'Aldrig hämtat. Första hämtningen tar in det som finns i mappen.'}
-            {' '}Hämtningen frågar efter det som kommit sedan förra gången. Inget markeras,
-            flyttas eller raderas i brevlådan.
-          </p>
-        ) : (
-          <p className="muted">
-            Ingen brevlåda är ansluten. Det behövs inte — en <code>.eml</code>-fil kan
-            importeras för hand, och kön fungerar likadant. Se <strong>Anslutningar</strong>.
-          </p>
-        )}
-        {mailbox?.last_error && (
-          <p className="fetch-error">
-            Senaste försöket gick inte igenom: {mailbox.last_error}. Läget är oförändrat —
-            nästa hämtning börjar om från samma punkt.
-          </p>
-        )}
+    <div className="intake-source">
+      <div className="intake-source-row">
+        <span className="intake-source-state">
+          <Mail size={14} />
+          {connected ? (
+            <span>
+              Ansluten brevlåda.{' '}
+              {mailbox?.hasFetched
+                ? `Senast hämtat ${formatDateTime(mailbox.last_fetched_at)} — ${mailbox.last_new_count} nya.`
+                : 'Aldrig hämtat. Första hämtningen tar in det som finns i mappen.'}
+              {' '}Hämtningen frågar efter det som kommit sedan förra gången. Inget markeras,
+              flyttas eller raderas i brevlådan.
+            </span>
+          ) : (
+            <span>
+              Ingen brevlåda är ansluten. Det behövs inte — en <code>.eml</code>-fil kan
+              importeras för hand, och kön fungerar likadant. Se <strong>Anslutningar</strong>.
+            </span>
+          )}
+        </span>
+
+        <span className="intake-source-actions">
+          <input
+            type="file"
+            accept=".eml,message/rfc822"
+            onChange={onImportFile}
+            className="hidden-file-input"
+            id="intake-eml-import"
+          />
+          <label htmlFor="intake-eml-import" className={`import-button ${busy ? 'busy' : ''}`}>
+            {busy ? <Loader2 size={14} className="spin" /> : <Upload size={14} />}
+            Importera en .eml-fil
+          </label>
+          <button type="button" className="fetch-button" disabled={busy || !connected} onClick={onFetch}>
+            {busy ? <Loader2 size={14} className="spin" /> : <RefreshCw size={14} />} Hämta nytt
+          </button>
+        </span>
       </div>
-      <button type="button" className="fetch-button" disabled={busy || !connected} onClick={onFetch}>
-        {busy ? <Loader2 size={15} className="spin" /> : <RefreshCw size={15} />} Hämta nytt
-      </button>
+
+      {format?.mail && (
+        <p className="muted intake-format-note">
+          Tas emot: {format.mail.attachmentTypes.join(', ')} som bilaga, högst{' '}
+          {format.mail.maxAttachments} stycken. Allt annat avvisas i sin helhet — inget
+          halvimporteras.
+        </p>
+      )}
+
+      {mailbox?.last_error && (
+        <p className="fetch-error">
+          Senaste försöket gick inte igenom: {mailbox.last_error}. Läget är oförändrat —
+          nästa hämtning börjar om från samma punkt.
+        </p>
+      )}
 
       {lastResult && (
         <div className="fetch-result">
@@ -178,9 +215,52 @@ function FetchBar({ mailbox, connected, busy, onFetch, lastResult }) {
   );
 }
 
+/** One row in the queue: enough to choose from, never enough to decide from. */
+function ThreadRow({ thread, selected, onSelect }) {
+  const Icon = CATEGORY_ICON[thread.category] || Inbox;
+  return (
+    <button
+      type="button"
+      className={`thread-row${selected ? ' selected' : ''}${thread.resolved ? ' resolved' : ''}`}
+      aria-current={selected ? 'true' : undefined}
+      onClick={() => onSelect(thread.key)}
+    >
+      <span className="thread-row-top">
+        <span className="thread-subject">{thread.subject}</span>
+        {thread.resolved
+          ? <span className="thread-row-state settled"><CheckCircle2 size={12} /> Avgjord</span>
+          : <span className="thread-row-state open">{thread.open_count}</span>}
+      </span>
+      <span className="thread-meta">
+        Senast från {thread.latest_sender_display || thread.latest_sender}
+        {' · '}{formatDate(thread.first_at)} – {formatDate(thread.latest_at)}
+        {' · '}{thread.message_count} meddelande{thread.message_count === 1 ? '' : 'n'}
+        {' · '}{thread.attachment_count} bilag{thread.attachment_count === 1 ? 'a' : 'or'}
+      </span>
+      <span className="thread-row-tags">
+        <span className="tag category">
+          <Icon size={11} /> {thread.category_label}
+          {thread.category_confirmed && <CheckCircle2 size={10} aria-label="bekräftad av människa" />}
+        </span>
+        {thread.awaiting_reply && (
+          <span className="tag awaiting">
+            <MessageCircleQuestion size={11} /> ser ut att vänta svar
+          </span>
+        )}
+      </span>
+    </button>
+  );
+}
+
+// Enough readings to judge the reading by. A message whose PDF attachment was
+// parsed can produce a dozen, each quoting a paragraph, and the decision must
+// not sit below a wall of them.
+const SIGNALS_SHOWN = 4;
+
 /** What the app believes, with the words it believes it from. */
-function TriagePanel({ thread, categories, busy, onConfirm }) {
+function ReadingPanel({ thread, categories, busy, onConfirm }) {
   const [open, setOpen] = useState(false);
+  const [allSignals, setAllSignals] = useState(false);
   const [chosen, setChosen] = useState(thread.category);
   const [note, setNote] = useState('');
 
@@ -190,43 +270,57 @@ function TriagePanel({ thread, categories, busy, onConfirm }) {
   const confirmation = latest?.triage_confirmation;
 
   return (
-    <div className="triage">
-      <div className="triage-head">
-        <h5><Sparkles size={14} /> Vad det ser ut att gälla</h5>
-        <span className="triage-by">
+    <section className="detail-section reading">
+      <div className="detail-section-head">
+        <h4>Vad det ser ut att gälla</h4>
+        {/* Who produced the reading, always — "regelmotor" and "regelmotor +
+            språkmodell" are different assurances a reader is entitled to. */}
+        <span className="reading-by">
           {thread.suggested_by ? `bedömt av ${thread.suggested_by}` : 'ingen bedömning'}
         </span>
       </div>
 
-      {thread.headline && <p className="triage-headline">{thread.headline}</p>}
-      {thread.why_it_matters && <p className="triage-why">{thread.why_it_matters}</p>}
+      {thread.headline && <p className="reading-headline">{thread.headline}</p>}
+      {thread.why_it_matters && <p className="reading-why">{thread.why_it_matters}</p>}
       {thread.action_hint && (
-        <p className="triage-action"><Clock size={13} /> {thread.action_hint}</p>
+        <p className="reading-action"><Clock size={13} /> {thread.action_hint}</p>
       )}
       {thread.uncertainty && (
-        <p className="triage-uncertainty"><HelpCircle size={13} /> {thread.uncertainty}</p>
+        <p className="reading-uncertainty"><HelpCircle size={13} /> {thread.uncertainty}</p>
       )}
 
       {thread.signals?.length > 0 && (
-        <div className="triage-signals">
-          <h6>Läst ur meddelandet</h6>
+        <div className="reading-signals">
+          <h6>
+            <span>Läst ur meddelandet</span>
+            {thread.signals.length > SIGNALS_SHOWN && (
+              <span className="h6-count">{thread.signals.length}</span>
+            )}
+          </h6>
           <ul>
-            {thread.signals.map((signal, i) => (
+            {(allSignals ? thread.signals : thread.signals.slice(0, SIGNALS_SHOWN)).map((signal, i) => (
               <li key={`${signal.kind}-${signal.value}-${i}`}>
-                <span className={`signal-kind ${signal.kind}`}>
+                <span className="signal-kind">
                   {SIGNAL_LABEL[signal.kind] || signal.kind}
                 </span>
                 <span className="signal-value">{signal.value}</span>
                 <span className="muted"> ur {SOURCE_LABEL[signal.source] || signal.source}</span>
-                <q className="signal-quote"><Quote size={11} /> {signal.quote}</q>
+                <q className="signal-quote">{signal.quote}</q>
               </li>
             ))}
           </ul>
+          {thread.signals.length > SIGNALS_SHOWN && (
+            <button type="button" className="signals-more" onClick={() => setAllSignals(!allSignals)}>
+              {allSignals
+                ? <><ChevronDown size={13} /> Visa färre avläsningar</>
+                : <><ChevronRight size={13} /> Visa alla {thread.signals.length} avläsningar</>}
+            </button>
+          )}
         </div>
       )}
 
       {thread.related?.length > 0 && (
-        <div className="triage-related">
+        <div className="reading-related">
           <h6><Link2 size={13} /> Kan höra ihop med</h6>
           <ul>
             {thread.related.map((record, i) => {
@@ -243,7 +337,7 @@ function TriagePanel({ thread, categories, busy, onConfirm }) {
         </div>
       )}
 
-      <div className="triage-category">
+      <div className="reading-category">
         {confirmation ? (
           <p className="category-confirmed">
             <CheckCircle2 size={13} /> {confirmation.confirmed_by} har satt kategorin till{' '}
@@ -266,15 +360,18 @@ function TriagePanel({ thread, categories, busy, onConfirm }) {
                     ))}
                   </select>
                 </label>
-                <input
-                  type="text"
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder="Anteckning (valfri)"
-                  aria-label="Anteckning om kategorin"
-                />
+                <label>
+                  Anteckning (valfri)
+                  <input
+                    type="text"
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                    aria-label="Anteckning om kategorin"
+                  />
+                </label>
                 <button
                   type="button"
+                  className="category-save"
                   disabled={busy || !latest}
                   onClick={() => onConfirm(latest.id, chosen, note.trim())}
                 >
@@ -285,7 +382,7 @@ function TriagePanel({ thread, categories, busy, onConfirm }) {
           </>
         )}
       </div>
-    </div>
+    </section>
   );
 }
 
@@ -491,158 +588,174 @@ function ResolutionSummary({ event, busy, onReopen, onOpenDocument }) {
         ))}
       </ul>
       {resolution.note && <p className="resolution-note">Anteckning: {resolution.note}</p>}
-      <button type="button" className="reopen" disabled={busy} onClick={() => onReopen(event.id)}>
-        <RotateCcw size={13} /> Öppna i kön igen
-      </button>
-      <p className="muted">
-        Det som redan skapats står kvar — en uppgift som gjorts av posten är ett beslut i sig.
-      </p>
+      <div className="resolution-foot">
+        <button type="button" className="reopen" disabled={busy} onClick={() => onReopen(event.id)}>
+          <RotateCcw size={13} /> Öppna i kön igen
+        </button>
+        <span className="muted">
+          Det som redan skapats står kvar — en uppgift som gjorts av posten är ett beslut i sig.
+        </span>
+      </div>
     </div>
   );
 }
 
-function ThreadCard({
+/** One message: the thing that actually arrived. */
+function Message({ event, busy, onRetriage, onOpenDocument }) {
+  return (
+    <article className={`message ${event.resolution ? 'settled' : ''}`}>
+      <header className="message-head">
+        <h5>{event.subject || '(utan ämne)'}</h5>
+        <span className="message-from">
+          {event.origin_display ? `${event.origin_display} <${event.origin}>` : event.origin}
+          {' · '}{formatDateTime(event.occurred_at || event.received_at)}
+          {event.attachments.length > 0 && ` · ${event.attachments.length} bilaga(or)`}
+        </span>
+      </header>
+
+      {event.body_text && <pre className="message-body">{event.body_text}</pre>}
+
+      {event.attachments.length > 0 && (
+        <ul className="message-attachments">
+          {event.attachments.map((attachment) => (
+            <li key={attachment.id}>
+              <button
+                type="button"
+                className="link"
+                disabled={!attachment.document_id}
+                onClick={() => onOpenDocument?.(attachment.document_id, 1)}
+              >
+                <Paperclip size={12} /> {attachment.filename}
+              </button>
+              <span className={`badge ${attachment.archived ? 'confirmed' : 'proposed'}`}>
+                {attachment.archived ? 'i föreningens arkiv' : 'material under granskning'}
+              </span>
+              {attachment.reused_existing_document && (
+                <span className="badge dedup">samma fil fanns redan — länkad</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {event.preserved_document_id && (
+        <p className="message-preserved">
+          <Archive size={13} /> Texten är bevarad som dokument
+          {' '}({event.preserved_by}, {formatDateTime(event.preserved_at)})
+          {event.preservation_note ? ` — ${event.preservation_note}` : ''}.
+          <button
+            type="button"
+            className="link"
+            onClick={() => onOpenDocument?.(event.preserved_document_id, 1)}
+          >
+            Öppna
+          </button>
+        </p>
+      )}
+
+      <div className="message-foot">
+        {/* Provenance is what makes the message checkable against the mailbox
+            it came from. Present, and out of the way until it is wanted. */}
+        <details className="message-provenance-toggle">
+          <summary>Härkomst</summary>
+          <dl className="message-provenance">
+            <div><dt>Mottaget av föreningen</dt><dd>{formatDateTime(event.received_at)}</dd></div>
+            <div><dt>Hur det kom hit</dt><dd>{event.provenance.method} / {event.provenance.adapter}</dd></div>
+            <div><dt>Importerat av</dt><dd>{event.provenance.imported_by}</dd></div>
+            <div><dt>Innehållshash</dt><dd><code>{event.content_sha256.slice(0, 24)}…</code></dd></div>
+          </dl>
+        </details>
+        <button
+          type="button"
+          className="retriage"
+          disabled={busy}
+          onClick={() => onRetriage(event.id)}
+        >
+          <RefreshCw size={12} /> Läs om meddelandet
+        </button>
+      </div>
+    </article>
+  );
+}
+
+/** The selected thread, in full: what arrived, what was read, what to do. */
+function ThreadDetail({
   thread, categories, resolutions, busy,
   onConfirm, onResolve, onReopen, onRetriage, onOpenDocument,
 }) {
-  const [expanded, setExpanded] = useState(!thread.resolved);
   const Icon = CATEGORY_ICON[thread.category] || Inbox;
-
   return (
-    <article className={`thread ${thread.resolved ? 'resolved' : 'open'}`}>
-      <button
-        type="button"
-        className="thread-head"
-        aria-expanded={expanded}
-        onClick={() => setExpanded(!expanded)}
-      >
-        <span className="thread-chevron">
-          {expanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
-        </span>
-        <span className="thread-main">
-          <span className="thread-subject">{thread.subject}</span>
-          <span className="thread-meta">
-            Senast från {thread.latest_sender_display || thread.latest_sender}
-            {' · '}{formatDate(thread.first_at)} – {formatDate(thread.latest_at)}
-            {' · '}{thread.message_count} meddelande{thread.message_count === 1 ? '' : 'n'}
-            {' · '}{thread.attachment_count} bilag{thread.attachment_count === 1 ? 'a' : 'or'}
+    <div className="thread-detail">
+      <header className="detail-head">
+        {/* The count belongs in the heading, not under it: the subject alone is
+            the list row's job, and a detail pane whose title is a verbatim copy
+            of the row that opened it reads as the same thing shown twice. */}
+        <h3>
+          {thread.subject} · {thread.message_count} meddelande{thread.message_count === 1 ? '' : 'n'}
+        </h3>
+        {/* Deliberately not the list row's line again: the sender is on every
+            message below, and a detail pane that repeats its own list row is
+            two panes saying one thing. */}
+        <p className="detail-head-meta">
+          {formatDate(thread.first_at)} – {formatDate(thread.latest_at)}
+          {' · '}{thread.attachment_count} bilag{thread.attachment_count === 1 ? 'a' : 'or'}
+        </p>
+        <div className="detail-head-tags">
+          <span className="tag category">
+            <Icon size={11} /> {thread.category_label}
+            {thread.category_confirmed && <CheckCircle2 size={10} aria-label="bekräftad av människa" />}
           </span>
-        </span>
-        <span className="thread-badges">
-          <span className={`badge category ${thread.category}`}>
-            <Icon size={12} /> {thread.category_label}
-            {thread.category_confirmed && <CheckCircle2 size={11} aria-label="bekräftad av människa" />}
-          </span>
-          {thread.awaiting_reply && (
-            <span className="badge awaiting">
-              <MessageCircleQuestion size={12} /> ser ut att vänta svar
-            </span>
-          )}
           {thread.resolved
-            ? <span className="badge done">avgjord</span>
-            : <span className="badge open">{thread.open_count} att ta ställning till</span>}
-        </span>
-      </button>
-
-      {expanded && (
-        <div className="thread-body">
-          <TriagePanel
-            thread={thread}
-            categories={categories}
-            busy={busy}
-            onConfirm={onConfirm}
-          />
-
-          <div className="thread-messages">
-            <h5>Meddelanden i tråden</h5>
-            {thread.events.map((event) => (
-              <details key={event.id} className={`message ${event.resolution ? 'settled' : ''}`}>
-                <summary>
-                  <strong>{event.subject || '(utan ämne)'}</strong>
-                  <span className="muted">
-                    {' '}{event.origin_display ? `${event.origin_display} <${event.origin}>` : event.origin}
-                    {' · '}{formatDateTime(event.occurred_at || event.received_at)}
-                    {event.attachments.length > 0 && ` · ${event.attachments.length} bilaga(or)`}
-                  </span>
-                </summary>
-
-                <dl className="message-provenance">
-                  <div><dt>Mottaget av föreningen</dt><dd>{formatDateTime(event.received_at)}</dd></div>
-                  <div><dt>Hur det kom hit</dt><dd>{event.provenance.method} / {event.provenance.adapter}</dd></div>
-                  <div><dt>Importerat av</dt><dd>{event.provenance.imported_by}</dd></div>
-                  <div><dt>Innehållshash</dt><dd><code>{event.content_sha256.slice(0, 24)}…</code></dd></div>
-                </dl>
-
-                {event.body_text && <pre className="message-body">{event.body_text}</pre>}
-
-                {event.attachments.length > 0 && (
-                  <ul className="message-attachments">
-                    {event.attachments.map((attachment) => (
-                      <li key={attachment.id}>
-                        <button
-                          type="button"
-                          className="link"
-                          disabled={!attachment.document_id}
-                          onClick={() => onOpenDocument?.(attachment.document_id, 1)}
-                        >
-                          <Paperclip size={12} /> {attachment.filename}
-                        </button>
-                        <span className={`badge ${attachment.archived ? 'confirmed' : 'proposed'}`}>
-                          {attachment.archived ? 'i föreningens arkiv' : 'material under granskning'}
-                        </span>
-                        {attachment.reused_existing_document && (
-                          <span className="badge dedup">samma fil fanns redan — länkad</span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                )}
-
-                {event.preserved_document_id && (
-                  <p className="message-preserved">
-                    <Archive size={13} /> Texten är bevarad som dokument
-                    {' '}({event.preserved_by}, {formatDateTime(event.preserved_at)})
-                    {event.preservation_note ? ` — ${event.preservation_note}` : ''}.
-                    <button
-                      type="button"
-                      className="link"
-                      onClick={() => onOpenDocument?.(event.preserved_document_id, 1)}
-                    >
-                      Öppna
-                    </button>
-                  </p>
-                )}
-
-                {event.resolution ? (
-                  <ResolutionSummary
-                    event={event}
-                    busy={busy}
-                    onReopen={onReopen}
-                    onOpenDocument={onOpenDocument}
-                  />
-                ) : (
-                  <ResolveForm
-                    event={event}
-                    resolutions={resolutions}
-                    busy={busy}
-                    onResolve={onResolve}
-                  />
-                )}
-
-                <button
-                  type="button"
-                  className="retriage"
-                  disabled={busy}
-                  onClick={() => onRetriage(event.id)}
-                >
-                  <RefreshCw size={12} /> Läs om meddelandet
-                </button>
-              </details>
-            ))}
-          </div>
+            ? <span className="tag settled"><CheckCircle2 size={11} /> avgjord</span>
+            : <span className="tag open">{thread.open_count} att ta ställning till</span>}
         </div>
-      )}
-    </article>
+      </header>
+
+      <section className="detail-section messages">
+        <div className="detail-section-head">
+          <h4>Meddelanden i tråden</h4>
+        </div>
+        {thread.events.map((event) => (
+          <Message
+            key={event.id}
+            event={event}
+            busy={busy}
+            onRetriage={onRetriage}
+            onOpenDocument={onOpenDocument}
+          />
+        ))}
+      </section>
+
+      <ReadingPanel
+        thread={thread}
+        categories={categories}
+        busy={busy}
+        onConfirm={onConfirm}
+      />
+
+      {thread.events.map((event) => (
+        <section className="detail-section decision" key={`decision-${event.id}`}>
+          {thread.events.length > 1 && (
+            <p className="decision-for">Gäller: {event.subject || '(utan ämne)'}</p>
+          )}
+          {event.resolution ? (
+            <ResolutionSummary
+              event={event}
+              busy={busy}
+              onReopen={onReopen}
+              onOpenDocument={onOpenDocument}
+            />
+          ) : (
+            <ResolveForm
+              event={event}
+              resolutions={resolutions}
+              busy={busy}
+              onResolve={onResolve}
+            />
+          )}
+        </section>
+      ))}
+    </div>
   );
 }
 
@@ -656,6 +769,7 @@ export default function IntakeQueue({
   const [notice, setNotice] = useState('');
   const [lastFetch, setLastFetch] = useState(null);
   const [filter, setFilter] = useState('open');
+  const [selectedKey, setSelectedKey] = useState(null);
 
   const refresh = useCallback(async () => {
     if (!brfId) return;
@@ -738,108 +852,120 @@ export default function IntakeQueue({
     return all;
   }, [queue, filter]);
 
+  // The selection follows the list rather than being stored against it: a
+  // refresh, a filter change or a decision that empties the queue must never
+  // leave the detail pane showing a thread the list no longer contains.
+  const selected = threads.find((t) => t.key === selectedKey) || threads[0] || null;
+
   const counts = queue?.counts || {};
 
   return (
     <div className="intake">
-      <div className="intake-intro">
-        <h3><Inbox size={18} /> Inkommande post</h3>
-        <p>
-          Brevlådan är råmaterial. Det här är en granskningskö: ingenting blir en del av
-          föreningens arkiv, en uppgift eller en bevakning förrän någon här bestämmer det —
-          och ingenting ändras i brevlådan när ni gör det.
-        </p>
-      </div>
+      {/* One line, not a manifesto. The promise it makes is repeated where it is
+          actually needed — on the decision form, beside the button that would
+          otherwise look like it does something to the mailbox. */}
+      <p className="intake-intro">
+        Brevlådan är råmaterial. Det här är en granskningskö — ingenting blir arkiv,
+        uppgift eller bevakning förrän någon här bestämmer det, och ingenting ändras i
+        brevlådan när ni gör det.
+      </p>
 
       <Banner tone="error" onDismiss={() => setError('')}>{error}</Banner>
       <Banner tone="ok" onDismiss={() => setNotice('')}>{notice}</Banner>
 
       {isAdmin && (
-        <>
-          <FetchBar
-            mailbox={queue?.mailbox}
-            connected={mailboxConnected}
-            busy={busy}
-            onFetch={handleFetch}
-            lastResult={lastFetch}
-          />
-          <div className="intake-manual">
-            <input
-              type="file"
-              accept=".eml,message/rfc822"
-              onChange={handleImportFile}
-              className="hidden-file-input"
-              id="intake-eml-import"
-            />
-            <label htmlFor="intake-eml-import" className={`import-button ${busy ? 'busy' : ''}`}>
-              {busy ? <Loader2 size={15} className="spin" /> : <Upload size={15} />}
-              Importera en .eml-fil
-            </label>
-            {format?.mail && (
-              <span className="muted">
-                Tas emot: {format.mail.attachmentTypes.join(', ')} som bilaga, högst{' '}
-                {format.mail.maxAttachments} stycken. Allt annat avvisas i sin helhet — inget
-                halvimporteras.
-              </span>
-            )}
-          </div>
-        </>
+        <FetchBar
+          mailbox={queue?.mailbox}
+          connected={mailboxConnected}
+          busy={busy}
+          onFetch={handleFetch}
+          onImportFile={handleImportFile}
+          format={format}
+          lastResult={lastFetch}
+        />
       )}
 
-      <div className="intake-counts" role="group" aria-label="Filtrera kön">
-        <button
-          type="button"
-          className={filter === 'open' ? 'active' : ''}
-          aria-pressed={filter === 'open'}
-          onClick={() => setFilter('open')}
-        >
-          Att ta ställning till <span className="pill">{counts.openThreads || 0}</span>
-        </button>
-        <button
-          type="button"
-          className={filter === 'awaiting' ? 'active' : ''}
-          aria-pressed={filter === 'awaiting'}
-          onClick={() => setFilter('awaiting')}
-        >
-          Väntar svar <span className="pill">{counts.awaitingReply || 0}</span>
-        </button>
-        <button
-          type="button"
-          className={filter === 'all' ? 'active' : ''}
-          aria-pressed={filter === 'all'}
-          onClick={() => setFilter('all')}
-        >
-          Alla trådar <span className="pill">{counts.threads || 0}</span>
-        </button>
-        <button type="button" className="refresh" onClick={refresh} disabled={loading || busy}>
+      <div className="intake-toolbar">
+        <div className="ui-tabs intake-counts" role="group" aria-label="Filtrera kön">
+          <button
+            type="button"
+            className={filter === 'open' ? 'active' : ''}
+            aria-pressed={filter === 'open'}
+            onClick={() => setFilter('open')}
+          >
+            Att ta ställning till <span className="ui-count">{counts.openThreads || 0}</span>
+          </button>
+          <button
+            type="button"
+            className={filter === 'awaiting' ? 'active' : ''}
+            aria-pressed={filter === 'awaiting'}
+            onClick={() => setFilter('awaiting')}
+          >
+            Väntar svar <span className="ui-count">{counts.awaitingReply || 0}</span>
+          </button>
+          <button
+            type="button"
+            className={filter === 'all' ? 'active' : ''}
+            aria-pressed={filter === 'all'}
+            onClick={() => setFilter('all')}
+          >
+            Alla trådar <span className="ui-count">{counts.threads || 0}</span>
+          </button>
+        </div>
+        <button type="button" className="ui-btn ui-btn--ghost ui-btn--sm refresh" onClick={refresh} disabled={loading || busy}>
           <RefreshCw size={14} /> Uppdatera
         </button>
       </div>
 
-      {loading && <p className="intake-loading"><Loader2 size={16} className="spin" /> Hämtar…</p>}
+      {loading && <p className="ui-loading intake-loading"><Loader2 size={16} className="spin" /> Hämtar…</p>}
 
+      {/* Nothing in the queue is one state, not two: splitting the screen to
+          say "empty" on the left and "nothing selected" on the right would be
+          the layout insisting on itself. */}
       {!loading && threads.length === 0 && (
-        <p className="empty">
-          {filter === 'open'
-            ? 'Ingenting väntar på ett beslut.'
-            : 'Inga trådar matchar filtret.'}
-        </p>
+        <div className="intake-empty">
+          <div className="ui-empty">
+            <div className="ui-empty-media"><Inbox size={20} /></div>
+            <h3>{filter === 'open' ? 'Kön är tom' : 'Inga träffar'}</h3>
+            <p className="empty">
+              {filter === 'open'
+                ? 'Ingenting väntar på ett beslut.'
+                : 'Inga trådar matchar filtret.'}
+            </p>
+          </div>
+        </div>
       )}
 
-      {!loading && threads.map((thread) => (
-        <ThreadCard
-          key={thread.key}
-          thread={thread}
-          categories={queue.categoryLabels}
-          resolutions={queue.resolutionLabels}
-          busy={busy || !isAdmin}
-          onConfirm={handleConfirm}
-          onResolve={handleResolve}
-          onReopen={handleReopen}
-          onRetriage={handleRetriage}
-          onOpenDocument={onOpenDocument}
-        />
-      ))}
+      {!loading && threads.length > 0 && (
+        <div className="intake-layout">
+          <div className="intake-list" role="list" aria-label="Trådar i kön">
+            {threads.map((thread) => (
+              <ThreadRow
+                key={thread.key}
+                thread={thread}
+                selected={selected?.key === thread.key}
+                onSelect={setSelectedKey}
+              />
+            ))}
+          </div>
+
+          <div className="intake-detail">
+            {selected && (
+              <ThreadDetail
+                thread={selected}
+                categories={queue.categoryLabels}
+                resolutions={queue.resolutionLabels}
+                busy={busy || !isAdmin}
+                onConfirm={handleConfirm}
+                onResolve={handleResolve}
+                onReopen={handleReopen}
+                onRetriage={handleRetriage}
+                onOpenDocument={onOpenDocument}
+              />
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -27,7 +27,7 @@ export function LockScreen({ onUnlock, onForgot }: { onUnlock: () => void; onFor
             <LockIcon size={32} />
           </div>
           <h1 className="screen__title" style={{ textAlign: 'center', marginTop: 'var(--s3)' }}>
-            Lås upp Källa
+            Lås upp Träff
           </h1>
           <p className="screen__lede" style={{ textAlign: 'center' }}>
             Ange din kod för att komma åt föreningens svar och dokument.

@@ -3,6 +3,7 @@ import type { FormEvent } from 'react'
 
 import { ApiError, OfflineError } from '../api/client'
 import { Notice } from '../components/Notice'
+import { TraffMark } from '../components/TraffMark'
 import { useSession } from '../state/session'
 
 /* Seeded demo logins, for the dev-mode convenience list only.
@@ -56,10 +57,15 @@ export function Login() {
     <div className="frame">
       <main className="frame__main">
         <div className="screen">
-          <h1 className="screen__title">Källa</h1>
+          {/* §05 Lockup: the mark stands before the name at cap height. It
+              says who is speaking before it asks for anything. */}
+          <span className="lockup">
+            <TraffMark size={28} decorative />
+            <h1 className="screen__title lockup__name">Träff</h1>
+          </span>
           <p className="screen__lede">
-            Föreningens dokument, med källa. Ställ en fråga och få svar som går att belägga —
-            eller ett tydligt besked när underlaget inte räcker.
+            Ställ en fråga om föreningens dokument. Svaret visar var det står.
+            Står det ingenstans säger Träff det.
           </p>
 
           {expired && !error && (

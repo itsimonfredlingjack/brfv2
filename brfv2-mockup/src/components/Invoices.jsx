@@ -329,11 +329,10 @@ export default function Invoices({ brfId, isAdmin = false, onOpenDocument, onOpe
   return (
     <div className="invoices">
       <div className="invoices-intro">
-        <h3><Receipt size={18} /> Fakturor</h3>
+        <h3 className="ui-section-title"><Receipt size={17} /> Fakturor</h3>
         <p>
-          Varje faktura är ett ärende: vad den är, vad som ändrats, vad den stämmer mot,
-          vad som saknas och vem som gör något åt det. Ingenting här ändrar något i
-          ekonomisystemet — det finns ingen kodväg som skriver utåt.
+          Varje faktura är ett ärende: vad den är, vad som ändrats, vad den stämmer mot och
+          vem som gör något åt det. Ingenting här ändrar något i ekonomisystemet.
         </p>
       </div>
 
@@ -373,10 +372,13 @@ export default function Invoices({ brfId, isAdmin = false, onOpenDocument, onOpe
 
       {pane === 'queue' && (
         <>
+          {/* Five numbers, not five cards. A row of stat tiles is the shape of
+              an analytics dashboard, and this is a work queue: the numbers say
+              how much is left, and then get out of the way. */}
           <dl className="invoices-counts">
             <div><dt>Att granska</dt><dd>{counts.open ?? 0}</dd></div>
             <div><dt>Med signal</dt><dd>{counts.withSignal ?? 0}</dd></div>
-            <div><dt>Förfallna</dt><dd>{counts.overdue ?? 0}</dd></div>
+            <div><dt>Förfallna</dt><dd className={counts.overdue ? 'attention' : ''}>{counts.overdue ?? 0}</dd></div>
             <div><dt>Utan ansvarig</dt><dd>{counts.unassigned ?? 0}</dd></div>
             <div>
               <dt>Öppet belopp</dt>
@@ -460,52 +462,60 @@ export default function Invoices({ brfId, isAdmin = false, onOpenDocument, onOpe
           )}
 
           {!loading && visible.length > 0 && (
-            <table className="invoices-queue">
-              <thead>
-                <tr>
-                  <th>Faktura</th>
-                  <th>Belopp</th>
-                  <th>Förfaller</th>
-                  <th>Källa</th>
-                  <th>I ekonomisystemet</th>
-                  <th>Vår granskning</th>
-                  <th>Signal</th>
-                  <th>Ansvarig</th>
-                  <th>Senaste aktivitet</th>
-                </tr>
-              </thead>
-              <tbody>
-                {visible.map((row) => (
-                  <tr key={row.id} className={row.overdue ? 'overdue' : ''}>
-                    <td>
-                      <button type="button" className="case-link" onClick={() => setSelected(row.id)}>
-                        <strong>{row.supplier_name || 'Okänd leverantör'}</strong>
-                        <span className="muted">{row.invoice_number || row.case_key}</span>
-                      </button>
-                    </td>
-                    <td className="numeric">{formatAmount(row.total_amount, row.currency)}</td>
-                    <td>
-                      {row.due_date || '—'}
-                      {row.overdue && <span className="overdue-flag">förfallen</span>}
-                    </td>
-                    <td>
-                      {row.observation_kinds.map((kind) => (
-                        <span key={kind} className="source-badge">{OBSERVATION_SHORT[kind] || kind}</span>
-                      ))}
-                    </td>
-                    <td className="muted">{row.source_status_label || 'ingen status'}</td>
-                    <td><span className="review-badge">{row.review_status_label}</span></td>
-                    <td><SignalChip signal={row.top_signal} /></td>
-                    <td>
-                      {row.responsible
-                        ? <span className="responsible"><User size={12} /> {row.responsible}</span>
-                        : <span className="muted">ej utsedd</span>}
-                    </td>
-                    <td className="muted">{(row.last_activity_at || '').slice(0, 10)}</td>
+            <div className="invoices-queue-wrap">
+              <table className="invoices-queue">
+                <thead>
+                  <tr>
+                    <th>Faktura</th>
+                    <th className="col-amount">Belopp</th>
+                    <th>Förfaller</th>
+                    <th>I ekonomisystemet</th>
+                    <th>Vår granskning</th>
+                    <th>Signal</th>
+                    <th>Ansvarig</th>
+                    <th>Senaste aktivitet</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {visible.map((row) => (
+                    <tr
+                      key={row.id}
+                      className={row.overdue ? 'overdue' : ''}
+                      onClick={() => setSelected(row.id)}
+                    >
+                      <td>
+                        <button type="button" className="case-link" onClick={() => setSelected(row.id)}>
+                          <strong>{row.supplier_name || 'Okänd leverantör'}</strong>
+                          <span className="case-link-sub">
+                            <span className="muted">{row.invoice_number || row.case_key}</span>
+                            {/* Where the case has been seen belongs to its
+                                identity, not to a column of its own — it is
+                                read alongside the number it identifies. */}
+                            {row.observation_kinds.map((kind) => (
+                              <span key={kind} className="source-badge">{OBSERVATION_SHORT[kind] || kind}</span>
+                            ))}
+                          </span>
+                        </button>
+                      </td>
+                      <td className="numeric col-amount">{formatAmount(row.total_amount, row.currency)}</td>
+                      <td className="col-due">
+                        {row.due_date || '—'}
+                        {row.overdue && <span className="overdue-flag">förfallen</span>}
+                      </td>
+                      <td className="muted col-source-status">{row.source_status_label || 'ingen status'}</td>
+                      <td><span className="review-badge">{row.review_status_label}</span></td>
+                      <td><SignalChip signal={row.top_signal} /></td>
+                      <td>
+                        {row.responsible
+                          ? <span className="responsible"><User size={12} /> {row.responsible}</span>
+                          : <span className="muted">ej utsedd</span>}
+                      </td>
+                      <td className="muted numeric">{(row.last_activity_at || '').slice(0, 10)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </>
       )}

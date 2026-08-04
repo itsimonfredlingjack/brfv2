@@ -1,6 +1,6 @@
 {
-  "name": "Källa — föreningens dokument",
-  "short_name": "Källa",
+  "name": "Träff — föreningens dokument",
+  "short_name": "Träff",
   "description": "Ställ frågor om föreningens dokument och få svar med exakt källa.",
   "lang": "sv",
   "dir": "ltr",
@@ -8,8 +8,8 @@
   "scope": "/m/",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#FBFAF8",
-  "theme_color": "#FBFAF8",
+  "background_color": "#F7F5F3",
+  "theme_color": "#F7F5F3",
   "icons": [
     { "src": "/m/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
     { "src": "/m/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },

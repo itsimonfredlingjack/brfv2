@@ -1,4 +1,4 @@
-"""End-to-end acceptance for the BRF Dokument-AI Fedora desktop delivery.
+"""End-to-end acceptance for the Träff Fedora desktop delivery.
 
 Run from the repository root after ``make desktop-build`` (or against an
 installed application with ``--application /usr/bin/brfv2-desktop``)::
@@ -94,7 +94,7 @@ TASK_RESPONSIBLE = "Jonas Berg"
 SUPPORTED_QUESTION = "Var har styrelsen sitt säte?"
 UNSUPPORTED_QUESTION = "Vilka öppettider har föreningens planetarium?"
 
-GENERAL_CHAT_INPUT = 'input[placeholder="Ställ en generell fråga till AI:n..."]'
+GENERAL_CHAT_INPUT = 'input[placeholder="Fråga rakt in i högen…"]'
 BRF_SELECT = 'select[aria-label="Byt aktiv förening"]'
 
 COLLECT_RUNTIME_ERRORS = """
@@ -1775,11 +1775,11 @@ def failure_surfaces(
     # somewhere with no resources beside it and no reachable checkout
     # reproduces exactly that, without putting a test-only hook into the
     # shipped product.
-    installed_resources = Path("/usr/lib/BRF Dokument-AI")
+    installed_resources = Path("/usr/lib/Träff")
     if installed_resources.is_dir():
         results["startupFailure"] = {
             "skipped": (
-                "an installation is present at /usr/lib/BRF Dokument-AI, so a detached "
+                "an installation is present at /usr/lib/Träff, so a detached "
                 "copy of the binary still resolves a valid runtime; this surface is "
                 "verified against the checkout build instead"
             )
@@ -1938,7 +1938,7 @@ def runtime_python(application: Path) -> tuple[Path, Path]:
 
     resolved = application.resolve()
     candidates = [
-        Path("/usr/lib/BRF Dokument-AI/runtime"),
+        Path("/usr/lib/Träff/runtime"),
         resolved.parent.parent.parent / "runtime",
     ]
     for runtime in candidates:
@@ -2306,7 +2306,7 @@ def main() -> None:
             candidate
             for candidate in (
                 binary_dir.parent.parent / "runtime/BUNDLE.json",
-                Path("/usr/lib/BRF Dokument-AI/runtime/BUNDLE.json"),
+                Path("/usr/lib/Träff/runtime/BUNDLE.json"),
             )
             if candidate.is_file()
         ),

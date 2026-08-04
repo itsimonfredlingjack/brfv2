@@ -1,4 +1,4 @@
-# RPM spec for the BRF Dokument-AI Fedora desktop delivery.
+# RPM spec for the Träff Fedora desktop delivery.
 #
 # The package is assembled by ops/package-desktop.sh, which stages a complete
 # buildroot first; this spec only describes and packs it. Everything below that
@@ -40,7 +40,7 @@
 #                     applies to every other strip pass: the bundled tree
 #                     ships as staged.
 
-%global appname     BRF Dokument-AI
+%global appname     Träff
 %global binname     brfv2-desktop
 %global _binary_payload w3.zstdio
 
@@ -70,7 +70,7 @@ Requires:       tesseract
 Requires:       tesseract-langpack-swe
 
 %description
-BRF Dokument-AI besvarar frågor om en bostadsrättsförenings egna dokument och
+Träff besvarar frågor om en bostadsrättsförenings egna dokument och
 visar alltid exakt var i vilken PDF svaret står. Frågor utan stöd i dokumenten
 besvaras inte — de avvisas.
 
@@ -93,7 +93,8 @@ cp -a %{stagedroot}/. %{buildroot}/
 
 %files
 %attr(0755, root, root) %{_bindir}/%{binname}
-# Quoted: the product name contains a space, and %files splits on whitespace.
+# Quoted: %files splits on whitespace, and the product name is not guaranteed
+# to stay a single unspaced word.
 "%{_prefix}/lib/%{appname}"
 "%{_datadir}/applications/%{appname}.desktop"
 %{_datadir}/icons/hicolor/32x32/apps/%{binname}.png
@@ -101,7 +102,7 @@ cp -a %{stagedroot}/. %{buildroot}/
 %{_datadir}/icons/hicolor/256x256/apps/%{binname}.png
 
 %changelog
-* Tue Jul 28 2026 BRF Dokument-AI <noreply@example.com> - 0.2.0-1
+* Tue Jul 28 2026 Träff <noreply@example.com> - 0.2.0-1
 - Första distributionsbara skrivbordsleveransen: paketerad Python-körmiljö,
   medföljande embeddervikter, förstagångskonfiguration i appen, säkerhets-
   kopiering och återställning.
