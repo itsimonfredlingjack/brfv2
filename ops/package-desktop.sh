@@ -296,6 +296,16 @@ rpm -qlp "$RPM" | awk -F/ 'NF<=5' | sort -u | head -20
 
 if [ "$INSTALL" -eq 1 ]; then
   step "Installation"
-  sudo dnf install -y "$RPM"
+  if rpm -q "$PKGNAME" >/dev/null 2>&1; then
+    sudo dnf reinstall -y "$RPM"
+  else
+    sudo dnf install -y "$RPM"
+  fi
+  if command -v update-desktop-database >/dev/null 2>&1; then
+    sudo update-desktop-database /usr/share/applications
+  fi
+  if command -v kbuildsycoca6 >/dev/null 2>&1; then
+    kbuildsycoca6 --noincremental >/dev/null 2>&1 || true
+  fi
   green "Installerad. Starta från applikationsmenyn eller med: $BINNAME"
 fi
