@@ -49,6 +49,7 @@ step() { printf '\n\033[1m==> %s\033[0m\n' "$*"; }
 fail() { printf '\033[31mFEL: %s\033[0m\n' "$*" >&2; exit 1; }
 
 command -v rpmbuild >/dev/null 2>&1 || fail "rpmbuild saknas — kör 'sudo dnf install rpm-build'."
+command -v rsvg-convert >/dev/null 2>&1 || fail "rsvg-convert saknas — kan inte verifiera desktop-ikonerna."
 [ -d src-tauri/runtime/python ] || fail "src-tauri/runtime saknas — kör 'make desktop-runtime' först."
 [ -f src-tauri/runtime/BUNDLE.json ] || fail "src-tauri/runtime/BUNDLE.json saknas — kör om 'make desktop-runtime'."
 [ -d brfv2-mockup/node_modules ] || fail "brfv2-mockup/node_modules saknas — kör 'make setup' först."
@@ -70,6 +71,27 @@ BUNDLE_TREE="$(python3 -c "import json;print(json.load(open('src-tauri/runtime/B
   bundle:   $BUNDLE_TREE
   checkout: $DELIVERY_TREE
   Kör om 'make desktop-runtime'."
+
+# The SVG is the one canonical desktop mark. The PNGs are committed because
+# Tauri and the RPM consume raster assets, so fail before packaging if any
+# generated size has drifted from that source (or came from the standard icon).
+step "Desktop-ikoner"
+for icon in \
+  "32:src-tauri/icons/32x32.png" \
+  "128:src-tauri/icons/128x128.png" \
+  "256:src-tauri/icons/128x128@2x.png" \
+  "512:src-tauri/icons/icon.png"; do
+  size="${icon%%:*}"
+  target="${icon#*:}"
+  generated="$(mktemp)"
+  rsvg-convert -w "$size" -h "$size" src-tauri/icons/icon.svg -o "$generated"
+  if ! cmp -s "$generated" "$target"; then
+    rm -f "$generated"
+    fail "$target är inte genererad från src-tauri/icons/icon.svg — kör om desktop-ikonbygget."
+  fi
+  rm -f "$generated"
+done
+green "desktop-ikoner verifierade från src-tauri/icons/icon.svg"
 
 VERSION="$(python3 -c "import json;print(json.load(open('src-tauri/tauri.conf.json'))['version'])")"
 

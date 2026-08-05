@@ -1,9 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="Träff">
-  <!-- §08 Ikon och bruk. The icon carries the BRAND mark: complete, monochrome,
-       never a state colour — not even when there are new hits. Geometry is §02
-       and is not free-hand: diameter 52 % of the field, ring 8 % of the
-       diameter, core 46 % of the inner measure, always concentric. -->
+  <!-- Desktop launcher cut of the Träff brand mark: complete, monochrome,
+       never a state colour — not even when there are new hits. The mark uses
+       72 % of the visible field so the symbol survives KDE's small menu
+       raster sizes. Geometry remains fixed (§02): ring 8 % of the diameter,
+       core 46 % of the inner measure, always concentric. -->
   <rect width="512" height="512" rx="112" fill="#07080B"/>
-  <circle cx="256" cy="256" r="122.4704" fill="none" stroke="#ECEDEF" stroke-width="21.2992"/>
-  <circle cx="256" cy="256" r="51.4376" fill="#ECEDEF"/>
+  <circle cx="256" cy="256" r="169.5744" fill="none" stroke="#ECEDEF" stroke-width="29.4912"/>
+  <circle cx="256" cy="256" r="71.221248" fill="#ECEDEF"/>
 </svg>
