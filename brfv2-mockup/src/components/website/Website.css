@@ -57,14 +57,17 @@
 
 /* ---------- AI partner ---------- */
 
+/* The partner's rail is paper like the rest of the shell — no colour of its
+   own. An assistant with a tinted room reads as a second product; this one is
+   a colleague at the same desk, and the page stays the star. */
 .ai-panel {
-  width: 324px;
+  width: 308px;
   flex: none;
   display: flex;
   flex-direction: column;
   min-height: 0;
   border-right: 1px solid var(--panel-border);
-  background: linear-gradient(180deg, rgba(139, 92, 246, 0.055) 0%, rgba(139, 92, 246, 0) 220px), var(--bg-color);
+  background: var(--surface-1);
 }
 
 .ai-panel--collapsed {
@@ -396,40 +399,54 @@
   position: relative;
 }
 
+/* Wraps rather than clips: at 150 % zoom the fixed row cut "Publicera" in
+   half at the window edge — a hidden control on the one button that ships
+   the page. */
 .site-topbar {
   flex: none;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 16px;
-  padding: 0 16px;
-  height: 56px;
+  justify-content: space-between;
+  gap: 8px 16px;
+  padding: 8px 16px;
+  min-height: 52px;
   border-bottom: 1px solid var(--panel-border);
-  background: var(--bg-color);
+  background: var(--sidebar);
 }
 
 .site-topbar__left {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 10px;
+  gap: 6px 10px;
   min-width: 0;
-  flex: 1;
-}
-
-.site-topbar__center {
-  display: flex;
-  gap: 2px;
-  padding: 3px;
-  background: var(--panel-bg);
-  border: 1px solid var(--panel-border);
-  border-radius: 9px;
+  flex: 1 1 auto;
 }
 
 .site-topbar__right {
   display: flex;
   align-items: center;
   gap: 8px;
-  flex: 1;
+  flex: none;
   justify-content: flex-end;
+}
+
+/* Which width the page is judged at: a quiet instrument floating over the
+   desk, under the canvas it measures. */
+.site-vpbar {
+  position: absolute;
+  bottom: 14px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  background: var(--popover);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-md);
+  z-index: 15;
 }
 
 .site-pageselect {
@@ -509,21 +526,22 @@
   gap: 6px;
   background: none;
   border: 0;
-  border-radius: 7px;
-  padding: 6px 11px;
+  border-radius: var(--radius-pill);
+  padding: 6px 12px;
   color: var(--text-muted);
   font-family: inherit;
   font-size: 12.5px;
   font-weight: 550;
   cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
 }
 
 .site-vp:hover {
-  color: var(--text-secondary);
+  color: var(--text-primary);
 }
 
 .site-vp.active {
-  background: var(--panel-hover);
+  background: var(--surface-3);
   color: var(--text-primary);
 }
 
@@ -1076,7 +1094,7 @@
     width: 300px;
   }
 
-  .site-topbar__center span {
+  .site-vpbar span {
     display: none;
   }
 }
@@ -1198,7 +1216,9 @@
   color: var(--text-secondary);
 }
 
-.site-broken svg { color: var(--status-warning); }
+/* A workspace that failed to start is machinery breaking — Avbrott, never the
+   amber that means a claim lacks support. */
+.site-broken svg { color: var(--avbrott); }
 
 .site-broken h1 {
   font-family: var(--font-sans);
@@ -1210,11 +1230,11 @@
 .site-broken p { max-width: 52ch; font-size: 14px; line-height: 1.65; }
 
 .site-broken__detail {
-  font-family: ui-monospace, 'SF Mono', Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 12.5px;
-  color: var(--status-warning);
-  background: var(--panel-bg);
-  border: 1px solid var(--panel-border);
+  color: var(--avbrott);
+  background: var(--avbrott-soft);
+  border: 1px solid var(--avbrott-border);
   border-radius: 8px;
   padding: 10px 14px;
   word-break: break-word;

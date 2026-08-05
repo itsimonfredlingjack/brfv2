@@ -2,46 +2,48 @@
  *
  * Everything on this screen is something a human decided, so nothing on it
  * carries the provisional treatment Bevakningar uses for what a rule engine
- * read — no dashed borders, no tinted "förslag" blocks. The only visual
- * emphasis is on the two facts a board acts on: a date that has passed, and
- * work nobody is named for.
+ * read — no dashed borders, no tinted "förslag" blocks. Responsibility is the
+ * axis instead: every card opens with who owns the work, on a rail of its
+ * own, with the deadline as the measurement under the name. The trail is not
+ * a detail view; it is the feature, set like the appendix of a protocol —
+ * timestamps in the measuring cut, one hairline per entry, nothing boxed.
  *
  * Late is marked in a word and in weight, never in a hue. A date that has
  * passed is arithmetic — §07 gives arithmetic to the mono — and this product
- * keeps red for the one thing red means here: the machinery failed, or is about
- * to destroy something (theme.css, --avbrott). A card that says its lateness
- * only in colour is also unreadable to exactly the person who most needs it. */
+ * keeps red for the one thing red means here: the machinery failed, or is
+ * about to destroy something (theme.css, --avbrott). */
 
 .tasks {
-  max-width: 1100px;
+  max-width: 1040px;
   margin: 0 auto;
   padding: 0 4px 48px;
 }
 
 .tasks-header {
   display: flex;
-  align-items: flex-start;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
-  margin-bottom: 14px;
+  margin-bottom: 18px;
 }
 
 .tasks-header h2 {
-  display: flex;
-  align-items: center;
-  gap: 9px;
   margin: 0 0 6px;
-  font-size: var(--text-xl);
+  font-family: var(--font-serif);
+  font-size: var(--text-2xl);
   font-weight: 400;
   letter-spacing: -0.03em;
-  color: var(--text-primary);
+  line-height: 1.1;
+  color: var(--foreground);
 }
+
+.tasks-header h2 > svg { display: none; }
 
 .tasks .muted,
 .tasks .empty {
-  color: var(--text-secondary);
-  font-size: 14px;
+  color: var(--muted-foreground);
+  font-size: var(--text-base);
   line-height: 1.6;
   max-width: 78ch;
 }
@@ -52,16 +54,21 @@
   display: inline-flex;
   align-items: center;
   gap: 7px;
-  padding: 8px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--panel-border);
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: 13px;
+  height: 32px;
+  padding: 0 13px;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-2xl);
+  background: var(--field);
+  color: var(--foreground);
+  font-size: var(--text-base);
+  font-weight: 500;
   font-family: inherit;
+  white-space: nowrap;
   cursor: pointer;
+  transition: background-color 0.14s ease;
 }
 
+.tasks-refresh:hover:not(:disabled) { background: var(--surface-3); }
 .tasks-refresh:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .tasks-banner {
@@ -69,108 +76,92 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
-  padding: 11px 14px;
-  border-radius: 10px;
   margin-bottom: 14px;
-  font-size: 14px;
-  line-height: 1.5;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2xl);
+  font-size: var(--text-base);
+  line-height: 1.55;
 }
 
-.tasks-banner.error {
-  background: var(--avbrott-soft);
-  border: 1px solid var(--avbrott-border);
-  color: var(--text-primary);
-}
-
-.tasks-banner.ok {
-  background: var(--surface-3);
-  border: 1px solid var(--border-strong);
-  color: var(--text-primary);
-}
+.tasks-banner.error { background: var(--avbrott-soft); border-color: var(--avbrott-border); }
+.tasks-banner.ok { background: var(--card); border-color: var(--border-strong); }
 
 .tasks-banner-dismiss {
-  background: transparent;
+  display: flex;
+  flex-shrink: 0;
+  padding: 2px;
   border: none;
+  background: transparent;
   color: inherit;
   cursor: pointer;
-  padding: 2px;
-  display: flex;
 }
 
 .tasks-loading {
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--text-secondary);
-  font-size: 14px;
+  color: var(--muted-foreground);
+  font-size: var(--text-base);
 }
 
-.tasks .spin { animation: tasks-spin 1s linear infinite; }
-
-@keyframes tasks-spin {
-  to { transform: rotate(360deg); }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .tasks .spin { animation: none; }
-}
-
-/* --- the three numbers --- */
+/* --- the three numbers: a counter line, not a dashboard --- */
 
 .tasks-counts {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
-  gap: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0;
   margin: 0 0 12px;
+  padding: 12px 4px;
+  border-top: 1px solid var(--border-strong);
+  border-bottom: 1px solid var(--border);
 }
 
 .tasks-counts > div {
-  padding: 11px 14px;
-  border-radius: 11px;
-  border: 1px solid var(--panel-border);
-  background: var(--surface-2);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 0 26px;
+  border-right: 1px solid var(--border);
 }
 
-/* Work nobody is named for, and work whose date has passed: emphasised by an
-   ink edge, because both are counts rather than claims. */
-.tasks-counts > div.flagged {
-  border-color: var(--border-strong);
-  background: var(--surface-1);
-  box-shadow: inset 3px 0 0 var(--ink);
-}
+.tasks-counts > div:last-child { border-right: none; }
+.tasks-counts > div:first-child { padding-left: 4px; }
 
 .tasks-counts dt {
-  font-size: 12px;
-  color: var(--text-secondary);
+  color: var(--subtle-foreground);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
 }
 
 .tasks-counts dd {
-  margin: 2px 0 0;
-  font-size: 22px;
+  margin: 0;
+  color: var(--foreground);
+  font-size: var(--text-lg);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
-  color: var(--text-primary);
 }
+
+/* Work nobody is named for, and work whose date has passed: emphasised by an
+   ink rule under the number, because both are counts rather than claims. */
+.tasks-counts > div.flagged dd { width: fit-content; box-shadow: inset 0 -2px 0 var(--ink); }
 
 .tasks-summary {
-  margin: 0 0 22px;
-  padding: 11px 14px;
-  border-radius: 10px;
-  border: 1px solid var(--panel-border);
-  font-size: 14px;
+  margin: 0 0 24px;
+  font-size: var(--text-base);
   line-height: 1.6;
-  color: var(--text-secondary);
+  color: var(--muted-foreground);
 }
 
-.tasks-summary strong {
-  color: var(--text-primary);
-  font-variant-numeric: tabular-nums;
-}
+.tasks-summary strong { color: var(--foreground); font-variant-numeric: tabular-nums; }
 
 .tasks-new,
-.tasks-active {
-  margin-bottom: 28px;
-}
+.tasks-active { margin-bottom: 30px; }
 
 .tasks h3 {
   display: flex;
@@ -179,32 +170,88 @@
   margin: 0 0 4px;
   font-size: var(--text-lg);
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--foreground);
 }
 
 .tasks h3 + p { margin: 0 0 14px; }
 
-/* --- one task --- */
+/* --- one task: the ownership rail, then the work --- */
 
 .task {
-  border: 1px solid var(--panel-border);
-  border-radius: 12px;
-  padding: 14px 16px;
+  display: grid;
+  grid-template-columns: 148px minmax(0, 1fr);
+  gap: 4px 18px;
   margin-bottom: 12px;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--card);
+}
+
+/* A passed date carries the strongest edge on the screen — ink, the only
+   emphasis on paper that claims nothing. */
+.task.overdue { box-shadow: inset 3px 0 0 var(--ink); }
+
+/* Blocked is waiting on somebody, not wrong: the same dashed language the
+   product uses for anything unsettled. */
+.task.blocked { border-style: dashed; border-color: var(--border-strong); }
+
+.task-who {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  padding-top: 2px;
+  min-width: 0;
+}
+
+.task-avatar {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  margin-bottom: 3px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
   background: var(--surface-2);
+  color: var(--foreground);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.02em;
 }
 
-.task.overdue {
-  border-color: var(--border-strong);
-  box-shadow: inset 3px 0 0 var(--ink);
-}
-
-/* Blocked is provisional, not wrong: the same dashed language Bevakningar
-   uses for anything waiting on a human. */
-.task.blocked {
-  border-color: var(--border-strong);
+/* Nobody yet: the tile is drawn empty, the way the status mark is empty until
+   proof exists. */
+.task-avatar.empty {
   border-style: dashed;
+  background: transparent;
+  color: var(--subtle-foreground);
 }
+
+.task-owner {
+  max-width: 100%;
+  font-size: var(--text-base);
+  font-weight: 600;
+  line-height: 1.35;
+  color: var(--foreground);
+  overflow-wrap: anywhere;
+}
+
+/* Nobody named is a gap in the record, not a blank field. */
+.task-unassigned { color: var(--warn); font-weight: 600; }
+
+.task-due {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  letter-spacing: 0.04em;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+}
+
+.task-due.late { color: var(--foreground); font-weight: 600; }
+
+.task-body { min-width: 0; }
 
 .task-head {
   display: flex;
@@ -215,227 +262,230 @@
   margin-bottom: 6px;
 }
 
+/* Where the work came from: a classification, in the measuring cut. */
 .task-origin-kind {
-  font-size: var(--text-xs);
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--text-secondary);
+  color: var(--subtle-foreground);
 }
 
-.task-badges {
-  display: inline-flex;
-  gap: 6px;
-  flex-wrap: wrap;
-}
+.task-badges { display: inline-flex; gap: 6px; flex-wrap: wrap; }
 
 .task-badge {
+  padding: 2px 9px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  color: var(--muted-foreground);
   font-size: var(--text-xs);
-  font-weight: 600;
-  padding: 2px 8px;
-  border-radius: 999px;
-  border: 1px solid var(--panel-border);
-  color: var(--text-secondary);
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 /* Workflow status is not one of the identity's meanings, so it gets none of
-   the identity's colours. The ramp is fill and edge: the one being worked on is
+   the identity's colours. The ramp is fill and edge: the one being worked is
    filled, what is waiting is dashed, what is finished recedes. */
-.task-badge.open { background: var(--surface-2); }
-.task-badge.in_progress {
-  background: var(--surface-3);
-  border-color: var(--border-strong);
-  color: var(--foreground);
-}
-.task-badge.blocked {
-  background: transparent;
-  border-color: var(--border-strong);
-  border-style: dashed;
-}
-.task-badge.done {
-  background: var(--muted);
-  border-color: transparent;
-  color: var(--subtle-foreground);
-}
-.task-badge.cancelled { background: var(--surface-2); color: var(--subtle-foreground); }
+.task-badge.open { background: transparent; }
+.task-badge.in_progress { background: var(--muted); border-color: transparent; color: var(--foreground); }
+.task-badge.blocked { background: transparent; border-style: dashed; }
+.task-badge.done { background: var(--muted); border-color: transparent; color: var(--subtle-foreground); }
+.task-badge.cancelled { background: transparent; color: var(--subtle-foreground); }
 
 /* The measurement, boxed (theme.css .matt--overdue). */
 .task-badge.late {
   background: var(--surface-3);
   border-color: var(--border-strong);
+  border-radius: var(--radius-sm);
   color: var(--foreground);
   font-family: var(--font-mono);
   font-size: 0.6875rem;
+  font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  border-radius: var(--radius-sm);
 }
 
 .task-title {
   margin: 0 0 8px;
-  font-size: 15px;
+  font-size: var(--text-md);
   font-weight: 600;
   line-height: 1.45;
-  color: var(--text-primary);
+  color: var(--foreground);
 }
 
 .task-description {
   margin: 0 0 10px;
-  font-size: 14px;
-  line-height: 1.6;
-  color: var(--text-primary);
   max-width: 78ch;
+  font-size: var(--text-base);
+  line-height: 1.6;
+  color: var(--foreground);
 }
 
 .task-facts {
-  margin: 0 0 10px;
   display: grid;
   gap: 4px;
+  margin: 0 0 10px;
 }
 
 .task-facts > div {
   display: grid;
-  grid-template-columns: minmax(110px, 26%) 1fr;
+  grid-template-columns: minmax(96px, 22%) 1fr;
   gap: 10px;
 }
 
-.task-facts dt {
-  font-size: 12px;
-  color: var(--text-secondary);
-}
+.task-facts dt { font-size: var(--text-sm); color: var(--muted-foreground); }
 
 .task-facts dd {
   margin: 0;
-  font-size: 13px;
-  color: var(--text-primary);
+  font-size: var(--text-sm);
+  color: var(--foreground);
   font-variant-numeric: tabular-nums;
   overflow-wrap: anywhere;
 }
 
-/* Nobody named is a fact about the work, not a blank field. */
-.task-unassigned {
-  color: var(--warn);
-  font-weight: 600;
-}
-
 /* --- citations --- */
 
-.task-citations {
-  display: grid;
-  gap: 8px;
-  margin-bottom: 12px;
-}
+.task-citations { display: grid; gap: 8px; margin-bottom: 12px; }
 
 .task-citation {
   display: grid;
-  gap: 5px;
+  gap: 4px;
   width: 100%;
-  text-align: left;
-  padding: 10px 12px;
-  border-radius: 10px;
-  border: 1px solid var(--panel-border);
-  background: var(--surface-2);
-  color: var(--text-primary);
+  padding: 10px 13px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-block);
+  background: var(--card);
+  color: var(--foreground);
   font: inherit;
+  text-align: left;
   cursor: pointer;
+  transition: background-color 0.14s ease, border-color 0.14s ease;
 }
 
 .task-citation:hover,
 .task-citation:focus-visible {
-  border-color: var(--accent, #6384ff);
+  background: var(--card-hover);
+  border-color: var(--border-strong);
+  outline: none;
 }
 
 .task-citation-source {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
+  color: var(--muted-foreground);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  letter-spacing: 0.06em;
 }
 
-.task-citation-approx { font-weight: 500; font-style: italic; }
+.task-citation-approx { font-weight: 400; font-style: italic; }
 
+/* The document's own words, in the document's own voice. */
 .task-citation-quote {
   display: block;
-  font-size: 13px;
-  line-height: 1.6;
-  color: var(--text-primary);
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: var(--text-lg);
+  line-height: 1.45;
+  letter-spacing: -0.01em;
+  color: var(--foreground);
+  quotes: '»' '«';
 }
 
-/* --- the trail --- */
+/* --- the trail: an appended record, not a stack of boxes --- */
 
 .task-history {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid var(--panel-border);
+  border-top: 1px solid var(--border);
 }
 
 .task-history h5,
 .task-change h5 {
   margin: 0 0 8px;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--text-secondary);
+  color: var(--subtle-foreground);
 }
 
-.task-history-earlier {
-  margin-bottom: 8px;
-}
+.task-history-earlier { margin-bottom: 8px; }
 
 .task-history-earlier summary {
   cursor: pointer;
-  font-size: 13px;
-  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  color: var(--muted-foreground);
 }
 
 .task-events {
   list-style: none;
+  display: grid;
+  gap: 0;
   margin: 0;
   padding: 0;
-  display: grid;
-  gap: 6px;
 }
 
 .task-event {
   display: grid;
-  grid-template-columns: 130px 120px 1fr;
-  gap: 4px 12px;
-  padding: 7px 10px;
-  border-radius: 9px;
-  border: 1px solid var(--panel-border);
-  background: var(--surface-2);
-  font-size: 13px;
-  color: var(--text-primary);
+  grid-template-columns: 132px 110px 1fr;
+  gap: 2px 14px;
+  padding: 7px 2px;
+  border-bottom: 1px solid var(--border);
+  font-size: var(--text-sm);
+  color: var(--foreground);
 }
+
+.task-event:last-child { border-bottom: none; }
 
 .task-event-when {
-  color: var(--text-secondary);
+  color: var(--subtle-foreground);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  padding-top: 1px;
 }
 
-.task-event-who {
-  color: var(--text-secondary);
-  overflow-wrap: anywhere;
-}
+.task-event-who { color: var(--muted-foreground); overflow-wrap: anywhere; }
 
 .task-event-note {
-  grid-column: 1 / -1;
-  color: var(--text-secondary);
+  grid-column: 2 / -1;
+  color: var(--muted-foreground);
   line-height: 1.55;
 }
 
-.task-event.status_changed { border-color: var(--border-strong); }
+.task-event.status_changed .task-event-what { font-weight: 500; }
 
 /* --- changing it --- */
 
 .task-change {
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid var(--panel-border);
+  border-top: 1px solid var(--border);
 }
+
+.task-change > summary {
+  cursor: pointer;
+  list-style: none;
+  color: var(--muted-foreground);
+}
+
+.task-change > summary::-webkit-details-marker { display: none; }
+.task-change > summary:hover h5 { color: var(--foreground); }
+.task-change > summary h5 { display: inline-flex; margin: 0; }
+.task-change > summary::before {
+  content: '▸ ';
+  font-size: var(--text-xs);
+  color: var(--subtle-foreground);
+}
+.task-change[open] > summary { margin-bottom: 10px; }
+.task-change[open] > summary::before { content: '▾ '; }
 
 .task-change-fields {
   display: flex;
@@ -446,9 +496,9 @@
 
 .tasks label {
   display: grid;
-  gap: 4px;
-  font-size: 12px;
-  color: var(--text-secondary);
+  gap: 5px;
+  font-size: var(--text-sm);
+  color: var(--muted-foreground);
 }
 
 .task-change-fields label { flex: 1 1 170px; }
@@ -456,58 +506,73 @@
 .tasks input,
 .tasks select,
 .tasks textarea {
-  padding: 7px 10px;
-  border-radius: 9px;
-  border: 1px solid var(--panel-border);
-  background: var(--surface-2);
-  color: var(--text-primary);
-  font-size: 13px;
+  padding: 6px 11px;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-2xl);
+  background: var(--field);
+  color: var(--foreground);
+  font-size: var(--text-base);
   font-family: inherit;
+  outline: none;
   resize: vertical;
+  transition: border-color 0.14s ease, box-shadow 0.14s ease;
 }
+
+.tasks textarea { border-radius: var(--radius-block); }
+
+.tasks input:focus-visible,
+.tasks select:focus-visible,
+.tasks textarea:focus-visible { border-color: var(--ring); box-shadow: 0 0 0 3px var(--ring-glow); }
 
 .tasks input:disabled,
 .tasks select:disabled,
-.tasks textarea:disabled { opacity: 0.6; }
+.tasks textarea:disabled { opacity: 0.55; }
 
-.task-change-text {
-  margin-bottom: 10px;
-}
+.task-change-text { margin-bottom: 10px; }
 
 .task-change-text summary {
-  cursor: pointer;
-  font-size: 13px;
-  color: var(--text-secondary);
   margin-bottom: 8px;
+  cursor: pointer;
+  font-size: var(--text-sm);
+  color: var(--muted-foreground);
 }
 
 .task-change-text label { margin-bottom: 8px; }
 
 .task-change-note { margin-bottom: 10px; }
 
-.task-change-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
+.task-invalid { margin: 0 0 8px; font-size: var(--text-sm); color: var(--warn); }
+
+.task-change-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 
 .task-action {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 8px 13px;
-  border-radius: 9px;
-  border: 1px solid var(--panel-border);
-  background: transparent;
-  color: var(--text-primary);
-  font-size: 13px;
-  font-weight: 600;
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--input);
+  border-radius: var(--radius-2xl);
+  background: var(--field);
+  color: var(--foreground);
+  font-size: var(--text-base);
+  font-weight: 500;
   font-family: inherit;
+  white-space: nowrap;
   cursor: pointer;
+  transition: background-color 0.14s ease;
 }
 
+.task-action:hover:not(:disabled) { background: var(--surface-3); }
 .task-action:disabled { opacity: 0.5; cursor: not-allowed; }
-.task-action.save { border-color: var(--ink); }
+
+.task-action.save {
+  border-color: transparent;
+  background: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 600;
+}
+.task-action.save:hover:not(:disabled) { background: var(--primary-action-hover); }
 
 .task-comment {
   display: flex;
@@ -516,7 +581,7 @@
   flex-wrap: wrap;
   margin-top: 12px;
   padding-top: 12px;
-  border-top: 1px solid var(--panel-border);
+  border-top: 1px solid var(--border);
 }
 
 .task-comment label { flex: 1 1 240px; }
@@ -524,17 +589,18 @@
 /* --- done and cancelled --- */
 
 .tasks-closed {
-  border: 1px solid var(--panel-border);
-  border-radius: 12px;
-  padding: 12px 14px;
   margin-bottom: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  background: var(--surface-1);
 }
 
 .tasks-closed summary {
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--text-secondary);
+  font-size: var(--text-base);
+  font-weight: 500;
+  color: var(--muted-foreground);
 }
 
 .tasks-closed > .muted,
@@ -542,42 +608,52 @@
 
 .tasks-closed ul {
   list-style: none;
-  margin: 12px 0 0;
-  padding: 0;
   display: grid;
   gap: 10px;
+  margin: 12px 0 0;
+  padding: 0;
 }
 
 .task-closed {
   display: grid;
   gap: 4px;
   padding: 11px 13px;
-  border-radius: 10px;
-  border: 1px solid var(--panel-border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--card);
 }
 
-.task-closed-title { font-size: 14px; color: var(--text-primary); }
+.task-closed-title { font-size: var(--text-base); color: var(--foreground); }
 
 .task-closed-meta,
 .task-closed-note,
 .task-closed-origin {
-  font-size: 12px;
-  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  color: var(--muted-foreground);
   line-height: 1.55;
 }
 
 .task-closed-history summary {
   cursor: pointer;
-  font-size: 12px;
-  color: var(--text-secondary);
+  font-size: var(--text-sm);
+  color: var(--muted-foreground);
 }
 
 .task-closed-history .task-events { margin-top: 8px; }
 
 @media (max-width: 720px) {
+  .task { grid-template-columns: 1fr; gap: 8px; }
+  .task-who {
+    flex-direction: row;
+    align-items: center;
+    gap: 10px;
+  }
+  .task-avatar { margin-bottom: 0; }
+
   .task-facts > div,
   .task-event {
     grid-template-columns: 1fr;
     gap: 2px;
   }
+  .task-event-note { grid-column: 1; }
 }

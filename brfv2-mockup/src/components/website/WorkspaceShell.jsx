@@ -347,22 +347,6 @@ export default function WorkspaceShell({
             {busy && <Loader2 size={14} className="site-spin" aria-label="Sparar" />}
           </div>
 
-          <div className="site-topbar__center" role="group" aria-label="Visningsbredd">
-            {VIEWPORTS.map(({ id, label, icon: Icon }) => (
-              <button
-                key={id}
-                type="button"
-                className={`site-vp ${viewport === id ? 'active' : ''}`}
-                onClick={() => setViewport(id)}
-                title={label}
-                aria-pressed={viewport === id}
-              >
-                <Icon size={15} aria-hidden="true" />
-                <span>{label}</span>
-              </button>
-            ))}
-          </div>
-
           <div className="site-topbar__right">
             {isAdmin && (
               <button type="button" className="site-btn" onClick={() => setDrawerOpen(true)}>
@@ -413,6 +397,24 @@ export default function WorkspaceShell({
             data-testid="site-canvas"
           >
             <Puck.Preview />
+          </div>
+
+          {/* Floating over the desk rather than crowding the toolbar: which
+              width the page is being judged at is a property of the canvas. */}
+          <div className="site-vpbar" role="group" aria-label="Visningsbredd">
+            {VIEWPORTS.map(({ id, label, icon: Icon }) => (
+              <button
+                key={id}
+                type="button"
+                className={`site-vp ${viewport === id ? 'active' : ''}`}
+                onClick={() => setViewport(id)}
+                title={label}
+                aria-pressed={viewport === id}
+              >
+                <Icon size={15} aria-hidden="true" />
+                <span>{label}</span>
+              </button>
+            ))}
           </div>
         </div>
 

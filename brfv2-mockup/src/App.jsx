@@ -60,12 +60,13 @@ function ModelStatusBadge({ status }) {
     : status.kind === 'warning' ? 'Modell inte redo'
     : status.displayName || status.model || 'Okänd modell';
 
+  // Only a ready runtime earns a second line: for a warning the primary
+  // sentence already names the provider, and repeating it in small grey type
+  // read as a leaked debug string beside the real message.
   const secondary =
     status.kind === 'ready'
       ? [displayNameForProvider(status.provider), status.runtimeLabel].filter(Boolean).join(' · ')
-      : status.kind === 'warning'
-        ? displayNameForProvider(status.provider)
-        : null;
+      : null;
 
   const title = 'Modellen som just nu används för att generera AI-chattens svar.';
   const ariaLabel = `Modellstatus: ${primary}${secondary ? ', ' + secondary : ''}`;
@@ -816,7 +817,7 @@ function App() {
                       </div>
                       <div className="pdf-actions">
                          <button className="icon-action-btn" onClick={() => setPdfZoom(z => Math.max(50, z - 10))} title="Zooma ut" aria-label="Zooma ut"><ZoomOut size={16}/></button>
-                         <span style={{ fontSize: '12px', width: '40px', textAlign: 'center' }}>{pdfZoom}%</span>
+                         <span className="pdf-zoom-value">{pdfZoom}%</span>
                          <button className="icon-action-btn" onClick={() => setPdfZoom(z => Math.min(200, z + 10))} title="Zooma in" aria-label="Zooma in"><ZoomIn size={16}/></button>
                       </div>
                     </div>
@@ -1093,12 +1094,7 @@ function App() {
                     <h2 className="page-title">Dokument</h2>
                     <p className="page-header-sub">
                       {activeBrfName ? `Dokument för ${activeBrfName}.` : 'Hantera dokument.'}
-                      {documents.length > 0 && (
-                        <span className="page-header-count">
-                          {' · '}{documents.length} dokument{' · '}
-                          {documents.reduce((sum, d) => sum + (d.pages || 0), 0)} sökbara sidor
-                        </span>
-                      )}
+                      {' '}Allt som ligger här kan sökas, citeras och öppnas på rätt sida.
                     </p>
                   </div>
                   {isAdmin && (
@@ -1152,6 +1148,15 @@ function App() {
                       </button>
                     )}
                   </div>
+                  {/* The corpus, said as a measurement — and, under a filter,
+                      the measurement of what the filter left. */}
+                  {!documentsLoading && !documentsError && documents.length > 0 && (
+                    <p className="docs-register-count" aria-live="polite">
+                      {docsSearchQuery
+                        ? `${filteredDocs.length} av ${documents.length} dokument`
+                        : `${documents.length} dokument · ${documents.reduce((sum, d) => sum + (d.pages || 0), 0)} sökbara sidor`}
+                    </p>
+                  )}
                 </div>
 
                 <div className="docs-collection-container">
@@ -1184,12 +1189,18 @@ function App() {
                   ) : (
                     <>
                       {/* Desktop Table */}
+                      {/* The register. Name first and strongest; what can be
+                          measured about the document — pages, date — stands to
+                          the right in the mono, the cut that measures. The old
+                          status column said "Färdigbehandlad" on every row of
+                          every library (ingestion is synchronous), and a badge
+                          every row carries is decoration, not status. */}
                       <table className="docs-table desktop-only">
                         <thead>
                           <tr>
                             <th scope="col">Dokumentnamn</th>
-                            <th scope="col">Uppladdat</th>
-                            <th scope="col">Status</th>
+                            <th scope="col" className="num-col">Sidor</th>
+                            <th scope="col" className="num-col">Uppladdat</th>
                             {isAdmin && <th scope="col" className="action-col"><span className="visually-hidden">Åtgärder</span></th>}
                           </tr>
                         </thead>
@@ -1203,24 +1214,16 @@ function App() {
                             >
                               <td className="doc-name-cell">
                                 <button className="doc-open-btn" onClick={() => openDocument(doc.id)} aria-label={`Öppna ${doc.name}`}>
-                                  <FileText size={16} color="var(--text-secondary)" className="doc-icon" />
                                   <span className="truncate">{doc.name}</span>
                                   {doc.id === highlightDocId && <span className="new-doc-badge">Ny</span>}
                                 </button>
                               </td>
-                              <td className="meta-cell">{doc.date}</td>
-                              {/* Every listed document has this status, because
-                                  ingestion is synchronous — a green badge on
-                                  every row of every library is decoration, and
-                                  decoration is what makes a real badge
-                                  invisible. */}
-                              <td>
-                                <span className="status-text muted"><CheckCircle2 size={13}/> Färdigbehandlad</span>
-                              </td>
+                              <td className="meta-cell num-col">{doc.pages != null ? doc.pages : '—'}</td>
+                              <td className="meta-cell num-col">{doc.date}</td>
                               {isAdmin && (
                                 <td className="action-col" onClick={(e) => e.stopPropagation()}>
                                   <button
-                                    className="icon-action-btn danger"
+                                    className="icon-action-btn danger row-reveal"
                                     onClick={() => requestDeleteDocument(doc)}
                                     disabled={!!deletingId}
                                     aria-label={`Ta bort ${doc.name}`}
@@ -1252,7 +1255,7 @@ function App() {
                               <div className="doc-card-meta">
                                  <span>{doc.date}</span>
                                  <span>·</span>
-                                 <span className="status-text ok">Färdig</span>
+                                 <span>{doc.pages != null ? `${doc.pages} sidor` : ''}</span>
                               </div>
                               <ChevronRight size={16} className="chevron-icon" />
                             </button>
@@ -1338,29 +1341,20 @@ function App() {
             {currentTab === 'chat' && (
               <div className="tab-content tab-content--fill">
                 <div className="chat-container">
-                  <div className="chat-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                    <div>
-                      <h2 className="chat-title">Fråga dokumenten</h2>
-                      <p style={{ color: 'var(--text-secondary)', fontSize: '14px', margin: '4px 0 0 0' }}>Frågan går till föreningens egna dokument. Ingenting annat.</p>
-                      <ModelStatusBadge status={llmStatus} />
-                    </div>
-
-                    <div className="chat-scope-selector desktop-only">
-                       <span style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>Söker i:</span>
-                       <span className="scope-btn static" aria-label={`Söker i alla ${documents.length} dokument`}>
-                         Alla {documents.length} dokument
-                       </span>
-                    </div>
+                  <div className="chat-header">
+                    <h2 className="chat-title">Fråga dokumenten</h2>
+                    <p className="chat-header-sub">Frågan går till föreningens egna dokument. Ingenting annat.</p>
                   </div>
 
                   <div className="chat-messages-area">
                     {chatMessages.length === 0 ? (
                       <div className="chat-empty-state">
+                         <TraffMark size={26} decorative />
                          <h3 className="chat-empty-title">Ställ en fråga om föreningens dokument</h3>
                          <p className="chat-empty-hint">
-                           Svaret citerar det dokument det kommer ur, eller uteblir.
+                           Svaret citerar det dokument det kommer ur — eller uteblir.
                          </p>
-                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%', maxWidth: '400px' }}>
+                         <div className="chat-empty-examples">
                            <button className="example-prompt-btn" onClick={() => executeGeneralChat('Vad säger stadgarna om andrahandsuthyrning?')} disabled={chatBusy}>
                              Vad säger stadgarna om andrahandsuthyrning?
                            </button>
@@ -1372,13 +1366,18 @@ function App() {
                     ) : (
                       <>
                         {chatMessages.map((msg, idx) => (
-                          <div key={idx} className={`chat-message ${msg.role}`}>
-                            <div className="chat-avatar">
-                              {msg.role === 'ai' ? (msg.pending ? <Loader2 size={14} className="spin" /> : 'AI') : 'DU'}
+                          msg.role === 'user' ? (
+                            /* The person's words, as a line in the record —
+                               not a speech bubble. The label does the telling. */
+                            <div key={idx} className="chat-message user">
+                              <p className="chat-question-label">Fråga</p>
+                              <p className="chat-question-text">{msg.content}</p>
                             </div>
-                            <div style={{ flex: 1 }}>
-                              <div className={`chat-content${msg.role === 'ai' ? ' chat-content--answer' : ''}${msg.refusal ? ' is-ejbelagt' : ''}`}>
-                                {msg.role === 'ai' && answerState(msg) && <AnswerState state={answerState(msg)} />}
+                          ) : (
+                          <div key={idx} className="chat-message ai">
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div className={`chat-content chat-content--answer${msg.refusal ? ' is-ejbelagt' : ''}${msg.pending ? ' is-pending' : ''}`}>
+                                {answerState(msg) && <AnswerState state={answerState(msg)} />}
                                 <div className="answer-body">{msg.content}</div>
                                 {msg.warning && <p className="answer-caveat"><Info size={14} aria-hidden="true" /> {msg.warning}</p>}
 
@@ -1403,19 +1402,19 @@ function App() {
                                   </div>
                                 )}
                               </div>
-                              {msg.role === 'ai' && msg.model && !NO_MODEL_REFUSAL_REASONS.includes(msg.refusalReason) && (
+                              {msg.model && !NO_MODEL_REFUSAL_REASONS.includes(msg.refusalReason) && (
                                 <div className="chat-model-provenance" title="Modellen som genererade detta svar.">
                                   {displayNameForModel(msg.model)} · {displayNameForProvider(msg.provider)}
                                 </div>
                               )}
                             </div>
                           </div>
+                          )
                         ))}
 
                         {chatError && (
                           <div className="chat-message ai">
-                            <div className="chat-avatar"><AlertTriangle size={16} /></div>
-                            <div style={{ flex: 1 }}>
+                            <div style={{ flex: 1, minWidth: 0 }}>
                               <div className="chat-content is-avbrott">
                                 <AnswerState state="avbrott" />
                                 {chatError.message}
@@ -1445,6 +1444,12 @@ function App() {
                       <button className="chat-send-btn" onClick={() => executeGeneralChat(chatInput)} disabled={chatBusy || !chatInput.trim()} aria-label="Skicka fråga">
                         {chatBusy ? <Loader2 size={18} className="spin"/> : <ArrowRight size={18} />}
                       </button>
+                    </div>
+                    {/* Provenance where the question is asked: what will be
+                        searched, and what will do the generating. */}
+                    <div className="chat-composer-meta">
+                      <ModelStatusBadge status={llmStatus} />
+                      <span className="chat-composer-scope">Söker i alla {documents.length} dokument</span>
                     </div>
                   </div>
                 </div>

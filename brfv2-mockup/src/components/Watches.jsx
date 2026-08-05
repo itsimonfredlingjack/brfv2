@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
-  CalendarClock,
   CheckCircle2,
   FileText,
   HelpCircle,
@@ -276,9 +275,21 @@ function BoardWatch({
 }) {
   const [note, setNote] = useState('');
   const moved = watch.due_date !== watch.derived_due_date;
+  const late = typeof watch.days_left === 'number' && watch.days_left < 0;
 
   return (
-    <article className="watch board">
+    <article className={`watch board${late ? ' late' : ''}`}>
+      {/* Time is this workspace's axis, so the date stands on its own rail
+          before anything else on the card. A passed date reads as weight, not
+          as a hue — the boxed measurement theme.css prescribes. */}
+      <div className="watch-when">
+        <span className="watch-date">{watch.due_date}</span>
+        {late
+          ? <span className="matt--overdue">{daysLeftText(watch.days_left)}</span>
+          : <span className="watch-days">{daysLeftText(watch.days_left)}</span>}
+      </div>
+
+      <div className="watch-body">
       <header className="watch-head">
         <span className="watch-kind">{watch.kind_label}</span>
         <span className="watch-badge approved">{watch.status_label}</span>
@@ -287,13 +298,6 @@ function BoardWatch({
       <h4 className="watch-title">{watch.title}</h4>
 
       <dl className="watch-facts">
-        <div>
-          <dt>Datum</dt>
-          <dd>
-            {watch.due_date}
-            <span className="watch-days"> · {daysLeftText(watch.days_left)}</span>
-          </dd>
-        </div>
         <div>
           <dt>Ansvarig</dt>
           <dd>
@@ -346,24 +350,31 @@ function BoardWatch({
           >
             <CheckCircle2 size={14} /> Markera som avklarad
           </button>
-          <label>
-            <span>Varför avfärdas den? (krävs)</span>
-            <input
-              type="text"
-              value={note}
-              disabled={busy}
-              onChange={(e) => setNote(e.target.value)}
-            />
-          </label>
-          <button
-            type="button"
-            className="watch-action dismiss"
-            disabled={busy || !note.trim()}
-            title={note.trim() ? undefined : 'Skriv först varför bevakningen inte gäller.'}
-            onClick={() => onDismiss(watch, note.trim())}
-          >
-            Avfärda
-          </button>
+          {/* Dismissing is the exception, so its reason field waits behind a
+              disclosure instead of standing open on every card on the board. */}
+          <details className="watch-dismiss-wrap">
+            <summary>Avfärda …</summary>
+            <div className="watch-dismiss">
+              <label>
+                <span>Varför avfärdas den? (krävs)</span>
+                <input
+                  type="text"
+                  value={note}
+                  disabled={busy}
+                  onChange={(e) => setNote(e.target.value)}
+                />
+              </label>
+              <button
+                type="button"
+                className="watch-action dismiss"
+                disabled={busy || !note.trim()}
+                title={note.trim() ? undefined : 'Skriv först varför bevakningen inte gäller.'}
+                onClick={() => onDismiss(watch, note.trim())}
+              >
+                Avfärda
+              </button>
+            </div>
+          </details>
         </div>
       )}
 
@@ -380,6 +391,7 @@ function BoardWatch({
         suggestedDue={watch.due_date || ''}
         onCreated={onTaskCreated}
       />
+      </div>
     </article>
   );
 }
@@ -552,10 +564,10 @@ export default function Watches({ brfId, isAdmin = false, onOpenCitation }) {
 
   return (
     <div className="watches">
-      <header className="watches-header">
-        <div>
-          <h2><CalendarClock size={22} /> Bevakningar</h2>
-          <p className="muted">
+      <header className="watches-header page-header">
+        <div className="page-header-text">
+          <h2 className="page-title">Bevakningar</h2>
+          <p className="page-header-sub">
             Daterade skyldigheter lästa ur föreningens egna avtal. Motorn föreslår,
             en människa beslutar — ingenting här är en skyldighet förrän någon
             godkänt det.

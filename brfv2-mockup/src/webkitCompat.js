@@ -73,23 +73,36 @@ export function patchPuckAutoFrame(code) {
   useEffect22(() => {
     let timer;
     let cancelled = false;
+    let attempts = 0;
     const activateWhenReady = () => {
       const frame = frameRef.current;
       const doc = frame?.contentDocument;
-      let root = doc?.getElementById("frame-root");
-      // WebKitGTK may expose the srcdoc document while leaving its body
-      // unparsed. Recreate only Puck's inert mount point; React still owns all
-      // rendered content and the normal srcdoc path remains unchanged.
-      if (!root && doc?.body && doc.body.childNodes.length === 0) {
-        root = doc.createElement("div");
-        root.id = "frame-root";
-        root.setAttribute("data-puck-entry", "");
-        doc.body.appendChild(root);
+      if (doc) {
+        let root = doc?.getElementById("frame-root");
+        // WebKitGTK may expose the srcdoc document while leaving its body
+        // unparsed. Recreate only Puck's inert mount point; React still owns
+        // all rendered content and the normal srcdoc path remains unchanged.
+        //
+        // Chromium, though, first exposes a *transient* about:blank document
+        // that the srcdoc parse replaces moments later. Creating the mount
+        // point in that one made Puck portal the preview into a dead document
+        // and the canvas stayed permanently blank in every ordinary browser.
+        // So an about:blank document only qualifies after the iframe's load
+        // event has had ~half a second to arrive — the WebKitGTK quirk this
+        // shim exists for — while the real srcdoc document qualifies at once.
+        const settled = doc.URL !== "about:blank" || attempts > 30;
+        if (!root && settled && doc?.body && doc.body.childNodes.length === 0) {
+          root = doc.createElement("div");
+          root.id = "frame-root";
+          root.setAttribute("data-puck-entry", "");
+          doc.body.appendChild(root);
+        }
+        if (root) {
+          setLoaded(true);
+          return;
+        }
       }
-      if (root) {
-        setLoaded(true);
-        return;
-      }
+      attempts += 1;
       if (!cancelled) timer = setTimeout(activateWhenReady, 16);
     };
     activateWhenReady();

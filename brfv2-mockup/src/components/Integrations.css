@@ -34,52 +34,59 @@
 
 .integrations-header {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
-  margin-bottom: 16px;
+  margin-bottom: 18px;
 }
 
-.integrations-tabs { display: inline-flex; align-items: center; gap: 2px; height: 32px; padding: 3px; border-radius: var(--radius-3xl); background: var(--muted); }
+/* The two panes are sections of one workspace, so their switch is set like
+   section titles rather than a pill group: the serif states which desk is
+   open, the underline is ink — the only emphasis on paper that claims
+   nothing. The lucide glyphs in the markup stay for structure but the type
+   carries this alone. */
+.integrations-tabs { display: inline-flex; align-items: baseline; gap: 26px; }
 
 .integrations-tabs button {
   display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  height: 100%;
-  padding: 0 13px;
-  border: 1px solid transparent;
-  border-radius: var(--radius-2xl);
+  align-items: baseline;
+  gap: 9px;
+  padding: 0 1px 7px;
+  border: none;
+  border-bottom: 2px solid transparent;
   background: transparent;
-  color: var(--muted-foreground);
-  font-size: var(--text-base);
-  font-weight: 500;
+  color: var(--ink-subtle);
+  font-family: var(--font-serif);
+  font-size: var(--text-2xl);
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
   white-space: nowrap;
   cursor: pointer;
-  transition: background-color 0.14s ease, color 0.14s ease;
+  transition: color 0.14s ease, border-color 0.14s ease;
 }
 
+.integrations-tabs button > svg { display: none; }
 .integrations-tabs button:hover { color: var(--foreground); }
-.integrations-tabs button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.integrations-tabs button:focus-visible { outline: 2px solid var(--ring); outline-offset: 4px; border-radius: 2px; }
 .integrations-tabs button.active {
-  background: var(--surface-3);
-  border-color: var(--input);
   color: var(--foreground);
-  box-shadow: var(--shadow-xs);
+  border-bottom-color: var(--ink);
 }
 
 .integrations-tabs .pill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  align-self: center;
   min-width: 20px;
-  height: 18px;
-  padding: 0 6px;
+  height: 20px;
+  padding: 0 7px;
   border-radius: 999px;
   background: var(--secondary);
   color: var(--foreground);
+  font-family: var(--font-mono);
   font-size: var(--text-xs);
   font-weight: 600;
   font-variant-numeric: tabular-nums;

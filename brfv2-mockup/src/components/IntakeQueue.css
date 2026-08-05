@@ -64,12 +64,14 @@
 
 /* ---------- where the post comes from ---------- */
 
+/* A strip, not a card: where the post comes from is context, and the queue
+   below is the work. */
 .intake-source {
-  margin-bottom: 12px;
-  padding: 11px 14px;
+  margin-bottom: 14px;
+  padding: 10px 14px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-3xl);
-  background: var(--card);
+  border-radius: var(--radius-block);
+  background: var(--surface-1);
 }
 
 .intake-source-row {
@@ -87,7 +89,7 @@
   flex: 1 1 420px;
   min-width: 0;
   color: var(--muted-foreground);
-  font-size: var(--text-base);
+  font-size: var(--text-sm);
   line-height: 1.55;
 }
 
@@ -97,7 +99,7 @@
 
 .intake-source-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 
-.intake-format-note { margin-top: 8px; max-width: 82ch; }
+.intake-format-note { margin-top: 7px; max-width: 82ch; font-size: var(--text-sm); color: var(--subtle-foreground); }
 
 /* A label, not a button, so the file input stays the real control and the
    keyboard path is the input's own. */
@@ -237,9 +239,9 @@
   flex-direction: column;
   gap: 5px;
   width: 100%;
-  padding: 11px 12px;
+  padding: 11px 13px;
   border: 1px solid transparent;
-  border-radius: var(--radius-3xl);
+  border-radius: var(--radius-xl);
   background: transparent;
   color: var(--foreground);
   text-align: left;
@@ -251,10 +253,12 @@
 .thread-row:hover { background: var(--surface-2); }
 
 /* Selection is a filled surface with a border, not a coloured bar: the row is
-   the thing being worked on, and it should read as raised rather than tagged. */
+   the paper being worked on, and it should read as lifted off the desk rather
+   than tagged. */
 .thread-row.selected {
   background: var(--card);
   border-color: var(--border-strong);
+  box-shadow: var(--shadow-xs);
 }
 
 .thread-row:focus-visible { border-color: var(--ring); box-shadow: 0 0 0 3px var(--ring-glow); }
@@ -293,6 +297,7 @@
   font-size: var(--text-sm);
   color: var(--muted-foreground);
   line-height: 1.45;
+  font-variant-numeric: tabular-nums;
 }
 
 .thread-row-tags { display: flex; flex-wrap: wrap; gap: 5px; }
@@ -507,7 +512,16 @@
 
 .detail-section.reading { background: var(--surface-1); }
 
-.reading-by { font-size: var(--text-sm); color: var(--muted-foreground); }
+/* Whose reading this is, said in the cut that measures: attribution is a fact
+   about machinery, not part of the prose. */
+.reading-by {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--subtle-foreground);
+}
 
 .reading-headline { font-size: var(--text-md); line-height: 1.55; }
 .reading-why,
@@ -560,9 +574,12 @@
   gap: 8px;
 }
 
+/* The value column flexes and wraps; the source label keeps its own width.
+   With two auto tracks a long supplier name grew the middle track past the
+   card and squeezed " ur mejltexten" to zero — an invisible provenance. */
 .reading-signals li {
   display: grid;
-  grid-template-columns: auto minmax(0, auto) minmax(0, 1fr);
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 3px 8px;
   align-items: baseline;
   min-width: 0;

@@ -87,12 +87,18 @@ function Banner({ tone, children, onDismiss }) {
   );
 }
 
+// A date that has passed or approaches is arithmetic, not a claim the
+// documents fail to support — so these two signals wear the measurement's
+// box, never Vägran's amber (theme.css, beside --avbrott).
+const MEASURED_SIGNALS = new Set(['overdue', 'due_soon']);
+
 function SignalChip({ signal }) {
   if (!signal) return <span className="signal-chip none">—</span>;
   const Icon = SIGNAL_ICON[signal.kind] || AlertTriangle;
+  const tone = MEASURED_SIGNALS.has(signal.kind) ? 'measured' : signal.severity;
   return (
-    <span className={`signal-chip ${signal.severity}`} title={signal.detail}>
-      <Icon size={12} /> {signal.label}
+    <span className={`signal-chip ${tone}`} title={`${signal.label} — ${signal.detail || ''}`}>
+      <Icon size={12} /> <span className="signal-chip-label">{signal.label}</span>
     </span>
   );
 }
@@ -328,39 +334,44 @@ export default function Invoices({ brfId, isAdmin = false, onOpenDocument, onOpe
 
   return (
     <div className="invoices">
-      <div className="invoices-intro">
-        <h3 className="ui-section-title"><Receipt size={17} /> Fakturor</h3>
-        <p>
-          Varje faktura är ett ärende: vad den är, vad som ändrats, vad den stämmer mot och
-          vem som gör något åt det. Ingenting här ändrar något i ekonomisystemet.
-        </p>
-      </div>
+      <header className="page-header invoices-masthead">
+        <div className="page-header-text">
+          <h2 className="page-title">Fakturor</h2>
+          <p className="page-header-sub">
+            Varje faktura är ett ärende: vad den är, vad som ändrats, vad den stämmer mot och
+            vem som gör något åt det. Ingenting här ändrar något i ekonomisystemet.
+          </p>
+        </div>
+      </header>
 
       <Banner tone="error" onDismiss={() => setError('')}>{error}</Banner>
       <Banner tone="ok" onDismiss={() => setNotice('')}>{notice}</Banner>
 
-      <div className="invoices-tabs" role="tablist">
-        <button
-          type="button"
-          role="tab"
-          aria-selected={pane === 'queue'}
-          className={pane === 'queue' ? 'active' : ''}
-          onClick={() => setPane('queue')}
-        >
-          <Receipt size={15} /> Granskningskö
-          {counts.open > 0 && <span className="pill">{counts.open}</span>}
-        </button>
-        {fortnoxReady && (
-          <button
-            type="button"
-            role="tab"
-            aria-selected={pane === 'mapping'}
-            className={pane === 'mapping' ? 'active' : ''}
-            onClick={() => setPane('mapping')}
-          >
-            <Table2 size={15} /> Fältkontroll
-          </button>
-        )}
+      <div className="invoices-toolbar">
+        {/* One pane needs no switch: the tablist appears with the second pane. */}
+        {fortnoxReady ? (
+          <div className="invoices-tabs" role="tablist">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={pane === 'queue'}
+              className={pane === 'queue' ? 'active' : ''}
+              onClick={() => setPane('queue')}
+            >
+              <Receipt size={15} /> Granskningskö
+              {counts.open > 0 && <span className="pill">{counts.open}</span>}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={pane === 'mapping'}
+              className={pane === 'mapping' ? 'active' : ''}
+              onClick={() => setPane('mapping')}
+            >
+              <Table2 size={15} /> Fältkontroll
+            </button>
+          </div>
+        ) : <span />}
         <button type="button" className="invoices-refresh" onClick={refresh} disabled={loading || busy}>
           <RefreshCw size={14} /> Uppdatera
         </button>
@@ -406,7 +417,7 @@ export default function Invoices({ brfId, isAdmin = false, onOpenDocument, onOpe
               <input
                 type="search"
                 value={query}
-                placeholder="Sök leverantör, fakturanummer, ansvarig…"
+                placeholder="Sök leverantör, nummer, ansvarig…"
                 aria-label="Sök i fakturakön"
                 onChange={(e) => setQuery(e.target.value)}
               />
@@ -473,7 +484,7 @@ export default function Invoices({ brfId, isAdmin = false, onOpenDocument, onOpe
                     <th>Vår granskning</th>
                     <th>Signal</th>
                     <th>Ansvarig</th>
-                    <th>Senaste aktivitet</th>
+                    <th>Aktivitet</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -507,7 +518,7 @@ export default function Invoices({ brfId, isAdmin = false, onOpenDocument, onOpe
                       <td><SignalChip signal={row.top_signal} /></td>
                       <td>
                         {row.responsible
-                          ? <span className="responsible"><User size={12} /> {row.responsible}</span>
+                          ? <span className="responsible" title={row.responsible}><User size={12} /> <span className="truncate">{row.responsible}</span></span>
                           : <span className="muted">ej utsedd</span>}
                       </td>
                       <td className="muted numeric">{(row.last_activity_at || '').slice(0, 10)}</td>

@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import {
   AlertTriangle,
-  ClipboardList,
   FileText,
   Loader2,
   RefreshCw,
@@ -239,8 +238,11 @@ function TaskChange({ task, statusLabels, busy, onSave, onComment }) {
   }
 
   return (
-    <div className="task-change">
-      <h5>Ändra</h5>
+    /* On demand, not always open: the card is the record, and a permanently
+       expanded mutation form outweighed the work it was about. The trail
+       above stays open — it is the feature; changing is the exception. */
+    <details className="task-change">
+      <summary><h5>Ändra eller kommentera</h5></summary>
       <div className="task-change-fields">
         <label>
           <span>Status</span>
@@ -348,18 +350,43 @@ function TaskChange({ task, statusLabels, busy, onSave, onComment }) {
           Kommentera
         </button>
       </div>
-    </div>
+    </details>
   );
 }
+
+/** Initials for the ownership rail. Presentation only — the name stands beside. */
+const initialsFor = (name) => (name || '')
+  .split(' ')
+  .filter(Boolean)
+  .map((word) => word[0].toUpperCase())
+  .slice(0, 2)
+  .join('');
 
 /** One piece of work the association has taken on. */
 function TaskCard({ task, statusLabels, busy, canDecide, onSave, onComment, onOpenCitation }) {
   return (
     <article className={`task ${task.status}${task.overdue ? ' overdue' : ''}`}>
+      {/* Responsibility is this workspace's axis: who owns the work stands on
+          a rail of its own, before the work itself — and nobody named is said
+          in Vägran, because unowned work is work without support. The date
+          under the name is the next measurement a board asks for. */}
+      <div className="task-who">
+        <span className={`task-avatar${task.responsible ? '' : ' empty'}`} aria-hidden="true">
+          {initialsFor(task.responsible) || '?'}
+        </span>
+        <span className="task-owner">
+          {task.responsible
+            ? task.responsible
+            : <span className="task-unassigned">ej utsedd</span>}
+        </span>
+        <span className={`task-due${task.overdue ? ' late' : ''}`}>{dueText(task)}</span>
+      </div>
+
+      <div className="task-body">
       <header className="task-head">
         <span className="task-origin-kind">{task.origin.kind_label}</span>
         <span className="task-badges">
-          {/* Late is said in words as well as in colour: the two people who
+          {/* Late is said in words as well as in weight: the two people who
               need this card most are the one who cannot see the border and the
               one reading it in a printout. */}
           {task.overdue && <span className="task-badge late">försenad</span>}
@@ -371,18 +398,6 @@ function TaskCard({ task, statusLabels, busy, canDecide, onSave, onComment, onOp
       {task.description && <p className="task-description">{task.description}</p>}
 
       <dl className="task-facts">
-        <div>
-          <dt>Ansvarig</dt>
-          <dd>
-            {task.responsible
-              ? task.responsible
-              : <span className="task-unassigned">ej utsedd</span>}
-          </dd>
-        </div>
-        <div>
-          <dt>Datum</dt>
-          <dd>{dueText(task)}</dd>
-        </div>
         <div>
           <dt>Ursprung</dt>
           <dd>{originText(task)}</dd>
@@ -415,6 +430,7 @@ function TaskCard({ task, statusLabels, busy, canDecide, onSave, onComment, onOp
           onComment={onComment}
         />
       )}
+      </div>
     </article>
   );
 }
@@ -515,7 +531,7 @@ export default function Tasks({ brfId, isAdmin = false, onOpenCitation }) {
     <div className="tasks">
       <header className="tasks-header">
         <div>
-          <h2><ClipboardList size={22} /> Uppgifter</h2>
+          <h2>Uppgifter</h2>
           <p className="muted">
             Arbete som en människa har tagit på sig: vem som äger det, till när,
             och allt som hänt sedan dess. Ingen motor skapar en uppgift — att

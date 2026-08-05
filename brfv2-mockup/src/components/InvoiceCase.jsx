@@ -846,7 +846,12 @@ export default function InvoiceCase({
       {kase.signals.length > 0 && (
         <ul className="case-signals">
           {kase.signals.map((signal, i) => (
-            <li key={`${signal.kind}-${i}`} className={`signal ${signal.severity}`}>
+            /* A passed or approaching date is arithmetic, not Vägran — it
+               takes the measurement's tone, matching the queue's chips. */
+            <li
+              key={`${signal.kind}-${i}`}
+              className={`signal ${['overdue', 'due_soon'].includes(signal.kind) ? 'measured' : signal.severity}`}
+            >
               <strong>{signal.label}</strong>
               <span>{signal.detail}</span>
             </li>

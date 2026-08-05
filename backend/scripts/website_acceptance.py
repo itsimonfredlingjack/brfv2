@@ -875,7 +875,9 @@ def main(argv: list[str] | None = None) -> int:
         other_workspaces = []
         for label, marker in (
             ("Dokument", "Dokument"),
-            ("Inkommande", "Inkommande post"),
+            # The queue's own opening line — the "Inkommande post" heading it
+            # used to look for left the screen when Fakturor moved out of it.
+            ("Inkommande", "Brevlådan är råmaterial"),
             ("Fakturor", "Fakturor"),
             ("Bevakningar", "Bevakningar"),
             ("Uppgifter", "Uppgifter"),

@@ -26,15 +26,7 @@
   padding-bottom: 8px;
 }
 
-.invoices-intro h3 { margin-bottom: 6px; }
-
-.invoices-intro p {
-  max-width: 72ch;
-  margin-bottom: 16px;
-  color: var(--muted-foreground);
-  font-size: var(--text-base);
-  line-height: 1.6;
-}
+.invoices-masthead { margin-bottom: 16px; }
 
 .invoices-banner {
   display: flex;
@@ -52,19 +44,24 @@
 .invoices-banner.error { background: var(--danger-soft); border-color: var(--danger-border); }
 .invoices-banner.ok { background: var(--card); border-color: var(--border-strong); }
 
-/* ---- tabs ---- */
+/* ---- toolbar (pane switch + refresh) ---- */
 
-.invoices-tabs {
+.invoices-toolbar {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
 }
 
 /* The same segmented control as everywhere else: a pill track with the
    selected segment filled. One tab shape in the product, not three. */
 .invoices-tabs {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
   --track: var(--muted);
 }
 
@@ -125,34 +122,45 @@
 
 /* ---- counts ---- */
 
+/* The journal's opening line: what is left, said as measurements. Labels in
+   the mono that measures, figures in tabular ink — a ledger row, not a row of
+   dashboard tiles. */
 .invoices-counts {
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
   gap: 0;
-  margin: 0 0 14px;
-  padding: 10px 4px;
-  border-top: 1px solid var(--border);
+  margin: 0 0 16px;
+  padding: 12px 4px;
+  border-top: 1px solid var(--border-strong);
   border-bottom: 1px solid var(--border);
 }
 
 .invoices-counts > div {
   display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding: 0 18px;
+  flex-direction: column;
+  gap: 3px;
+  padding: 0 26px;
   border-right: 1px solid var(--border);
 }
 
 .invoices-counts > div:last-child { border-right: none; }
 .invoices-counts > div:first-child { padding-left: 4px; }
 
-.invoices-counts dt { color: var(--muted-foreground); font-size: var(--text-base); }
+.invoices-counts dt {
+  color: var(--subtle-foreground);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
 
 .invoices-counts dd {
   margin: 0;
   color: var(--foreground);
-  font-size: var(--text-md);
+  font-size: var(--text-lg);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
@@ -163,12 +171,14 @@
 
 /* ---- reading an invoice in ---- */
 
+/* Ingestion is context, not the work: a strip like Inkommande's source bar,
+   quieter than the ledger it feeds. */
 .invoices-read-in {
   margin-bottom: 14px;
-  padding: 11px 15px;
+  padding: 10px 14px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-3xl);
-  background: var(--card);
+  border-radius: var(--radius-block);
+  background: var(--surface-1);
 }
 
 .invoices-read-in summary {
@@ -293,7 +303,8 @@
 .invoices select option { background: #FFFFFF; color: var(--foreground); }
 
 .invoices-search {
-  flex: 1 1 280px;
+  flex: 1 1 200px;
+  max-width: 320px;
   flex-direction: row !important;
   align-items: center;
   gap: 8px;
@@ -321,6 +332,8 @@
   overflow-x: auto;
 }
 
+/* The ledger: column labels in the measuring cut, figures tabular and
+   right-aligned so amounts can be run down with a finger. */
 .invoices-queue {
   width: 100%;
   border-collapse: collapse;
@@ -328,24 +341,44 @@
 }
 
 .invoices-queue th {
-  height: 38px;
+  height: 40px;
   padding: 0 10px;
   border-bottom: 1px solid var(--border);
-  color: var(--muted-foreground);
-  font-size: var(--text-base);
+  color: var(--subtle-foreground);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
   font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   text-align: left;
   white-space: nowrap;
-  letter-spacing: 0;
-  text-transform: none;
 }
 
 .invoices-queue td {
-  padding: 9px 10px;
+  padding: 10px 9px;
   border-bottom: 1px solid var(--border);
   color: var(--foreground);
   vertical-align: middle;
   white-space: nowrap;
+}
+
+/* A name is identification, not prose: it may truncate before it may widen
+   the ledger past its window. */
+.invoices-queue .responsible { max-width: 112px; }
+.invoices-queue .responsible > svg { flex-shrink: 0; }
+.invoices-queue .responsible .truncate { min-width: 0; }
+
+.invoices-queue th:first-child,
+.invoices-queue td:first-child { padding-left: 16px; }
+.invoices-queue th:last-child,
+.invoices-queue td:last-child { padding-right: 16px; }
+
+/* Dates are measurements; at register size they buy the ledger its width. */
+.invoices-queue td.col-due,
+.invoices-queue td.numeric.muted {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  letter-spacing: 0.01em;
 }
 
 .invoices-queue tbody tr { cursor: pointer; transition: background-color 0.12s ease; }
@@ -354,12 +387,19 @@
 
 .invoices-queue th.col-amount,
 .invoices-queue td.col-amount { text-align: right; }
+.invoices-queue td.col-amount {
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  letter-spacing: 0.01em;
+}
 .invoices-queue td.numeric { font-variant-numeric: tabular-nums; }
+.invoices-queue td.col-due { font-variant-numeric: tabular-nums; }
+.invoices-queue td.col-due .overdue-flag { display: flex; }
 
 /* The accounting system's own words, allowed to wrap: it is a sentence
    ("Bokförd i ekonomisystemet"), not a code, and forcing it onto one line
    costs the columns that follow it more than it is worth. */
-.invoices-queue td.col-source-status { white-space: normal; min-width: 130px; max-width: 170px; }
+.invoices-queue td.col-source-status { white-space: normal; min-width: 110px; max-width: 150px; }
 
 /* An overdue invoice is the one row that has to be found at a glance. A dot
    beside the supplier does that without an inset bar fighting the card's
@@ -385,7 +425,7 @@
   display: flex;
   flex-direction: column;
   gap: 3px;
-  max-width: 230px;
+  max-width: 190px;
   padding: 0;
   border: none;
   background: none;
@@ -404,12 +444,15 @@
 .invoices-queue .case-link:hover strong { text-decoration: underline; text-underline-offset: 3px; }
 .case-link-sub { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; font-size: var(--text-sm); }
 
-/* The word, set as the measurement it is (theme.css .matt--overdue). */
+/* The word, set as the measurement it is (theme.css .matt--overdue). Below
+   the date rather than beside it — the column stays narrow, and the flag
+   reads as a remark on the date it belongs to. */
 .overdue-flag {
   display: inline-flex;
   align-items: center;
+  width: fit-content;
   height: 18px;
-  margin-left: 8px;
+  margin-top: 3px;
   padding: 0 7px;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
@@ -470,6 +513,7 @@
   display: inline-flex;
   align-items: center;
   gap: 5px;
+  max-width: 150px;
   padding: 2px 9px;
   border: 1px solid transparent;
   border-radius: 999px;
@@ -477,6 +521,9 @@
   font-weight: 500;
   white-space: nowrap;
 }
+
+.signal-chip > svg { flex-shrink: 0; }
+.signal-chip-label { overflow: hidden; text-overflow: ellipsis; }
 
 /* Severity is a ramp inside ONE meaning, not two colours. Both of these say
    the same thing — the invoice asserts something the association's own
@@ -486,6 +533,20 @@
 .signal-chip.attention { background: transparent; border-color: var(--warn-border); color: var(--warn); }
 .signal-chip.info { background: var(--muted); border-color: transparent; color: var(--muted-foreground); }
 .signal-chip.none { color: var(--subtle-foreground); }
+
+/* Overdue and due-soon: the calendar, measured — the same box as
+   .matt--overdue, never amber. */
+.signal-chip.measured {
+  background: var(--surface-3);
+  border-color: var(--border-strong);
+  border-radius: var(--radius-sm);
+  color: var(--foreground);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
 
 .invoices-loading {
   display: flex;
@@ -572,9 +633,13 @@
 
 .case-identity-basis > svg { flex-shrink: 0; position: relative; top: 2px; }
 
+/* The sum is the case's central measurement, so it is set in the cut that
+   measures — not in a display face pretending the number is a headline. */
 .case-amount {
-  font-size: 1.5rem;
+  font-family: var(--font-mono);
+  font-size: 1.375rem;
   font-weight: 600;
+  letter-spacing: 0.01em;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -588,19 +653,24 @@
 }
 
 .case-status-card {
-  padding: 12px 15px;
+  padding: 13px 16px;
   border: 1px solid var(--border);
-  border-radius: var(--radius-3xl);
+  border-radius: var(--radius-xl);
   background: var(--card);
 }
 
+/* Theirs is read-only and sits on the paper; ours is the one being worked and
+   sits on the raised card. Same size, same shape — different ground. */
+.case-status-card.source { background: var(--surface-1); }
+
 .case-status-card h5 {
-  margin-bottom: 5px;
-  color: var(--muted-foreground);
-  font-size: var(--text-base);
+  margin-bottom: 6px;
+  color: var(--subtle-foreground);
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
   font-weight: 500;
-  letter-spacing: 0;
-  text-transform: none;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .case-status-card strong { display: block; font-size: var(--text-lg); font-weight: 600; }
@@ -658,6 +728,8 @@
 .case-signals .signal.warning strong::before { background: var(--warn); }
 .case-signals .signal.attention strong::before { background: transparent; box-shadow: inset 0 0 0 2px var(--warn); }
 .case-signals .signal.info strong::before { background: var(--muted-foreground); }
+/* The calendar, measured: full-strength ink among muted dots. */
+.case-signals .signal.measured strong::before { background: var(--ink); }
 
 .case-columns {
   display: grid;
