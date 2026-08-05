@@ -1,0 +1,299 @@
+{
+  "schema": "brfv2-invoice-acceptance/v1",
+  "ok": true,
+  "runLabel": "design-pass",
+  "application": "/home/aidev/Projects/brfv2/src-tauri/target/release/brfv2-desktop",
+  "applicationIdentity": {
+    "path": "/home/aidev/Projects/brfv2/src-tauri/target/release/brfv2-desktop",
+    "sha256": "459d882a2b7e4fb373c58c57238edc5040f30aaf1506580c9909b7dad63112c3",
+    "bytes": 3429760
+  },
+  "durationSeconds": 16.2,
+  "modelRequired": false,
+  "engineVersion": "2026.08.2",
+  "transportRetries": 0,
+  "screenshots": [
+    "docs/evidence/design-pass-invoice-queue-empty.png",
+    "docs/evidence/design-pass-invoice-case.png",
+    "docs/evidence/design-pass-invoice-citation.png",
+    "docs/evidence/design-pass-invoice-case-worked.png",
+    "docs/evidence/design-pass-invoice-change.png",
+    "docs/evidence/design-pass-invoice-analysis-history.png",
+    "docs/evidence/design-pass-invoice-replaced-version.png",
+    "docs/evidence/design-pass-invoice-credit.png",
+    "docs/evidence/design-pass-invoice-queue.png"
+  ],
+  "failureScreenshot": null,
+  "steps": {
+    "navigation": [
+      "Dokument",
+      "AI-chatt",
+      "Inkommande",
+      "Fakturor",
+      "Bevakningar",
+      "Uppgifter",
+      "Hemsidan"
+    ],
+    "emptyQueue": null,
+    "availableFromFixture": [
+      "SI-2026-114",
+      "SI-2026-131",
+      "SI-2026-207",
+      "SI-2026-402",
+      "SI-2027-018",
+      "SI-2027-024"
+    ],
+    "caseAfterImport": {
+      "caveat": "Ingen här har tagit ställning till fakturan ännu.",
+      "localStatus": "Ej granskad",
+      "observations": [
+        "Ekonomisystem"
+      ],
+      "findings": [
+        {
+          "verdict": "överensstämmer",
+          "citations": 2,
+          "uncertainty": true
+        },
+        {
+          "verdict": "möjlig avvikelse",
+          "citations": 2,
+          "uncertainty": true
+        },
+        {
+          "verdict": "kan inte verifieras",
+          "citations": 0,
+          "uncertainty": true
+        }
+      ],
+      "basis": "Leverantör (Snösvängen Entreprenad AB) och fakturanummer (2026-114) är båda kända, så varje läsning av den här fakturan hamnar på samma ärende.",
+      "identity": "Faktura 2026-114 · 2026-02-03 · förfaller 2026-03-05 · period 2026-01-01 – 2026-01-31",
+      "timeline": 6,
+      "supplier": "Snösvängen Entreprenad AB",
+      "sourceStatus": "Ingen status läst",
+      "amount": "6 250,00 SEK"
+    },
+    "forbiddenControls": [],
+    "citationNavigation": {
+      "clicked": "Öppna Snöröjningsavtal 2026.pdf sida 1",
+      "page": "Sida 1 av 1",
+      "highlight": 4,
+      "document": "Snöröjningsavtal 2026.pdf"
+    },
+    "afterHumanWork": {
+      "timeline": [
+        {
+          "human": false,
+          "text": "Fakturaärende öppnat för Snösvängen Entreprenad AB 2026-114."
+        },
+        {
+          "human": false,
+          "text": "Källa kopplad: fixture-accounting SI-2026-114 — faktura 2026-114"
+        },
+        {
+          "human": false,
+          "text": "Granskning körd (version 1): 3 fynd, ingen signal att lyfta."
+        },
+        {
+          "human": false,
+          "text": "överensstämmer: À-pris för maskinell snöröjning med traktor (1 250,00 SEK) motsvarar det citerade villkoret i Snöröjningsavtal 2026.pdf s. 1."
+        },
+        {
+          "human": false,
+          "text": "möjlig avvikelse: Fakturaperioden 2026-01-01 – 2026-01-31 ligger helt eller delvis utanför den citerade avtalstiden 2026-11-01 och tills vidare i Snöröjningsavtal 2026.pdf s. 1."
+        },
+        {
+          "human": false,
+          "text": "kan inte verifieras: Det finns ingen tidigare inläst faktura från Snösvängen Entreprenad AB att jämföra med. Läs in en äldre faktura från samma leverantör om ni vill se förändringen"
+        },
+        {
+          "human": true,
+          "text": "Ringde Snösvängen om timtaxan, återkommer på fredag."
+        },
+        {
+          "human": true,
+          "text": "Granskningsstatus: Behöver utredas"
+        },
+        {
+          "human": true,
+          "text": "Ansvarig: Ordförande Ek"
+        },
+        {
+          "human": true,
+          "text": "Uppgift skapad: Snösvängen Entreprenad AB 2026-114"
+        }
+      ],
+      "localStatus": "Behöver utredas",
+      "comments": [
+        "Ringde Snösvängen om timtaxan, återkommer på fredag."
+      ],
+      "tasks": [
+        "Snösvängen Entreprenad AB 2026-114"
+      ],
+      "responsible": "Ordförande Ek",
+      "caveat": "Något behöver kontrolleras innan fakturan kan bedömas."
+    },
+    "afterTwoRefreshes": {
+      "timelineBefore": 10,
+      "timeline": 10,
+      "findings": 3,
+      "responsible": "Ordförande Ek",
+      "localStatus": "Behöver utredas",
+      "comments": 1
+    },
+    "previousInvoiceComparison": {
+      "verdict": "möjlig avvikelse",
+      "citations": 0,
+      "suggestion": "Fakturan är 4 625,00 SEK högre än Faktura 2026-114 (2026-02-03) (6 250,00 SEK → 10 875,00 SEK, +74,0 %). Fakturan förklarar själv en del av det: antalet för Maskinell snöröjning med traktor har gått från 4 till 6, vilket förklarar 2 500,00 SEK av skillnaden. Det här förklarar den inte: à-priset för Maskinell snöröjning med traktor har gått från 1 250,00 SEK till 1 450,00 SEK (+16,0 %), vilket är 1 200,00 SEK av skillnaden. Stäm av mot avtalet eller be leverantören om grunden för höjningen.",
+      "facts": [
+        "Föregående faktura",
+        "Belopp föregående",
+        "Belopp den här fakturan",
+        "À-pris Maskinell snöröjning med traktor",
+        "Antal Maskinell snöröjning med traktor",
+        "Förändring"
+      ]
+    },
+    "analysisVersionOne": {
+      "head": "Version 1gäller nu2026-08-05 03:19",
+      "meta": [
+        "regelmotor 2026.08.2",
+        "fixture-accounting SI-2027-018 · innehållshash 253700c073df… · läst 2026-08-05 03:19",
+        "3 från motorn"
+      ],
+      "summary": "Första inspelade granskningen: 3 fynd.",
+      "replacedControls": 0
+    },
+    "analysisVersionTwo": {
+      "head": "Version 2gäller nu2026-08-05 03:19",
+      "meta": [
+        "regelmotor 2026.08.2",
+        "fixture-accounting SI-2027-018 · innehållshash 253700c073df… · läst 2026-08-05 03:19",
+        "3 från motorn"
+      ],
+      "summary": "Ersatte den föregående granskningen: 2 ändrade fynd.",
+      "changes": [
+        {
+          "kind": "fyndet har ändrats",
+          "summary": "Belopp mot avtal: Koppling till leverantören delvis namnlikhet → ett namn någon här har bekräftat.",
+          "facts": [
+            "Koppling till leverantörendelvis namnlikhet → ett namn någon här har bekräftat"
+          ]
+        },
+        {
+          "kind": "fyndet har ändrats",
+          "summary": "Period mot avtal: Koppling till leverantören delvis namnlikhet → ett namn någon här har bekräftat.",
+          "facts": [
+            "Koppling till leverantörendelvis namnlikhet → ett namn någon här har bekräftat"
+          ]
+        }
+      ],
+      "opens": "Visa den ersatta versionen (3 fynd)"
+    },
+    "replacedVersion": [
+      {
+        "verdict": "överensstämmer",
+        "status": "ersatt",
+        "buttons": 0
+      },
+      {
+        "verdict": "överensstämmer",
+        "status": "ersatt",
+        "buttons": 0
+      },
+      {
+        "verdict": "kan inte verifieras",
+        "status": "ersatt",
+        "buttons": 0
+      }
+    ],
+    "creditOffered": [
+      "SI-2027-024",
+      "Snösvängen AB",
+      "2027-01-15",
+      "−6 250,00 SEK",
+      "Läs in och granska"
+    ],
+    "creditCase": {
+      "signals": [
+        {
+          "label": "Möjlig kreditfaktura",
+          "severity": "info",
+          "detail": "Den här posten är negativ och tar exakt ut Faktura 2026-114 (2026-02-03, fixture-accounting). Den kan vara krediteringen av den fakturan."
+        }
+      ],
+      "credits": [
+        {
+          "verdict": "överensstämmer",
+          "uncertainty": "OsäkerhetAtt två belopp tar ut varandra betyder inte att krediteringen avser just den här fakturan. Ingenting i underlaget säger vilken faktura en kreditnota hör till.",
+          "says": "Den här posten är negativ och tar exakt ut Faktura 2026-114 (2026-02-03, fixture-accounting). Den kan vara krediteringen av den fakturan.",
+          "citations": 0
+        },
+        {
+          "verdict": "överensstämmer",
+          "uncertainty": "OsäkerhetAtt två belopp tar ut varandra betyder inte att krediteringen avser just den här fakturan. Ingenting i underlaget säger vilken faktura en kreditnota hör till.",
+          "says": "Den här posten är negativ och tar exakt ut Faktura 2027-018 (2027-01-04, fixture-accounting). Den kan vara krediteringen av den fakturan.",
+          "citations": 0
+        }
+      ],
+      "amount": "−6 250,00 SEK"
+    },
+    "creditControls": {
+      "forbidden": [],
+      "count": 41
+    },
+    "queue": [
+      {
+        "invoice": "Snösvängen AB2027-024Ekonomisystem",
+        "signal": "Möjlig kreditfaktura",
+        "due": "2027-02-14",
+        "lastActivity": "2026-08-05",
+        "responsible": "ej utsedd",
+        "accounting": "ingen status",
+        "review": "Ej granskad",
+        "amount": "−6 250,00 SEK"
+      },
+      {
+        "invoice": "Snösvängen AB2027-018Ekonomisystem",
+        "signal": "—",
+        "due": "2027-02-03",
+        "lastActivity": "2026-08-05",
+        "responsible": "ej utsedd",
+        "accounting": "ingen status",
+        "review": "Ej granskad",
+        "amount": "6 250,00 SEK"
+      },
+      {
+        "invoice": "Snösvängen Entreprenad AB2026-131Ekonomisystem",
+        "signal": "Prisförändring",
+        "due": "2026-04-02förfallen",
+        "lastActivity": "2026-08-05",
+        "responsible": "ej utsedd",
+        "accounting": "ingen status",
+        "review": "Ej granskad",
+        "amount": "10 875,00 SEK"
+      },
+      {
+        "invoice": "Snösvängen Entreprenad AB2026-114Ekonomisystem",
+        "signal": "Förfallen",
+        "due": "2026-03-05förfallen",
+        "lastActivity": "2026-08-05",
+        "responsible": "Ordförande Ek",
+        "accounting": "ingen status",
+        "review": "Behöver utredas",
+        "amount": "6 250,00 SEK"
+      }
+    ],
+    "counts": [
+      "Att granska4",
+      "Med signal2",
+      "Förfallna2",
+      "Utan ansvarig3",
+      "Öppet belopp17 125,00 SEK"
+    ],
+    "incomingTabs": [
+      "Inkommande",
+      "Anslutningar"
+    ]
+  }
+}

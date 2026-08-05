@@ -1,0 +1,165 @@
+{
+  "schema": "brfv2-intake-acceptance/v1",
+  "ok": true,
+  "runLabel": "design-pass",
+  "application": "/home/aidev/Projects/brfv2/src-tauri/target/release/brfv2-desktop",
+  "applicationIdentity": {
+    "path": "/home/aidev/Projects/brfv2/src-tauri/target/release/brfv2-desktop",
+    "sha256": "459d882a2b7e4fb373c58c57238edc5040f30aaf1506580c9909b7dad63112c3",
+    "bytes": 3429760
+  },
+  "durationSeconds": 11.8,
+  "modelRequired": false,
+  "message": {
+    "file": "fraga-fran-medlem.eml",
+    "subject": "Fråga om jourtid för snöröjning",
+    "sender": "medlem@gjutformen12.example"
+  },
+  "transportRetries": 0,
+  "screenshots": [
+    "docs/evidence/design-pass-intake-queue-empty.png",
+    "docs/evidence/design-pass-intake-card.png",
+    "docs/evidence/design-pass-intake-decided.png",
+    "docs/evidence/design-pass-intake-preserved-document.png",
+    "docs/evidence/design-pass-intake-task.png",
+    "docs/evidence/design-pass-intake-reopened.png",
+    "docs/evidence/design-pass-intake-watch.png"
+  ],
+  "failureScreenshot": null,
+  "steps": {
+    "withoutModel": {
+      "mode": "desktop",
+      "llm": {
+        "display_name": "",
+        "model": "",
+        "runtime_label": "",
+        "ready": false,
+        "provider": "none"
+      }
+    },
+    "emptyQueue": {
+      "says": "Ingenting väntar på ett beslut.",
+      "importControl": true,
+      "cards": 0
+    },
+    "card": {
+      "suggestedBy": "bedömt av regelmotor",
+      "signals": [
+        {
+          "quote": "Fråga om jourtid för snöröjning Hej styrelsen, När på året gäller jouren för snöröjning?",
+          "value": "fråga i meddelandet",
+          "kind": "Fråga"
+        },
+        {
+          "quote": "Medlem i föreningen <medlem@gjutformen12.example>",
+          "value": "Medlem i föreningen",
+          "kind": "Avsändare"
+        }
+      ],
+      "subject": "Fråga om jourtid för snöröjning",
+      "meta": "Senast från Medlem i föreningen · 2026-02-04 – 2026-02-04 · 1 meddelande · 0 bilagor",
+      "badges": [
+        "Fråga som väntar svar",
+        "ser ut att vänta svar"
+      ]
+    },
+    "provenance": {
+      "Hur det kom hit": "manual-file-import / eml-file",
+      "Importerat av": "91ca8602d839",
+      "Mottaget av föreningen": "2026-08-05 03:18",
+      "Innehållshash": "7b9360f2354d204021d9cb8f…"
+    },
+    "reasonRequired": {
+      "title": "Skriv först varför posten ska bevaras.",
+      "disabled": true,
+      "asks": "Varför ska posten bevaras? (krävs)"
+    },
+    "firstDecision": {
+      "outcomes": [
+        "Meddelandets text bevarad som dokument — E-post 2026-02-04 — Fråga om jourtid för snöröjning.pdfÖppna dokumentet",
+        "Skapa uppgift — Svara medlemmen om jourtid för snöröjning (att göra)"
+      ],
+      "head": "Beslutat 2026-08-05 03:18 av 91ca8602d839",
+      "note": "Anteckning: Medlemsfråga om jourtid — underlag för styrelsens svar.",
+      "reopen": true,
+      "opensDocument": true
+    },
+    "inArchiveWithoutReload": true,
+    "preservedDocument": {
+      "page": "Sida 1 av 1",
+      "document": "E-post 2026-02-04 — Fråga om jourtid för snöröjning.pdf",
+      "canvas": {
+        "height": 842,
+        "width": 595
+      }
+    },
+    "taskFromPost": {
+      "citations": [
+        "E-post 2026-02-04 — Fråga om jourtid för snöröjning.pdf · s. 1Medlem i föreningen <medlem@gjutformen12.example>"
+      ],
+      "origin": "Inkommande post",
+      "active": 1,
+      "text": "KL Karin Lindqvist 2026-09-15 · om 41 dagar INKOMMANDE POST att göra Svara medlemmen om jourtid för snöröjning  Ursprung Inkommande post — Fråga om jourtid för snöröjning — från medlem@gjutformen12.example Läst ur E-post 2026-02-04 — Fråga om jourtid för snöröjning.pdf Skapad 91ca8602d839 · 2026-08-05 03:18  E-post 2026-02-04 — Fråga om jourtid för snöröjning.pdf · s. 1 Medlem i föreningen <medlem@gjutformen12.example> HÄNDELSER  2026-08-05 03:18 91ca8602d839 skapad Fråga om jourtid för snöröjning — från medlem@gjutformen12.example ÄNDRA ELLER KOMMENTERA ",
+      "events": 1
+    },
+    "reopened": {
+      "badges": [
+        "Fråga som väntar svar",
+        "1 att ta ställning till"
+      ],
+      "offersOutcomes": 5
+    },
+    "afterReopen": {
+      "outcomes": [],
+      "preservedDocumentId": "fe5313913b06",
+      "decisionHistory": [
+        {
+          "outcomes": [
+            "take_in",
+            "create_task"
+          ],
+          "note": "Medlemsfråga om jourtid — underlag för styrelsens svar.",
+          "supersededBy": "91ca8602d839",
+          "decidedBy": "91ca8602d839"
+        }
+      ],
+      "resolutionPresent": false,
+      "activeTasks": 1,
+      "documents": 1
+    },
+    "secondDecision": {
+      "outcomes": [
+        "Meddelandets text bevarad som dokument — E-post 2026-02-04 — Fråga om jourtid för snöröjning.pdfÖppna dokumentet",
+        "Bevaka — Väntar svar om Fråga om jourtid för snöröjning senast 2026-10-01 (later)"
+      ],
+      "note": "Anteckning: Omtag: styrelsen vill ha svaret bevakat, inte bara en uppgift."
+    },
+    "afterSecondDecision": {
+      "outcomes": [
+        "take_in",
+        "monitor"
+      ],
+      "preservedDocumentId": "fe5313913b06",
+      "decisionHistory": [
+        {
+          "outcomes": [
+            "take_in",
+            "create_task"
+          ],
+          "note": "Medlemsfråga om jourtid — underlag för styrelsens svar.",
+          "supersededBy": "91ca8602d839",
+          "decidedBy": "91ca8602d839"
+        }
+      ],
+      "resolutionPresent": true,
+      "activeTasks": 1,
+      "documents": 1
+    },
+    "watchFromPost": {
+      "bucket": "Senare",
+      "citations": 1,
+      "text": "2026-10-01 om 57 dagar VÄNTAT SVAR bevakas Väntar svar om Fråga om jourtid för snöröjning senast 2026-10-01  Ansvarig ej utsedd Påminnelse 2026-09-01 (30 dagar före) Läst ur E-post 2026-02-04 — Fråga om jourtid för snöröjning.pdf Datumet är motorns eget: Datum ur inkommande post: Fråga om jourtid för snöröjning från medlem@gjutformen12.example, 2026-02-04. Satt av en människa vid granskningen.. En människa har godkänt det.   E-post 2026-02-04 — Fråga om jourtid för snöröjning.pdf · s. 1 Medlem i föreningen <medlem@gjutformen12.example> Markera som avklarad Avfärda … Skapa uppgift ",
+      "onBoard": 1
+    }
+  }
+}

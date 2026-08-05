@@ -1,0 +1,103 @@
+{
+  "schema": "brfv2-website-acceptance/v1",
+  "runLabel": "design-pass",
+  "ok": false,
+  "startedAt": "2026-08-05T00:03:57+0200",
+  "durationSeconds": 14.0,
+  "application": {
+    "path": "/home/aidev/Projects/brfv2/src-tauri/target/release/brfv2-desktop",
+    "sha256": "459d882a2b7e4fb373c58c57238edc5040f30aaf1506580c9909b7dad63112c3",
+    "bytes": 3429760
+  },
+  "transportRetries": 0,
+  "steps": {
+    "processPreflight": {
+      "tauri-driver": [],
+      "WebKitWebDriver": [],
+      "brfv2-desktop": []
+    },
+    "withoutModel": {
+      "mode": "desktop",
+      "llm": {
+        "display_name": "",
+        "model": "",
+        "runtime_label": "",
+        "ready": false,
+        "provider": "none"
+      }
+    },
+    "emptyWorkspace": {
+      "create": true,
+      "says": "Bygg den sida medlemmarna faktiskt läser — i samma system som dokumenten, posten och uppgifterna. Sakuppgifter hämtas ur föreningens egna handlingar, med källhänvisning, och det som inte går att belägga skrivs inte.",
+      "canvas": false,
+      "pagesAfterRead": 0
+    },
+    "canvas": {
+      "sameOrigin": true,
+      "appBackground": "rgb(247, 245, 243)",
+      "width": 1110,
+      "siteBackground": "rgb(251, 250, 248)"
+    },
+    "blockAdded": {
+      "blocks": 1,
+      "summary": "La till Toppsektion"
+    },
+    "edited": {
+      "heading": "Välkommen till Brf Gjutformen 12"
+    },
+    "mobileViewport": {
+      "canvasWidth": 390,
+      "frameWidth": 388,
+      "heroColumns": "348px"
+    },
+    "published": {
+      "seq": 1,
+      "slug": "start"
+    },
+    "draftStaysInTheDraft": {
+      "publishedSlug": "start",
+      "draftSlug": "hem",
+      "draftTextLeaked": false
+    },
+    "publishedAgain": {
+      "seq": 2,
+      "slug": "hem"
+    },
+    "rolledBack": {
+      "publicSeq": 1,
+      "draftKeptItsText": true,
+      "revisions": 2
+    },
+    "homeAndNavigationBoundary": {
+      "draftHomeDidNotLeak": true,
+      "publicHomeAfterPublish": "page-90f1feb7d9",
+      "publicHomeCount": 1,
+      "navigationStayedDraftOnly": true
+    },
+    "publishWindowBoundary": {
+      "draftHideDidNotLeak": true,
+      "publishedFutureWindowHid": true,
+      "draftRevealDidNotLeak": true,
+      "publishedOpenWindowRevealed": true
+    },
+    "aiPublicationBoundary": {
+      "aiCouldNotHidePublicPage": true,
+      "unverifiedPublishStatus": 409,
+      "humanConfirmationPublished": true,
+      "modelCalls": 2
+    },
+    "aiRefusesWithoutModel": {
+      "applied": false,
+      "refusal": "AI-assistenten svarade med något som inte gick att tolka som ändringar. Ingenting skrevs. Försök formulera om."
+    }
+  },
+  "screenshots": [
+    "docs/evidence/design-pass-website-empty.png",
+    "docs/evidence/design-pass-website-canvas.png",
+    "docs/evidence/design-pass-website-selected.png",
+    "docs/evidence/design-pass-website-mobile.png",
+    "docs/evidence/design-pass-website-published.png",
+    "docs/evidence/design-pass-website-versions.png",
+    "docs/evidence/design-pass-website-failure.png"
+  ]
+}
