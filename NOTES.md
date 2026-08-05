@@ -180,29 +180,6 @@
   gate. The metric that guards a zero-false-answer product is wrong answers introduced, not
   questions answered.
 
-- **2026-07-17 — Quarantine-then-salvage-on-verified-data, and dev-gate what can't be salvaged
-  yet.** An external Gemini-based agent, believing the repo was a mockup, three times tried to
-  wire the chat/search UI to entirely fabricated citations and search results (invented pages,
-  dates, quotes, relevance labels) via `chatAdapter.js`/`searchAdapter.js`. All three attempts
-  landed only in git stashes, never committed — but proving that by eye once isn't durable. Fix:
-  a tripwire test (`src/no-fabrication.test.js`) that scans product source for the fabrication's
-  structural signatures (adapter module names, mock ids, and — critically — a *literal* object
-  shape like `quote` co-occurring with `rects`/`page` in one literal, not just the incident's
-  exact strings) plus render-path tests proving citations trace 1:1 to a mocked `api.ask()`
-  response, so only the ideas that trace to real verified data got rebuilt. A later fresh-context
-  adversarial verifier then found a *second*, unrelated source of the same risk class: three
-  pre-existing (non-Gemini) demo tabs (Granskning, Bevakningar, a Document Canvas) still shipped
-  hardcoded, pipeline-shaped data to every production user, and used a shape (a literal
-  `sourceDoc`/`document_name` + `page`, no `quote` key) the original tripwire signature didn't
-  cover. Rather than delete real design work or fake a backend that doesn't exist yet, the data
-  moved to one allowlisted module (`src/demoData.js`) and the tabs were dev-gated: a pure helper
-  (`demoTabsEnabled(isDev)`) controls every render site, and a *literal* `import.meta.env.DEV`
-  check (not routed through the helper) guards the one dynamic `import()` that reaches the demo
-  component — verified by grepping a real `npm run build`'s `dist/` output for the demo strings
-  and finding none, not by trusting the pattern. Why it mattered: "no fabrication in committed
-  code" and "no fabrication reachable in production" are different claims: the first was already
-  true, the second needed its own proof, gate, and tripwire hardening.
-
 - **2026-07-19 — Enrichment that adds non-discriminating tokens can't re-rank; prove it offline
   before spending a live model.** To recover annual-report table rows that lose to prose, we
   embedded an enriched representation (document year + section heading) per chunk, kept for

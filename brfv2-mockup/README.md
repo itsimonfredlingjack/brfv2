@@ -8,9 +8,6 @@ Katalogen var tidigare ett eget, gitignorerat Git-repo. Den är nu vanliga
 spårade filer i huvudrepot, så en ren klon innehåller hela produkten. Den gamla
 historiken finns kvar på `migration/brfv2-mockup/*`-grenarna.
 
-Rotens `src/` är en äldre backendkopplad prototyp och ska inte ta emot nya
-produktintegrationer.
-
 ## Verifierad MVP
 
 Pilotvyn använder verkliga backendkontrakt för:

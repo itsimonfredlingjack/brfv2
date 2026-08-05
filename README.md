@@ -60,11 +60,6 @@ Fram till juli 2026 var `brfv2-mockup/` ett separat, gitignorerat repo, vilket
 gjorde att en ren klon inte gick att köra. Den historiken finns kvar på
 `migration/brfv2-mockup/*`-grenarna; katalogen är nu vanliga spårade filer.
 
-Rotens React-app i `src/` är en äldre backendkopplad prototyp. Den är inte den
-avsedda pilotfrontenden och ska inte få nya produktintegrationer. Rotens
-frontendtester och bygge behålls som regressionsskydd tills prototypen kan
-arkiveras separat.
-
 ## Grenar — läs det här om en fil verkar saknas
 
 Produktlinjerna har inte alltid slagits ihop i takt med att de utvecklats, så
@@ -99,7 +94,7 @@ make setup
 
 Det är hela uppsättningen. Den installerar `uv` i `~/.local/bin` om det saknas,
 skapar backend-venv:en, hämtar embedder-vikterna, installerar `node_modules`
-för båda frontenderna och laddar ner Playwrights chromium. Inget sudo, inga
+för den kanoniska frontenden och laddar ner Playwrights chromium. Inget sudo, inga
 systempaket, körbar hur många gånger som helst.
 
 Två plattformsdetaljer värda att känna till:

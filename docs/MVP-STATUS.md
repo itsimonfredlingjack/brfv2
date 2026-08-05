@@ -23,8 +23,6 @@ med två verifierade citat samtidigt som q11 fortsätter att vägras säkert.
   submodul. Den verifierade pilotvyn använder riktiga backenddata. Fram till
   juli 2026 låg katalogen i ett separat, gitignorerat repo; den historiken
   finns kvar på `migration/brfv2-mockup/*`-grenarna.
-- Rotens `src/` är en äldre backendkopplad prototyp. Den underhålls inte som
-  den visuella produkten och ska inte få nya integrationer.
 - FastAPI-backend, driftverktyg och evidens ligger i huvudrepot.
 - Global sök, dokumentbunden chatt, kvalitetskontroll, bevakningar och
   inställningsflöden ligger utanför MVP. I pilotvyn är de dolda, spärrade eller

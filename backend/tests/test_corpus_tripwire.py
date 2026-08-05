@@ -1,5 +1,4 @@
-"""Corpus-mixing tripwire (CI3) — the backend counterpart to
-`src/no-fabrication.test.js`. CI2 made `corpus_origin` a structural,
+"""Corpus-mixing tripwire (CI3). CI2 made `corpus_origin` a structural,
 non-bypassable tenant property (`tenant_meta.json`, stamped onto every
 `DocumentMeta` at ingestion, naming rules on the `brf_id` namespace) and
 migrated the two pre-existing dev tenants onto it. That was a one-time

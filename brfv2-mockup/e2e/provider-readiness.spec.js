@@ -11,13 +11,15 @@ const cases = [
     name: 'fake',
     url: 'http://127.0.0.1:15173/brfv2/',
     primary: 'Testleverantör – inte redo',
-    secondary: 'Testläge',
+    secondary: null,
+    absentSecondary: 'Testläge',
   },
   {
     name: 'none',
     url: 'http://127.0.0.1:15175/brfv2/',
     primary: 'Ingen modell konfigurerad',
-    secondary: 'Ingen modell',
+    secondary: null,
+    absentSecondary: 'Ingen modell',
   },
   {
     name: 'unavailable',
@@ -34,6 +36,9 @@ for (const readiness of cases) {
     await expect(page.getByText(readiness.primary, { exact: true })).toBeVisible();
     if (readiness.secondary) {
       await expect(page.getByText(readiness.secondary, { exact: true })).toBeVisible();
+    }
+    if (readiness.absentSecondary) {
+      await expect(page.getByText(readiness.absentSecondary, { exact: true })).toHaveCount(0);
     }
     const status = page.getByLabel(new RegExp(`Modellstatus: ${readiness.primary}`));
     await expect(status).toBeVisible();

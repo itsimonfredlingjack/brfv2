@@ -2,8 +2,8 @@
 
 > **Provenance note:** The original SPEC.md was not found on disk at build time (2026-07-16).
 > This document is a faithful reconstruction from the build prompt (which quotes §2 and §5),
-> `deep-research-report.md` (architecture research), and the existing frontend
-> (settings contract in `src/components/SettingsView.jsx`). Section numbering matches the
+> `deep-research-report.md` (architecture research), and the canonical frontend.
+> Section numbering matches the
 > build prompt's references: §2 = failure modes, §5 = OCR spike.
 
 ## §0. Product context
@@ -102,11 +102,11 @@ Citation payload: `{document_id, document_name, page (1-based), quote, chunk_id,
 
 ### Frontend (existing Vite/React app, made real)
 
-- `src/api.js` — API client; Vite dev proxy `/api` → `:8787`.
+- `brfv2-mockup/src/api.js` — API client; Vite dev proxy `/api` → `:8787`.
 - Upload modal → real `POST /api/documents` with progress states.
 - Documents tab → real list.
 - AI chat → `POST /api/ask`; renders answer + citation chips; refusals rendered distinctly.
-- `src/components/PdfViewer.jsx` — pdf.js canvas render of the real page + absolutely-positioned
+- `brfv2-mockup/src/components/PdfPane.jsx` — pdf.js canvas render of the real page + absolutely-positioned
   highlight overlays (fitz top-left rect × viewport scale, y-flip through pdf.js viewport so
   rotation is handled); citation click opens viewer at the right doc/page.
 

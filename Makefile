@@ -1,10 +1,10 @@
-.PHONY: setup backend backend-pilot require-pilot-llm frontend frontend-legacy mobile mobile-build mobile-test \
+.PHONY: setup backend backend-pilot require-pilot-llm frontend mobile mobile-build mobile-test \
         desktop-runtime desktop-build desktop-run desktop-check desktop-package desktop-install desktop-uninstall desktop-acceptance \
         invoice-acceptance intake-acceptance website-acceptance desktop-acceptance-full invoice-rules-lock \
         website-vocabulary-lock website-vocabulary-check \
         test test-isolation eval eval-b eval-fast eval-sweep \
         eval-selfhosted eval-b-selfhosted desktop-acceptance-installed desktop-verify-reproducible demo demo-stop demo-status demo-reset \
-        build build-legacy model-readiness model-readiness-selftest \
+        build model-readiness model-readiness-selftest \
         model-readiness-selftest-negative
 
 # Generation default for dev + eval is the standard hosted provider (logged-in `claude`
@@ -35,9 +35,6 @@ backend-pilot: require-pilot-llm  ## API-server i pilotläge mot Gemma 4 12B på
 frontend:           ## Kanoniska UI:t i brfv2-mockup på :5173
 	@test -d brfv2-mockup/node_modules || (echo "brfv2-mockup/node_modules saknas — kör 'make setup' först."; exit 1)
 	cd brfv2-mockup && npm run dev
-
-frontend-legacy:    ## Äldre backendkopplad prototyp i rotens src/
-	npm run dev
 
 mobile:             ## Mobilklienten Källa (xs_mobilapp) på :5174 — kräver backend på :8787
 	@test -d xs_mobilapp/node_modules || (echo "xs_mobilapp/node_modules saknas — kör 'cd xs_mobilapp && npm install'."; exit 1)
@@ -196,6 +193,3 @@ model-readiness-selftest-negative: ## Bevis: self-test med FABRICERAD scriptad F
 build:              ## Produktionsbygge av kanoniska brfv2-mockup
 	@test -d brfv2-mockup/node_modules || (echo "brfv2-mockup/node_modules saknas — kör 'make setup' först."; exit 1)
 	cd brfv2-mockup && npm run build
-
-build-legacy:       ## Bygg den äldre rotfrontenden
-	npm run build

@@ -174,7 +174,7 @@ och ska inte återanvändas för riktiga kundtenanter.
 | Komponent | Procedur | Verifiering efteråt |
 |---|---|---|
 | Python-beroenden (backend) | Uppdatera `pyproject.toml`/`uv.lock`, `cd backend && uv sync` | `make test` |
-| Node-beroenden (frontend) | Uppdatera `package.json`, `npm install` i `brfv2-mockup/` (och roten om `src/`-prototypen berörs) | `npm test && npm run lint && npm run build` i `brfv2-mockup/` |
+| Node-beroenden (frontend) | Uppdatera `package.json` och kör `npm install` i `brfv2-mockup/` | `npm test && npm run lint && npm run build` i `brfv2-mockup/` |
 | Embedding-vikter (`model2vec`) | Bytt `Model2VecEmbedder.MODEL_ID` i `app/embeddings.py`, kör om `ops/setup.sh`-steget för embedder-cache eller låt lazy-fetch ske vid första `ask()` | `make eval-fast` (retrieval utan LLM) för att se att recall inte kollapsar |
 | Självhostad modellruntime (`agenntserver`) | Uppdatera `docker-compose.yml`/GGUF-vikter på värden, `sudo docker compose up -d --force-recreate` i `/home/simon/llama-cpp` | `ops/demo.sh check-tunnel` + full livegate (§6.1) — modellbyte kräver **alltid** omkörning |
 | Databas/schema | **Ingen migreringsmekanism finns.** `documents.json`/`tenant_meta.json`/`auth.db` har inget versionsfält | Efter en schemaändring i koden: kör om `scripts.seed --reset` mot en testmiljö, `make test`, och verifiera manuellt att befintliga produktionstenanters filer fortfarande läses korrekt innan de rörs. **TBD — ingen formell migreringsprocess är definierad; behöver ägarbeslut innan en verklig schemaändring görs mot en produktionstenant.** |

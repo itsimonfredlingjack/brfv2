@@ -58,10 +58,6 @@ step "Kanonisk frontend (brfv2-mockup)"
 (cd brfv2-mockup && npm install)
 green "brfv2-mockup/node_modules klar"
 
-step "Äldre rotfrontend (regressionsskydd)"
-npm install
-green "node_modules klar"
-
 # --- browsers -----------------------------------------------------------
 # `npx playwright install-deps` only works on apt-based distros; on Fedora it
 # fails with "spawn apt-get ENOENT". The browser download itself is portable
