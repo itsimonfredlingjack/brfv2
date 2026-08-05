@@ -29,7 +29,7 @@ source "$ROOT/ops/lib/repro.sh"
 
 RUNTIME="$ROOT/src-tauri/runtime"
 PY_TAG="python3.12"
-APPNAME="BRF Dokument-AI"
+APPNAME="Träff"
 # Where the bundle lands once the RPM is installed. Baked into the compiled
 # bytecode so a traceback from the installed application names the file the
 # operator can actually open.

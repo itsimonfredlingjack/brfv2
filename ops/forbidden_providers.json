@@ -149,17 +149,17 @@
     "why": "A strict content sweep over the parts of the payload this project authors and can therefore hold to a no-forbidden-names standard: the packaged product code and the built desktop UI. Every match must be an explicitly declared reference (see declaredReferences) or the inspection fails.",
     "scan": [
       {
-        "root": "usr/lib/BRF Dokument-AI/runtime/backend",
+        "root": "usr/lib/Träff/runtime/backend",
         "why": "The product code that ships."
       },
       {
-        "root": "usr/lib/BRF Dokument-AI/ui",
+        "root": "usr/lib/Träff/ui",
         "why": "The built desktop UI. A shipped provider label would be an exposed hosted identifier even though it is not an implementation."
       }
     ],
     "notScanned": [
       {
-        "root": "usr/lib/BRF Dokument-AI/runtime/python/lib/python3.12/site-packages",
+        "root": "usr/lib/Träff/runtime/python/lib/python3.12/site-packages",
         "why": "Third-party sources are held to the structural rules above (distributions, modules, attributes, pathPatterns, entryPointPatterns, filenameScan, import probes) rather than to a content sweep. huggingface_hub legitimately keeps guarded optional imports of hf_xet and dangling lazy-attribute entries for the removed inference tree; editing vendored sources to erase those names would risk the approved embedder for no gain, and the probes below prove that none of them can resolve. See guardedOptionalImports."
       },
       {
@@ -189,7 +189,7 @@
       "retainedBecause": "Defence in depth costs nothing and removing a security scrub to make a string search pass would weaken the product to flatter the evidence."
     },
     {
-      "path": "usr/lib/BRF Dokument-AI/runtime/backend/app/schemas.py",
+      "path": "usr/lib/Träff/runtime/backend/app/schemas.py",
       "pattern": "claude-opus-4-8",
       "expectedOccurrences": 1,
       "classification": "default value of the per-tenant `aiModel` setting",

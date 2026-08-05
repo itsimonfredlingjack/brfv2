@@ -16,7 +16,7 @@ Two scopes, same rules:
                   in scope yet and are reported as such rather than skipped
                   silently.
   --root DIR      an install-shaped root: usr/bin/brfv2-desktop and
-                  usr/lib/BRF Dokument-AI/. That is the buildroot and an
+                  usr/lib/Träff/. That is the buildroot and an
                   extracted RPM, so the same rules answer for the package
                   contents.
   --installed [P] the installed product under prefix P (default /), mounted
@@ -54,7 +54,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 RULES_PATH = ROOT / "ops" / "forbidden_providers.json"
 
-APP_DIR = "usr/lib/BRF Dokument-AI"
+APP_DIR = "usr/lib/Träff"
 RUNTIME_REL = f"{APP_DIR}/runtime"
 UI_REL = f"{APP_DIR}/ui"
 SHELL_REL = "usr/bin/brfv2-desktop"

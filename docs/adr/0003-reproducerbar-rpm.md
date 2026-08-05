@@ -20,7 +20,7 @@ Fem separata orsaker hittades, och varje orsak behövde sin egen åtgärd.
 headern.
 
 Åtgärd: en enda deterministisk kompilering av *hela* trädet med
-`-s "$RUNTIME" -p "/usr/lib/BRF Dokument-AI/runtime"`, vilket skriver den
+`-s "$RUNTIME" -p "/usr/lib/Träff/runtime"`, vilket skriver den
 sökväg filen får när den är **installerad**, och
 `--invalidation-mode unchecked-hash`, som tar bort mtime ur headern helt. Det
 installerade trädet är skrivskyddat, så det finns inget att invalidera mot.
