@@ -267,7 +267,7 @@ function ReadingPanel({ thread, categories, busy, onConfirm }) {
   const depthCount = (thread.signals?.length || 0) + (thread.related?.length || 0);
 
   return (
-    <section className="detail-section reading">
+    <section className="detail-section reading reading--secondary">
       <div className="detail-section-head">
         <h4>Vad det ser ut att gälla</h4>
         {/* Who produced the reading, always — "regelmotor" and "regelmotor +

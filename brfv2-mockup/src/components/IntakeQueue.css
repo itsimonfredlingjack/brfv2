@@ -407,20 +407,22 @@
   border-bottom: none;
 }
 
-.detail-head { padding: 20px 26px 16px; border-bottom: 1px solid var(--border); }
+.detail-head { padding: 16px 22px 12px; border-bottom: 1px solid var(--border); }
 
 .detail-head h3 {
   font-family: var(--font-serif);
   font-size: var(--text-xl);
   font-weight: 400;
-  letter-spacing: -0.03em;
-  line-height: 1.25;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
   text-wrap: balance;
 }
 
 .detail-section { padding: 20px 26px; border-bottom: 1px solid var(--border); }
 .detail-section:last-child { border-bottom: none; }
 .thread-evidence .detail-section:last-child { border-bottom: none; }
+
+.detail-section.messages { background: transparent; }
 
 .detail-section-head {
   display: flex;
@@ -475,12 +477,12 @@
    the screen telling a board member their post is a machine artefact. */
 .message-body {
   margin: 0 0 12px;
-  padding: 14px 16px;
+  padding: 16px 18px;
   border: 1px solid var(--border);
   border-radius: var(--radius-block);
-  background: var(--surface-1);
+  background: var(--field);
   font-family: inherit;
-  font-size: var(--text-md);
+  font-size: var(--text-base);
   line-height: 1.65;
   color: var(--foreground);
   white-space: pre-wrap;
@@ -581,6 +583,25 @@
 /* ---------- the reading: what the app believes ---------- */
 
 .detail-section.reading { background: var(--surface-1); }
+
+.detail-section.reading--secondary {
+  background: transparent;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+
+.reading--secondary .detail-section-head h4 {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink-muted);
+  text-transform: none;
+}
+
+.reading--secondary .reading-headline {
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
 
 /* Whose reading this is, said in the cut that measures: attribution is a fact
    about machinery, not part of the prose. */

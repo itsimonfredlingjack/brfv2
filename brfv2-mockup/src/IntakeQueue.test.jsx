@@ -571,6 +571,27 @@ describe('the message itself', () => {
   });
 });
 
+describe('readable detail hierarchy', () => {
+  it('keeps message before reading before decision', async () => {
+    mountWith();
+    await waitForQueue();
+    const evidence = document.querySelector('.thread-evidence');
+    const messages = evidence.querySelector('.detail-section.messages');
+    const reading = evidence.querySelector('.detail-section.reading');
+    const decisions = document.querySelector('.thread-decisions');
+    expect(messages.compareDocumentPosition(reading) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(evidence.compareDocumentPosition(decisions) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('marks reading as secondary chrome relative to the message', async () => {
+    mountWith();
+    await waitForQueue();
+    const reading = document.querySelector('.detail-section.reading');
+    expect(reading.classList.contains('reading--secondary')).toBe(true);
+    expect(reading.querySelector('details.reading-depth')?.open ?? false).toBe(false);
+  });
+});
+
 describe('detail layout for deciding', () => {
   it('anchors decisions below a scrollable evidence region', async () => {
     mountWith();
