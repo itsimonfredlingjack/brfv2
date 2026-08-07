@@ -2,7 +2,7 @@ import React from 'react';
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import Integrations from './components/Integrations';
 import { intakeApi, integrationsApi } from './api';
 
@@ -178,6 +178,14 @@ describe('the incoming shell', () => {
     mountWith({ events: [EVENT, { ...EVENT, id: 'ev2', review_status: 'approved' }] });
     const tab = await screen.findByRole('tab', { name: /Inkommande/ });
     expect(tab.textContent).toContain('1');
+  });
+
+  it('shows the open count as quiet navigation chrome, not a loud badge', async () => {
+    mountWith({ events: [EVENT, { ...EVENT, id: 'ev2' }] });
+    await waitFor(() => expect(screen.getByRole('tab', { name: /Inkommande/ })).toBeInTheDocument());
+    const tab = screen.getByRole('tab', { name: /Inkommande/ });
+    expect(tab.querySelector('.tab-count')).toHaveTextContent('2');
+    expect(tab.querySelector('.pill')).toBeNull();
   });
 
   /* The invoice review moved out. Asserting its absence here is what keeps the

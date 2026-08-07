@@ -32,13 +32,24 @@
   padding-bottom: 8px;
 }
 
+/* The queue pane fills the window (see App.css `.tab-content:has(.intake)`);
+   the connections pane stays in plain flow. */
+.integrations:has(.intake) { flex: 1; min-height: 0; }
+
+.pane:has(.intake) {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+}
+
 .integrations-header {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   gap: 16px;
   flex-wrap: wrap;
-  margin-bottom: 18px;
+  margin-bottom: 14px;
 }
 
 /* The two panes are sections of one workspace, so their switch is set like
@@ -75,20 +86,12 @@
   border-bottom-color: var(--ink);
 }
 
-.integrations-tabs .pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  align-self: center;
-  min-width: 20px;
-  height: 20px;
-  padding: 0 7px;
-  border-radius: 999px;
-  background: var(--secondary);
-  color: var(--foreground);
+.integrations-tabs .tab-count {
+  margin-left: 8px;
+  color: var(--ink-muted);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
-  font-weight: 600;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
 
@@ -474,8 +477,11 @@
 
 /* Three equal decisions, so three equal controls. Making one of them the loud
    one would be the screen recommending an answer it has no business
-   recommending. */
-.decision {
+   recommending.
+   Scoped to button.decision: a bare .decision also matched Inkommande's
+   section.detail-section.decision and crushed the anchored resolve form to
+   32px inside the B2 detail pane. */
+button.decision {
   height: 32px;
   padding: 0 13px;
   border: 1px solid var(--input);
@@ -489,9 +495,9 @@
   transition: background-color 0.14s ease;
 }
 
-.decision:hover:not(:disabled) { background: var(--surface-3); }
-.decision:disabled { opacity: 0.5; cursor: not-allowed; }
-.decision.reopen { border-style: dashed; }
+button.decision:hover:not(:disabled) { background: var(--surface-3); }
+button.decision:disabled { opacity: 0.5; cursor: not-allowed; }
+button.decision.reopen { border-style: dashed; }
 
 .decision-bar .muted { flex-basis: 100%; margin-top: 2px; font-size: var(--text-sm); }
 

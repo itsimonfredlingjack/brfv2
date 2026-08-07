@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  AlertTriangle,
   Archive,
   CalendarClock,
   CheckCircle2,
@@ -14,7 +13,6 @@ import {
   ListTodo,
   Loader2,
   Mail,
-  MessageCircleQuestion,
   Paperclip,
   RefreshCw,
   RotateCcw,
@@ -58,16 +56,6 @@ import './IntakeQueue.css';
  * it is), and the **decision** last. A reader should meet the message before
  * they meet the interpretation of it.
  */
-
-const CATEGORY_ICON = {
-  invoice: FileText,
-  contract_or_quote: FileText,
-  authority_or_manager: AlertTriangle,
-  decision_or_approval: CheckCircle2,
-  question_awaiting_reply: MessageCircleQuestion,
-  information: Inbox,
-  unclear: HelpCircle,
-};
 
 const SIGNAL_LABEL = {
   date: 'Datum',
@@ -139,17 +127,14 @@ function FetchBar({ mailbox, connected, busy, onFetch, onImportFile, format, las
           <Mail size={14} />
           {connected ? (
             <span>
-              Ansluten brevlåda.{' '}
+              Ansluten brevlåda
               {mailbox?.hasFetched
-                ? `Senast hämtat ${formatDateTime(mailbox.last_fetched_at)} — ${mailbox.last_new_count} nya.`
-                : 'Aldrig hämtat. Första hämtningen tar in det som finns i mappen.'}
-              {' '}Hämtningen frågar efter det som kommit sedan förra gången. Inget markeras,
-              flyttas eller raderas i brevlådan.
+                ? ` · senast ${formatDateTime(mailbox.last_fetched_at)} · ${mailbox.last_new_count} nya`
+                : ' · aldrig hämtat'}
             </span>
           ) : (
             <span>
-              Ingen brevlåda är ansluten. Det behövs inte — en <code>.eml</code>-fil kan
-              importeras för hand, och kön fungerar likadant. Se <strong>Anslutningar</strong>.
+              Ingen brevlåda är ansluten · importera en .eml-fil eller se Anslutningar
             </span>
           )}
         </span>
@@ -162,22 +147,36 @@ function FetchBar({ mailbox, connected, busy, onFetch, onImportFile, format, las
             className="hidden-file-input"
             id="intake-eml-import"
           />
-          <label htmlFor="intake-eml-import" className={`import-button ${busy ? 'busy' : ''}`}>
+          <label
+            htmlFor="intake-eml-import"
+            className={`import-button ${busy ? 'busy' : ''}`}
+            title="Importera en .eml-fil"
+          >
             {busy ? <Loader2 size={14} className="spin" /> : <Upload size={14} />}
-            Importera en .eml-fil
+            Importera .eml
           </label>
-          <button type="button" className="fetch-button" disabled={busy || !connected} onClick={onFetch}>
-            {busy ? <Loader2 size={14} className="spin" /> : <RefreshCw size={14} />} Hämta nytt
+          <button
+            type="button"
+            className="fetch-button"
+            disabled={busy || !connected}
+            onClick={onFetch}
+            title="Hämta nytt"
+            aria-label="Hämta nytt"
+          >
+            {busy ? <Loader2 size={14} className="spin" /> : <RefreshCw size={14} />} Hämta
           </button>
         </span>
       </div>
 
       {format?.mail && (
-        <p className="muted intake-format-note">
-          Tas emot: {format.mail.attachmentTypes.join(', ')} som bilaga, högst{' '}
-          {format.mail.maxAttachments} stycken. Allt annat avvisas i sin helhet — inget
-          halvimporteras.
-        </p>
+        <details className="intake-format-disclosure">
+          <summary>Om hämtning</summary>
+          <p className="muted intake-format-note">
+            Tas emot: {format.mail.attachmentTypes.join(', ')} som bilaga, högst{' '}
+            {format.mail.maxAttachments} stycken. Allt annat avvisas i sin helhet — inget
+            halvimporteras.
+          </p>
+        </details>
       )}
 
       {mailbox?.last_error && (
@@ -217,7 +216,6 @@ function FetchBar({ mailbox, connected, busy, onFetch, onImportFile, format, las
 
 /** One row in the queue: enough to choose from, never enough to decide from. */
 function ThreadRow({ thread, selected, onSelect }) {
-  const Icon = CATEGORY_ICON[thread.category] || Inbox;
   return (
     <button
       type="button"
@@ -232,21 +230,8 @@ function ThreadRow({ thread, selected, onSelect }) {
           : <span className="thread-row-state open">{thread.open_count}</span>}
       </span>
       <span className="thread-meta">
-        Senast från {thread.latest_sender_display || thread.latest_sender}
-        {' · '}{formatDate(thread.first_at)} – {formatDate(thread.latest_at)}
-        {' · '}{thread.message_count} meddelande{thread.message_count === 1 ? '' : 'n'}
-        {' · '}{thread.attachment_count} bilag{thread.attachment_count === 1 ? 'a' : 'or'}
-      </span>
-      <span className="thread-row-tags">
-        <span className="tag category">
-          <Icon size={11} /> {thread.category_label}
-          {thread.category_confirmed && <CheckCircle2 size={10} aria-label="bekräftad av människa" />}
-        </span>
-        {thread.awaiting_reply && (
-          <span className="tag awaiting">
-            <MessageCircleQuestion size={11} /> ser ut att vänta svar
-          </span>
-        )}
+        {thread.latest_sender_display || thread.latest_sender}
+        {' · '}<span className="thread-date">{formatDate(thread.latest_at)}</span>
       </span>
     </button>
   );
@@ -265,12 +250,23 @@ function ReadingPanel({ thread, categories, busy, onConfirm }) {
   const [note, setNote] = useState('');
 
   useEffect(() => { setChosen(thread.category); }, [thread.category]);
+  useEffect(() => { setAllSignals(false); setOpen(false); }, [thread.key]);
 
   const latest = thread.events[thread.events.length - 1];
   const confirmation = latest?.triage_confirmation;
 
+  // Default: enough to know what the system thinks this concerns.
+  // On demand: why, hints, quoted extractions, related proposals.
+  const hasDepth = Boolean(
+    thread.why_it_matters
+    || thread.action_hint
+    || thread.signals?.length
+    || thread.related?.length,
+  );
+  const depthCount = (thread.signals?.length || 0) + (thread.related?.length || 0);
+
   return (
-    <section className="detail-section reading">
+    <section className="detail-section reading reading--secondary">
       <div className="detail-section-head">
         <h4>Vad det ser ut att gälla</h4>
         {/* Who produced the reading, always — "regelmotor" and "regelmotor +
@@ -281,107 +277,121 @@ function ReadingPanel({ thread, categories, busy, onConfirm }) {
       </div>
 
       {thread.headline && <p className="reading-headline">{thread.headline}</p>}
-      {thread.why_it_matters && <p className="reading-why">{thread.why_it_matters}</p>}
-      {thread.action_hint && (
-        <p className="reading-action"><Clock size={13} /> {thread.action_hint}</p>
-      )}
       {thread.uncertainty && (
         <p className="reading-uncertainty"><HelpCircle size={13} /> {thread.uncertainty}</p>
       )}
 
-      {thread.signals?.length > 0 && (
-        <div className="reading-signals">
-          <h6>
-            <span>Läst ur meddelandet</span>
-            {thread.signals.length > SIGNALS_SHOWN && (
-              <span className="h6-count">{thread.signals.length}</span>
+      <div className="reading-tools">
+        {hasDepth && (
+          <details key={thread.key} className="reading-depth">
+            <summary>
+              <span>Varför och underlag</span>
+              {depthCount > 0 && <span className="depth-count">{depthCount}</span>}
+            </summary>
+          <div className="reading-depth-body">
+            {thread.why_it_matters && <p className="reading-why">{thread.why_it_matters}</p>}
+            {thread.action_hint && (
+              <p className="reading-action"><Clock size={13} /> {thread.action_hint}</p>
             )}
-          </h6>
-          <ul>
-            {(allSignals ? thread.signals : thread.signals.slice(0, SIGNALS_SHOWN)).map((signal, i) => (
-              <li key={`${signal.kind}-${signal.value}-${i}`}>
-                <span className="signal-kind">
-                  {SIGNAL_LABEL[signal.kind] || signal.kind}
-                </span>
-                <span className="signal-value">{signal.value}</span>
-                <span className="muted"> ur {SOURCE_LABEL[signal.source] || signal.source}</span>
-                <q className="signal-quote">{signal.quote}</q>
-              </li>
-            ))}
-          </ul>
-          {thread.signals.length > SIGNALS_SHOWN && (
-            <button type="button" className="signals-more" onClick={() => setAllSignals(!allSignals)}>
-              {allSignals
-                ? <><ChevronDown size={13} /> Visa färre avläsningar</>
-                : <><ChevronRight size={13} /> Visa alla {thread.signals.length} avläsningar</>}
-            </button>
-          )}
+
+            {thread.signals?.length > 0 && (
+              <div className="reading-signals">
+                <h6>
+                  <span>Läst ur meddelandet</span>
+                  {thread.signals.length > SIGNALS_SHOWN && (
+                    <span className="h6-count">{thread.signals.length}</span>
+                  )}
+                </h6>
+                <ul>
+                  {(allSignals ? thread.signals : thread.signals.slice(0, SIGNALS_SHOWN)).map((signal, i) => (
+                    <li key={`${signal.kind}-${signal.value}-${i}`}>
+                      <span className="signal-kind">
+                        {SIGNAL_LABEL[signal.kind] || signal.kind}
+                      </span>
+                      <span className="signal-value">{signal.value}</span>
+                      <span className="muted"> ur {SOURCE_LABEL[signal.source] || signal.source}</span>
+                      <q className="signal-quote">{signal.quote}</q>
+                    </li>
+                  ))}
+                </ul>
+                {thread.signals.length > SIGNALS_SHOWN && (
+                  <button type="button" className="signals-more" onClick={() => setAllSignals(!allSignals)}>
+                    {allSignals
+                      ? <><ChevronDown size={13} /> Visa färre avläsningar</>
+                      : <><ChevronRight size={13} /> Visa alla {thread.signals.length} avläsningar</>}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {thread.related?.length > 0 && (
+              <div className="reading-related">
+                <h6><Link2 size={13} /> Kan höra ihop med</h6>
+                <ul>
+                  {thread.related.map((record, i) => {
+                    const Icon = RELATED_ICON[record.kind] || FileText;
+                    return (
+                      <li key={`${record.kind}-${record.ref_id}-${i}`}>
+                        <Icon size={13} /> <strong>{record.label}</strong>
+                        <span className="muted"> — {record.basis}</span>
+                        <span className="badge proposed">förslag</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+          </div>
+          </details>
+        )}
+
+        {!confirmation && (
+          <button type="button" className="category-toggle" onClick={() => setOpen(!open)}>
+            {open ? <ChevronDown size={13} /> : <ChevronRight size={13} />} Rätta kategorin
+          </button>
+        )}
+      </div>
+
+      {!confirmation && open && (
+        <div className="category-form">
+          <label>
+            Kategori
+            <select value={chosen} onChange={(e) => setChosen(e.target.value)}>
+              {Object.entries(categories).map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Anteckning (valfri)
+            <input
+              type="text"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              aria-label="Anteckning om kategorin"
+            />
+          </label>
+          <button
+            type="button"
+            className="category-save"
+            disabled={busy || !latest}
+            onClick={() => onConfirm(latest.id, chosen, note.trim())}
+          >
+            Spara kategorin
+          </button>
         </div>
       )}
 
-      {thread.related?.length > 0 && (
-        <div className="reading-related">
-          <h6><Link2 size={13} /> Kan höra ihop med</h6>
-          <ul>
-            {thread.related.map((record, i) => {
-              const Icon = RELATED_ICON[record.kind] || FileText;
-              return (
-                <li key={`${record.kind}-${record.ref_id}-${i}`}>
-                  <Icon size={13} /> <strong>{record.label}</strong>
-                  <span className="muted"> — {record.basis}</span>
-                  <span className="badge proposed">förslag</span>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      )}
-
-      <div className="reading-category">
-        {confirmation ? (
+      {confirmation && (
+        <div className="reading-category">
           <p className="category-confirmed">
             <CheckCircle2 size={13} /> {confirmation.confirmed_by} har satt kategorin till{' '}
             <strong>{categories[confirmation.category] || confirmation.category}</strong>
             {confirmation.note ? ` — ${confirmation.note}` : ''}.
             {' '}Förslaget var <em>{categories[thread.category] || thread.category}</em> och står kvar.
           </p>
-        ) : (
-          <>
-            <button type="button" className="category-toggle" onClick={() => setOpen(!open)}>
-              {open ? <ChevronDown size={13} /> : <ChevronRight size={13} />} Rätta kategorin
-            </button>
-            {open && (
-              <div className="category-form">
-                <label>
-                  Kategori
-                  <select value={chosen} onChange={(e) => setChosen(e.target.value)}>
-                    {Object.entries(categories).map(([key, label]) => (
-                      <option key={key} value={key}>{label}</option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Anteckning (valfri)
-                  <input
-                    type="text"
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    aria-label="Anteckning om kategorin"
-                  />
-                </label>
-                <button
-                  type="button"
-                  className="category-save"
-                  disabled={busy || !latest}
-                  onClick={() => onConfirm(latest.id, chosen, note.trim())}
-                >
-                  Spara kategorin
-                </button>
-              </div>
-            )}
-          </>
-        )}
-      </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -601,15 +611,24 @@ function ResolutionSummary({ event, busy, onReopen, onOpenDocument }) {
 }
 
 /** One message: the thing that actually arrived. */
-function Message({ event, busy, onRetriage, onOpenDocument }) {
+function Message({ event, showSubject = true, busy, onRetriage, onOpenDocument }) {
   return (
     <article className={`message ${event.resolution ? 'settled' : ''}`}>
       <header className="message-head">
-        <h5>{event.subject || '(utan ämne)'}</h5>
+        {/* The detail head above already carries the thread's subject in the
+            serif; restating it here would be the same line twice, one screen
+            apart. A reply with a different subject still gets its own. */}
+        {showSubject && <h5>{event.subject || '(utan ämne)'}</h5>}
         <span className="message-from">
-          {event.origin_display ? `${event.origin_display} <${event.origin}>` : event.origin}
-          {' · '}{formatDateTime(event.occurred_at || event.received_at)}
-          {event.attachments.length > 0 && ` · ${event.attachments.length} bilaga(or)`}
+          <span className="message-sender">
+            {event.origin_display ? `${event.origin_display} <${event.origin}>` : event.origin}
+          </span>
+          <span className="message-meta">
+            <time dateTime={event.occurred_at || event.received_at}>
+              {formatDateTime(event.occurred_at || event.received_at)}
+            </time>
+            {event.attachments.length > 0 && ` · ${event.attachments.length} bilaga(or)`}
+          </span>
         </span>
       </header>
 
@@ -683,78 +702,67 @@ function ThreadDetail({
   thread, categories, resolutions, busy,
   onConfirm, onResolve, onReopen, onRetriage, onOpenDocument,
 }) {
-  const Icon = CATEGORY_ICON[thread.category] || Inbox;
+  // Evidence scrolls; decisions stay anchored at the foot of the detail card.
+  // Remounting the scroller on thread change keeps the message first without
+  // a sticky decision that outranks unread source text.
   return (
     <div className="thread-detail">
-      <header className="detail-head">
-        {/* The count belongs in the heading, not under it: the subject alone is
-            the list row's job, and a detail pane whose title is a verbatim copy
-            of the row that opened it reads as the same thing shown twice. */}
-        <h3>
-          {thread.subject} · {thread.message_count} meddelande{thread.message_count === 1 ? '' : 'n'}
-        </h3>
-        {/* Deliberately not the list row's line again: the sender is on every
-            message below, and a detail pane that repeats its own list row is
-            two panes saying one thing. */}
-        <p className="detail-head-meta">
-          {formatDate(thread.first_at)} – {formatDate(thread.latest_at)}
-          {' · '}{thread.attachment_count} bilag{thread.attachment_count === 1 ? 'a' : 'or'}
-        </p>
-        <div className="detail-head-tags">
-          <span className="tag category">
-            <Icon size={11} /> {thread.category_label}
-            {thread.category_confirmed && <CheckCircle2 size={10} aria-label="bekräftad av människa" />}
-          </span>
-          {thread.resolved
-            ? <span className="tag settled"><CheckCircle2 size={11} /> avgjord</span>
-            : <span className="tag open">{thread.open_count} att ta ställning till</span>}
-        </div>
-      </header>
+      <div className="thread-evidence" key={thread.key}>
+        <header className="detail-head">
+          {/* Subject once. Dates, sender, category and open-count live on the
+              list row or the message — restating them here is two panes saying
+              one thing before any new information appears. */}
+          <h3>{thread.subject}</h3>
+        </header>
 
-      <section className="detail-section messages">
-        <div className="detail-section-head">
-          <h4>Meddelanden i tråden</h4>
-        </div>
-        {thread.events.map((event) => (
-          <Message
-            key={event.id}
-            event={event}
-            busy={busy}
-            onRetriage={onRetriage}
-            onOpenDocument={onOpenDocument}
-          />
-        ))}
-      </section>
-
-      <ReadingPanel
-        thread={thread}
-        categories={categories}
-        busy={busy}
-        onConfirm={onConfirm}
-      />
-
-      {thread.events.map((event) => (
-        <section className="detail-section decision" key={`decision-${event.id}`}>
-          {thread.events.length > 1 && (
-            <p className="decision-for">Gäller: {event.subject || '(utan ämne)'}</p>
-          )}
-          {event.resolution ? (
-            <ResolutionSummary
+        {/* No "Meddelanden i tråden" label: the serif subject above and the
+            sender line make the object self-evident, and the one heading this
+            column needs is the one that marks the machine's reading. */}
+        <section className="detail-section messages">
+          {thread.events.map((event) => (
+            <Message
+              key={event.id}
               event={event}
+              showSubject={(event.subject || '(utan ämne)') !== thread.subject}
               busy={busy}
-              onReopen={onReopen}
+              onRetriage={onRetriage}
               onOpenDocument={onOpenDocument}
             />
-          ) : (
-            <ResolveForm
-              event={event}
-              resolutions={resolutions}
-              busy={busy}
-              onResolve={onResolve}
-            />
-          )}
+          ))}
         </section>
-      ))}
+
+        <ReadingPanel
+          thread={thread}
+          categories={categories}
+          busy={busy}
+          onConfirm={onConfirm}
+        />
+      </div>
+
+      <div className="thread-decisions">
+        {thread.events.map((event) => (
+          <section className="detail-section decision" key={`decision-${event.id}`}>
+            {thread.events.length > 1 && (
+              <p className="decision-for">Gäller: {event.subject || '(utan ämne)'}</p>
+            )}
+            {event.resolution ? (
+              <ResolutionSummary
+                event={event}
+                busy={busy}
+                onReopen={onReopen}
+                onOpenDocument={onOpenDocument}
+              />
+            ) : (
+              <ResolveForm
+                event={event}
+                resolutions={resolutions}
+                busy={busy}
+                onResolve={onResolve}
+              />
+            )}
+          </section>
+        ))}
+      </div>
     </div>
   );
 }
@@ -861,15 +869,8 @@ export default function IntakeQueue({
 
   return (
     <div className="intake">
-      {/* One line, not a manifesto. The promise it makes is repeated where it is
-          actually needed — on the decision form, beside the button that would
-          otherwise look like it does something to the mailbox. */}
-      <p className="intake-intro">
-        Brevlådan är råmaterial. Det här är en granskningskö — ingenting blir arkiv,
-        uppgift eller bevakning förrän någon här bestämmer det, och ingenting ändras i
-        brevlådan när ni gör det.
-      </p>
-
+      {/* The mailbox promise lives beside Spara beslutet — not as a page
+          manifesto that burns the first viewport every session. */}
       <Banner tone="error" onDismiss={() => setError('')}>{error}</Banner>
       <Banner tone="ok" onDismiss={() => setNotice('')}>{notice}</Banner>
 
@@ -891,14 +892,17 @@ export default function IntakeQueue({
             type="button"
             className={filter === 'open' ? 'active' : ''}
             aria-pressed={filter === 'open'}
+            data-filter="open"
             onClick={() => setFilter('open')}
           >
-            Att ta ställning till <span className="ui-count">{counts.openThreads || 0}</span>
+            Att avgöra<span className="sr-only"> — att ta ställning till</span>{' '}
+            <span className="ui-count">{counts.openThreads || 0}</span>
           </button>
           <button
             type="button"
             className={filter === 'awaiting' ? 'active' : ''}
             aria-pressed={filter === 'awaiting'}
+            data-filter="awaiting"
             onClick={() => setFilter('awaiting')}
           >
             Väntar svar <span className="ui-count">{counts.awaitingReply || 0}</span>
@@ -907,9 +911,12 @@ export default function IntakeQueue({
             type="button"
             className={filter === 'all' ? 'active' : ''}
             aria-pressed={filter === 'all'}
+            data-filter="all"
             onClick={() => setFilter('all')}
           >
-            Alla trådar <span className="ui-count">{counts.threads || 0}</span>
+            Alla{' '}
+            <span className="sr-only">trådar</span>{' '}
+            <span className="ui-count">{counts.threads || 0}</span>
           </button>
         </div>
         <button type="button" className="ui-btn ui-btn--ghost ui-btn--sm refresh" onClick={refresh} disabled={loading || busy}>

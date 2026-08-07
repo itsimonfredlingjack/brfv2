@@ -1,0 +1,74 @@
+{
+  "status": "complete",
+  "project_type": "brownfield",
+  "current_section": "complete",
+  "current_question": 0,
+  "completed_sections": [
+    "product",
+    "guidelines",
+    "tech_stack",
+    "workflow",
+    "styleguides"
+  ],
+  "answers": {
+    "project_name": "Träff",
+    "project_description": "Träff använder inga externa modell-API:er för behandling av föreningens innehåll. Inferens körs på infrastruktur som Träff kontrollerar, i första hand i Sverige och annars inom EU/EES. Dokument, frågor, mejl, fakturor, prompts, embeddings och modellresultat lämnar aldrig Träffs driftmiljö.",
+    "problem_statement": "Träff solves the gap between information arriving and responsible action being taken.\n\nBRF boards are often run by volunteers who must manage emails, invoices, contracts, resident questions, meeting notes and deadlines across fragmented, unstructured systems. Important information gets buried, responsibilities become person-dependent, and decisions are difficult to trace back to their source. Existing portals digitise individual tasks, while generic AI tools introduce uncertainty around accuracy, privacy and data location.\n\nTräff turns this fragmented workload into structured, source-backed and traceable work, while keeping every decision under human control and all AI processing within Träff-controlled Swedish or European infrastructure.",
+    "target_users": "Swedish housing associations (bostadsrättsföreningar) as organisations — boards, appointed managers, and anyone authorised to act for the association.",
+    "key_goals": [
+      "Turn fragmented BRF work into structured, source-backed actions while keeping every decision under human control.",
+      "Make all AI processing private, verifiable, and operated entirely within Träff-controlled Swedish or EU/EES infrastructure.",
+      "Reduce person-dependence by connecting documents, incoming post, invoices, tasks, watches, and decisions in one traceable product."
+    ],
+    "voice_tone": "Clear, calm, and trustworthy Swedish. Use plain language for volunteer boards, with short and direct UI text, no marketing fluff or unnecessary technical jargon. Be precise about sources, uncertainty, responsibility, and what the system can or cannot do. Technical documentation may be more formal and detailed, but should remain readable and unambiguous.",
+    "design_principles": [
+      "Refuse over fabricate",
+      "Human decides, system prepares",
+      "Every action must remain traceable to its source",
+      "Tenant isolation is structural",
+      "No association content leaves Träff-controlled infrastructure",
+      "Simplicity for volunteer boards",
+      "Read-only integrations by default",
+      "Reliability and reversibility over convenience"
+    ],
+    "primary_languages": "Python 3.12, JavaScript/TypeScript, and Rust as detected. Rust is primarily the Tauri desktop shell and packaging layer, but it is still part of the project's maintained codebase.",
+    "languages_detail": {
+      "python": "3.12",
+      "javascript": "web (JSX)",
+      "typescript": "mobile PWA + native",
+      "rust": "Tauri 2 desktop shell / packaging"
+    },
+    "frontend": "React for the canonical web and mobile PWA, Expo/React Native for the native Android app, and Tauri 2 as the desktop shell around the canonical web UI.",
+    "backend": "FastAPI on Python 3.12 as the single shared backend for all clients, including RAG, authentication, integrations, invoices, watches, tasks, and the website builder.",
+    "database": "SQLite for authentication and tenancy metadata, plus per-tenant file/JSON storage and local indexes for documents and extracted artifacts. There is no shared multi-tenant Postgres product database for document content.",
+    "infrastructure": "Self-hosted on Träff-controlled infrastructure, preferably in Sweden and otherwise within the EU/EES. Fedora RPM packaging for desktop through Tauri, local development via Make targets, and read-only Fortnox and Microsoft Graph integrations.",
+    "tdd_strictness": "Moderate. Require tests for domain logic, regressions, tenant isolation, authentication, refusal/grounding, persistence, integrations, invoices, watches, and tasks. Pure documentation, styling, and low-risk UI polish do not need test-first development, but all relevant existing tests and acceptance checks must still pass.",
+    "commit_strategy": "Use Conventional Commits (feat:, fix:, docs:, test:, chore:, refactor:) with clear, scoped subjects. Keep commits atomic and avoid mixing unrelated changes; squash only when a task or review workflow explicitly requires it.",
+    "code_review": "Require code review for all non-trivial changes, especially domain logic, security, authentication, tenant isolation, integrations, invoices, persistence, and grounding/refusal behaviour. Documentation and very small low-risk UI polish may be self-reviewed. Critical changes should receive an independent review against the actual diff, tests, and acceptance evidence.",
+    "verification_checkpoints": "Require manual verification after each phase completion. Also verify immediately after any high-risk change affecting security, tenant isolation, authentication, persistence, integrations, invoices, grounding/refusal, or desktop packaging. Each checkpoint should review the actual diff, relevant tests, logs, and user-visible behaviour before proceeding.",
+    "style_guide_languages": [
+      "python",
+      "javascript",
+      "typescript",
+      "html-css",
+      "general"
+    ],
+    "style_guide_notes": "Include Rust-specific expectations in the general guide for the maintained Tauri shell and packaging layer.",
+    "existing_lint_configs": "Use existing linting and formatting configurations as the source of truth. Style guides reference ruff.toml, Oxlint, ESLint, and TypeScript configs. Do not add a root Prettier policy unless the project explicitly adopts one later."
+  },
+  "files_created": [
+    "conductor/index.md",
+    "conductor/product.md",
+    "conductor/product-guidelines.md",
+    "conductor/tech-stack.md",
+    "conductor/workflow.md",
+    "conductor/tracks.md",
+    "conductor/code_styleguides/general.md",
+    "conductor/code_styleguides/python.md",
+    "conductor/code_styleguides/javascript.md",
+    "conductor/code_styleguides/typescript.md",
+    "conductor/code_styleguides/html-css.md"
+  ],
+  "started_at": "2026-08-05T17:21:22Z",
+  "last_updated": "2026-08-05T19:45:18Z"
+}

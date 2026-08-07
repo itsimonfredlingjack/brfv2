@@ -83,7 +83,7 @@ export default function Integrations({ brfId, isAdmin = false, onOpenDocument, o
             onClick={() => setPane('inbox')}
           >
             <Inbox size={16} /> Inkommande
-            {openEvents > 0 && <span className="pill">{openEvents}</span>}
+            {openEvents > 0 && <span className="tab-count">{openEvents}</span>}
           </button>
           <button
             type="button"

@@ -1,0 +1,29 @@
+{
+  "id": "sovereign-inference-boundary",
+  "title": "Enforce sovereign inference boundary",
+  "type": "feature",
+  "priority": "critical",
+  "status": "in_progress",
+  "created": "2026-08-05T21:34:07Z",
+  "updated": "2026-08-06T12:00:00Z",
+  "branch": "feat/produktbas",
+  "phases": {
+    "total": 9,
+    "completed": 1,
+    "current": "0-agent-guidance-complete"
+  },
+  "tasks": {
+    "total": 55,
+    "completed": 6
+  },
+  "spec": "spec.md",
+  "plan": "plan.md",
+  "tags": [
+    "security",
+    "llm",
+    "sovereignty",
+    "architecture-consolidation",
+    "agent-guidance"
+  ],
+  "notes": "Decisions 1–7 locked 2026-08-06. Phase 0 (AGENTS.md consolidation) complete. No product runtime implementation yet. Framing: architecture consolidation; Fedora/pilot already structurally self-hosted."
+}

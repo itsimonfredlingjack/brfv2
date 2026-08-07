@@ -346,6 +346,11 @@
    composer belongs at the bottom edge and not under the last thing said. */
 .tab-content--fill { flex: 1; }
 
+/* Inkommande also owns the window: its detail card pins the decision at its
+   foot and scrolls the evidence internally, so it fills rather than stacks.
+   (`:has` keeps the other panes sharing this shell on plain flow.) */
+.tab-content:has(.intake) { flex: 1; min-height: 0; }
+
 /* `min-width: 0` is load-bearing, not tidiness: a flex item defaults to
    min-width:auto, so one wide table inside a workspace would push the whole
    column past the window and take the filter row and the sidebar edge with it.
@@ -1611,7 +1616,8 @@ mark.search-highlight {
 /* ========================================================================= */
 
 .truncate { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.visually-hidden { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+.visually-hidden,
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
 .text-left { text-align: left; }
 .text-muted { color: var(--muted-foreground); }
 .mobile-only { display: none !important; }

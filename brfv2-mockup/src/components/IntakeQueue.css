@@ -19,6 +19,7 @@
 .intake {
   display: flex;
   flex-direction: column;
+  flex: 1;
   min-width: 0;
   min-height: 0;
   padding-bottom: 8px;
@@ -26,13 +27,7 @@
 
 /* ---------- header ---------- */
 
-.intake-intro {
-  max-width: 72ch;
-  margin-bottom: 14px;
-  color: var(--muted-foreground);
-  font-size: var(--text-base);
-  line-height: 1.6;
-}
+/* Intro manifesto removed: the mailbox promise sits beside Spara beslutet. */
 
 /* ---------- banners ---------- */
 
@@ -65,41 +60,56 @@
 /* ---------- where the post comes from ---------- */
 
 /* A strip, not a card: where the post comes from is context, and the queue
-   below is the work. */
+   below is the work. One hairline under it, no box around it. */
 .intake-source {
-  margin-bottom: 14px;
-  padding: 10px 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-block);
-  background: var(--surface-1);
+  margin-bottom: 10px;
+  padding: 8px 0 10px;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
 }
 
 .intake-source-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 18px;
-  flex-wrap: wrap;
+  gap: 12px;
+  flex-wrap: nowrap;
 }
 
 .intake-source-state {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
-  flex: 1 1 420px;
+  flex: 1 1 auto;
   min-width: 0;
   color: var(--muted-foreground);
   font-size: var(--text-sm);
-  line-height: 1.55;
+  line-height: 1.4;
 }
 
-.intake-source-state > svg { flex-shrink: 0; margin-top: 3px; }
-.intake-source-state code { font-family: var(--font-mono); font-size: 0.92em; }
+.intake-source-state > svg { flex-shrink: 0; margin-top: 0; }
 .intake-source-state strong { color: var(--foreground); font-weight: 500; }
 
 .intake-source-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 
-.intake-format-note { margin-top: 7px; max-width: 82ch; font-size: var(--text-sm); color: var(--subtle-foreground); }
+.intake-format-disclosure {
+  margin-top: 4px;
+}
+
+.intake-format-disclosure summary {
+  display: inline-block;
+  color: var(--subtle-foreground);
+  font-size: var(--text-sm);
+  font-weight: 400;
+  cursor: pointer;
+  list-style: none;
+}
+
+.intake-format-disclosure summary::-webkit-details-marker { display: none; }
+.intake-format-disclosure summary::before { content: '▸ '; }
+.intake-format-disclosure[open] summary::before { content: '▾ '; }
+
+.intake-format-note { margin-top: 6px; max-width: 82ch; font-size: var(--text-sm); color: var(--subtle-foreground); }
 
 /* A label, not a button, so the file input stays the real control and the
    keyboard path is the input's own. */
@@ -189,12 +199,28 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  width: 100%;
+  gap: 16px;
   margin-bottom: 12px;
   flex-wrap: wrap;
 }
 
-.intake-counts button { gap: 8px; }
+@media (min-width: 900px) {
+  .intake-toolbar { flex-wrap: nowrap; }
+}
+
+.intake-counts {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.intake-counts button {
+  flex: 1 1 0;
+  min-width: 0;
+  gap: 8px;
+  padding: 0 10px;
+}
 
 .intake-loading {
   color: var(--muted-foreground);
@@ -216,30 +242,34 @@
 .intake-layout {
   display: grid;
   grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
-  gap: 14px;
-  align-items: start;
-  min-height: 0;
+  gap: 16px;
+  /* Fill what the window leaves after the chrome above (the fill chain is
+     tab-content → integrations → pane → intake), so the detail card can pin
+     decisions at its foot while evidence scrolls — no viewport arithmetic
+     that drifts whenever a banner or a header changes height. Below the
+     minimum the page scrolls instead of crushing the evidence to nothing. */
+  align-items: stretch;
+  flex: 1;
+  min-height: 420px;
 }
 
 /* The list keeps its place while the detail scrolls: knowing how much is left
    is half of what a queue is for. */
 .intake-list {
-  position: sticky;
-  top: 0;
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-height: calc(100vh - 190px);
+  max-height: 100%;
   overflow-y: auto;
-  padding-right: 2px;
+  padding: 2px;
 }
 
 .thread-row {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 4px;
   width: 100%;
-  padding: 11px 13px;
+  padding: 11px 14px;
   border: 1px solid transparent;
   border-radius: var(--radius-xl);
   background: transparent;
@@ -282,48 +312,36 @@
   justify-content: center;
   gap: 4px;
   flex-shrink: 0;
-  min-width: 20px;
-  height: 18px;
-  padding: 0 6px;
+  min-width: 18px;
+  height: 16px;
+  padding: 0 5px;
   border-radius: 999px;
-  font-size: var(--text-xs);
-  font-weight: 600;
-}
-
-.thread-row-state.open { background: var(--secondary); color: var(--foreground); }
-.thread-row-state.settled { background: transparent; color: var(--muted-foreground); font-weight: 500; }
-
-.thread-meta {
-  font-size: var(--text-sm);
-  color: var(--muted-foreground);
-  line-height: 1.45;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
 
-.thread-row-tags { display: flex; flex-wrap: wrap; gap: 5px; }
+.thread-row-state.open { background: transparent; color: var(--ink-subtle); }
+.thread-row-state.settled { background: transparent; color: var(--ink-subtle); font-weight: 500; }
 
-/* ---------- tags ---------- */
-
-.intake .tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  padding: 1px 8px;
-  border: 1px solid var(--border-strong);
-  border-radius: 999px;
-  color: var(--muted-foreground);
+.thread-meta {
   font-size: var(--text-xs);
-  font-weight: 500;
+  color: var(--ink-subtle);
+  line-height: 1.35;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-/* The category is the engine's reading, so it is an outline and never a filled
-   chip: a filled chip reads as a fact, and this is a proposal until somebody
-   confirms it. */
-.intake .tag.category { color: var(--foreground); }
-.intake .tag.awaiting { border-color: var(--warn-border); color: var(--warn); }
-.intake .tag.open { background: var(--secondary); border-color: transparent; color: var(--foreground); }
-.intake .tag.settled { border-color: var(--border-strong); color: var(--muted-foreground); }
+/* Sender is prose; the date is a measurement. */
+.thread-meta .thread-date {
+  font-family: var(--font-mono);
+  font-size: 0.86em;
+  letter-spacing: 0.02em;
+}
+
+/* ---------- badges ---------- */
 
 .intake .badge {
   display: inline-flex;
@@ -347,35 +365,66 @@
 
 .intake-detail {
   min-width: 0;
+  min-height: 0;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
   border: 1px solid var(--border);
   border-radius: var(--radius-3xl);
   background: var(--card);
+  overflow: hidden;
 }
 
-.thread-detail { display: flex; flex-direction: column; }
+/* Evidence scrolls; the decision foot grows upward into that budget when the
+   form expands (task/watch). No nested scroll inside the decision itself.
+   CSS grid 1fr / auto is used instead of flex: flex was sizing the decision
+   foot to a crushed height inside overflow:hidden despite flex-shrink: 0. */
+.thread-detail {
+  display: grid;
+  grid-template-rows: minmax(0, 1fr) auto;
+  flex: 1;
+  min-height: 0;
+  height: 100%;
+}
 
-.detail-head { padding: 18px 20px 16px; border-bottom: 1px solid var(--border); }
+.thread-evidence {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* The decision zone is the workbench at the foot of the card: a slightly
+   heavier seam above it, the ground colour as its surface, and the screen's
+   only filled button inside it. */
+.thread-decisions {
+  border-top: 1px solid var(--border-strong);
+  background: var(--surface-2);
+}
+
+.thread-decisions .detail-section.decision {
+  padding: 16px 26px 18px;
+  border-bottom: 1px solid var(--border);
+}
+
+.thread-decisions .detail-section.decision:last-child {
+  border-bottom: none;
+}
+
+.detail-head { padding: 16px 22px 12px; border-bottom: 1px solid var(--border); }
 
 .detail-head h3 {
   font-family: var(--font-serif);
   font-size: var(--text-xl);
   font-weight: 400;
-  letter-spacing: -0.03em;
-  line-height: 1.2;
+  letter-spacing: -0.02em;
+  line-height: 1.3;
+  text-wrap: balance;
 }
 
-.detail-head-count { color: var(--muted-foreground); font-size: var(--text-md); font-weight: 400; }
-
-.detail-head-meta {
-  margin-top: 5px;
-  color: var(--muted-foreground);
-  font-size: var(--text-base);
-}
-
-.detail-head-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 11px; }
-
-.detail-section { padding: 18px 20px; border-bottom: 1px solid var(--border); }
+.detail-section { padding: 20px 26px; border-bottom: 1px solid var(--border); }
 .detail-section:last-child { border-bottom: none; }
+.thread-evidence .detail-section:last-child { border-bottom: none; }
+
+.detail-section.messages { background: transparent; }
 
 .detail-section-head {
   display: flex;
@@ -397,21 +446,45 @@
 .message { padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid var(--border); }
 .message:last-child { padding-bottom: 0; margin-bottom: 0; border-bottom: none; }
 
-.message-head { margin-bottom: 9px; }
-.message-head h5 { font-size: var(--text-md); font-weight: 600; }
-.message-from { display: block; margin-top: 2px; font-size: var(--text-sm); color: var(--muted-foreground); }
+.message-head { margin-bottom: 10px; }
+.message-head h5 { margin-bottom: 4px; font-size: var(--text-md); font-weight: 600; }
+
+/* Sender is who this is from; the date and the attachment count are measured
+   facts about it, so they sit apart, in the measuring cut. */
+.message-from {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 16px;
+  flex-wrap: wrap;
+}
+
+.message-sender {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--foreground);
+  overflow-wrap: anywhere;
+}
+
+.message-meta {
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  letter-spacing: 0.02em;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
 
 /* The message text is the evidence, so it is set as text — a readable measure,
    the body font, no monospace. It is not code, and typesetting it as code was
    the screen telling a board member their post is a machine artefact. */
 .message-body {
   margin: 0 0 12px;
-  padding: 12px 14px;
-  border-left: 2px solid var(--border-strong);
-  border-radius: 0 var(--radius-block) var(--radius-block) 0;
-  background: var(--surface-2);
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-block);
+  background: var(--field);
   font-family: inherit;
-  font-size: var(--text-md);
+  font-size: var(--text-base);
   line-height: 1.65;
   color: var(--foreground);
   white-space: pre-wrap;
@@ -469,6 +542,7 @@
 }
 
 .message-foot { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.message-foot .retriage { margin-left: auto; }
 
 .message-provenance-toggle summary {
   color: var(--muted-foreground);
@@ -510,7 +584,23 @@
 
 /* ---------- the reading: what the app believes ---------- */
 
-.detail-section.reading { background: var(--surface-1); }
+.detail-section.reading--secondary {
+  background: transparent;
+  padding-top: 8px;
+}
+
+.reading--secondary .detail-section-head h4 {
+  font-family: var(--font-sans);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--ink-muted);
+  text-transform: none;
+}
+
+.reading--secondary .reading-headline {
+  font-size: var(--text-sm);
+  color: var(--ink-muted);
+}
 
 /* Whose reading this is, said in the cut that measures: attribution is a fact
    about machinery, not part of the prose. */
@@ -523,7 +613,62 @@
   color: var(--subtle-foreground);
 }
 
-.reading-headline { font-size: var(--text-md); line-height: 1.55; }
+/* The one sentence the machine wants to say. Stronger than the prose around
+   it, still sans — it is a claim to check, not an answer to trust. */
+.reading-headline {
+  font-size: var(--text-lg);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+  line-height: 1.4;
+  text-wrap: pretty;
+}
+
+/* B1: deeper interpretation stays one disclosure away. Collapsed keeps the
+   reading heading, attribution, headline and any uncertainty. The disclosure
+   and the category correction share one quiet tools row. */
+.reading-tools {
+  display: flex;
+  align-items: baseline;
+  gap: 8px 20px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.reading-depth { flex: 1 1 auto; min-width: 0; }
+
+.reading-depth summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--subtle-foreground);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  list-style: none;
+}
+
+.reading-depth summary::-webkit-details-marker { display: none; }
+.reading-depth summary::before { content: '▸ '; }
+.reading-depth[open] summary::before { content: '▾ '; }
+.reading-depth summary:hover { color: var(--foreground); }
+
+/* How much is behind the disclosure, as a count — a number is measured. */
+.reading-depth .depth-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 17px;
+  height: 16px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.reading-depth-body { margin-top: 10px; }
+
 .reading-why,
 .reading-action {
   display: flex;
@@ -667,7 +812,7 @@
 
 .reading-related strong { color: var(--foreground); font-weight: 500; }
 
-.reading-category { margin-top: 16px; }
+.reading-category { margin-top: 14px; }
 
 .category-confirmed {
   display: flex;
@@ -701,7 +846,7 @@
   gap: 10px;
   flex-wrap: wrap;
   align-items: flex-end;
-  margin-top: 10px;
+  margin-top: 12px;
 }
 
 .category-form label,
@@ -772,25 +917,32 @@
   color: var(--foreground);
 }
 
-.resolve-options { display: flex; gap: 7px; flex-wrap: wrap; margin-bottom: 12px; }
+.resolve-options { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
 
+/* The five outcomes are chips, not form rows: one press each, combinable, and
+   a chosen one is marked with ink — a person has touched it. */
 .resolve-options label {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  height: 32px;
-  padding: 0 13px;
-  border: 1px solid var(--input);
-  border-radius: var(--radius-2xl);
-  background: var(--surface-2);
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-pill);
+  background: var(--card);
   font-size: var(--text-base);
   cursor: pointer;
   transition: background-color 0.12s ease, border-color 0.12s ease;
 }
 
-.resolve-options label:hover { background: var(--surface-3); }
-.resolve-options label.chosen { background: var(--secondary); border-color: var(--border-strong); color: var(--foreground); }
-.resolve-options input[type='checkbox'] { accent-color: var(--handling); }
+.resolve-options label:hover { background: var(--surface-1); }
+.resolve-options label.chosen {
+  background: var(--secondary);
+  border-color: var(--foreground);
+  color: var(--foreground);
+  font-weight: 500;
+}
+.resolve-options input[type='checkbox'] { accent-color: var(--primary); margin: 0; }
 
 .resolve-section {
   display: flex;
@@ -857,6 +1009,15 @@
 .resolve-note { margin-bottom: 14px; max-width: 520px; }
 
 .resolve-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+
+/* The mailbox promise sits at the far end of the act it qualifies — beside
+   the button, out of the button's way. */
+.resolve-actions .muted {
+  margin-left: auto;
+  max-width: 46ch;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
 
 .resolve-submit {
   height: 32px;
@@ -935,13 +1096,13 @@
    decision form is worse than one column of each. */
 @media (max-width: 1100px) {
   .intake-layout { grid-template-columns: minmax(0, 1fr); }
-  /* Stacked, the list is above the detail rather than beside it, and a sticky
-     block at the top of the page would sit on top of what is being read. */
-  .intake-list { position: static; max-height: 320px; }
+  /* Stacked, the list is a bounded strip above the detail rather than a
+     column beside it. */
+  .intake-list { max-height: 320px; }
 }
 
-@media (max-width: 760px) {
-  .intake-source-row { flex-direction: column; align-items: stretch; }
+@media (max-width: 720px) {
+  .intake-source-row { flex-direction: column; align-items: stretch; flex-wrap: wrap; }
   .intake-source-actions { justify-content: flex-start; }
   .reading-signals li { grid-template-columns: 1fr; }
 }
