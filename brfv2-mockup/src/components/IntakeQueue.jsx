@@ -147,19 +147,31 @@ function FetchBar({ mailbox, connected, busy, onFetch, onImportFile, format, las
             className="hidden-file-input"
             id="intake-eml-import"
           />
-          <label htmlFor="intake-eml-import" className={`import-button ${busy ? 'busy' : ''}`}>
+          <label
+            htmlFor="intake-eml-import"
+            className={`import-button ${busy ? 'busy' : ''}`}
+            title="Importera en .eml-fil"
+            aria-label="Importera en .eml-fil"
+          >
             {busy ? <Loader2 size={14} className="spin" /> : <Upload size={14} />}
-            Importera en .eml-fil
+            Importera .eml
           </label>
-          <button type="button" className="fetch-button" disabled={busy || !connected} onClick={onFetch}>
-            {busy ? <Loader2 size={14} className="spin" /> : <RefreshCw size={14} />} Hämta nytt
+          <button
+            type="button"
+            className="fetch-button"
+            disabled={busy || !connected}
+            onClick={onFetch}
+            title="Hämta nytt"
+            aria-label="Hämta nytt"
+          >
+            {busy ? <Loader2 size={14} className="spin" /> : <RefreshCw size={14} />} Hämta
           </button>
         </span>
       </div>
 
       {format?.mail && (
         <details className="intake-format-disclosure">
-          <summary>Vilka bilagor tas emot</summary>
+          <summary>Om hämtning</summary>
           <p className="muted intake-format-note">
             Tas emot: {format.mail.attachmentTypes.join(', ')} som bilaga, högst{' '}
             {format.mail.maxAttachments} stycken. Allt annat avvisas i sin helhet — inget

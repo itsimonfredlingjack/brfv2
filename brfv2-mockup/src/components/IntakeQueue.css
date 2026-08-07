@@ -62,42 +62,45 @@
 /* A strip, not a card: where the post comes from is context, and the queue
    below is the work. One hairline under it, no box around it. */
 .intake-source {
-  margin-bottom: 12px;
-  padding-bottom: 10px;
+  margin-bottom: 10px;
+  padding: 8px 0 10px;
   border-bottom: 1px solid var(--border);
+  background: transparent;
 }
 
 .intake-source-row {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   justify-content: space-between;
-  gap: 18px;
-  flex-wrap: wrap;
+  gap: 12px;
+  flex-wrap: nowrap;
 }
 
 .intake-source-state {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   gap: 8px;
-  flex: 1 1 420px;
+  flex: 1 1 auto;
   min-width: 0;
   color: var(--muted-foreground);
   font-size: var(--text-sm);
-  line-height: 1.55;
+  line-height: 1.4;
 }
 
-.intake-source-state > svg { flex-shrink: 0; margin-top: 3px; }
+.intake-source-state > svg { flex-shrink: 0; margin-top: 0; }
 .intake-source-state strong { color: var(--foreground); font-weight: 500; }
 
 .intake-source-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 
 .intake-format-disclosure {
-  margin-top: 6px;
+  margin-top: 4px;
 }
 
 .intake-format-disclosure summary {
+  display: inline-block;
   color: var(--subtle-foreground);
   font-size: var(--text-sm);
+  font-weight: 400;
   cursor: pointer;
   list-style: none;
 }
@@ -1062,8 +1065,8 @@
   .intake-list { max-height: 320px; }
 }
 
-@media (max-width: 760px) {
-  .intake-source-row { flex-direction: column; align-items: stretch; }
+@media (max-width: 720px) {
+  .intake-source-row { flex-direction: column; align-items: stretch; flex-wrap: wrap; }
   .intake-source-actions { justify-content: flex-start; }
   .reading-signals li { grid-template-columns: 1fr; }
 }

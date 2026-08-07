@@ -462,18 +462,39 @@ describe('fetching', () => {
 
   it('keeps the manual .eml import usable with nothing connected', async () => {
     mountWith({ mailboxConnected: false });
-    expect(await screen.findByText('Importera en .eml-fil')).toBeInTheDocument();
+    expect(await screen.findByText('Importera .eml')).toBeInTheDocument();
     expect(screen.getByText(/Ingen brevlåda är ansluten/)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Hämta nytt/ })).toBeDisabled();
     expect(intakeApi.fetch).not.toHaveBeenCalled();
   });
 
+  it('keeps the source row as a single toolstrip line', async () => {
+    mountWith();
+    await waitForQueue();
+    const source = document.querySelector('.intake-source');
+    expect(source).toBeTruthy();
+    expect(source.querySelector('.intake-source-row')).toBeTruthy();
+    // No permanent gray manifesto paragraph as a sibling article block
+    expect(screen.queryByText(/Brevlådan är råmaterial/)).not.toBeInTheDocument();
+  });
+
+  it('puts fetch policy behind Om hämtning, not in the first viewport body', async () => {
+    mountWith();
+    await waitForQueue();
+    const disclosure = screen.getByText('Om hämtning').closest('details');
+    expect(disclosure).toBeTruthy();
+    expect(disclosure.open).toBe(false);
+    expect(screen.queryByText(/halvimporteras/)).not.toBeVisible();
+    fireEvent.click(screen.getByText('Om hämtning'));
+    expect(screen.getByText(/halvimporteras/)).toBeVisible();
+  });
+
   it('keeps format limits one disclosure away, not in the first viewport', async () => {
     mountWith();
-    await screen.findByText('Importera en .eml-fil');
+    await screen.findByText('Importera .eml');
     const note = screen.getByText(/application\/pdf som bilaga/);
     expect(note).not.toBeVisible();
-    fireEvent.click(screen.getByText(/Vilka bilagor tas emot/));
+    fireEvent.click(screen.getByText(/Om hämtning/));
     expect(note).toBeVisible();
     expect(screen.getByText(/Allt annat avvisas i sin helhet/)).toBeVisible();
   });
@@ -748,7 +769,7 @@ describe('a member who is not an administrator', () => {
     // Reading is the point of showing it; the acts are admin-only in the
     // backend, and the UI must not offer what the route will refuse.
     expect(screen.queryByRole('button', { name: /Hämta nytt/ })).not.toBeInTheDocument();
-    expect(screen.queryByText('Importera en .eml-fil')).not.toBeInTheDocument();
+    expect(screen.queryByText('Importera .eml')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByText('SV: Offert takomläggning'));
     expect(screen.getByRole('checkbox', { name: 'Ta in' })).toBeDisabled();
