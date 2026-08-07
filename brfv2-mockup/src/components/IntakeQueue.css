@@ -524,6 +524,26 @@
 }
 
 .reading-headline { font-size: var(--text-md); line-height: 1.55; }
+
+/* B1: deeper interpretation stays one disclosure away. Collapsed keeps the
+   reading heading, attribution, headline and any uncertainty. */
+.reading-depth {
+  margin-top: 10px;
+}
+
+.reading-depth summary {
+  color: var(--subtle-foreground);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  list-style: none;
+}
+
+.reading-depth summary::-webkit-details-marker { display: none; }
+.reading-depth summary::before { content: '▸ '; }
+.reading-depth[open] summary::before { content: '▾ '; }
+
+.reading-depth-body { margin-top: 8px; }
+
 .reading-why,
 .reading-action {
   display: flex;

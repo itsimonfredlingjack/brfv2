@@ -283,7 +283,22 @@ describe('what the app believes', () => {
     mountWith();
     expect(await screen.findByText('Vad det ser ut att gälla')).toBeInTheDocument();
     expect(screen.getByText(EVENT.triage.headline)).toBeInTheDocument();
-    expect(screen.getByText(/Ett godkännande som bara finns i en inkorg/)).toBeInTheDocument();
+    expect(screen.getByText('bedömt av regelmotor')).toBeInTheDocument();
+  });
+
+  it('keeps why and underlag one disclosure away by default', async () => {
+    mountWith();
+    await waitForQueue();
+    expect(screen.getByText(EVENT.triage.headline)).toBeVisible();
+    expect(screen.getByText(/Ett godkännande som bara finns i en inkorg/)).not.toBeVisible();
+    expect(screen.getByText('Läst ur meddelandet')).not.toBeVisible();
+    expect(screen.getByText('Snöröjningsavtal 2026.pdf')).not.toBeVisible();
+
+    fireEvent.click(screen.getByText('Varför och underlag'));
+
+    expect(screen.getByText(/Ett godkännande som bara finns i en inkorg/)).toBeVisible();
+    expect(screen.getByText('Läst ur meddelandet')).toBeVisible();
+    expect(screen.getByText('Snöröjningsavtal 2026.pdf')).toBeVisible();
   });
 
   it('names who produced the reading, and never calls a rule engine AI', async () => {
@@ -302,6 +317,7 @@ describe('what the app believes', () => {
   it('shows every value next to the words it was read from', async () => {
     mountWith();
     await waitForQueue();
+    fireEvent.click(screen.getByText('Varför och underlag'));
     const signals = screen.getByText('Läst ur meddelandet').closest('div');
 
     // A value without its quote is an unverifiable claim, so each one is
@@ -318,6 +334,7 @@ describe('what the app believes', () => {
   it('marks a related record as a proposal and states its basis', async () => {
     mountWith();
     await waitForQueue();
+    fireEvent.click(screen.getByText('Varför och underlag'));
     const item = screen.getByText('Snöröjningsavtal 2026.pdf').closest('li');
     expect(within(item).getByText('förslag')).toBeInTheDocument();
     expect(within(item).getByText(/föreslaget av sökningen på ämne och avsändare/))

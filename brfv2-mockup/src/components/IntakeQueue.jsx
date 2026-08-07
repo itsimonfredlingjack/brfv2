@@ -239,9 +239,19 @@ function ReadingPanel({ thread, categories, busy, onConfirm }) {
   const [note, setNote] = useState('');
 
   useEffect(() => { setChosen(thread.category); }, [thread.category]);
+  useEffect(() => { setAllSignals(false); setOpen(false); }, [thread.key]);
 
   const latest = thread.events[thread.events.length - 1];
   const confirmation = latest?.triage_confirmation;
+
+  // Default: enough to know what the system thinks this concerns.
+  // On demand: why, hints, quoted extractions, related proposals.
+  const hasDepth = Boolean(
+    thread.why_it_matters
+    || thread.action_hint
+    || thread.signals?.length
+    || thread.related?.length,
+  );
 
   return (
     <section className="detail-section reading">
@@ -255,60 +265,68 @@ function ReadingPanel({ thread, categories, busy, onConfirm }) {
       </div>
 
       {thread.headline && <p className="reading-headline">{thread.headline}</p>}
-      {thread.why_it_matters && <p className="reading-why">{thread.why_it_matters}</p>}
-      {thread.action_hint && (
-        <p className="reading-action"><Clock size={13} /> {thread.action_hint}</p>
-      )}
       {thread.uncertainty && (
         <p className="reading-uncertainty"><HelpCircle size={13} /> {thread.uncertainty}</p>
       )}
 
-      {thread.signals?.length > 0 && (
-        <div className="reading-signals">
-          <h6>
-            <span>Läst ur meddelandet</span>
-            {thread.signals.length > SIGNALS_SHOWN && (
-              <span className="h6-count">{thread.signals.length}</span>
+      {hasDepth && (
+        <details key={thread.key} className="reading-depth">
+          <summary>Varför och underlag</summary>
+          <div className="reading-depth-body">
+            {thread.why_it_matters && <p className="reading-why">{thread.why_it_matters}</p>}
+            {thread.action_hint && (
+              <p className="reading-action"><Clock size={13} /> {thread.action_hint}</p>
             )}
-          </h6>
-          <ul>
-            {(allSignals ? thread.signals : thread.signals.slice(0, SIGNALS_SHOWN)).map((signal, i) => (
-              <li key={`${signal.kind}-${signal.value}-${i}`}>
-                <span className="signal-kind">
-                  {SIGNAL_LABEL[signal.kind] || signal.kind}
-                </span>
-                <span className="signal-value">{signal.value}</span>
-                <span className="muted"> ur {SOURCE_LABEL[signal.source] || signal.source}</span>
-                <q className="signal-quote">{signal.quote}</q>
-              </li>
-            ))}
-          </ul>
-          {thread.signals.length > SIGNALS_SHOWN && (
-            <button type="button" className="signals-more" onClick={() => setAllSignals(!allSignals)}>
-              {allSignals
-                ? <><ChevronDown size={13} /> Visa färre avläsningar</>
-                : <><ChevronRight size={13} /> Visa alla {thread.signals.length} avläsningar</>}
-            </button>
-          )}
-        </div>
-      )}
 
-      {thread.related?.length > 0 && (
-        <div className="reading-related">
-          <h6><Link2 size={13} /> Kan höra ihop med</h6>
-          <ul>
-            {thread.related.map((record, i) => {
-              const Icon = RELATED_ICON[record.kind] || FileText;
-              return (
-                <li key={`${record.kind}-${record.ref_id}-${i}`}>
-                  <Icon size={13} /> <strong>{record.label}</strong>
-                  <span className="muted"> — {record.basis}</span>
-                  <span className="badge proposed">förslag</span>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
+            {thread.signals?.length > 0 && (
+              <div className="reading-signals">
+                <h6>
+                  <span>Läst ur meddelandet</span>
+                  {thread.signals.length > SIGNALS_SHOWN && (
+                    <span className="h6-count">{thread.signals.length}</span>
+                  )}
+                </h6>
+                <ul>
+                  {(allSignals ? thread.signals : thread.signals.slice(0, SIGNALS_SHOWN)).map((signal, i) => (
+                    <li key={`${signal.kind}-${signal.value}-${i}`}>
+                      <span className="signal-kind">
+                        {SIGNAL_LABEL[signal.kind] || signal.kind}
+                      </span>
+                      <span className="signal-value">{signal.value}</span>
+                      <span className="muted"> ur {SOURCE_LABEL[signal.source] || signal.source}</span>
+                      <q className="signal-quote">{signal.quote}</q>
+                    </li>
+                  ))}
+                </ul>
+                {thread.signals.length > SIGNALS_SHOWN && (
+                  <button type="button" className="signals-more" onClick={() => setAllSignals(!allSignals)}>
+                    {allSignals
+                      ? <><ChevronDown size={13} /> Visa färre avläsningar</>
+                      : <><ChevronRight size={13} /> Visa alla {thread.signals.length} avläsningar</>}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {thread.related?.length > 0 && (
+              <div className="reading-related">
+                <h6><Link2 size={13} /> Kan höra ihop med</h6>
+                <ul>
+                  {thread.related.map((record, i) => {
+                    const Icon = RELATED_ICON[record.kind] || FileText;
+                    return (
+                      <li key={`${record.kind}-${record.ref_id}-${i}`}>
+                        <Icon size={13} /> <strong>{record.label}</strong>
+                        <span className="muted"> — {record.basis}</span>
+                        <span className="badge proposed">förslag</span>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </div>
+            )}
+          </div>
+        </details>
       )}
 
       <div className="reading-category">

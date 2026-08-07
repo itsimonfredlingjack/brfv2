@@ -89,13 +89,33 @@ const THREADS = [
     open_count: 1,
     resolved: false,
     headline: 'Avtal eller offert — vinterväghållning',
-    why_it_matters: 'Avtalsfrågor bör behållas om de påverkar föreningen.',
+    why_it_matters: 'Avtalsfrågor bör behållas om de påverkar föreningen. Ett avtal som bara finns i inkorgen är svårt att belägga senare.',
     action_hint: 'Läs och bestäm om posten ska bevaras.',
     supplier_name: 'Fastighetsservice & Trädgårdsentreprenad i Mälardalen Aktiebolag',
     suggested_by: 'regelmotor',
     uncertainty: '',
-    signals: [],
-    related: [],
+    signals: [
+      {
+        kind: 'date',
+        value: '2025-11-01',
+        source: 'body',
+        quote: 'avtalet om vinterväghållning och snöröjning för säsongen 2025/2026',
+      },
+      {
+        kind: 'supplier',
+        value: 'Fastighetsservice & Trädgårdsentreprenad i Mälardalen Aktiebolag',
+        source: 'from',
+        quote: 'kundtjanst@fastighetsservice.example',
+      },
+    ],
+    related: [
+      {
+        kind: 'document',
+        ref_id: 'doc-snorojning',
+        label: 'Snöröjningsavtal 2025.pdf',
+        basis: 'föreslaget av sökningen på ämne och avsändare',
+      },
+    ],
     events: [
       eventStub({
         id: 'ev1',
