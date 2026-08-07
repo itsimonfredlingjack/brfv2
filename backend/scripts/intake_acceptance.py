@@ -152,7 +152,7 @@ const row = [...document.querySelectorAll('.intake-list .thread-row')]
   .find((r) => r.innerText.includes(subject));
 if (!row) {
   const all = [...document.querySelectorAll('.intake-counts button')]
-    .find((b) => b.textContent.includes('Alla trådar'));
+    .find((b) => b.getAttribute('aria-label') === 'Alla trådar');
   if (all && all.getAttribute('aria-pressed') !== 'true') all.click();
   return null;
 }
