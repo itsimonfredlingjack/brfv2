@@ -531,6 +531,28 @@ describe('the message itself', () => {
   });
 });
 
+describe('detail layout for deciding', () => {
+  it('anchors decisions below a scrollable evidence region', async () => {
+    mountWith();
+    await waitForQueue();
+
+    const evidence = document.querySelector('.thread-evidence');
+    const decisions = document.querySelector('.thread-decisions');
+    expect(evidence).toBeTruthy();
+    expect(decisions).toBeTruthy();
+    expect(evidence.querySelector('.detail-section.messages')).toBeTruthy();
+    expect(evidence.querySelector('.detail-section.reading')).toBeTruthy();
+    expect(evidence.querySelector('.detail-section.decision')).toBeNull();
+    expect(decisions.querySelector('.detail-section.decision')).toBeTruthy();
+    expect(
+      evidence.compareDocumentPosition(decisions) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Spara beslutet' })).toBeInTheDocument();
+    expect(screen.getByText('Vad det ser ut att gälla')).toBeVisible();
+    expect(screen.getByText(EVENT.triage.headline)).toBeVisible();
+  });
+});
+
 describe('resolving', () => {
   function openForm() {
     fireEvent.click(screen.getByText('SV: Offert takomläggning'));

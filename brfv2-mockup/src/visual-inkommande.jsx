@@ -315,7 +315,11 @@ function Shell() {
           </nav>
         </aside>
         <main className="main-content">
-          <div className="integrations">
+          {/* App.jsx wraps every workspace in .tab-content — the harness does
+              too, or fill-layout rules scoped to it would silently not apply
+              here. */}
+          <div className="tab-content">
+            <div className="integrations">
             <div className="integrations-header">
               <div className="integrations-tabs" role="tablist">
                 <button type="button" role="tab" aria-selected="true" className="active">
@@ -341,6 +345,7 @@ function Shell() {
                 }}
               />
             </section>
+            </div>
           </div>
         </main>
       </div>

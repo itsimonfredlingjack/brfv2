@@ -134,7 +134,7 @@ function FetchBar({ mailbox, connected, busy, onFetch, onImportFile, format, las
             </span>
           ) : (
             <span>
-              Ingen brevlåda är ansluten · importera <code>.eml</code> eller se Anslutningar
+              Ingen brevlåda är ansluten · importera en .eml-fil eller se Anslutningar
             </span>
           )}
         </span>
@@ -220,7 +220,7 @@ function ThreadRow({ thread, selected, onSelect }) {
       </span>
       <span className="thread-meta">
         {thread.latest_sender_display || thread.latest_sender}
-        {' · '}{formatDate(thread.latest_at)}
+        {' · '}<span className="thread-date">{formatDate(thread.latest_at)}</span>
       </span>
     </button>
   );
@@ -252,6 +252,7 @@ function ReadingPanel({ thread, categories, busy, onConfirm }) {
     || thread.signals?.length
     || thread.related?.length,
   );
+  const depthCount = (thread.signals?.length || 0) + (thread.related?.length || 0);
 
   return (
     <section className="detail-section reading">
@@ -269,9 +270,13 @@ function ReadingPanel({ thread, categories, busy, onConfirm }) {
         <p className="reading-uncertainty"><HelpCircle size={13} /> {thread.uncertainty}</p>
       )}
 
-      {hasDepth && (
-        <details key={thread.key} className="reading-depth">
-          <summary>Varför och underlag</summary>
+      <div className="reading-tools">
+        {hasDepth && (
+          <details key={thread.key} className="reading-depth">
+            <summary>
+              <span>Varför och underlag</span>
+              {depthCount > 0 && <span className="depth-count">{depthCount}</span>}
+            </summary>
           <div className="reading-depth-body">
             {thread.why_it_matters && <p className="reading-why">{thread.why_it_matters}</p>}
             {thread.action_hint && (
@@ -326,54 +331,56 @@ function ReadingPanel({ thread, categories, busy, onConfirm }) {
               </div>
             )}
           </div>
-        </details>
+          </details>
+        )}
+
+        {!confirmation && (
+          <button type="button" className="category-toggle" onClick={() => setOpen(!open)}>
+            {open ? <ChevronDown size={13} /> : <ChevronRight size={13} />} Rätta kategorin
+          </button>
+        )}
+      </div>
+
+      {!confirmation && open && (
+        <div className="category-form">
+          <label>
+            Kategori
+            <select value={chosen} onChange={(e) => setChosen(e.target.value)}>
+              {Object.entries(categories).map(([key, label]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Anteckning (valfri)
+            <input
+              type="text"
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              aria-label="Anteckning om kategorin"
+            />
+          </label>
+          <button
+            type="button"
+            className="category-save"
+            disabled={busy || !latest}
+            onClick={() => onConfirm(latest.id, chosen, note.trim())}
+          >
+            Spara kategorin
+          </button>
+        </div>
       )}
 
-      <div className="reading-category">
-        {confirmation ? (
+      {confirmation && (
+        <div className="reading-category">
           <p className="category-confirmed">
             <CheckCircle2 size={13} /> {confirmation.confirmed_by} har satt kategorin till{' '}
             <strong>{categories[confirmation.category] || confirmation.category}</strong>
             {confirmation.note ? ` — ${confirmation.note}` : ''}.
             {' '}Förslaget var <em>{categories[thread.category] || thread.category}</em> och står kvar.
           </p>
-        ) : (
-          <>
-            <button type="button" className="category-toggle" onClick={() => setOpen(!open)}>
-              {open ? <ChevronDown size={13} /> : <ChevronRight size={13} />} Rätta kategorin
-            </button>
-            {open && (
-              <div className="category-form">
-                <label>
-                  Kategori
-                  <select value={chosen} onChange={(e) => setChosen(e.target.value)}>
-                    {Object.entries(categories).map(([key, label]) => (
-                      <option key={key} value={key}>{label}</option>
-                    ))}
-                  </select>
-                </label>
-                <label>
-                  Anteckning (valfri)
-                  <input
-                    type="text"
-                    value={note}
-                    onChange={(e) => setNote(e.target.value)}
-                    aria-label="Anteckning om kategorin"
-                  />
-                </label>
-                <button
-                  type="button"
-                  className="category-save"
-                  disabled={busy || !latest}
-                  onClick={() => onConfirm(latest.id, chosen, note.trim())}
-                >
-                  Spara kategorin
-                </button>
-              </div>
-            )}
-          </>
-        )}
-      </div>
+        </div>
+      )}
     </section>
   );
 }
@@ -593,15 +600,24 @@ function ResolutionSummary({ event, busy, onReopen, onOpenDocument }) {
 }
 
 /** One message: the thing that actually arrived. */
-function Message({ event, busy, onRetriage, onOpenDocument }) {
+function Message({ event, showSubject = true, busy, onRetriage, onOpenDocument }) {
   return (
     <article className={`message ${event.resolution ? 'settled' : ''}`}>
       <header className="message-head">
-        <h5>{event.subject || '(utan ämne)'}</h5>
+        {/* The detail head above already carries the thread's subject in the
+            serif; restating it here would be the same line twice, one screen
+            apart. A reply with a different subject still gets its own. */}
+        {showSubject && <h5>{event.subject || '(utan ämne)'}</h5>}
         <span className="message-from">
-          {event.origin_display ? `${event.origin_display} <${event.origin}>` : event.origin}
-          {' · '}{formatDateTime(event.occurred_at || event.received_at)}
-          {event.attachments.length > 0 && ` · ${event.attachments.length} bilaga(or)`}
+          <span className="message-sender">
+            {event.origin_display ? `${event.origin_display} <${event.origin}>` : event.origin}
+          </span>
+          <span className="message-meta">
+            <time dateTime={event.occurred_at || event.received_at}>
+              {formatDateTime(event.occurred_at || event.received_at)}
+            </time>
+            {event.attachments.length > 0 && ` · ${event.attachments.length} bilaga(or)`}
+          </span>
         </span>
       </header>
 
@@ -675,59 +691,67 @@ function ThreadDetail({
   thread, categories, resolutions, busy,
   onConfirm, onResolve, onReopen, onRetriage, onOpenDocument,
 }) {
+  // Evidence scrolls; decisions stay anchored at the foot of the detail card.
+  // Remounting the scroller on thread change keeps the message first without
+  // a sticky decision that outranks unread source text.
   return (
     <div className="thread-detail">
-      <header className="detail-head">
-        {/* Subject once. Dates, sender, category and open-count live on the
-            list row or the message — restating them here is two panes saying
-            one thing before any new information appears. */}
-        <h3>{thread.subject}</h3>
-      </header>
+      <div className="thread-evidence" key={thread.key}>
+        <header className="detail-head">
+          {/* Subject once. Dates, sender, category and open-count live on the
+              list row or the message — restating them here is two panes saying
+              one thing before any new information appears. */}
+          <h3>{thread.subject}</h3>
+        </header>
 
-      <section className="detail-section messages">
-        <div className="detail-section-head">
-          <h4>Meddelanden i tråden</h4>
-        </div>
-        {thread.events.map((event) => (
-          <Message
-            key={event.id}
-            event={event}
-            busy={busy}
-            onRetriage={onRetriage}
-            onOpenDocument={onOpenDocument}
-          />
-        ))}
-      </section>
-
-      <ReadingPanel
-        thread={thread}
-        categories={categories}
-        busy={busy}
-        onConfirm={onConfirm}
-      />
-
-      {thread.events.map((event) => (
-        <section className="detail-section decision" key={`decision-${event.id}`}>
-          {thread.events.length > 1 && (
-            <p className="decision-for">Gäller: {event.subject || '(utan ämne)'}</p>
-          )}
-          {event.resolution ? (
-            <ResolutionSummary
+        {/* No "Meddelanden i tråden" label: the serif subject above and the
+            sender line make the object self-evident, and the one heading this
+            column needs is the one that marks the machine's reading. */}
+        <section className="detail-section messages">
+          {thread.events.map((event) => (
+            <Message
+              key={event.id}
               event={event}
+              showSubject={(event.subject || '(utan ämne)') !== thread.subject}
               busy={busy}
-              onReopen={onReopen}
+              onRetriage={onRetriage}
               onOpenDocument={onOpenDocument}
             />
-          ) : (
-            <ResolveForm
-              event={event}
-              resolutions={resolutions}
-              busy={busy}
-              onResolve={onResolve}
-            />
-          )}
+          ))}
         </section>
-      ))}
+
+        <ReadingPanel
+          thread={thread}
+          categories={categories}
+          busy={busy}
+          onConfirm={onConfirm}
+        />
+      </div>
+
+      <div className="thread-decisions">
+        {thread.events.map((event) => (
+          <section className="detail-section decision" key={`decision-${event.id}`}>
+            {thread.events.length > 1 && (
+              <p className="decision-for">Gäller: {event.subject || '(utan ämne)'}</p>
+            )}
+            {event.resolution ? (
+              <ResolutionSummary
+                event={event}
+                busy={busy}
+                onReopen={onReopen}
+                onOpenDocument={onOpenDocument}
+              />
+            ) : (
+              <ResolveForm
+                event={event}
+                resolutions={resolutions}
+                busy={busy}
+                onResolve={onResolve}
+              />
+            )}
+          </section>
+        ))}
+      </div>
     </div>
   );
 }
