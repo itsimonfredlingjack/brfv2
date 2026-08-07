@@ -312,21 +312,23 @@
   justify-content: center;
   gap: 4px;
   flex-shrink: 0;
-  min-width: 20px;
-  height: 18px;
-  padding: 0 6px;
+  min-width: 18px;
+  height: 16px;
+  padding: 0 5px;
   border-radius: 999px;
-  font-size: var(--text-xs);
-  font-weight: 600;
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
 }
 
-.thread-row-state.open { background: var(--secondary); color: var(--foreground); }
-.thread-row-state.settled { background: transparent; color: var(--muted-foreground); font-weight: 500; }
+.thread-row-state.open { background: transparent; color: var(--ink-subtle); }
+.thread-row-state.settled { background: transparent; color: var(--ink-subtle); font-weight: 500; }
 
 .thread-meta {
-  font-size: var(--text-sm);
-  color: var(--muted-foreground);
-  line-height: 1.4;
+  font-size: var(--text-xs);
+  color: var(--ink-subtle);
+  line-height: 1.35;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;

@@ -243,6 +243,15 @@ describe('the queue, before anything is decided', () => {
     expect(within(list).queryByText('Beslut eller godkännande')).not.toBeInTheDocument();
   });
 
+  it('keeps list rows choose-dense: subject, sender, date — not a decision form', async () => {
+    mountWith();
+    await waitForQueue();
+    const row = document.querySelector('.thread-row');
+    expect(row.querySelector('.thread-subject')).toBeTruthy();
+    expect(row.querySelector('.thread-meta')).toBeTruthy();
+    expect(row.querySelector('.thread-meta').textContent).not.toMatch(/meddelande|bilaga/i);
+  });
+
   it('keeps awaiting-reply discoverable via the filter, not as a list chip', async () => {
     mountWith({
       threads: [{ ...THREAD, awaiting_reply: true }],
