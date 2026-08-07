@@ -250,7 +250,7 @@ describe('the queue, before anything is decided', () => {
     });
     await waitForQueue();
     expect(screen.queryByText(/ser ut att vänta svar/)).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /Väntar svar/ })).toHaveTextContent('1');
+    expect(screen.getByRole('button', { name: 'Väntar svar' })).toHaveTextContent('1');
   });
 
   it('does not restate list metadata in the detail head', async () => {
@@ -273,8 +273,27 @@ describe('the queue, before anything is decided', () => {
     await waitForQueue();
     expect(screen.queryByText('Avklarad tråd')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /Alla trådar/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'Alla trådar' }));
     expect(await screen.findByText('Avklarad tråd')).toBeInTheDocument();
+  });
+
+  it('exposes compact filter labels that still name the three modes', async () => {
+    mountWith();
+    await waitForQueue();
+    const group = screen.getByRole('group', { name: 'Filtrera kön' });
+    expect(within(group).getByRole('button', { name: 'Att ta ställning till' })).toHaveTextContent(/Att avgöra/);
+    expect(within(group).getByRole('button', { name: 'Väntar svar' })).toBeInTheDocument();
+    expect(within(group).getByRole('button', { name: 'Alla trådar' })).toHaveTextContent(/^Alla/);
+  });
+
+  it('keeps the filter toolbar as its own row above the list', async () => {
+    mountWith();
+    await waitForQueue();
+    const toolbar = document.querySelector('.intake-toolbar');
+    const list = document.querySelector('.intake-list');
+    expect(toolbar).toBeTruthy();
+    expect(list).toBeTruthy();
+    expect(toolbar.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
 });
 
@@ -721,7 +740,7 @@ describe('a resolved item', () => {
 
   /** Resolved threads live behind the "Alla trådar" filter, collapsed. */
   async function showResolved() {
-    fireEvent.click(await screen.findByRole('button', { name: /Alla trådar/ }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Alla trådar' }));
     const list = await waitForQueue();
     fireEvent.click(within(list).getByText('Offert takomläggning'));
   }

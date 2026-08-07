@@ -199,12 +199,28 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  width: 100%;
+  gap: 16px;
   margin-bottom: 12px;
   flex-wrap: wrap;
 }
 
-.intake-counts button { gap: 8px; }
+@media (min-width: 900px) {
+  .intake-toolbar { flex-wrap: nowrap; }
+}
+
+.intake-counts {
+  flex: 1 1 auto;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.intake-counts button {
+  flex: 1 1 0;
+  min-width: 0;
+  gap: 8px;
+  padding: 0 10px;
+}
 
 .intake-loading {
   color: var(--muted-foreground);

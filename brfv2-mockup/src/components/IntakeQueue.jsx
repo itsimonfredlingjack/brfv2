@@ -893,14 +893,16 @@ export default function IntakeQueue({
             type="button"
             className={filter === 'open' ? 'active' : ''}
             aria-pressed={filter === 'open'}
+            aria-label="Att ta ställning till"
             onClick={() => setFilter('open')}
           >
-            Att ta ställning till <span className="ui-count">{counts.openThreads || 0}</span>
+            Att avgöra <span className="ui-count">{counts.openThreads || 0}</span>
           </button>
           <button
             type="button"
             className={filter === 'awaiting' ? 'active' : ''}
             aria-pressed={filter === 'awaiting'}
+            aria-label="Väntar svar"
             onClick={() => setFilter('awaiting')}
           >
             Väntar svar <span className="ui-count">{counts.awaitingReply || 0}</span>
@@ -909,9 +911,10 @@ export default function IntakeQueue({
             type="button"
             className={filter === 'all' ? 'active' : ''}
             aria-pressed={filter === 'all'}
+            aria-label="Alla trådar"
             onClick={() => setFilter('all')}
           >
-            Alla trådar <span className="ui-count">{counts.threads || 0}</span>
+            Alla <span className="ui-count">{counts.threads || 0}</span>
           </button>
         </div>
         <button type="button" className="ui-btn ui-btn--ghost ui-btn--sm refresh" onClick={refresh} disabled={loading || busy}>
