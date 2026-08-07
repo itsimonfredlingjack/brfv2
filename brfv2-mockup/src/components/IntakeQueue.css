@@ -26,13 +26,7 @@
 
 /* ---------- header ---------- */
 
-.intake-intro {
-  max-width: 72ch;
-  margin-bottom: 14px;
-  color: var(--muted-foreground);
-  font-size: var(--text-base);
-  line-height: 1.6;
-}
+/* Intro manifesto removed: the mailbox promise sits beside Spara beslutet. */
 
 /* ---------- banners ---------- */
 
@@ -99,7 +93,22 @@
 
 .intake-source-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
 
-.intake-format-note { margin-top: 7px; max-width: 82ch; font-size: var(--text-sm); color: var(--subtle-foreground); }
+.intake-format-disclosure {
+  margin-top: 8px;
+}
+
+.intake-format-disclosure summary {
+  color: var(--subtle-foreground);
+  font-size: var(--text-sm);
+  cursor: pointer;
+  list-style: none;
+}
+
+.intake-format-disclosure summary::-webkit-details-marker { display: none; }
+.intake-format-disclosure summary::before { content: '▸ '; }
+.intake-format-disclosure[open] summary::before { content: '▾ '; }
+
+.intake-format-note { margin-top: 6px; max-width: 82ch; font-size: var(--text-sm); color: var(--subtle-foreground); }
 
 /* A label, not a button, so the file input stays the real control and the
    keyboard path is the input's own. */
@@ -237,9 +246,9 @@
 .thread-row {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 3px;
   width: 100%;
-  padding: 11px 13px;
+  padding: 10px 12px;
   border: 1px solid transparent;
   border-radius: var(--radius-xl);
   background: transparent;
@@ -296,11 +305,12 @@
 .thread-meta {
   font-size: var(--text-sm);
   color: var(--muted-foreground);
-  line-height: 1.45;
+  line-height: 1.4;
   font-variant-numeric: tabular-nums;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
-
-.thread-row-tags { display: flex; flex-wrap: wrap; gap: 5px; }
 
 /* ---------- tags ---------- */
 
@@ -354,7 +364,7 @@
 
 .thread-detail { display: flex; flex-direction: column; }
 
-.detail-head { padding: 18px 20px 16px; border-bottom: 1px solid var(--border); }
+.detail-head { padding: 16px 20px 14px; border-bottom: 1px solid var(--border); }
 
 .detail-head h3 {
   font-family: var(--font-serif);
@@ -363,16 +373,6 @@
   letter-spacing: -0.03em;
   line-height: 1.2;
 }
-
-.detail-head-count { color: var(--muted-foreground); font-size: var(--text-md); font-weight: 400; }
-
-.detail-head-meta {
-  margin-top: 5px;
-  color: var(--muted-foreground);
-  font-size: var(--text-base);
-}
-
-.detail-head-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 11px; }
 
 .detail-section { padding: 18px 20px; border-bottom: 1px solid var(--border); }
 .detail-section:last-child { border-bottom: none; }

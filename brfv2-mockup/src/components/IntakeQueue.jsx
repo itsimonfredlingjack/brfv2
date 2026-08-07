@@ -1,6 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  AlertTriangle,
   Archive,
   CalendarClock,
   CheckCircle2,
@@ -14,7 +13,6 @@ import {
   ListTodo,
   Loader2,
   Mail,
-  MessageCircleQuestion,
   Paperclip,
   RefreshCw,
   RotateCcw,
@@ -58,16 +56,6 @@ import './IntakeQueue.css';
  * it is), and the **decision** last. A reader should meet the message before
  * they meet the interpretation of it.
  */
-
-const CATEGORY_ICON = {
-  invoice: FileText,
-  contract_or_quote: FileText,
-  authority_or_manager: AlertTriangle,
-  decision_or_approval: CheckCircle2,
-  question_awaiting_reply: MessageCircleQuestion,
-  information: Inbox,
-  unclear: HelpCircle,
-};
 
 const SIGNAL_LABEL = {
   date: 'Datum',
@@ -139,17 +127,14 @@ function FetchBar({ mailbox, connected, busy, onFetch, onImportFile, format, las
           <Mail size={14} />
           {connected ? (
             <span>
-              Ansluten brevlåda.{' '}
+              Ansluten brevlåda
               {mailbox?.hasFetched
-                ? `Senast hämtat ${formatDateTime(mailbox.last_fetched_at)} — ${mailbox.last_new_count} nya.`
-                : 'Aldrig hämtat. Första hämtningen tar in det som finns i mappen.'}
-              {' '}Hämtningen frågar efter det som kommit sedan förra gången. Inget markeras,
-              flyttas eller raderas i brevlådan.
+                ? ` · senast ${formatDateTime(mailbox.last_fetched_at)} · ${mailbox.last_new_count} nya`
+                : ' · aldrig hämtat'}
             </span>
           ) : (
             <span>
-              Ingen brevlåda är ansluten. Det behövs inte — en <code>.eml</code>-fil kan
-              importeras för hand, och kön fungerar likadant. Se <strong>Anslutningar</strong>.
+              Ingen brevlåda är ansluten · importera <code>.eml</code> eller se Anslutningar
             </span>
           )}
         </span>
@@ -173,11 +158,14 @@ function FetchBar({ mailbox, connected, busy, onFetch, onImportFile, format, las
       </div>
 
       {format?.mail && (
-        <p className="muted intake-format-note">
-          Tas emot: {format.mail.attachmentTypes.join(', ')} som bilaga, högst{' '}
-          {format.mail.maxAttachments} stycken. Allt annat avvisas i sin helhet — inget
-          halvimporteras.
-        </p>
+        <details className="intake-format-disclosure">
+          <summary>Vilka bilagor tas emot</summary>
+          <p className="muted intake-format-note">
+            Tas emot: {format.mail.attachmentTypes.join(', ')} som bilaga, högst{' '}
+            {format.mail.maxAttachments} stycken. Allt annat avvisas i sin helhet — inget
+            halvimporteras.
+          </p>
+        </details>
       )}
 
       {mailbox?.last_error && (
@@ -217,7 +205,6 @@ function FetchBar({ mailbox, connected, busy, onFetch, onImportFile, format, las
 
 /** One row in the queue: enough to choose from, never enough to decide from. */
 function ThreadRow({ thread, selected, onSelect }) {
-  const Icon = CATEGORY_ICON[thread.category] || Inbox;
   return (
     <button
       type="button"
@@ -232,21 +219,8 @@ function ThreadRow({ thread, selected, onSelect }) {
           : <span className="thread-row-state open">{thread.open_count}</span>}
       </span>
       <span className="thread-meta">
-        Senast från {thread.latest_sender_display || thread.latest_sender}
-        {' · '}{formatDate(thread.first_at)} – {formatDate(thread.latest_at)}
-        {' · '}{thread.message_count} meddelande{thread.message_count === 1 ? '' : 'n'}
-        {' · '}{thread.attachment_count} bilag{thread.attachment_count === 1 ? 'a' : 'or'}
-      </span>
-      <span className="thread-row-tags">
-        <span className="tag category">
-          <Icon size={11} /> {thread.category_label}
-          {thread.category_confirmed && <CheckCircle2 size={10} aria-label="bekräftad av människa" />}
-        </span>
-        {thread.awaiting_reply && (
-          <span className="tag awaiting">
-            <MessageCircleQuestion size={11} /> ser ut att vänta svar
-          </span>
-        )}
+        {thread.latest_sender_display || thread.latest_sender}
+        {' · '}{formatDate(thread.latest_at)}
       </span>
     </button>
   );
@@ -683,32 +657,13 @@ function ThreadDetail({
   thread, categories, resolutions, busy,
   onConfirm, onResolve, onReopen, onRetriage, onOpenDocument,
 }) {
-  const Icon = CATEGORY_ICON[thread.category] || Inbox;
   return (
     <div className="thread-detail">
       <header className="detail-head">
-        {/* The count belongs in the heading, not under it: the subject alone is
-            the list row's job, and a detail pane whose title is a verbatim copy
-            of the row that opened it reads as the same thing shown twice. */}
-        <h3>
-          {thread.subject} · {thread.message_count} meddelande{thread.message_count === 1 ? '' : 'n'}
-        </h3>
-        {/* Deliberately not the list row's line again: the sender is on every
-            message below, and a detail pane that repeats its own list row is
-            two panes saying one thing. */}
-        <p className="detail-head-meta">
-          {formatDate(thread.first_at)} – {formatDate(thread.latest_at)}
-          {' · '}{thread.attachment_count} bilag{thread.attachment_count === 1 ? 'a' : 'or'}
-        </p>
-        <div className="detail-head-tags">
-          <span className="tag category">
-            <Icon size={11} /> {thread.category_label}
-            {thread.category_confirmed && <CheckCircle2 size={10} aria-label="bekräftad av människa" />}
-          </span>
-          {thread.resolved
-            ? <span className="tag settled"><CheckCircle2 size={11} /> avgjord</span>
-            : <span className="tag open">{thread.open_count} att ta ställning till</span>}
-        </div>
+        {/* Subject once. Dates, sender, category and open-count live on the
+            list row or the message — restating them here is two panes saying
+            one thing before any new information appears. */}
+        <h3>{thread.subject}</h3>
       </header>
 
       <section className="detail-section messages">
@@ -861,15 +816,8 @@ export default function IntakeQueue({
 
   return (
     <div className="intake">
-      {/* One line, not a manifesto. The promise it makes is repeated where it is
-          actually needed — on the decision form, beside the button that would
-          otherwise look like it does something to the mailbox. */}
-      <p className="intake-intro">
-        Brevlådan är råmaterial. Det här är en granskningskö — ingenting blir arkiv,
-        uppgift eller bevakning förrän någon här bestämmer det, och ingenting ändras i
-        brevlådan när ni gör det.
-      </p>
-
+      {/* The mailbox promise lives beside Spara beslutet — not as a page
+          manifesto that burns the first viewport every session. */}
       <Banner tone="error" onDismiss={() => setError('')}>{error}</Banner>
       <Banner tone="ok" onDismiss={() => setNotice('')}>{notice}</Banner>
 

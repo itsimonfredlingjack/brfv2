@@ -217,33 +217,52 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
+async function waitForQueue() {
+  return screen.findByRole('list', { name: 'Trådar i kön' });
+}
+
 // ---------------------------------------------------------------------------
 
 describe('the queue, before anything is decided', () => {
-  it('says out loud that the mailbox is raw material and this is a queue', async () => {
+  it('keeps the mailbox promise on the decision, not as a page manifesto', async () => {
     mountWith();
-    const intro = await screen.findByText(/Brevlådan är råmaterial/);
-    expect(intro).toHaveTextContent(/ingenting ändras i brevlådan/i);
+    await waitForQueue();
+    expect(screen.queryByText(/Brevlådan är råmaterial/)).not.toBeInTheDocument();
+    expect(screen.getByText(/Ingenting ändras i brevlådan/)).toBeInTheDocument();
   });
 
-  it('shows a thread as a conversation, not as unrelated messages', async () => {
+  it('shows a thread as something to choose, not something to decide from', async () => {
     mountWith();
-    expect(await screen.findByText('Offert takomläggning')).toBeInTheDocument();
-    const meta = screen.getByText(/Senast från Anna Lind/);
-    expect(meta).toHaveTextContent('2 meddelanden');
-    expect(meta).toHaveTextContent('1 bilaga');
-    expect(meta).toHaveTextContent('2026-02-03');
+    const list = await screen.findByRole('list', { name: 'Trådar i kön' });
+    expect(within(list).getByText('Offert takomläggning')).toBeInTheDocument();
+    const meta = within(list).getByText(/Anna Lind/);
     expect(meta).toHaveTextContent('2026-02-10');
+    expect(meta).not.toHaveTextContent('Senast från');
+    expect(meta).not.toHaveTextContent('meddelande');
+    expect(meta).not.toHaveTextContent('bilag');
+    expect(within(list).queryByText('Beslut eller godkännande')).not.toBeInTheDocument();
   });
 
-  it('marks a thread that appears to be waiting for a reply', async () => {
+  it('keeps awaiting-reply discoverable via the filter, not as a list chip', async () => {
     mountWith({
       threads: [{ ...THREAD, awaiting_reply: true }],
       counts: { threads: 1, openThreads: 1, awaitingReply: 1 },
     });
-    // "ser ut att" and not "väntar svar": the product reads incoming post and
-    // cannot see whether somebody here already replied.
-    expect(await screen.findByText(/ser ut att vänta svar/)).toBeInTheDocument();
+    await waitForQueue();
+    expect(screen.queryByText(/ser ut att vänta svar/)).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Väntar svar/ })).toHaveTextContent('1');
+  });
+
+  it('does not restate list metadata in the detail head', async () => {
+    mountWith();
+    await waitForQueue();
+    const detail = document.querySelector('.detail-head');
+    expect(detail).toBeTruthy();
+    expect(detail).toHaveTextContent('Offert takomläggning');
+    expect(detail).not.toHaveTextContent('att ta ställning till');
+    expect(detail).not.toHaveTextContent('Beslut eller godkännande');
+    expect(detail).not.toHaveTextContent('2026-02-03');
+    expect(detail).not.toHaveTextContent('bilag');
   });
 
   it('filters to what still needs a decision without hiding the rest', async () => {
@@ -251,7 +270,7 @@ describe('the queue, before anything is decided', () => {
       threads: [THREAD, { ...THREAD, key: 't2', subject: 'Avklarad tråd', resolved: true, open_count: 0 }],
       counts: { threads: 2, openThreads: 1, awaitingReply: 0 },
     });
-    await screen.findByText('Offert takomläggning');
+    await waitForQueue();
     expect(screen.queryByText('Avklarad tråd')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: /Alla trådar/ }));
@@ -282,7 +301,7 @@ describe('what the app believes', () => {
 
   it('shows every value next to the words it was read from', async () => {
     mountWith();
-    await screen.findByText('Offert takomläggning');
+    await waitForQueue();
     const signals = screen.getByText('Läst ur meddelandet').closest('div');
 
     // A value without its quote is an unverifiable claim, so each one is
@@ -298,7 +317,7 @@ describe('what the app believes', () => {
 
   it('marks a related record as a proposal and states its basis', async () => {
     mountWith();
-    await screen.findByText('Offert takomläggning');
+    await waitForQueue();
     const item = screen.getByText('Snöröjningsavtal 2026.pdf').closest('li');
     expect(within(item).getByText('förslag')).toBeInTheDocument();
     expect(within(item).getByText(/föreslaget av sökningen på ämne och avsändare/))
@@ -348,7 +367,7 @@ describe('correcting the category', () => {
 
   it('posts exactly the category that was chosen', async () => {
     mountWith();
-    await screen.findByText('Offert takomläggning');
+    await waitForQueue();
     fireEvent.click(screen.getByRole('button', { name: /Rätta kategorin/ }));
 
     fireEvent.change(screen.getByLabelText('Kategori'), { target: { value: 'invoice' } });
@@ -370,14 +389,14 @@ describe('fetching', () => {
         last_error: '',
       },
     });
-    expect(await screen.findByText(/Senast hämtat .* — 3 nya\./)).toBeInTheDocument();
-    expect(screen.getByText(/frågar efter det som kommit sedan förra gången/))
-      .toBeInTheDocument();
+    expect(await screen.findByText(/senast .* · 3 nya/i)).toBeInTheDocument();
+    expect(screen.queryByText(/frågar efter det som kommit sedan förra gången/))
+      .not.toBeInTheDocument();
   });
 
   it('reports what could not be taken in rather than staying silent', async () => {
     mountWith();
-    await screen.findByText('Offert takomläggning');
+    await waitForQueue();
     intakeApi.fetch.mockResolvedValue({
       seen: 2,
       new: 1,
@@ -403,7 +422,7 @@ describe('fetching', () => {
 
   it('says plainly when there is nothing new', async () => {
     mountWith();
-    await screen.findByText('Offert takomläggning');
+    await waitForQueue();
     intakeApi.fetch.mockResolvedValue({
       seen: 0, new: 0, alreadyKnown: 0, events: [], skipped: [], checkpoint: {},
     });
@@ -432,15 +451,19 @@ describe('fetching', () => {
     expect(intakeApi.fetch).not.toHaveBeenCalled();
   });
 
-  it('states the accepted format instead of leaving the operator to guess', async () => {
+  it('keeps format limits one disclosure away, not in the first viewport', async () => {
     mountWith();
-    expect(await screen.findByText(/application\/pdf som bilaga/)).toBeInTheDocument();
-    expect(screen.getByText(/Allt annat avvisas i sin helhet/)).toBeInTheDocument();
+    await screen.findByText('Importera en .eml-fil');
+    const note = screen.getByText(/application\/pdf som bilaga/);
+    expect(note).not.toBeVisible();
+    fireEvent.click(screen.getByText(/Vilka bilagor tas emot/));
+    expect(note).toBeVisible();
+    expect(screen.getByText(/Allt annat avvisas i sin helhet/)).toBeVisible();
   });
 
   it('surfaces a refusal reason from the backend verbatim', async () => {
     mountWith();
-    await screen.findByText('Offert takomläggning');
+    await waitForQueue();
     integrationsApi.importSourceEvent.mockRejectedValue(
       new Error("Bilagan 'underlag.csv' är text/csv. Den här versionen tar bara emot application/pdf"),
     );
@@ -454,7 +477,7 @@ describe('fetching', () => {
 describe('the message itself', () => {
   it('shows provenance the operator can check the message against', async () => {
     mountWith();
-    await screen.findByText('Offert takomläggning');
+    await waitForQueue();
     fireEvent.click(screen.getByText('SV: Offert takomläggning'));
 
     expect(screen.getByText('graph-mailbox-import / microsoft-graph')).toBeInTheDocument();
@@ -464,7 +487,7 @@ describe('the message itself', () => {
 
   it('keeps an attachment as material under review until somebody says otherwise', async () => {
     mountWith();
-    await screen.findByText('Offert takomläggning');
+    await waitForQueue();
     fireEvent.click(screen.getByText('SV: Offert takomläggning'));
 
     const item = screen.getByText('offert-tak.pdf').closest('li');
@@ -484,7 +507,7 @@ describe('the message itself', () => {
         }],
       }],
     });
-    await screen.findByText('Offert takomläggning');
+    await waitForQueue();
     fireEvent.click(screen.getByText('SV: Offert takomläggning'));
     expect(screen.getByText(/Texten är bevarad som dokument/)).toBeInTheDocument();
     expect(screen.getByText(/Godkännandet måste gå att belägga/)).toBeInTheDocument();
@@ -498,7 +521,7 @@ describe('resolving', () => {
 
   it('offers every outcome the product model has', async () => {
     mountWith();
-    await screen.findByText('Offert takomläggning');
+    await waitForQueue();
     openForm();
     for (const label of Object.values(RESOLUTION_LABELS)) {
       expect(screen.getByRole('checkbox', { name: label })).toBeInTheDocument();
@@ -507,7 +530,7 @@ describe('resolving', () => {
 
   it('refuses to take anything in without a stated reason, before the backend is asked', async () => {
     mountWith();
-    await screen.findByText('Offert takomläggning');
+    await waitForQueue();
     openForm();
 
     fireEvent.click(screen.getByRole('checkbox', { name: 'Ta in' }));
@@ -525,7 +548,7 @@ describe('resolving', () => {
 
   it('preserves the message without adopting its attachments by default', async () => {
     mountWith();
-    await screen.findByText('Offert takomläggning');
+    await waitForQueue();
     openForm();
 
     fireEvent.click(screen.getByRole('checkbox', { name: 'Ta in' }));
@@ -546,7 +569,7 @@ describe('resolving', () => {
 
   it('sends the attachments a reviewer explicitly chose', async () => {
     mountWith();
-    await screen.findByText('Offert takomläggning');
+    await waitForQueue();
     openForm();
 
     fireEvent.click(screen.getByRole('checkbox', { name: 'Ta in' }));
@@ -564,7 +587,7 @@ describe('resolving', () => {
 
   it('combines preserving with taking work on, in one act', async () => {
     mountWith();
-    await screen.findByText('Offert takomläggning');
+    await waitForQueue();
     openForm();
 
     fireEvent.click(screen.getByRole('checkbox', { name: 'Ta in' }));
@@ -589,7 +612,7 @@ describe('resolving', () => {
 
   it('offers the dates it read, as something to press rather than a prefilled guess', async () => {
     mountWith();
-    await screen.findByText('Offert takomläggning');
+    await waitForQueue();
     openForm();
 
     fireEvent.click(screen.getByRole('checkbox', { name: 'Bevaka' }));
@@ -602,7 +625,7 @@ describe('resolving', () => {
 
   it('will not let a card say both "inte relevant" and something else', async () => {
     mountWith();
-    await screen.findByText('Offert takomläggning');
+    await waitForQueue();
     openForm();
 
     fireEvent.click(screen.getByRole('checkbox', { name: 'Ta in' }));
@@ -614,7 +637,7 @@ describe('resolving', () => {
 
   it('says that the mailbox is untouched, on the form where it matters', async () => {
     mountWith();
-    await screen.findByText('Offert takomläggning');
+    await waitForQueue();
     openForm();
     expect(screen.getByText(/Ingenting ändras i brevlådan/)).toBeInTheDocument();
   });
@@ -639,7 +662,8 @@ describe('a resolved item', () => {
   /** Resolved threads live behind the "Alla trådar" filter, collapsed. */
   async function showResolved() {
     fireEvent.click(await screen.findByRole('button', { name: /Alla trådar/ }));
-    fireEvent.click(await screen.findByText('Offert takomläggning'));
+    const list = await waitForQueue();
+    fireEvent.click(within(list).getByText('Offert takomläggning'));
   }
 
   it('says where it went, not merely that it is handled', async () => {
@@ -680,7 +704,7 @@ describe('a resolved item', () => {
 describe('a member who is not an administrator', () => {
   it('may read the queue and may not act on it', async () => {
     mountWith({ isAdmin: false });
-    await screen.findByText('Offert takomläggning');
+    await waitForQueue();
 
     // Reading is the point of showing it; the acts are admin-only in the
     // backend, and the UI must not offer what the route will refuse.
