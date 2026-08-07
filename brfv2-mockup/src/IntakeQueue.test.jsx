@@ -259,7 +259,8 @@ describe('the queue, before anything is decided', () => {
     });
     await waitForQueue();
     expect(screen.queryByText(/ser ut att vänta svar/)).not.toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Väntar svar' })).toHaveTextContent('1');
+    const group = screen.getByRole('group', { name: 'Filtrera kön' });
+    expect(group.querySelector('button[data-filter="awaiting"]')).toHaveTextContent('1');
   });
 
   it('does not restate list metadata in the detail head', async () => {
@@ -282,7 +283,7 @@ describe('the queue, before anything is decided', () => {
     await waitForQueue();
     expect(screen.queryByText('Avklarad tråd')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Alla trådar' }));
+    fireEvent.click(document.querySelector('button[data-filter="all"]'));
     expect(await screen.findByText('Avklarad tråd')).toBeInTheDocument();
   });
 
@@ -290,9 +291,11 @@ describe('the queue, before anything is decided', () => {
     mountWith();
     await waitForQueue();
     const group = screen.getByRole('group', { name: 'Filtrera kön' });
-    expect(within(group).getByRole('button', { name: 'Att ta ställning till' })).toHaveTextContent(/Att avgöra/);
-    expect(within(group).getByRole('button', { name: 'Väntar svar' })).toBeInTheDocument();
-    expect(within(group).getByRole('button', { name: 'Alla trådar' })).toHaveTextContent(/^Alla/);
+    expect(group.querySelector('button[data-filter="open"]')).toHaveTextContent(/Att avgöra/);
+    expect(group.querySelector('button[data-filter="open"] .sr-only')).toHaveTextContent(/att ta ställning till/);
+    expect(group.querySelector('button[data-filter="awaiting"]')).toHaveTextContent(/Väntar svar/);
+    expect(group.querySelector('button[data-filter="all"]')).toHaveTextContent(/^Alla/);
+    expect(group.querySelector('button[data-filter="all"] .sr-only')).toHaveTextContent(/trådar/);
   });
 
   it('keeps the filter toolbar as its own row above the list', async () => {
@@ -768,9 +771,9 @@ describe('a resolved item', () => {
     },
   };
 
-  /** Resolved threads live behind the "Alla trådar" filter, collapsed. */
+  /** Resolved threads live behind the all-threads filter, collapsed. */
   async function showResolved() {
-    fireEvent.click(await screen.findByRole('button', { name: 'Alla trådar' }));
+    fireEvent.click(document.querySelector('button[data-filter="all"]'));
     const list = await waitForQueue();
     fireEvent.click(within(list).getByText('Offert takomläggning'));
   }

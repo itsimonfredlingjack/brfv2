@@ -151,8 +151,7 @@ if (!document.querySelector('.intake')) return null;
 const row = [...document.querySelectorAll('.intake-list .thread-row')]
   .find((r) => r.innerText.includes(subject));
 if (!row) {
-  const all = [...document.querySelectorAll('.intake-counts button')]
-    .find((b) => b.getAttribute('aria-label') === 'Alla trådar');
+  const all = document.querySelector('.intake-counts button[data-filter="all"]');
   if (all && all.getAttribute('aria-pressed') !== 'true') all.click();
   return null;
 }

@@ -584,11 +584,8 @@
 
 /* ---------- the reading: what the app believes ---------- */
 
-.detail-section.reading { background: var(--surface-1); }
-
 .detail-section.reading--secondary {
   background: transparent;
-  border-top: 1px solid var(--border);
   padding-top: 8px;
 }
 

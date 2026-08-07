@@ -151,7 +151,6 @@ function FetchBar({ mailbox, connected, busy, onFetch, onImportFile, format, las
             htmlFor="intake-eml-import"
             className={`import-button ${busy ? 'busy' : ''}`}
             title="Importera en .eml-fil"
-            aria-label="Importera en .eml-fil"
           >
             {busy ? <Loader2 size={14} className="spin" /> : <Upload size={14} />}
             Importera .eml
@@ -893,16 +892,17 @@ export default function IntakeQueue({
             type="button"
             className={filter === 'open' ? 'active' : ''}
             aria-pressed={filter === 'open'}
-            aria-label="Att ta ställning till"
+            data-filter="open"
             onClick={() => setFilter('open')}
           >
-            Att avgöra <span className="ui-count">{counts.openThreads || 0}</span>
+            Att avgöra<span className="sr-only"> — att ta ställning till</span>{' '}
+            <span className="ui-count">{counts.openThreads || 0}</span>
           </button>
           <button
             type="button"
             className={filter === 'awaiting' ? 'active' : ''}
             aria-pressed={filter === 'awaiting'}
-            aria-label="Väntar svar"
+            data-filter="awaiting"
             onClick={() => setFilter('awaiting')}
           >
             Väntar svar <span className="ui-count">{counts.awaitingReply || 0}</span>
@@ -911,10 +911,12 @@ export default function IntakeQueue({
             type="button"
             className={filter === 'all' ? 'active' : ''}
             aria-pressed={filter === 'all'}
-            aria-label="Alla trådar"
+            data-filter="all"
             onClick={() => setFilter('all')}
           >
-            Alla <span className="ui-count">{counts.threads || 0}</span>
+            Alla{' '}
+            <span className="sr-only">trådar</span>{' '}
+            <span className="ui-count">{counts.threads || 0}</span>
           </button>
         </div>
         <button type="button" className="ui-btn ui-btn--ghost ui-btn--sm refresh" onClick={refresh} disabled={loading || busy}>
