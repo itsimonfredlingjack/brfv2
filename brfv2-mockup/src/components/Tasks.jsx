@@ -537,35 +537,27 @@ export default function Tasks({ brfId, isAdmin = false, onOpenCitation }) {
   const counts = board?.counts || { active: 0, overdue: 0, unassigned: 0 };
 
   return (
-    <div className="tasks">
-      <header className="tasks-header">
-        <div>
+    <div className={`tasks${!loading && board && active.length === 0 ? ' has-no-active' : ''}`}>
+      <header className="tasks-header page-header">
+        <div className="page-header-text">
           <h2 className="page-title">Uppgifter</h2>
-          <p className="muted">
-            Arbete som en människa har tagit på sig: vem som äger det, till när,
-            och allt som hänt sedan dess. Ingen motor skapar en uppgift — att
-            skapa den är beslutet. Ingen uppgift raderas heller: arbete som
-            visade sig onödigt avbryts med en angiven anledning och står kvar.
+          <p className="page-header-sub">
+            Arbete någon tagit på sig — vem, till när, och vad som hänt sedan.
           </p>
         </div>
-        <button type="button" className="tasks-refresh" disabled={loading || busy} onClick={refresh}>
-          <RefreshCw size={15} /> Uppdatera
-        </button>
-      </header>
 
-      <Banner tone="error" onDismiss={() => setError('')}>{error}</Banner>
-      <Banner tone="ok" onDismiss={() => setNotice('')}>{notice}</Banner>
+        <div className="page-header-actions">
+          <button type="button" className="tasks-refresh" disabled={loading || busy} onClick={refresh}>
+            <RefreshCw size={15} /> Uppdatera
+          </button>
+        </div>
 
-      {loading && (
-        <p className="tasks-loading"><Loader2 size={16} className="spin" /> Hämtar…</p>
-      )}
-
-      {!loading && board && (
-        <>
-          {/* "Utan ansvarig" is the number that grows quietly: nothing fails
-              when a task has no owner, it simply never moves. It is counted
-              next to the two numbers people already look at. */}
-          <dl className="tasks-counts">
+        {/* Uppgifter's instrument is people: not money, not time, but how much
+            work is owned and how much of it has slipped. Three numerals in mono
+            on ink — the screen's own composition, and the same three whether
+            they read 0 or 40. */}
+        <div className="page-header-instrument">
+          <dl className="tasks-standing">
             <div>
               <dt>Pågående</dt>
               <dd>{counts.active}</dd>
@@ -579,26 +571,32 @@ export default function Tasks({ brfId, isAdmin = false, onOpenCitation }) {
               <dd>{counts.unassigned}</dd>
             </div>
           </dl>
+        </div>
+      </header>
 
+      <Banner tone="error" onDismiss={() => setError('')}>{error}</Banner>
+      <Banner tone="ok" onDismiss={() => setNotice('')}>{notice}</Banner>
+
+      {loading && (
+        <p className="tasks-loading"><Loader2 size={16} className="spin" /> Hämtar…</p>
+      )}
+
+      {!loading && board && (
+        <>
           <p className="tasks-summary">
-            Dagens datum enligt servern: <strong>{board.today}</strong>.
-            {counts.unassigned > 0 && ` ${counts.unassigned} av ${counts.active} `
+            {counts.unassigned > 0 && `${counts.unassigned} av ${counts.active} `
               + 'pågående uppgifter har ingen namngiven ansvarig.'}
             {!isAdmin && ' Bara administratörer kan skapa och ändra uppgifter.'}
           </p>
 
           {/* Nothing here for a member who cannot create one: the summary above
               already says why the section is missing. */}
+          {/* The heading and its paragraph said in five lines what the button
+              says in two words. A task that belongs to a finding is created
+              from that finding's own card, so this section only ever had one
+              job: start a task that begins in a meeting. */}
           {isAdmin && (
             <section className="tasks-new" aria-label="Ny uppgift" ref={newSectionRef}>
-              <h3>Ta på er ett arbete</h3>
-              <p className="muted">
-                För arbete som börjar i ett styrelsemöte i stället för i ett
-                dokument. En uppgift som ska hänga ihop med ett fynd eller en
-                bevakning skapas från den — knappen finns på kortet under
-                Fakturagranskning respektive Bevakningar, och då följer citaten
-                med.
-              </p>
               <CreateTask
                 brfId={brfId}
                 canCreate={isAdmin}
@@ -613,10 +611,6 @@ export default function Tasks({ brfId, isAdmin = false, onOpenCitation }) {
 
           <section className="tasks-active" aria-label="Pågående">
             <h3>Pågående</h3>
-            <p className="muted">
-              I den ordning servern skickade dem: försenat först, sedan efter
-              datum, odaterat sist.
-            </p>
             {active.length === 0 ? (
               <EmptyState
                 title="Inga uppgifter på gång."

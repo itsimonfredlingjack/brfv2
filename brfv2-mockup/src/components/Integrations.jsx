@@ -70,38 +70,71 @@ export default function Integrations({ brfId, isAdmin = false, onOpenDocument, o
   const graph = connections?.['microsoft-graph'];
   const mailboxReady = graph?.connection?.status === 'connected';
   const openEvents = events.filter((e) => e.review_status === 'open').length;
+  const awaitingEvents = events.filter((e) => e.awaiting_reply).length;
 
   return (
     <div className="integrations">
-      <div className="integrations-header">
-        <div className="integrations-tabs" role="tablist">
-          <button
-            type="button"
-            role="tab"
-            aria-selected={pane === 'inbox'}
-            className={pane === 'inbox' ? 'active' : ''}
-            onClick={() => setPane('inbox')}
-          >
-            <Inbox size={16} /> Inkommande
-            {openEvents > 0 && <span className="tab-count">{openEvents}</span>}
-          </button>
-          <button
-            type="button"
-            role="tab"
-            aria-selected={pane === 'connections'}
-            className={pane === 'connections' ? 'active' : ''}
-            onClick={() => setPane('connections')}
-          >
-            <Plug size={16} /> Anslutningar
-          </button>
+      <div className="integrations-header page-header">
+        <div className="integrations-header-text">
+          <div className="integrations-tabs" role="tablist">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={pane === 'inbox'}
+              className={pane === 'inbox' ? 'active' : ''}
+              onClick={() => setPane('inbox')}
+            >
+              <Inbox size={16} /> Inkommande
+              {openEvents > 0 && <span className="tab-count">{openEvents}</span>}
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={pane === 'connections'}
+              className={pane === 'connections' ? 'active' : ''}
+              onClick={() => setPane('connections')}
+            >
+              <Plug size={16} /> Anslutningar
+            </button>
+          </div>
+          {/* Every other workspace opens with a sentence naming what the screen
+              is for, under its title, before any content. The tab switcher had
+              taken the title's place but never the sentence — this was the one
+              workspace that jumped straight into "Ingen brevlåda är ansluten."
+              with no framing at all. */}
+          <p className="page-header-sub">
+            {pane === 'inbox'
+              ? 'Post som kommit in, innan någon tagit ställning.'
+              : 'Brevlådor och system Träff läser ifrån.'}
+          </p>
         </div>
         {/* The queue refreshes itself, from its own toolbar. A second control
             with the same word on the same screen is a reader's problem, not a
             convenience — so this one only exists where nothing else offers it. */}
-        {pane === 'connections' && (
-          <button type="button" className="refresh" onClick={refresh} disabled={loading}>
-            <RefreshCw size={15} /> Uppdatera
-          </button>
+        <div className="page-header-actions">
+          {pane === 'connections' && (
+            <button type="button" className="refresh" onClick={refresh} disabled={loading}>
+              <RefreshCw size={15} /> Uppdatera
+            </button>
+          )}
+        </div>
+
+        {/* Inkommande's instrument is the queue's own standing: what is waiting
+            for a decision, what has been answered and is waiting on someone
+            else, and how much has come in altogether. */}
+        {pane === 'inbox' && (
+          <div className="page-header-instrument">
+            <div className="invoices-ledger">
+              <div className="invoices-ledger-figure">
+                <span className="ledger-label">Att avgöra</span>
+                <span className="ledger-amount">{openEvents}</span>
+              </div>
+              <dl className="watches-standing">
+                <div><dt>Väntar svar</dt><dd>{awaitingEvents}</dd></div>
+                <div><dt>Inkommet</dt><dd>{events.length}</dd></div>
+              </dl>
+            </div>
+          </div>
         )}
       </div>
 

@@ -398,12 +398,29 @@ function BoardWatch({
 }
 
 /**
- * Twelve months forward, for the recurring bucket only.
+ * The horizon: every watched obligation plotted against the twelve months
+ * ahead, with what's already late held apart in its own column.
  *
- * A strip, not a calendar: it answers "which months are loaded" and nothing
- * else. The dates themselves are on the cards.
+ * This is the page's opening statement, not a widget buried in one bucket —
+ * Bevakningar's whole reason to exist is "what's coming and when," and until
+ * now that fact lived only as rows of text below the fold. A person should
+ * see the shape of the year — where the obligations cluster, whether
+ * anything is already late — before reading a single card.
+ *
+ * Bar height carries the count, not colour: a taller column is more due that
+ * month, full stop. "Nu" (already late) gets the one weight-based mark this
+ * identity allows for overdue (an ink underline, §01/theme.css's own rule) —
+ * never a red bar, because lateness here is a fact stated in weight, not an
+ * alarm colour.
  */
-function MonthStrip({ today, watches }) {
+const HORIZON_BAR_MAX = 96;
+
+function horizonBarHeight(count, max) {
+  if (count === 0) return 2;
+  return Math.round(Math.max(10, (count / max) * HORIZON_BAR_MAX));
+}
+
+function Horizon({ today, overdue, upcoming }) {
   const cells = useMemo(() => {
     const [year, month] = today.split('-').map(Number);
     return Array.from({ length: 12 }, (_, i) => {
@@ -412,28 +429,36 @@ function MonthStrip({ today, watches }) {
       return {
         key,
         label: MONTHS[index % 12],
-        items: watches.filter((w) => w.due_date.startsWith(key)),
+        items: upcoming.filter((w) => w.due_date && w.due_date.startsWith(key)),
       };
     });
-  }, [today, watches]);
+  }, [today, upcoming]);
 
-  if (watches.length === 0) return null;
+  const max = Math.max(1, overdue.length, ...cells.map((c) => c.items.length));
 
   return (
-    <ol className="watch-strip" aria-label="Tolv månader framåt">
-      {cells.map((cell) => (
-        <li
-          key={cell.key}
-          className={cell.items.length > 0 ? 'loaded' : ''}
-          title={cell.items.length > 0
-            ? cell.items.map((w) => `${w.due_date} ${w.title}`).join('\n')
-            : `${cell.key}: inget`}
-        >
-          <span className="strip-month">{cell.label}</span>
-          <span className="strip-count">{cell.items.length > 0 ? cell.items.length : ''}</span>
+    <div className="watches-horizon" aria-label="Bevakningar över tid">
+      <ol className="horizon-strip">
+        <li className={`horizon-cell horizon-now${overdue.length > 0 ? ' loaded overdue' : ''}`}>
+          <span className="horizon-bar" style={{ height: `${horizonBarHeight(overdue.length, max)}px` }} />
+          <span className="horizon-count">{overdue.length || ''}</span>
+          <span className="horizon-label">Nu</span>
         </li>
-      ))}
-    </ol>
+        {cells.map((cell) => (
+          <li
+            key={cell.key}
+            className={`horizon-cell${cell.items.length > 0 ? ' loaded' : ''}`}
+            title={cell.items.length > 0
+              ? cell.items.map((w) => `${w.due_date} ${w.title}`).join('\n')
+              : `${cell.key}: inget`}
+          >
+            <span className="horizon-bar" style={{ height: `${horizonBarHeight(cell.items.length, max)}px` }} />
+            <span className="horizon-count">{cell.items.length || ''}</span>
+            <span className="horizon-label">{cell.label}</span>
+          </li>
+        ))}
+      </ol>
+    </div>
   );
 }
 
@@ -574,12 +599,10 @@ export default function Watches({ brfId, isAdmin = false, onOpenCitation }) {
         <div className="page-header-text">
           <h2 className="page-title">Bevakningar</h2>
           <p className="page-header-sub">
-            Daterade skyldigheter lästa ur föreningens egna avtal. Motorn föreslår,
-            en människa beslutar — ingenting här är en skyldighet förrän någon
-            godkänt det.
+            Daterade skyldigheter ur föreningens avtal. Motorn föreslår, en människa beslutar.
           </p>
         </div>
-        <div className="watches-header-actions">
+        <div className="page-header-actions">
           {isAdmin && (
             <button type="button" className="watches-scan" disabled={loading || busy} onClick={scan}>
               {scanning ? <Loader2 size={15} className="spin" /> : <ScanLine size={15} />} Läs om arkivet
@@ -588,6 +611,39 @@ export default function Watches({ brfId, isAdmin = false, onOpenCitation }) {
           <button type="button" className="watches-refresh" disabled={loading || busy} onClick={refresh}>
             <RefreshCw size={15} /> Uppdatera
           </button>
+        </div>
+
+        {/* Bevakningar's instrument is time, so the horizon belongs *in* the
+            band rather than under it: twelve months drawn in paper on ink is
+            the screen's own composition, not a chart parked on the page. It
+            needs `board` for the server's own date, so the band renders a
+            static twelve-month scale until that lands — the shape never
+            appears or disappears, only its bars do.
+
+            The four state counts used to sit on paper below the band while
+            Fakturor's sat inside it — the same widget with two different homes,
+            one tab apart. They belong on the faceplate, to the right of the
+            chart, exactly where Fakturor puts its own. */}
+        <div className="page-header-instrument watches-instrument">
+          {board && (
+            <Horizon
+              today={board.today}
+              overdue={board.buckets?.overdue || []}
+              upcoming={[
+                ...(board.buckets?.soon || []),
+                ...(board.buckets?.later || []),
+                ...(board.buckets?.recurring || []),
+              ]}
+            />
+          )}
+          <dl className="watches-standing">
+            <div><dt>Bevakas</dt><dd>{watchedCount}</dd></div>
+            <div><dt>Förslag</dt><dd>{proposed.length}</dd></div>
+            <div className={(board?.buckets?.overdue?.length || 0) > 0 ? 'flagged' : ''}>
+              <dt>Försenat</dt><dd>{board?.buckets?.overdue?.length || 0}</dd>
+            </div>
+            <div><dt>Odaterat</dt><dd>{unresolved.length}</dd></div>
+          </dl>
         </div>
       </header>
 
@@ -600,11 +656,13 @@ export default function Watches({ brfId, isAdmin = false, onOpenCitation }) {
 
       {!loading && board && (
         <>
-          <p className="watches-summary">
-            Dagens datum enligt servern: <strong>{board.today}</strong>.
-            {' '}{watchedCount} bevakas, {proposed.length} väntar på beslut.
-            {!isAdmin && ' Bara administratörer kan besluta om bevakningar.'}
-          </p>
+          {/* The horizon's own "Nu" column already anchors today, so restating
+              the server's date above it was a second clock on the same wall. */}
+          {!isAdmin && (
+            <p className="watches-today">
+              Bara administratörer kan besluta om bevakningar.
+            </p>
+          )}
 
           {nothingYet && (
             <EmptyState
@@ -636,7 +694,6 @@ export default function Watches({ brfId, isAdmin = false, onOpenCitation }) {
                       {board.bucketLabels[key]}
                       <span className="bucket-count">{rows.length}</span>
                     </h4>
-                    {key === 'recurring' && <MonthStrip today={board.today} watches={rows} />}
                     {rows.length === 0 ? (
                       <p className="empty">{EMPTY_BUCKET[key]}</p>
                     ) : rows.map((watch) => (

@@ -12,6 +12,34 @@
 > same colours, same button, same breakpoints — it gave the existing system one
 > thing to be remembered by. See **"Signature & Composition"** below; it is the
 > section to read before extending any of this further.
+> **Updated again 2026-08-08 (consistency pass, evening)** — after the signature
+> pass, a live audit (screenshots of Bevakningar, Uppgifter, Fakturor and
+> Inkommande, not just reading the code) found the working screens weren't
+> reserved-signature-correctly quiet, they were unevenly finished: Inkommande had
+> no masthead at all, and Uppgifter's instrument row rendered its numbers a full
+> step smaller than the identical pattern on Fakturor. No new device was
+> introduced — this pass finished rolling out patterns the app already had to the
+> screens that never got them. Kept deliberately separate from "Signature &
+> Composition" below: that section is about the one bold arrival moment; this is
+> about the quiet system actually being one system.
+> **Updated again 2026-08-08 (working-screen redesign pass, night)** — the
+> consistency pass above fixed unevenness but was still polish; the product
+> owner asked directly for populated/working screens to get a real compositional
+> redesign, not token parity. This pass reopens the "signature applied to
+> first-moment screens only" boundary (§ Open Questions) for two screens, each
+> given a genuinely new hero element grown from its own subject rather than a
+> shared device: Bevakningar's `Horizon` (a twelve-month bar-chart timeline,
+> replacing a buried per-bucket `MonthStrip`) and Fakturor's `ReviewComposition`
+> (a clickable stacked bar showing the queue's own granskningsläge, doubling as
+> the "Läge" filter). Neither borrows login's ink/paper split panel or the
+> animated ring — those stay arrival-only, per the existing rule, because they
+> mean something specific ("nothing established yet") that a populated register
+> isn't saying. These are new devices, each literal to what its own screen
+> actually measures (time; review progress) — not the split panel reused, and
+> not a third instance of the same idea. See `Watches.jsx`'s `Horizon` and
+> `Invoices.jsx`'s `ReviewComposition` for the components; colour discipline
+> holds (progress/lateness are weight, never hue, same as the rest of the
+> system).
 
 ## Evidence Sources
 
@@ -78,14 +106,98 @@ different content:
 - `Login.jsx`/`Login.css` — `.login-brand` (ink) / `.login-form-col` (paper), grid `minmax(380px,40%) 1fr`, stacks under 768px.
 - `App.jsx`/`App.css`, `Fråga dokumenten`'s empty state — `.chat-empty-brand` (ink) / `.chat-empty-body` (paper), grid `1fr 1.35fr`, stacks under 768px.
 
-**When to use it — this is the actual design rule, not a taste call:** the split
-panel is for screens where someone arrives with *literally nothing yet* — a
-login, an empty conversation. It is **not** for populated/working screens. A
-filled Fakturor register, an open document, a list with real rows: those stay on
-the existing quiet paper system untouched. Spend the boldness once, on arrival;
-everywhere else stays disciplined. Extending the split panel into a working
-screen would dilute the one thing it's supposed to mean ("you have nothing yet")
-into decoration.
+**When to use it:** the *split panel specifically* — ink beside paper, 40/60 —
+stays on screens where someone arrives with literally nothing yet: a login, an
+empty conversation. That is a statement about **that composition**, not a budget
+for boldness overall.
+
+**Superseded 2026-08-08 (Simon, explicitly): "spend the boldness once" is dead.**
+It used to read "spend the boldness once, on arrival; everywhere else stays
+disciplined," and every pass that touched a working screen dutifully obeyed it
+and shipped changes the product's owner could not see. Several rounds of that —
+a masthead here, a thin bar row there, half of them gated behind counts an empty
+association does not have — is what "I can't even tell if you changed anything"
+was actually describing. The rule was the cause, not the passes.
+
+The working screens now open on a **full-bleed ink masthead band** (`.page-header`
+in `App.css`; Bevakningar, Uppgifter, Fakturor, Inkommande and Dokument all opt
+in by carrying the class). It is not login's split panel — it runs horizontally
+across the top and hands the page below it back to the quiet paper system, which
+is untouched. Two constraints it must keep:
+
+- **It reads at zero data.** An empty association sees the same band as a full
+  one. Any new compositional element that renders `null` under a zero count is
+  invisible to the person who most needs to see the screen has a design.
+- **One bold move per screen, at the top.** The band is the assertion; the rows,
+  filters and cards under it stay disciplined. Boldness everywhere is the same
+  flatness as boldness nowhere.
+
+### 2b. The plate — one frame, five instruments (2026-08-08, system pass)
+
+The band above was right and its *execution* was five separate implementations.
+Measured live before this pass, across Dokument / Bevakningar / Uppgifter /
+Inkommande / Fakturor:
+
+| | band height | content left edge |
+|---|---|---|
+| before | 149 / 290 / 292 / 149 / 277 px | 288 / 366 / 366 / 288 / 288 px |
+| after | 268 px on all five | 288 px on all five |
+
+Changing tab resized the largest element on screen by up to 143px, and on two
+screens the title and the rows it headed stood on different left edges. That
+misalignment is the thing a reader registers as amateurish without being able to
+name it — it is what "lekstuga på alla sidor" was pointing at.
+
+**The rules now, enforced structurally rather than per screen:**
+
+- `.page-header` is a **CSS grid** with named areas — `title` / `actions` /
+  `instrument` — at a **fixed `--band-h`**. Flex was why each screen needed its
+  own patch (`order: 1` here, `margin-left: auto` there, a nested second flex row
+  on Fakturor to get the same arrangement a third way). The grid states the
+  arrangement once and no screen has to be told to get out of another's way.
+- Markup contract: every band emits `.page-header-text`, `.page-header-actions`
+  and `.page-header-instrument`. A workspace gets the faceplate hairline and the
+  shared caption style by **being** a workspace, not by remembering to ask.
+- The instrument is bottom-aligned, so all five readings share a baseline.
+- **Every screen has an instrument**, because the height is fixed and an empty
+  plate is worse than no plate. Fakturor: öppet belopp + four case counts.
+  Bevakningar: the twelve-month horizon + three state counts. Uppgifter: three
+  numerals. Dokument: sökbara sidor (pages, not files — a citation lands on a
+  page). Inkommande: att avgöra + väntar svar + inkommet.
+- **Mono measures, on every screen.** Uppgifter's numerals were Poppins while
+  Fakturor's and Bevakningar's were mono — the same widget in two typefaces, one
+  tab apart.
+- A reading appears **once**. Moving an instrument into the band means deleting
+  the paper copy below it (`.watches-counts`, `.tasks-counts`, Dokument's
+  register line, Inkommande's tab counts) — otherwise the same number is on
+  screen twice and neither is authoritative.
+- Under `max-height: 780px` the plate gives up its fixed height and drops the
+  instrument, still identically on every screen.
+
+### 2c. Geometry — three radii, three control heights, one spacing ramp
+
+The audit that prompted this found the stylesheets carrying **seven radii**
+(plus raw 9/10/11/12/14/16/20px), **thirteen control heights** (20→44px) and
+**nineteen gap values**, against a nine-step spacing scale that had been declared
+in `theme.css` and then used essentially nowhere. A scale nobody spends is a
+comment, not a system.
+
+- **Radius: `--r-sm` 8px operated / `--r-md` 12px held / `--r-lg` 18px sheets.**
+  The old names (`--radius-2xl` etc.) are aliases onto these, so 100+ existing
+  declarations inherit the correction untouched. Controls came **down from
+  18px** — an 18px corner on a 32px button is 56% of its own height, which is a
+  lozenge, and a screen of lozenges is the toy look.
+- **Height: `--h-sm` 28 / `--h-md` 36 / `--h-lg` 44**, chosen by role. `--h-md`
+  is the default for every button, input, select and filter.
+- **`<select>` is styled at the element level**, not via `.ui-select`. Fakturor's
+  four filters were bare selects that got a border from a stylesheet but never
+  `appearance: none`, so the whole filter row was drawn by the OS — four platform
+  widgets in a row inside the product's own fields. Watch for the
+  `background:` **shorthand** in component sheets: it resets `background-image`
+  and silently erases the chevron. Use `background-color`.
+- **The sidebar is paper (`#FBFAF9`), not `#FFFFFF`.** The app was running three
+  grounds at once and the coldest was the one permanently on screen. `#FFFFFF`
+  stays reserved for a document.
 
 ### 3. Masthead weight — every workspace's name is the one assertion
 
@@ -107,7 +219,7 @@ Desktop web (`brfv2-mockup/src/theme.css`) — `color-scheme: light` only. Dark 
 | Ground (papper) | `#F7F5F3` | `--papper` / `--background` | Warm, never pure white |
 | Surface steps | `#FBFAF9` / `#F7F5F3` / `#EFECE8` | `--surface-1..3` | Quiet section / inset / pressed |
 | Raised field / card | `#FFFFFF` | `--field` / `--card` | Inputs and cards lift off paper |
-| Sidebar | `#FFFFFF` | `--sidebar` | Raised vs workspace paper |
+| Sidebar | `#FBFAF9` | `--sidebar` | Paper, not white — see §2c; `#FFFFFF` is reserved for a document |
 | Ink | `#37322F` | `--ink` / `--foreground` | Never `#000`; now also used as a **panel ground** in first-moment split screens (login, chat empty state), not just as text |
 | Ink muted / subtle | `#605A57` / `#6F6A66` | `--ink-muted` / `--ink-subtle` | Secondary / meta |
 | Border / strong / input | `#E4E0DC` / `#CDC7C1` / `#DAD5D0` | `--border*` / `--input` | Warm greys |
@@ -234,6 +346,8 @@ Canonical primitives live in **`theme.css`** (`.ui-btn`, `.ui-input`, `.ui-badge
 Resolved 2026-08-08 (unified-system pass): dual button CSS (`.primary-action-btn*` deleted, design-locked), breakpoint sprawl (four locked widths), the 3px focus glow (one ring, token deleted), serif/sans split on desktop (sans-first), ad-hoc empty states (one `EmptyState` pattern).
 
 Resolved 2026-08-08 (signature pass, later same day): TraffMark shipping invisibly at 22px with no motion (now animated, used at hero scale); six different Lucide icons across empty states (now one ring glyph, `EmptyState.jsx`'s `icon` prop removed entirely); `.page-title` inconsistent across workspaces — Uppgifter had no class at all, the other three were 400-weight 30px against `Fråga dokumenten`'s always-600 title (all five now match); login and the chat empty state read as "a card in a void" (now the split-panel pattern); demo credentials hidden behind `import.meta.env.DEV` in a pilot build whose own premise (`DEMO.md`) is running without a developer present (hint now unconditional).
+
+Resolved 2026-08-08 (consistency pass, evening, found by live-screenshotting the four working screens the signature pass didn't touch — `brfv2-mockup/src/visual-{bevakningar,uppgifter,inkommande}.jsx`, new harnesses mounting the real components rather than a hand-copied shell): Inkommande's tab switcher carried no masthead weight at all and jumped straight into "Ingen brevlåda är ansluten" with no framing sentence — every other workspace opens with one (`Integrations.jsx`/`.css`, tab type now matches `.page-title` at 2.125rem, added `.integrations-header-text` + subcopy). Uppgifter's instrument row (`.tasks-counts dd`) rendered its numbers at `--text-lg` (17px), a full step under the identical pattern on Fakturor's `.invoices-counts dd` (1.5rem) — same shape, quieter for no reason tied to its own content (now matches). Bevakningar had no instrument row at all, only a plain mono sentence (`.watches-summary`) — it now gets the same four-figure row (`.watches-counts`: Bevakas / Förslag / Försenat / Odaterat) Fakturor and Uppgifter both have, with the plain sentence demoted to a caption (`.watches-today`) above it.
 
 Remaining:
 

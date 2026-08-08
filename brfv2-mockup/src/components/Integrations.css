@@ -43,20 +43,19 @@
   min-height: 0;
 }
 
-.integrations-header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-  margin-bottom: 14px;
-}
+/* Layout comes from the shared masthead grid in App.css. */
+.integrations-header { margin-bottom: var(--s5); }
+
+.integrations-header-text { display: flex; flex-direction: column; gap: var(--s1); }
 
 /* The two panes are sections of one workspace, so their switch is set like
-   section titles rather than a pill group: the serif states which desk is
-   open, the underline is ink — the only emphasis on paper that claims
+   section titles rather than a pill group: the display face states which desk
+   is open, the underline is ink — the only emphasis on paper that claims
    nothing. The lucide glyphs in the markup stay for structure but the type
-   carries this alone. */
+   carries this alone. Sized to match `.page-title` (34px/600, App.css) so
+   Inkommande's own name reads with the same weight every other workspace's
+   masthead carries — it is a masthead that happens to also be a switch, not a
+   smaller thing standing in for one. */
 .integrations-tabs { display: inline-flex; align-items: baseline; gap: 26px; }
 
 .integrations-tabs button {
@@ -69,9 +68,9 @@
   background: transparent;
   color: var(--ink-subtle);
   font-family: var(--font-display);
-  font-size: var(--text-2xl);
+  font-size: 2.125rem;
   font-weight: 600;
-  letter-spacing: -0.015em;
+  letter-spacing: -0.02em;
   line-height: 1.1;
   white-space: nowrap;
   cursor: pointer;

@@ -1093,35 +1093,56 @@ function App() {
             )}
 
             {currentTab === 'docs' && (
-              <div className="tab-content docs-overview" style={{ maxWidth: '1200px' }}>
+              <div className="tab-content docs-overview">
                 <header className="page-header">
                   <div className="page-header-text">
                     <h2 className="page-title">Dokument</h2>
                     <p className="page-header-sub">
-                      {activeBrfName ? `Dokument för ${activeBrfName}.` : 'Hantera dokument.'}
-                      {' '}Allt som ligger här kan sökas, citeras och öppnas på rätt sida.
+                      Sökbart, citerbart, öppnas på rätt sida.
                     </p>
                   </div>
-                  {isAdmin && (
-                    <>
-                      <input
-                        ref={uploadInputRef}
-                        type="file"
-                        accept="application/pdf"
-                        style={{ display: 'none' }}
-                        onChange={(e) => executeUpload(e.target.files?.[0] || null)}
-                      />
-                      <button
-                        className="ui-btn ui-btn--primary desktop-only"
-                        onClick={() => uploadInputRef.current?.click()}
-                        disabled={!!uploadState}
-                        title="Ladda upp ett nytt PDF-dokument"
-                      >
-                        {uploadState ? <Loader2 size={16} className="spin" /> : <Upload size={16} />}
-                        {uploadState ? 'Laddar upp…' : 'Ladda upp dokument'}
-                      </button>
-                    </>
-                  )}
+                  <div className="page-header-actions">
+                    {isAdmin && (
+                      <>
+                        <input
+                          ref={uploadInputRef}
+                          type="file"
+                          accept="application/pdf"
+                          style={{ display: 'none' }}
+                          onChange={(e) => executeUpload(e.target.files?.[0] || null)}
+                        />
+                        <button
+                          className="ui-btn ui-btn--primary desktop-only"
+                          onClick={() => uploadInputRef.current?.click()}
+                          disabled={!!uploadState}
+                          title="Ladda upp ett nytt PDF-dokument"
+                        >
+                          {uploadState ? <Loader2 size={16} className="spin" /> : <Upload size={16} />}
+                          {uploadState ? 'Laddar upp…' : 'Ladda upp dokument'}
+                        </button>
+                      </>
+                    )}
+                  </div>
+
+                  {/* Dokument's instrument is the archive itself: how much of
+                      the association is answerable. Pages, not files, is the
+                      honest figure — a citation lands on a page, and a
+                      three-page contract is not the same asset as a
+                      ninety-page annual report. It reads at zero, like every
+                      other band on the product. */}
+                  <div className="page-header-instrument">
+                    <div className="invoices-ledger">
+                      <div className="invoices-ledger-figure">
+                        <span className="ledger-label">Sökbara sidor</span>
+                        <span className="ledger-amount">
+                          {documents.reduce((sum, d) => sum + (d.pages || 0), 0)}
+                        </span>
+                      </div>
+                      <dl className="watches-standing">
+                        <div><dt>Dokument</dt><dd>{documents.length}</dd></div>
+                      </dl>
+                    </div>
+                  </div>
                 </header>
 
                 {uploadState && (
@@ -1158,13 +1179,12 @@ function App() {
                       </button>
                     )}
                   </div>
-                  {/* The corpus, said as a measurement — and, under a filter,
-                      the measurement of what the filter left. */}
-                  {!documentsLoading && !documentsError && documents.length > 0 && (
+                  {/* The archive's own measure now stands in the band, so this
+                      line only reports what a filter has left — otherwise the
+                      same two numbers were on screen twice, 90px apart. */}
+                  {!documentsLoading && !documentsError && docsSearchQuery && (
                     <p className="docs-register-count" aria-live="polite">
-                      {docsSearchQuery
-                        ? `${filteredDocs.length} av ${documents.length} dokument`
-                        : `${documents.length} dokument · ${documents.reduce((sum, d) => sum + (d.pages || 0), 0)} sökbara sidor`}
+                      {`${filteredDocs.length} av ${documents.length} dokument`}
                     </p>
                   )}
                 </div>

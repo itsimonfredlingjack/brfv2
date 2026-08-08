@@ -13,20 +13,24 @@
  * keeps red for the one thing red means here: the machinery failed, or is
  * about to destroy something (theme.css, --avbrott). */
 
+/* See Watches.css: the register cap sits on the children so the band above
+   them can reach both edges of the workspace. */
+/* See Watches.css: no auto side margins on a column-flex child. */
 .tasks {
-  max-width: 1040px;
-  margin: 0 auto;
-  padding: 0 4px 48px;
+  padding: 0 0 var(--s8);
 }
 
-.tasks-header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  flex-wrap: wrap;
-  margin-bottom: 18px;
+/* See Watches.css — left-aligned to the gutter so the rows and the band's
+   title share one edge. */
+.tasks > *:not(.page-header) {
+  max-width: var(--measure);
+  margin-inline: 0;
 }
+
+/* The band's own layout is the shared grid in App.css. This block used to
+   redeclare it as a flex row, which is why Uppgifter needed `order` and
+   `margin-left: auto` patches that no other screen had. */
+.tasks-header { margin-bottom: var(--s5); }
 
 .tasks-header h2 {
   margin: 0 0 6px;
@@ -53,11 +57,11 @@
 .tasks-refresh {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  height: 32px;
-  padding: 0 13px;
+  gap: var(--s2);
+  height: var(--h-md);
+  padding: 0 var(--s3);
   border: 1px solid var(--input);
-  border-radius: var(--radius-2xl);
+  border-radius: var(--r-sm);
   background: var(--field);
   color: var(--foreground);
   font-size: var(--text-base);
@@ -104,52 +108,6 @@
   color: var(--muted-foreground);
   font-size: var(--text-base);
 }
-
-/* --- the three numbers: a counter line, not a dashboard --- */
-
-.tasks-counts {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 0;
-  margin: 0 0 12px;
-  padding: 12px 4px;
-  border-top: 1px solid var(--border-strong);
-  border-bottom: 1px solid var(--border);
-}
-
-.tasks-counts > div {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  padding: 0 26px;
-  border-right: 1px solid var(--border);
-}
-
-.tasks-counts > div:last-child { border-right: none; }
-.tasks-counts > div:first-child { padding-left: 4px; }
-
-.tasks-counts dt {
-  color: var(--muted-foreground); /* contrast rule: <12px mono needs 6.2:1 */
-  font-family: var(--font-mono);
-  font-size: 0.6875rem;
-  font-weight: 500;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.tasks-counts dd {
-  margin: 0;
-  color: var(--foreground);
-  font-size: var(--text-lg);
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
-}
-
-/* Work nobody is named for, and work whose date has passed: emphasised by an
-   ink rule under the number, because both are counts rather than claims. */
-.tasks-counts > div.flagged dd { width: fit-content; box-shadow: inset 0 -2px 0 var(--ink); }
 
 .tasks-summary {
   margin: 0 0 24px;

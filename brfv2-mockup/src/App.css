@@ -37,18 +37,23 @@
 }
 
 /* ---- scope strip ---- */
+/* Chrome, set like chrome. This was a white strip with body-size prose running
+   the full width above both the sidebar and the workspace — the first thing on
+   screen, in the brightest surface the product owns, saying something no one
+   acts on. It is scope information about the build, so it takes the quiet
+   surface and the measuring cut and stops competing with the masthead. */
 .mock-banner-compact {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 10px;
+  gap: var(--s3);
   flex-shrink: 0;
-  padding: 7px 16px;
-  background: var(--card);
+  padding: var(--s2) var(--s4);
+  background: var(--surface-2);
   border-bottom: 1px solid var(--border);
   color: var(--muted-foreground);
-  font-size: var(--text-sm);
-  line-height: 1.45;
+  font-size: var(--text-xs);
+  line-height: 1.5;
   z-index: 100;
 }
 
@@ -401,18 +406,387 @@
 /* Page furniture                                                            */
 /* ========================================================================= */
 
+/* The masthead band. Every working screen used to open the same way — a title,
+   a grey line of subcopy, then a row of small numbers on the same paper as
+   everything under it. Nothing announced which screen you were on; the screens
+   were told apart by reading, not by looking. The band is the fix: ink, full
+   width, edge to edge, carrying the screen's name at real scale.
+
+   It is deliberately NOT login's split panel. Login is a vertical 40/60 of ink
+   beside paper because it opens on nothing; a working screen opens on a
+   register, so the boldness runs horizontally across the top and hands the
+   whole page below it back to the paper system, untouched.
+
+   Load-bearing: this reads at zero data. An empty association sees the same
+   ink band as a full one — the identity of the screen is not paid for by rows
+   it may not have. That was the flaw in every earlier pass, whose new elements
+   were gated behind counts and rendered nothing on an empty tenant. */
+/* The plate is a grid, not a flex row, and it is one fixed height on every
+   workspace. Both of those are corrections.
+
+   Flex was the reason each screen needed its own patch: Bevakningar and
+   Uppgifter had to set `order: 1` on their instrument and `margin-left: auto`
+   on their buttons to stop the actions wrapping onto a third line, Fakturor
+   nested a second flex row inside the first to get the same arrangement a
+   different way, and the three ended up with the same layout expressed three
+   times. A grid with named areas states the arrangement once: title left,
+   actions right, instrument across the foot. Nothing has to be told to get out
+   of anything else's way.
+
+   The fixed height is what makes the app feel like one surface. Measured
+   before this pass the band was 149/277/290/292/149px across five screens, so
+   changing tab resized the biggest element on screen and shifted every row
+   below it. Now the frame holds still and only what is inside it changes. */
 .page-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto 1fr;
+  grid-template-areas:
+    "title actions"
+    "instrument instrument";
+  column-gap: var(--s6);
+  row-gap: var(--s6);
+  height: var(--band-h);
+  margin: -24px -28px var(--s6);
+  padding: var(--s8) var(--gutter) var(--s6);
+  background: var(--ink);
+  color: var(--papper);
+}
+
+/* On a short window the plate would eat the register it heads. It gives up its
+   fixed height before the work does — still identical across screens, just
+   smaller, and the instrument is the part that goes. */
+@media (max-height: 780px) {
+  .page-header { height: auto; min-height: 0; }
+  .page-header-instrument { display: none; }
+}
+
+.page-header-text,
+.integrations-header-text { grid-area: title; align-self: start; min-width: 0; }
+
+/* Every band's controls, in one place, on one line with the title's cap. */
+.page-header-actions {
+  grid-area: actions;
+  align-self: start;
+  display: flex;
+  align-items: center;
+  gap: var(--s2);
+  padding-top: 6px;
+}
+
+/* The instrument sits on the floor of the plate, whatever its height, so the
+   readings across the five screens share a baseline instead of each one
+   floating wherever its own content left it. */
+.page-header-instrument {
+  grid-area: instrument;
+  align-self: end;
+  min-width: 0;
+}
+
+.page-header .page-title { color: var(--papper); font-size: 2.75rem; }
+
+/* One sentence, one line, held well short of the band's width. The bands were
+   carrying four-line explanations, which is what made every screen read as a
+   brochure instead of an instrument. Anything that needs a paragraph belongs
+   below the band, or nowhere. */
+.page-header .page-header-sub {
+  color: rgb(247 245 243 / 0.68);
+  font-size: 0.9375rem;
+  max-width: 76ch;
+  margin-top: 2px;
+}
+
+.page-header .page-header-count { color: rgb(247 245 243 / 0.5); }
+
+/* Dokument used to carry its measure as an inline `maxWidth: 1200`, which
+   boxed its band in while every other workspace's ran edge to edge. Same
+   arrangement as the registers now: root stretches, children hold the
+   measure. */
+.docs-overview > *:not(.page-header) {
+  max-width: var(--measure);
+  margin-inline: 0;
+  width: 100%;
+}
+
+/* Chrome sitting on ink, with a hierarchy the previous pass didn't have:
+   every control was the same outlined pill, so nothing read as *the* action
+   and "Ladda upp dokument" looked like an afterthought rather than the point
+   of the screen. Exactly one primary per band — paper filled, ink lettering —
+   and everything else is a hairline ghost that stays out of the title's way. */
+/* Geometry, not just colour. Each workspace's toolbar button carried its own
+   height, padding, radius and border in its own stylesheet — `.watches-scan`,
+   `.tasks-refresh`, `.invoices-read-in-btn` were three copies of one control
+   that had already drifted to 32px/13px/18px against 36px/12px/10px elsewhere.
+   The band states the control once and the component classes only name what
+   the button is for. */
+.page-header-actions button,
+.page-header button {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s2);
+  height: var(--h-md);
+  padding: 0 var(--s3);
+  background: transparent;
+  border: 1px solid rgb(247 245 243 / 0.2);
+  border-radius: var(--r-sm);
+  color: rgb(247 245 243 / 0.82);
+  font-family: inherit;
+  font-size: var(--text-sm);
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+}
+
+.page-header button:hover:not(:disabled) {
+  background: rgb(247 245 243 / 0.08);
+  border-color: rgb(247 245 243 / 0.42);
+  color: var(--papper);
+}
+
+/* The one action the screen exists to offer. */
+.page-header .ui-btn--primary,
+.page-header .invoices-read-in-btn,
+.page-header .watches-scan {
+  background: var(--papper);
+  border-color: var(--papper);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.page-header .ui-btn--primary:hover:not(:disabled),
+.page-header .invoices-read-in-btn:hover:not(:disabled),
+.page-header .watches-scan:hover:not(:disabled) {
+  background: #fff;
+  border-color: #fff;
+  color: var(--ink);
+}
+
+.page-header button:disabled { opacity: 0.4; }
+
+.page-header button:focus-visible {
+  outline: 2px solid var(--papper);
+  outline-offset: 2px;
+}
+
+/* Uppgifter writes its subcopy as `.muted`, not `.page-header-sub` — same
+   sentence, older class. It needs the paper-on-ink treatment too or it drops
+   to unreadable grey inside the band. */
+.page-header .muted { color: rgb(247 245 243 / 0.72); }
+
+/* Inkommande is the one screen whose masthead is a tablist rather than a
+   title, so its two tabs ARE the name of the screen and have to carry the
+   title's weight. Boxed outlines would read as toolbar chrome; instead the
+   selected tab is paper at masthead scale and the unselected one recedes —
+   the switch reads as two names, one of which is currently true. */
+.page-header .integrations-tabs { gap: 22px; }
+
+.page-header .integrations-tabs button {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  height: auto;
+  padding: 0;
+  gap: 0;
+  font-family: var(--font-display);
+  font-size: 2.75rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: rgb(247 245 243 / 0.38);
+}
+
+.page-header .integrations-tabs button svg { display: none; }
+
+.page-header .integrations-tabs button.active { color: var(--papper); }
+
+.page-header .integrations-tabs button:hover:not(:disabled) {
+  background: transparent;
+  border: none;
+  color: rgb(247 245 243 / 0.7);
+}
+
+.page-header .integrations-tabs button.active:hover { color: var(--papper); }
+
+/* ---- Per-screen instruments inside the band -----------------------------
+   The band is shared so the workspaces read as one product; what it *carries*
+   is not, because the screens do not answer the same question. Fakturor is
+   asked for money, Bevakningar for time, Uppgifter for who owes what. Each
+   band therefore holds that screen's own measure at display scale, and each
+   one is drawn from a value that exists at zero. */
+
+.invoices-tagline { color: rgb(247 245 243 / 0.72); font-size: var(--text-base); line-height: 1.6; }
+
+/* The faceplate rule. Each band's reading sits on a hairline, so "below this
+   line is a measurement" is stated once, structurally, and holds across every
+   instrument instead of each screen inventing its own spacing. It is on the
+   grid area rather than on the individual instruments, so a screen gets the
+   rule by being a workspace — not by remembering to ask for it. */
+.page-header-instrument {
+  border-top: 1px solid rgb(247 245 243 / 0.13);
+  padding-top: var(--s6);
+}
+
+/* Fakturor — the ledger figure. */
+.invoices-ledger {
   display: flex;
   align-items: flex-end;
-  justify-content: space-between;
-  gap: 16px;
-  margin-bottom: 20px;
+  gap: var(--s14);
+  width: 100%;
+  flex-wrap: wrap;
+}
+
+/* Three or more readings are a scale, so they earn the width and spread to the
+   far edge. One or two are a footnote to the big figure and stay beside it —
+   pinning a single count to the opposite side of a 1200px plate reads as a
+   layout accident, which is exactly what Dokument's lone "5" looked like. */
+.invoices-ledger > dl:has(> :nth-child(3)) { margin-left: auto; }
+
+.invoices-ledger-figure { display: flex; flex-direction: column; gap: var(--s2); }
+
+/* One caption style for every reading on the plate. This rule was written out
+   three times — once for the ledger's label, once for its counts, once for
+   Uppgifter's — with the same six declarations each time, which is how they
+   drift apart. Stated once against the grid area, they cannot. */
+.page-header-instrument .ledger-label,
+.page-header-instrument dt {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(247 245 243 / 0.5);
+}
+
+/* The one number the board came for, at a scale nothing else competes with. */
+.ledger-amount {
+  font-family: var(--font-mono);
+  font-size: 3.25rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--papper);
+}
+
+.invoices-ledger-counts { display: flex; gap: var(--s8); margin: 0; padding-bottom: var(--s1); }
+
+.invoices-ledger-counts > div { display: flex; flex-direction: column; gap: var(--s2); }
+
+.invoices-ledger-counts dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--papper);
+}
+
+/* Lateness still refuses red — it underlines instead, in paper on ink. */
+.invoices-ledger-counts dd.attention {
+  width: fit-content;
+  box-shadow: inset 0 -2px 0 var(--papper);
+}
+
+/* Uppgifter — three numerals for owned, slipped, unowned. */
+/* An empty Uppgifter offered the same action twice — a loose "Ny uppgift"
+   button and, 40px below it, the empty state's "Skapa första uppgiften". The
+   empty state is the better invitation, so while there is nothing to list the
+   loose button steps aside; it returns the moment its panel is open (the empty
+   state's action clicks it) or the moment there is a list to sit above. */
+.tasks.has-no-active .tasks-new:has(.task-create:not(.open)) { display: none; }
+
+.tasks-standing { display: flex; gap: var(--s14); margin: 0; }
+
+.tasks-standing > div { display: flex; flex-direction: column; gap: var(--s2); }
+
+/* Uppgifter's numerals were set in Poppins while Fakturor's and Bevakningar's
+   were set in mono — the same widget, in two typefaces, one tab apart. Mono is
+   the right one and the identity already says so: mono measures. */
+.tasks-standing dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 3.25rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--papper);
+}
+
+.tasks-standing > div.flagged dd {
+  width: fit-content;
+  box-shadow: inset 0 -3px 0 var(--papper);
+}
+
+/* Bevakningar — the horizon, inverted onto ink. Same twelve-month shape the
+   paper version had; only the grounds swap, so the instrument stays one
+   thing rather than becoming a second chart with its own rules. */
+/* Chart left, counts right — the same faceplate arrangement Fakturor uses, so
+   the two registers read as one instrument family rather than two ideas. */
+.watches-instrument {
+  display: flex;
+  align-items: flex-end;
+  gap: var(--s10);
+}
+
+.page-header .watches-horizon { margin: 0; flex: 1; min-width: 0; }
+
+.watches-standing { display: flex; gap: var(--s8); margin: 0; padding-bottom: var(--s1); }
+
+.watches-standing > div { display: flex; flex-direction: column; gap: var(--s2); }
+
+.watches-standing dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--papper);
+}
+
+/* Lateness refuses red on ink, on every screen that reports it: it underlines
+   in paper instead. */
+.watches-standing > div.flagged dd,
+.tasks-standing > div.flagged dd,
+.invoices-ledger-counts dd.attention {
+  width: fit-content;
+  box-shadow: inset 0 -2px 0 var(--papper);
+}
+
+.page-header .horizon-strip { border-bottom-color: rgb(247 245 243 / 0.22); }
+
+.page-header .horizon-now { border-right-color: rgb(247 245 243 / 0.22); }
+
+.page-header .horizon-bar { background: rgb(247 245 243 / 0.16); }
+
+.page-header .horizon-cell.loaded .horizon-bar { background: rgb(247 245 243 / 0.55); }
+
+.page-header .horizon-now.loaded .horizon-bar { background: var(--papper); }
+
+.page-header .horizon-count { color: var(--papper); }
+
+.page-header .horizon-label { color: rgb(247 245 243 / 0.5); }
+
+.page-header .horizon-now .horizon-label { color: var(--papper); }
+
+.page-header .horizon-now.overdue .horizon-count { box-shadow: inset 0 -2px 0 var(--papper); }
+
+.page-header .tab-count {
+  font-family: var(--font-mono);
+  font-size: 13px;
+  font-weight: 400;
+  vertical-align: super;
+  margin-left: 6px;
+  color: rgb(247 245 243 / 0.5);
 }
 
 /* Chrome on paper: when the header sits outside the sheet it belongs to the
    window, not to the article — closer to the content, no card padding. */
 .page-header.is-on-paper {
-  margin: -2px 4px 14px;
+  margin: -24px -28px 18px;
 }
 
 .page-header-text { display: flex; flex-direction: column; gap: 5px; }

@@ -206,7 +206,13 @@
   --primary-hover: #262220;
   --primary-foreground: #FFFFFF;
 
-  --sidebar: #FFFFFF;
+  /* The frame is paper, not white. The workspace ran three grounds at once —
+     an ink masthead, a warm paper canvas and a pure-white sidebar down the
+     left — and the coldest of the three was the one permanently on screen. The
+     identity reserves #FFFFFF for one thing: a document. A navigation column
+     is not a document, so it joins the paper and the app reads as two
+     materials instead of three. */
+  --sidebar: #FBFAF9;
   --sidebar-foreground: var(--ink);
   --sidebar-accent: var(--surface-3);
   --sidebar-accent-foreground: var(--ink);
@@ -277,19 +283,41 @@
   --brand-soft: #EFECE8;
   --brand-border: #CDC7C1;
 
-  /* ---- geometry: the signature ---- */
-  --radius: 0.625rem;
-  --radius-sm: calc(var(--radius) - 4px);   /*  6px */
-  --radius-md: calc(var(--radius) - 2px);   /*  8px */
-  --radius-lg: var(--radius);               /* 10px */
-  --radius-xl: calc(var(--radius) + 4px);   /* 14px */
-  --radius-2xl: calc(var(--radius) + 8px);  /* 18px — controls */
-  --radius-3xl: calc(var(--radius) + 14px); /* 24px — cards */
+  /* ---- geometry: three radii, and only three ------------------------------
+   *
+   * There were seven. `--radius-2xl` (18px) shaped 59 controls, `--radius-3xl`
+   * (24px) shaped 12 cards, and beside them the stylesheets carried raw 9px,
+   * 10px, 11px, 12px, 14px, 16px and 20px corners that nobody chose twice. The
+   * effect was not variety, it was noise: two buttons on adjacent screens were
+   * rounded differently for no reason a reader could name, and they read as two
+   * products.
+   *
+   * The values themselves were also wrong for what this is. An 18px corner on a
+   * 32px-tall button is 56% of its own height — that is a lozenge, not a
+   * control, and a screen full of lozenges is what "lekstuga" means. An
+   * instrument has tight corners. So: 8px on anything you operate, 12px on
+   * anything that holds content, 18px kept for the few large sheets where a
+   * soft edge still reads as paper rather than as a toy.
+   *
+   * The old names stay as aliases so 100+ existing declarations inherit the
+   * correction without being touched — and so the next stylesheet that reaches
+   * for `--radius-2xl` gets the right answer instead of the old one. */
+  --r-sm: 8px;    /* operated: buttons, inputs, chips, rows */
+  --r-md: 12px;   /* held: cards, panels, empty states */
+  --r-lg: 18px;   /* sheets and modals only */
   --radius-pill: 999px;
+
+  --radius: var(--r-sm);
+  --radius-sm: 6px;
+  --radius-md: var(--r-sm);
+  --radius-lg: var(--r-sm);
+  --radius-xl: var(--r-md);
+  --radius-2xl: var(--r-sm);   /* was 18px — see above */
+  --radius-3xl: var(--r-md);   /* was 24px */
   /* Multi-line content — prose, a quote, a textarea, a tall prompt button — is
      not a control and must not be shaped like one. A 64px-tall pill is what
      makes an operational screen read as a toy. */
-  --radius-block: 0.75rem;                  /* 12px */
+  --radius-block: var(--r-md);
 
   --shadow-xs: 0 1px 2px 0 rgb(55 50 47 / 0.05);
   --shadow-sm: 0 1px 3px 0 rgb(55 50 47 / 0.07), 0 1px 2px -1px rgb(55 50 47 / 0.06);
@@ -314,10 +342,28 @@
   --font-serif: var(--font-sans); /* deprecated — kept so stale references degrade to sans */
   --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 
-  /* ---- one control size, one radius, one spacing scale ---- */
-  --h-control: 2.25rem;   /* 36px — buttons, inputs, segmented filters */
-  --r-control: 0.625rem;  /* 10px */
-  --r-card: 0.875rem;     /* 14px */
+  /* ---- three control heights, and only three -------------------------------
+   *
+   * The stylesheets carried thirteen: 20, 22, 24, 26, 28, 30, 32, 34, 36, 38,
+   * 40, 42 and 44px. `--h-control` was declared here to be the one answer and
+   * was then used exactly once. Thirteen heights is why a toolbar never sits on
+   * a line — every row is a fraction off the one above it, and the eye reads
+   * that as carelessness long before it can point at the cause.
+   *
+   * Three, chosen by role rather than by look: something you press inside a
+   * dense row, something you press in a toolbar, something you press when the
+   * screen has nothing else to offer. */
+  --h-sm: 28px;   /* inline: chips, table-row actions, tag toggles */
+  --h-md: 36px;   /* the default: buttons, inputs, selects, filters */
+  --h-lg: 44px;   /* the one action on an empty screen; login */
+  --h-control: var(--h-md);
+  --r-control: var(--r-sm);
+  --r-card: var(--r-md);
+
+  /* The spacing ramp. This existed already and went unused — the audit found
+     nineteen distinct gap values in the components (2,3,4,5,6,7,8,9,10,11,12,
+     14,16,18,20,22,24,40,48) against a nine-step scale sitting right here. A
+     scale nobody spends is not a system, it is a comment. */
   --s1: 0.25rem;  /* 4px  */
   --s2: 0.5rem;   /* 8px  */
   --s3: 0.75rem;  /* 12px */
@@ -327,6 +373,20 @@
   --s8: 2rem;     /* 32px */
   --s10: 2.5rem;  /* 40px */
   --s14: 3.5rem;  /* 56px */
+
+  /* ---- the masthead plate ----
+   * One height, on every workspace. Measured across the five screens before
+   * this pass the ink band was 149, 277, 290, 292 and 149px tall, so moving
+   * between tabs resized the largest element on screen by up to 143px and the
+   * whole page below it jumped. A plate that changes size is not a plate.
+   * What varies between screens is the instrument it carries, never the frame
+   * around it. */
+  --band-h: 268px;
+  /* The type column. The band's title and everything underneath it hang off
+     one left edge — previously 288px on two screens and 366px on two others,
+     which is the misalignment that reads as amateurish without being nameable. */
+  --gutter: 28px;
+  --measure: 1200px;
 
   /* §07 puts the sans between 12 and 17px. The first pass lived at the floor
      of that range and set almost everything at 13–14, which is why the screen
@@ -686,10 +746,10 @@ code, pre, kbd, samp { font-family: var(--font-mono); }
 .ui-textarea {
   width: 100%;
   min-width: 0;
-  height: 32px;
-  padding: 0 12px;
+  height: var(--h-md);
+  padding: 0 var(--s3);
   border: 1px solid var(--input);
-  border-radius: var(--radius-2xl);
+  border-radius: var(--r-sm);
   background: transparent;
   color: var(--foreground);
   font-size: var(--text-base);
@@ -728,12 +788,23 @@ code, pre, kbd, samp { font-family: var(--font-mono); }
 select, input, textarea { color-scheme: light; }
 select option { background: #FFFFFF; color: var(--ink); }
 
+/* The chevron and the suppressed platform widget belong to `select`, not to a
+   class a screen has to remember. Fakturor's four filters were bare `<select>`
+   elements — they got the border and the radius from a stylesheet but never
+   `appearance: none`, so the queue's whole filter row was drawn by the OS: a
+   different height, a different corner and a system arrow sitting inside the
+   product's own field. Four platform widgets in a row is the single loudest
+   way an application announces it is not native to itself.
+
+   Element-level, so a select is right by existing. `.ui-select` stays as an
+   alias for the markup that already asks for it by name. */
+select,
 .ui-select {
   appearance: none;
   padding-right: 30px;
   background-image: linear-gradient(45deg, transparent 50%, var(--muted-foreground) 50%),
                     linear-gradient(135deg, var(--muted-foreground) 50%, transparent 50%);
-  background-position: calc(100% - 15px) 14px, calc(100% - 11px) 14px;
+  background-position: calc(100% - 15px) calc(50% + 1px), calc(100% - 11px) calc(50% + 1px);
   background-size: 4px 4px, 4px 4px;
   background-repeat: no-repeat;
   cursor: pointer;

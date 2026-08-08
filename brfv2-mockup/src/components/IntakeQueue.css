@@ -116,11 +116,11 @@
 .intake .import-button {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  height: 32px;
-  padding: 0 12px;
+  gap: var(--s2);
+  height: var(--h-md);
+  padding: 0 var(--s3);
   border: 1px solid var(--input);
-  border-radius: var(--radius-2xl);
+  border-radius: var(--r-sm);
   background: var(--field);
   color: var(--foreground);
   font-size: var(--text-base);
@@ -153,11 +153,11 @@
 .fetch-button {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  height: 32px;
-  padding: 0 12px;
+  gap: var(--s2);
+  height: var(--h-md);
+  padding: 0 var(--s3);
   border: 1px solid var(--input);
-  border-radius: var(--radius-2xl);
+  border-radius: var(--r-sm);
   background: var(--field);
   color: var(--foreground);
   font-size: var(--text-base);
@@ -196,13 +196,21 @@
 
 /* ---------- toolbar ---------- */
 
+/* The band above this row now states the queue's standing — att avgöra, väntar
+   svar, inkommet — at instrument scale. Repeating the same three numbers on the
+   filter chips 180px below said everything twice and made neither the
+   authoritative reading. The chips keep their job, which is switching the view;
+   the numbers keep theirs, which is being read. The `.sr-only` copy stays, so a
+   screen reader still hears the count where it is the only way to get it. */
+.intake-counts .ui-count { display: none; }
+
 .intake-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
   width: 100%;
-  gap: 16px;
-  margin-bottom: 12px;
+  gap: var(--s4);
+  margin-bottom: var(--s3);
   flex-wrap: wrap;
 }
 

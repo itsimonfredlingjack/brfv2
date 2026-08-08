@@ -106,6 +106,68 @@ function SignalChip({ signal }) {
 }
 
 /**
+ * Granskningsläge, drawn once for the whole queue.
+ *
+ * The file header's own rule is "two statuses, never merged" — what the
+ * accounting system says about a record, and what this board decided about
+ * it, in separate columns on every row. That rule is invisible from the
+ * queue's opening view: eight table columns look like any other admin grid
+ * until you read one. This is the same fact — how far the board's own
+ * granskning has gotten — said once, as the page's own weight, in the one
+ * dimension this screen actually tracks: not time (Bevakningar's axis), not
+ * money, but *how reviewed*. Darker means further along, because a case
+ * still "Ny" carries less resolved weight than one marked "Klar" — the same
+ * "overdue is weight, not colour" rule the rest of the identity already
+ * uses, applied to progress instead of lateness. Every segment is also the
+ * filter — this is the instrument row's own "Läge" dropdown, said as a bar
+ * instead of hidden in a `<select>`.
+ */
+function ReviewComposition({ cases, labels, activeStatus, onSelect }) {
+  const segments = useMemo(() => {
+    if (!labels?.reviewStatus) return [];
+    return Object.entries(labels.reviewStatus)
+      .map(([key, label]) => ({ key, label, count: cases.filter((c) => c.review_status === key).length }))
+      .filter((s) => s.count > 0);
+  }, [cases, labels]);
+
+  const total = segments.reduce((sum, s) => sum + s.count, 0);
+  if (total === 0) return null;
+
+  return (
+    <div className="invoices-composition" aria-label="Granskningsläge, hela kön">
+      <ol className="composition-bar">
+        {segments.map((s) => (
+          <li key={s.key} className="composition-segment" style={{ flexGrow: s.count }}>
+            <button
+              type="button"
+              data-status={s.key}
+              aria-pressed={activeStatus === s.key}
+              className={activeStatus === s.key ? 'active' : ''}
+              title={`${s.label}: ${s.count} av ${total}`}
+              onClick={() => onSelect(activeStatus === s.key ? 'open' : s.key)}
+            />
+          </li>
+        ))}
+      </ol>
+      <ol className="composition-legend">
+        {segments.map((s) => (
+          <li key={s.key}>
+            <button
+              type="button"
+              className={activeStatus === s.key ? 'active' : ''}
+              onClick={() => onSelect(activeStatus === s.key ? 'open' : s.key)}
+            >
+              <span className="legend-swatch" data-status={s.key} />
+              {s.label} <strong>{s.count}</strong>
+            </button>
+          </li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+/**
  * Reading an invoice in.
  *
  * The source is named in the request and never inferred from what happens to be
@@ -367,14 +429,20 @@ export default function Invoices({ brfId, isAdmin = false, onOpenDocument, onOpe
   return (
     <div className="invoices">
       <div className="invoices-chrome">
-        <header className="invoices-topline">
-          <div className="invoices-topline-text">
+        {/* Fakturor's instrument is money. The open amount is the one number a
+            board actually asks this screen for, so it is set as a ledger figure
+            inside the band at a scale nothing else on the screen competes with,
+            with the four review counts as its footing. Rendered at zero too —
+            "0,00 SEK" is a real answer, and an association with no invoices yet
+            still gets a screen that looks built. */}
+        <header className="invoices-topline page-header">
+          <div className="page-header-text">
             <h2 className="page-title">Fakturor</h2>
             <p className="invoices-tagline">
               Ärenden att granska — inget här skrivs till ekonomisystemet.
             </p>
           </div>
-          <div className="invoices-topline-actions">
+          <div className="page-header-actions">
             {isAdmin && (
               <button type="button" className="invoices-read-in-btn" onClick={openReadIn}>
                 <Download size={14} /> Läs in
@@ -384,22 +452,37 @@ export default function Invoices({ brfId, isAdmin = false, onOpenDocument, onOpe
               <RefreshCw size={14} /> Uppdatera
             </button>
           </div>
+
+          {pane === 'queue' && (
+            <div className="page-header-instrument">
+              <div className="invoices-ledger">
+                <div className="invoices-ledger-figure">
+                  <span className="ledger-label">Öppet belopp</span>
+                  <span className="ledger-amount">{formatAmount(counts.amountOpen, 'SEK')}</span>
+                </div>
+                <dl className="invoices-ledger-counts">
+                  <div><dt>Att granska</dt><dd>{counts.open ?? 0}</dd></div>
+                  <div><dt>Med signal</dt><dd>{counts.withSignal ?? 0}</dd></div>
+                  <div><dt>Förfallna</dt><dd className={counts.overdue ? 'attention' : ''}>{counts.overdue ?? 0}</dd></div>
+                  <div><dt>Utan ansvarig</dt><dd>{counts.unassigned ?? 0}</dd></div>
+                </dl>
+              </div>
+            </div>
+          )}
         </header>
 
         <Banner tone="error" onDismiss={() => setError('')}>{error}</Banner>
         <Banner tone="ok" onDismiss={() => setNotice('')}>{notice}</Banner>
 
         {pane === 'queue' && (
-          <dl className="invoices-counts">
-            <div><dt>Att granska</dt><dd>{counts.open ?? 0}</dd></div>
-            <div><dt>Med signal</dt><dd>{counts.withSignal ?? 0}</dd></div>
-            <div><dt>Förfallna</dt><dd className={counts.overdue ? 'attention' : ''}>{counts.overdue ?? 0}</dd></div>
-            <div><dt>Utan ansvarig</dt><dd>{counts.unassigned ?? 0}</dd></div>
-            <div>
-              <dt>Öppet belopp</dt>
-              <dd>{formatAmount(counts.amountOpen, 'SEK')}</dd>
-            </div>
-          </dl>
+          <>
+          <ReviewComposition
+            cases={cases}
+            labels={labels}
+            activeStatus={statusFilter}
+            onSelect={(key) => setStatusFilter(key)}
+          />
+          </>
         )}
 
         {isAdmin && (

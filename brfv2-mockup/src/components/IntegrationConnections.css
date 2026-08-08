@@ -134,10 +134,11 @@
 
 .ic-field input,
 .ic-field select {
-  padding: 9px 11px;
-  border-radius: 9px;
+  height: var(--h-md);
+  padding: 0 var(--s3);
+  border-radius: var(--r-sm);
   border: 1px solid var(--panel-border);
-  background: var(--surface-2);
+  background-color: var(--surface-2);
   color: var(--text-primary);
   font-size: 13px;
   font-family: inherit;

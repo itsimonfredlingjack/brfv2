@@ -34,16 +34,10 @@
   flex-shrink: 0;
 }
 
-.invoices-topline {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 16px;
-}
-
-.invoices-topline-text { min-width: 0; }
-
-.invoices-topline .page-title { margin-bottom: 4px; }
+/* Layout comes from the shared masthead grid in App.css. Fakturor used to nest
+   a second flex row (`.invoices-topline-main`) inside this one to place title
+   and actions — the grid states that once, for every workspace. */
+.invoices-topline .page-title { margin-bottom: var(--s1); }
 
 .invoices-tagline {
   margin: 0;
@@ -63,11 +57,11 @@
 .invoices-read-in-btn {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  height: 32px;
-  padding: 0 12px;
+  gap: var(--s2);
+  height: var(--h-md);
+  padding: 0 var(--s3);
   border: 1px solid var(--border);
-  border-radius: var(--r-control);
+  border-radius: var(--r-sm);
   background: var(--card);
   color: var(--foreground);
   font-size: var(--text-base);
@@ -140,6 +134,82 @@
 }
 
 .invoices-counts dd.attention { box-shadow: inset 0 -3px 0 var(--ink); }
+
+/* ---- granskningsläge: the page's own weight, drawn once ---- */
+
+.invoices-composition { margin: 0 0 22px; }
+
+.composition-bar {
+  display: flex;
+  list-style: none;
+  height: 14px;
+  margin: 0 0 10px;
+  padding: 0;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--surface-2);
+}
+
+.composition-segment { display: flex; min-width: 3px; }
+
+.composition-segment button {
+  flex: 1;
+  border: none;
+  border-right: 1px solid var(--papper);
+  cursor: pointer;
+  transition: filter 0.14s ease;
+}
+
+.composition-segment:last-child button { border-right: none; }
+
+/* Darker = further along. Not a status colour, a weight — same rule as
+   overdue (theme.css §01/02): this is progress, not epistemic meaning, so it
+   never borrows the identity's reserved hues. */
+.composition-segment button[data-status='new'] { background: var(--border-strong); }
+.composition-segment button[data-status='in_review'] { background: var(--ink-subtle); }
+.composition-segment button[data-status='waiting'] { background: var(--ink-muted); }
+.composition-segment button[data-status='done'] { background: var(--ink); }
+
+.composition-segment button:hover,
+.composition-segment button.active { filter: brightness(1.12); }
+
+.composition-segment button.active { box-shadow: inset 0 0 0 2px var(--ring); }
+
+.composition-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.composition-legend button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: none;
+  background: transparent;
+  padding: 2px 0;
+  color: var(--muted-foreground);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.composition-legend button.active { color: var(--foreground); font-weight: 600; }
+.composition-legend button strong { color: var(--foreground); font-variant-numeric: tabular-nums; }
+
+.legend-swatch {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.legend-swatch[data-status='new'] { background: var(--border-strong); }
+.legend-swatch[data-status='in_review'] { background: var(--ink-subtle); }
+.legend-swatch[data-status='waiting'] { background: var(--ink-muted); }
+.legend-swatch[data-status='done'] { background: var(--ink); }
 
 /* ---- the work sheet ---- */
 
@@ -345,30 +415,41 @@
   display: flex;
   flex-wrap: wrap;
   align-items: flex-end;
-  gap: 10px;
-  padding: 12px 14px;
+  gap: var(--s3);
+  padding: var(--s3) var(--s4);
   border-bottom: 1px solid var(--border);
   background: var(--card);
 }
 
+/* Each filter is one column of the row and carries its own width, so a long
+   option ("Senaste aktivitet", "Alla signaler") cannot squeeze the control to
+   its own text and clip under the chevron — which is what the auto-width
+   `<select>` did to two of the four. */
+.invoices-filters label:has(> select) { flex: 0 1 170px; }
+
 .invoices-filters label {
   display: flex;
+  min-width: 0;
   flex-direction: column;
-  gap: 5px;
+  gap: var(--s2);
   color: var(--muted-foreground);
-  font-size: var(--text-base);
+  font-size: var(--text-sm);
   font-weight: 500;
   letter-spacing: 0;
   text-transform: none;
 }
 
+.invoices-filters label > select { width: 100%; }
+
 .invoices-filters select,
 .invoices-filters input {
-  height: 32px;
-  padding: 0 10px;
+  height: var(--h-md);
+  padding: 0 var(--s3);
   border: 1px solid var(--input);
-  border-radius: var(--radius-2xl);
-  background: var(--field);
+  border-radius: var(--r-sm);
+  /* `background-color`, not the `background` shorthand: the shorthand resets
+     background-image and silently erased the select chevron theme.css draws. */
+  background-color: var(--field);
   color: var(--foreground);
   font-size: var(--text-md);
   outline: none;
@@ -396,15 +477,15 @@
 .invoices select option { background: #FFFFFF; color: var(--foreground); }
 
 .invoices-search {
-  flex: 1 1 200px;
-  max-width: 320px;
+  flex: 1 1 240px;
+  max-width: 340px;
   flex-direction: row !important;
   align-items: center;
-  gap: 8px;
-  height: 32px;
-  padding: 0 10px;
+  gap: var(--s2);
+  height: var(--h-md);
+  padding: 0 var(--s3);
   border: 1px solid var(--input);
-  border-radius: var(--radius-2xl);
+  border-radius: var(--r-sm);
   background: var(--field);
   color: var(--muted-foreground);
 }
@@ -1130,12 +1211,19 @@
 
 .case-review-status select,
 .case-review-status input,
+.case-responsible-form input {
+  height: var(--h-md);
+}
+
+.case-review-status select,
+.case-review-status input,
 .case-responsible-form input,
 .case-comment-form textarea {
-  padding: 8px 11px;
+  padding: var(--s2) var(--s3);
   border: 1px solid var(--input);
-  border-radius: var(--radius-block);
-  background: var(--field);
+  border-radius: var(--r-sm);
+  /* `background-color`, not the shorthand — see the filter row above. */
+  background-color: var(--field);
   color: var(--foreground);
   font-family: inherit;
   font-size: var(--text-md);
