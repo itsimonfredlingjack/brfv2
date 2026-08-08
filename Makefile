@@ -1,5 +1,6 @@
 .PHONY: setup backend backend-pilot require-pilot-llm frontend mobile mobile-build mobile-test \
-        desktop-runtime desktop-build desktop-run desktop-check desktop-package desktop-install desktop-uninstall desktop-acceptance \
+        desktop-runtime desktop-build desktop-run desktop-check desktop-package desktop-install desktop-uninstall \
+        desktop-icons desktop-refresh-installed desktop-acceptance \
         invoice-acceptance intake-acceptance website-acceptance desktop-acceptance-full invoice-rules-lock \
         website-vocabulary-lock website-vocabulary-check \
         test test-isolation eval eval-b eval-fast eval-sweep \
@@ -70,6 +71,28 @@ desktop-install: desktop-runtime  ## Bygg och installera RPM:en (kräver sudo; d
 
 desktop-uninstall:  ## Avinstallera paketet (användardata under ~/.local/share lämnas kvar)
 	sudo dnf remove -y brf-dokument-ai
+
+# Rasterikoner för Tauri/RPM — källan är alltid src-tauri/icons/icon.svg.
+desktop-icons:
+	@command -v rsvg-convert >/dev/null 2>&1 || (echo "rsvg-convert saknas — sudo dnf install librsvg2-tools"; exit 1)
+	rsvg-convert -w 32 -h 32 src-tauri/icons/icon.svg -o src-tauri/icons/32x32.png
+	rsvg-convert -w 128 -h 128 src-tauri/icons/icon.svg -o src-tauri/icons/128x128.png
+	rsvg-convert -w 256 -h 256 src-tauri/icons/icon.svg -o src-tauri/icons/128x128@2x.png
+	rsvg-convert -w 512 -h 512 src-tauri/icons/icon.svg -o src-tauri/icons/icon.png
+
+# Uppdatera det installerade paketet utan RPM-bygge: nytt UI, binär och ikoner
+# till /usr/lib/Träff + ikoncachen. Kräver sudo. Efter UI-pass — inte efter varje
+# liten ändring om du kör ./src-tauri/target/release/brfv2-desktop direkt.
+desktop-refresh-installed: desktop-build desktop-icons
+	@test -d /usr/lib/Träff/ui || (echo "/usr/lib/Träff saknas — installera med make desktop-install först."; exit 1)
+	sudo install -m 0644 src-tauri/icons/32x32.png /usr/share/icons/hicolor/32x32/apps/brfv2-desktop.png
+	sudo install -m 0644 src-tauri/icons/128x128.png /usr/share/icons/hicolor/128x128/apps/brfv2-desktop.png
+	sudo install -m 0644 src-tauri/icons/128x128@2x.png /usr/share/icons/hicolor/256x256/apps/brfv2-desktop.png
+	sudo cp -a brfv2-mockup/dist/. /usr/lib/Träff/ui/
+	sudo install -m 0755 src-tauri/target/release/brfv2-desktop /usr/bin/brfv2-desktop
+	sudo gtk-update-icon-cache -f /usr/share/icons/hicolor 2>/dev/null || true
+	@if command -v kbuildsycoca6 >/dev/null 2>&1; then kbuildsycoca6 --noincremental >/dev/null 2>&1 || true; fi
+	@echo "Träff uppdaterad i /usr/lib/Träff. Starta om appen. Om menyn visar gammal ikon: logga ut/in eller ta bort och lägg till favoriten igen."
 
 # Acceptansens evidens namnges efter körningen, inte efter det ärende som råkade
 # vara öppet när skriptet skrevs. Sätt RUN_LABEL=... för att låta flera körningar
