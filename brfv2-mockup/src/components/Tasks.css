@@ -30,10 +30,10 @@
 
 .tasks-header h2 {
   margin: 0 0 6px;
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: var(--text-2xl);
-  font-weight: 400;
-  letter-spacing: -0.03em;
+  font-weight: 600;
+  letter-spacing: -0.015em;
   line-height: 1.1;
   color: var(--foreground);
 }
@@ -383,14 +383,14 @@
 
 .task-citation-approx { font-weight: 400; font-style: italic; }
 
-/* The document's own words, in the document's own voice. */
+/* The document's own words, in the document's own voice: sans italic. */
 .task-citation-quote {
   display: block;
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
   font-style: italic;
   font-size: var(--text-lg);
   line-height: 1.45;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
   color: var(--foreground);
   quotes: '»' '«';
 }

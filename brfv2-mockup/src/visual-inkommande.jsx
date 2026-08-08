@@ -294,7 +294,7 @@ function Shell() {
       <div className="main-layout">
         <aside className="sidebar">
           <div className="sidebar-brand" style={{ marginBottom: 28 }}>
-            <div style={{ fontFamily: 'var(--font-serif)', fontSize: 28, letterSpacing: '-0.03em' }}>Träff</div>
+            <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, letterSpacing: '-0.015em' }}>Träff</div>
             <div className="matt" style={{ fontSize: 11, letterSpacing: '0.08em', color: 'var(--ink-subtle)' }}>
               BRF &amp; STYRELSE
             </div>

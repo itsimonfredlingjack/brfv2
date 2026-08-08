@@ -28,17 +28,17 @@
   align-items: center;
   /* §05: the gap is the diameter of the core. */
   /* §05: the mark stands at the name's cap height — the identity's own ratio
-     is a 50px mark against 56px of Instrument Serif. */
+     is a 50px mark against 56px of display type. */
   gap: 15px;
   margin-bottom: 14px;
   color: var(--foreground);
 }
 
 .login-title {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: 2.125rem;   /* 34px */
-  font-weight: 400;
-  letter-spacing: -0.03em;
+  font-weight: 600;
+  letter-spacing: -0.015em;
   /* The diacritic belongs to the name and is never clipped (§05). */
   line-height: 1.1;
   padding-top: 0.04em;

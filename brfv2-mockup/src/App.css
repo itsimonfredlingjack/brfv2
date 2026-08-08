@@ -106,10 +106,10 @@
 }
 
 .logo-name {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: 1.5rem;
-  font-weight: 400;
-  letter-spacing: -0.03em;
+  font-weight: 600;
+  letter-spacing: -0.015em;
   /* The diacritic belongs to the name and is never clipped by a tight line
      box (§05 Diakriten Ä). */
   line-height: 1.08;
@@ -953,10 +953,10 @@ mark.search-highlight {
 }
 .chat-empty-state > .traff-mark { margin-bottom: 10px; }
 
-.chat-empty-title { font-family: var(--font-serif); font-weight: 400; font-size: 1.5rem; letter-spacing: -0.025em; line-height: 1.2; }
+.chat-empty-title { font-family: var(--font-display); font-weight: 600; font-size: 1.5rem; letter-spacing: -0.015em; line-height: 1.2; }
 .chat-empty-hint { margin-bottom: 24px; font-size: var(--text-base); color: var(--muted-foreground); }
 .chat-empty-examples { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 440px; }
-.chat-title { font-family: var(--font-serif); font-weight: 400; font-size: var(--text-2xl); letter-spacing: -0.03em; }
+.chat-title { font-family: var(--font-display); font-weight: 600; font-size: var(--text-2xl); letter-spacing: -0.015em; }
 
 .example-prompt-btn {
   padding: 11px 14px;
@@ -1033,18 +1033,17 @@ mark.search-highlight {
   color: var(--muted-foreground);
 }
 
-/* §07: the serif is what the product *asserts*. An answer is the assertion —
-   so is a refusal, which §09 says must be written "lika tydligt och lika
-   snyggt som ett svar". Both are set in Instrument Serif at the identity's
-   floor of 22px, and neither is ever set in the sans the interface explains
-   itself in. That difference is how a reader tells the product's words from
-   the interface around them. */
+/* An answer is the product's assertion — so is a refusal, which §09 says
+   must be written "lika tydligt och lika snyggt som ett svar". Sans-first:
+   the answer is Inter at reading size, one step above the interface around
+   it; what sets the product's words apart is now the sheet, the state chip
+   and the citations rather than a serif cut. */
 .chat-content--answer { padding: 15px 18px 16px; }
 .chat-content--answer .answer-body {
-  font-family: var(--font-serif);
-  font-size: 1.375rem;   /* 22px — §07's floor for the serif */
-  line-height: 1.36;
-  letter-spacing: -0.015em;
+  font-family: var(--font-sans);
+  font-size: 1.0625rem;  /* 17px — the product's voice, one step above the interface */
+  line-height: 1.6;
+  letter-spacing: 0;
   color: var(--foreground);
 }
 
@@ -1161,11 +1160,11 @@ mark.search-highlight {
 /* The document's own words, in the document's own voice: serif italic with
    quotation marks. Träff never paraphrases inside a quotation. */
 .citation-text {
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
   font-style: italic;
-  font-size: 1.375rem;
+  font-size: 1.0625rem;
   line-height: 1.42;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
   color: var(--foreground);
 }
 .citation-source {

@@ -1,13 +1,17 @@
 Fonts vendored for the Träff visual identity (see the identity document
-"Träff Visual Identity System", section 07 Typografi). All three are licensed
+"Träff Visual Identity System", section 07 Typografi). All are licensed
 under the SIL Open Font License 1.1 and are served from the application's own
 origin — the desktop shell runs under `font-src 'self'`, and a remote font
 would be both a blocked request and a third party learning every reader's IP.
 
   Instrument Sans   — Copyright (c) 2023 The Instrument Sans Project Authors
                       https://github.com/Instrument/instrument-sans
-  Instrument Serif  — Copyright (c) 2022 The Instrument Serif Project Authors
-                      https://github.com/Instrument/instrument-serif
+                      (retained for the mobile clients; desktop is sans-first
+                      on Poppins/Inter since 2026-08-08)
+  Poppins           — Copyright (c) 2020 The Poppins Project Authors
+                      https://github.com/itfoundry/Poppins
+  Inter             — Copyright (c) 2016 The Inter Project Authors
+                      https://github.com/rsms/inter
   JetBrains Mono    — Copyright (c) 2020 The JetBrains Mono Project Authors
                       https://github.com/JetBrains/JetBrainsMono
 

@@ -392,16 +392,16 @@
 
 .watch-citation-approx { font-weight: 400; font-style: italic; }
 
-/* The contract's own words, in the contract's own voice: serif italic, like
-   every quotation in the product. Below §07's 22px floor for the same reason
-   as the queue's signal quotes — a list of them must stay scannable. */
+/* The contract's own words, in the contract's own voice: sans italic, like
+   every quotation in the product — and at reading size, because a list of
+   them must stay scannable. */
 .watch-citation-quote {
   display: block;
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
   font-style: italic;
   font-size: var(--text-lg);
   line-height: 1.45;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
   color: var(--foreground);
   quotes: '»' '«';
 }

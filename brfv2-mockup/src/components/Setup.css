@@ -44,21 +44,21 @@
 }
 
 .setup-lockup-name {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: 2.25rem;   /* 36px */
-  font-weight: 400;
-  letter-spacing: -0.03em;
+  font-weight: 600;
+  letter-spacing: -0.015em;
   /* The diacritic belongs to the name and is never clipped (§05). */
   line-height: 1.1;
   padding-top: 0.04em;
 }
 
-/* §07: the serif asserts. A page title is an assertion. */
+/* A page title asserts — now in the display sans. */
 .setup-title {
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: var(--text-2xl);
-  font-weight: 400;
-  letter-spacing: -0.03em;
+  font-weight: 600;
+  letter-spacing: -0.015em;
   line-height: 1.15;
   margin-bottom: 8px;
   color: var(--foreground);

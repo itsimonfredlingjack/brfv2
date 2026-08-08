@@ -58,19 +58,53 @@
     U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
-/* The assertion. Regular and italic — the italic is what a quotation is set in,
-   because the document's words belong to the document, never to the product. */
+/* The display. Poppins sets page titles, section titles and the brand name —
+   the assertion role the serif once held, now in a geometric sans. */
 @font-face {
-  font-family: 'Instrument Serif';
-  src: url('./assets/fonts/instrument-serif-latin-400-normal.woff2') format('woff2');
+  font-family: 'Poppins';
+  src: url('./assets/fonts/poppins-500.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Poppins';
+  src: url('./assets/fonts/poppins-600.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* The interface voice. Inter for everything that explains: body, labels,
+   chrome — plus a true italic for quotations (the document's own words). */
+@font-face {
+  font-family: 'Inter';
+  src: url('./assets/fonts/inter-400.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Instrument Serif';
-  src: url('./assets/fonts/instrument-serif-latin-400-italic.woff2') format('woff2');
+  font-family: 'Inter';
+  src: url('./assets/fonts/inter-500.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('./assets/fonts/inter-600.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Inter';
+  src: url('./assets/fonts/inter-400-italic.woff2') format('woff2');
   font-weight: 400;
   font-style: italic;
   font-display: swap;
@@ -259,11 +293,33 @@
   --shadow-md: 0 4px 12px -2px rgb(55 50 47 / 0.09);
   --shadow-lg: 0 16px 40px -12px rgb(55 50 47 / 0.18);
 
-  /* ---- type: three cuts, three jobs, never mixed (§07) ---- */
-  --font-sans: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI', Cantarell,
+  /* ---- type: three cuts, three jobs, never mixed (§07) ----
+   * Sans-first since 2026-08-08: Poppins displays, Inter explains,
+   * JetBrains Mono measures. --font-serif remains as a deprecated alias
+   * pointing at the sans; Instrument Serif is no longer vendored.
+   *
+   * Contrast rule (measured, see docs/design/2026-08-08-unified-system):
+   * text below 12px must use --ink-muted (6.2:1 on paper) or darker;
+   * --ink-subtle (4.9:1) is for >=12px secondary text and decoration. */
+  --font-display: 'Poppins', 'Inter', system-ui, sans-serif;
+  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Cantarell,
     'Noto Sans', sans-serif;
-  --font-serif: 'Instrument Serif', 'Iowan Old Style', Georgia, 'Times New Roman', serif;
+  --font-serif: var(--font-sans); /* deprecated — kept so stale references degrade to sans */
   --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  /* ---- one control size, one radius, one spacing scale ---- */
+  --h-control: 2.25rem;   /* 36px — buttons, inputs, segmented filters */
+  --r-control: 0.625rem;  /* 10px */
+  --r-card: 0.875rem;     /* 14px */
+  --s1: 0.25rem;  /* 4px  */
+  --s2: 0.5rem;   /* 8px  */
+  --s3: 0.75rem;  /* 12px */
+  --s4: 1rem;     /* 16px */
+  --s5: 1.25rem;  /* 20px */
+  --s6: 1.5rem;   /* 24px */
+  --s8: 2rem;     /* 32px */
+  --s10: 2.5rem;  /* 40px */
+  --s14: 3.5rem;  /* 56px */
 
   /* §07 puts the sans between 12 and 17px. The first pass lived at the floor
      of that range and set almost everything at 13–14, which is why the screen
@@ -324,12 +380,11 @@ body {
   color: var(--foreground);
   font-family: var(--font-sans);
   font-size: var(--text-base);
-  /* Instrument Serif ships one weight. Without this, `font-weight: 600` on a
-     serif heading does not fail — the browser smears the 400 outlines into a
-     fake bold, which is why several headings looked slightly out of focus and
-     lost their tracking. Off globally: the sans and the mono carry real
-     400–700, so nothing legitimate is synthesised anyway, and a future mistake
-     now shows up as "not bold" instead of as a damaged typeface. */
+  /* Only real weights are vendored (Inter 400/500/600, Poppins 500/600,
+     JetBrains Mono variable). Without this, a typo'd weight does not fail —
+     the browser smears the nearest outline into a fake bold, which loses
+     tracking. Off globally: a future mistake shows up as "not bold" instead
+     of as a damaged typeface. */
   font-synthesis-weight: none;
   /* §07: 1.5–1.65. Light text on a near-black ground needs the upper half of
      that — the tighter setting is what made paragraphs read as a wall. */
@@ -345,10 +400,10 @@ body {
    part of the interface, and an interface label explains rather than asserts. */
 h1, h2 {
   margin: 0;
-  font-family: var(--font-serif);
-  font-weight: 400;
+  font-family: var(--font-display);
+  font-weight: 600;
   line-height: 1.12;
-  letter-spacing: -0.03em;
+  letter-spacing: -0.015em;
 }
 
 /* h3–h6 label parts of the interface rather than assert anything, so they stay
@@ -405,14 +460,14 @@ h3, h4, h5, h6 {
    thing on paper and the only emphasis that claims nothing. */
 .rule-overdue { box-shadow: inset 3px 0 0 var(--ink); }
 
-/* A quotation is the document speaking. Serif italic, and never paraphrased
+/* A quotation is the document speaking. Sans italic, and never paraphrased
    inside the quotation marks (§09 Röst). */
 .citat {
-  font-family: var(--font-serif);
+  font-family: var(--font-sans);
   font-style: italic;
-  font-size: 1.375rem;   /* 22px — §07's floor for the serif */
+  font-size: 1.0625rem;   /* 17px — level with the answer, italic carries the voice */
   line-height: 1.42;
-  letter-spacing: -0.01em;
+  letter-spacing: 0;
   color: var(--foreground);
 }
 
@@ -805,10 +860,10 @@ select option { background: #FFFFFF; color: var(--ink); }
   display: flex;
   align-items: center;
   gap: 10px;
-  font-family: var(--font-serif);
+  font-family: var(--font-display);
   font-size: var(--text-xl);
-  font-weight: 400;
-  letter-spacing: -0.02em;
+  font-weight: 600;
+  letter-spacing: -0.01em;
   color: var(--foreground);
 }
 
