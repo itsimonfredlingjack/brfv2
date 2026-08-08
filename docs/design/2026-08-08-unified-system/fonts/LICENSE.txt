@@ -1,0 +1,8 @@
+Fonts in this directory are licensed under the SIL Open Font License 1.1.
+
+- Poppins 500/600 — Indian Type Foundry (https://fonts.google.com/specimen/Poppins)
+- Inter 400/500/600 — Rasmus Andersson (https://fonts.google.com/specimen/Inter)
+- JetBrains Mono (variable) — JetBrains (https://www.jetbrains.com/lp/mono/),
+  copied from brfv2-mockup/src/assets/fonts/
+
+All are OFL and safe to vendor in-product under font-src 'self'.

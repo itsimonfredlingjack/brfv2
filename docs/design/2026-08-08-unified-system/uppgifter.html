@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <title>Träff — Uppgifter</title>
+  <link rel="stylesheet" href="src/system.css">
+  <style>
+    .newtask {
+      display: flex; gap: 10px; align-items: center;
+      padding: 14px 16px; margin-bottom: var(--s6);
+    }
+    .newtask .input { flex: 1; }
+    .newtask .date { width: 150px; font-family: var(--font-mono); font-size: 12.5px; color: var(--ink-muted); }
+
+    .trow { display: flex; align-items: center; gap: 12px; padding: 12px 16px; }
+    .trow:hover { background: var(--surface-1); }
+    .tcheck {
+      width: 19px; height: 19px; border-radius: 50%;
+      border: 1.6px solid var(--border-strong); flex-shrink: 0;
+      display: grid; place-items: center; color: transparent; cursor: pointer;
+    }
+    .tcheck:hover { border-color: var(--ink); }
+    .trow.done .tcheck { background: var(--belagt); border-color: var(--belagt); color: #fff; }
+    .trow.done .tcheck svg.ic { width: 11px; height: 11px; }
+    .trow-main { flex: 1; min-width: 0; }
+    .trow-title { font-size: 14px; font-weight: 500; color: var(--ink-strong); }
+    .trow.done .trow-title { color: var(--ink-muted); }
+    .trow-sub { font-size: 12px; color: var(--ink-subtle); margin-top: 1px; }
+    .tag {
+      font-family: var(--font-mono); font-size: 10px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase;
+      background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--r-pill);
+      padding: 3px 8px; color: var(--ink-muted);
+    }
+    .avatar {
+      width: 26px; height: 26px; border-radius: 50%;
+      background: var(--surface-3); color: var(--ink);
+      font-size: 10.5px; font-weight: 600; display: grid; place-items: center; flex-shrink: 0;
+    }
+    .avatar.empty { background: transparent; border: 1.4px dashed var(--border-strong); color: var(--ink-subtle); }
+    .trow .due { width: 96px; text-align: right; }
+
+    .stats { display: flex; align-items: stretch; margin-bottom: var(--s6); }
+    .stat { flex: 1; padding: 13px 18px; display: flex; flex-direction: column; gap: 2px; }
+    .stat + .stat { border-left: 1px solid var(--border); }
+    .stat b { font-family: var(--font-mono); font-size: 17px; font-weight: 600; letter-spacing: -0.02em; color: var(--ink-strong); }
+    .stat span { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-subtle); }
+    .stat.warn b { color: var(--vagran); }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="8.6" stroke="#37322F" stroke-width="2.1"/><circle cx="11" cy="11" r="3.4" fill="#37322F"/></svg><span class="brand-name">Träff</span></div>
+      <div class="scope">BRF Norra Stackholm</div>
+      <nav class="nav">
+        <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-square" aria-hidden="true"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"></path></svg><span>Fråga dokumenten</span></a>
+        <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-folders" aria-hidden="true"><path d="M20 5a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h2.5a1.5 1.5 0 0 1 1.2.6l.6.8a1.5 1.5 0 0 0 1.2.6z"></path><path d="M3 8.268a2 2 0 0 0-1 1.738V19a2 2 0 0 0 2 2h11a2 2 0 0 0 1.732-1"></path></svg><span>Dokument</span></a>
+        <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard-check" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></svg><span>Granskning</span></a>
+        <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-calendar-clock" aria-hidden="true"><path d="M16 14v2.2l1.6 1"></path><path d="M16 2v4"></path><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"></path><path d="M3 10h5"></path><path d="M8 2v4"></path><circle cx="16" cy="16" r="6"></circle></svg><span>Bevakningar</span></a>
+        <a class="nav-item active" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard-list" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M12 11h4"></path><path d="M12 16h4"></path><path d="M8 11h.01"></path><path d="M8 16h.01"></path></svg><span>Uppgifter</span></a>
+        <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-inbox" aria-hidden="true"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg><span>Inkommande</span></a>
+        <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-receipt" aria-hidden="true"><path d="M12 17V7"></path><path d="M16 8h-6a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H8"></path><path d="M4 3a1 1 0 0 1 1-1 1.3 1.3 0 0 1 .7.2l.933.6a1.3 1.3 0 0 0 1.4 0l.934-.6a1.3 1.3 0 0 1 1.4 0l.933.6a1.3 1.3 0 0 0 1.4 0l.933-.6a1.3 1.3 0 0 1 1.4 0l.934.6a1.3 1.3 0 0 0 1.4 0l.933-.6A1.3 1.3 0 0 1 19 2a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1 1.3 1.3 0 0 1-.7-.2l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.934.6a1.3 1.3 0 0 1-1.4 0l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-1.4 0l-.934-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-.7.2 1 1 0 0 1-1-1z"></path></svg><span>Fakturor</span></a>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="foot-name">Anders Andersson</div>
+        <div class="foot-role">Styrelsemedlem</div>
+        <div class="foot-logout">Logga ut</div>
+      </div>
+    </aside>
+    <main class="main">
+      <div class="page">
+        <div class="page-head">
+          <div>
+            <div class="eyebrow"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard-list" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M12 11h4"></path><path d="M12 16h4"></path><path d="M8 11h.01"></path><path d="M8 16h.01"></path></svg> Arbete</div>
+            <h1 class="page-title">Uppgifter</h1>
+            <p class="page-sub">Arbetet, vem som äger det, till när — och allt som hänt på vägen. Uppgifter skapas av människor, aldrig av maskinen.</p>
+          </div>
+          <div class="page-actions">
+            <button class="btn btn--outline"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-refresh-cw" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg> Uppdatera</button>
+          </div>
+        </div>
+
+        <div class="card stats">
+          <div class="stat"><b>4</b><span>Pågående</span></div>
+          <div class="stat warn"><b>1</b><span>Försenad</span></div>
+          <div class="stat"><b>12</b><span>Avklarade · 30 dagar</span></div>
+          <div class="stat"><b>0</b><span>Avbrutna</span></div>
+        </div>
+
+        <div class="card newtask">
+          <div class="input"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg><input placeholder="Ny uppgift — vad ska göras?"></div>
+          <span class="date">SENAST 2026-08-29</span>
+          <button class="btn btn--primary">Lägg till</button>
+        </div>
+
+        <div class="sec-label">Pågående <span class="n">4</span></div>
+        <div class="rows">
+          <div class="trow">
+            <span class="tcheck"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg></span>
+            <div class="trow-main">
+              <div class="trow-title">Boka återbesiktning efter fasadåtgärd</div>
+              <div class="trow-sub">Skapad av Anders · från granskningen av tekniska rapporten</div>
+            </div>
+            <span class="tag">Underhåll</span>
+            <span class="avatar">AA</span>
+            <span class="matt due">2026-08-15</span>
+          </div>
+          <div class="trow">
+            <span class="tcheck"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg></span>
+            <div class="trow-main">
+              <div class="trow-title">Granska Ellevio-fakturans avvikelser mot avtalet</div>
+              <div class="trow-sub">Skapad av Klas · 3 avvikelser att verifiera</div>
+            </div>
+            <span class="tag">Ekonomi</span>
+            <span class="avatar">KL</span>
+            <span class="matt due matt--overdue">2026-08-04</span>
+          </div>
+          <div class="trow">
+            <span class="tcheck"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg></span>
+            <div class="trow-main">
+              <div class="trow-title">Uppdatera stadgarnas paragraf om andrahandsuthyrning</div>
+              <div class="trow-sub">Skapad av Maria · beslut på årsmötet 2026</div>
+            </div>
+            <span class="tag">Stadgar</span>
+            <span class="avatar">MA</span>
+            <span class="matt due">2026-09-01</span>
+          </div>
+          <div class="trow">
+            <span class="tcheck"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg></span>
+            <div class="trow-main">
+              <div class="trow-title">Samla in offerter för stambyte</div>
+              <div class="trow-sub">Skapad av Anders</div>
+            </div>
+            <span class="avatar empty">?</span>
+            <span class="matt due">2026-09-12</span>
+          </div>
+        </div>
+
+        <div class="sec-label">Avklarat <span class="n">12</span></div>
+        <div class="rows">
+          <div class="trow done">
+            <span class="tcheck"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg></span>
+            <div class="trow-main"><div class="trow-title">Skicka in energideklaration till kommunen</div></div>
+            <span class="avatar">KL</span>
+            <span class="matt due">2026-07-28</span>
+          </div>
+          <div class="trow done">
+            <span class="tcheck"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg></span>
+            <div class="trow-main"><div class="trow-title">Signera hisserviceavtalet</div></div>
+            <span class="avatar">AA</span>
+            <span class="matt due">2026-07-21</span>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

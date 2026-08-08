@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <title>Träff — Fråga dokumenten</title>
+  <link rel="stylesheet" href="src/system.css">
+  <style>
+    .chat-scroll { display: flex; flex-direction: column; gap: var(--s6); }
+
+    .q { display: flex; flex-direction: column; gap: 6px; }
+    .q-who { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-subtle); }
+    .q-body {
+      background: var(--surface-3); border-radius: var(--r-card);
+      padding: 12px 16px; font-size: 14.5px; color: var(--ink-strong);
+      max-width: 560px;
+    }
+
+    .ans { padding: 18px 20px 16px; display: flex; flex-direction: column; gap: 12px; }
+    .ans-head { display: flex; align-items: center; justify-content: space-between; }
+    .ans-text { font-size: 15px; line-height: 1.65; color: var(--ink); max-width: 70ch; }
+    .ans-text + .ans-text { margin-top: -4px; }
+    .ans.is-ejbelagt { background: var(--surface-1); border-style: dashed; }
+
+    .cites { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 2px; }
+    .cite {
+      display: inline-flex; align-items: center; gap: 7px;
+      height: 28px; padding: 0 11px;
+      background: var(--field); border: 1px solid var(--border); border-radius: var(--r-pill);
+      font-size: 12px; font-weight: 500; color: var(--ink);
+    }
+    .cite .no { font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--belagt); }
+    .cite .pg { font-family: var(--font-mono); font-size: 11px; color: var(--ink-muted); }
+    .cite:hover { border-color: var(--border-strong); box-shadow: var(--shadow-xs); }
+
+    .ans-foot { border-top: 1px solid var(--border); padding-top: 10px; display: flex; justify-content: space-between; align-items: center; }
+
+    .composer { margin-top: var(--s8); display: flex; flex-direction: column; gap: 8px; }
+    .composer-row { display: flex; gap: 10px; }
+    .composer .input { flex: 1; height: 44px; font-size: 14px; border-radius: 12px; }
+    .composer .btn { height: 44px; border-radius: 12px; padding: 0 18px; }
+    .composer-hint { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-subtle); text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="8.6" stroke="#37322F" stroke-width="2.1"/><circle cx="11" cy="11" r="3.4" fill="#37322F"/></svg><span class="brand-name">Träff</span></div>
+      <div class="scope">BRF Norra Stackholm</div>
+      <nav class="nav">
+        <a class="nav-item active" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-square" aria-hidden="true"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"></path></svg><span>Fråga dokumenten</span></a>
+        <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-folders" aria-hidden="true"><path d="M20 5a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h2.5a1.5 1.5 0 0 1 1.2.6l.6.8a1.5 1.5 0 0 0 1.2.6z"></path><path d="M3 8.268a2 2 0 0 0-1 1.738V19a2 2 0 0 0 2 2h11a2 2 0 0 0 1.732-1"></path></svg><span>Dokument</span></a>
+        <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard-check" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></svg><span>Granskning</span></a>
+        <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-calendar-clock" aria-hidden="true"><path d="M16 14v2.2l1.6 1"></path><path d="M16 2v4"></path><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"></path><path d="M3 10h5"></path><path d="M8 2v4"></path><circle cx="16" cy="16" r="6"></circle></svg><span>Bevakningar</span></a>
+        <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard-list" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M12 11h4"></path><path d="M12 16h4"></path><path d="M8 11h.01"></path><path d="M8 16h.01"></path></svg><span>Uppgifter</span></a>
+        <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-inbox" aria-hidden="true"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg><span>Inkommande</span></a>
+        <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-receipt" aria-hidden="true"><path d="M12 17V7"></path><path d="M16 8h-6a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H8"></path><path d="M4 3a1 1 0 0 1 1-1 1.3 1.3 0 0 1 .7.2l.933.6a1.3 1.3 0 0 0 1.4 0l.934-.6a1.3 1.3 0 0 1 1.4 0l.933.6a1.3 1.3 0 0 0 1.4 0l.933-.6a1.3 1.3 0 0 1 1.4 0l.934.6a1.3 1.3 0 0 0 1.4 0l.933-.6A1.3 1.3 0 0 1 19 2a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1 1.3 1.3 0 0 1-.7-.2l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.934.6a1.3 1.3 0 0 1-1.4 0l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-1.4 0l-.934-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-.7.2 1 1 0 0 1-1-1z"></path></svg><span>Fakturor</span></a>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="foot-name">Anders Andersson</div>
+        <div class="foot-role">Styrelsemedlem</div>
+        <div class="foot-logout">Logga ut</div>
+      </div>
+    </aside>
+    <main class="main">
+      <div class="page page--chat">
+        <div class="page-head">
+          <div>
+            <div class="eyebrow"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-square" aria-hidden="true"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"></path></svg> AI-chatt</div>
+            <h1 class="page-title">Fråga dokumenten</h1>
+            <p class="page-sub">Svar bygger alltid på föreningens egna dokument. Kan inget belägg hittas säger Träff det — aldrig en gissning.</p>
+          </div>
+        </div>
+
+        <div class="chat-scroll">
+          <div class="q">
+            <span class="q-who">Du</span>
+            <div class="q-body">Får man hyra ut sin lägenhet i andra hand, och i så fall hur länge?</div>
+          </div>
+
+          <div class="card ans">
+            <div class="ans-head">
+              <span class="st st--belagt"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-check" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg> Belagt</span>
+              <span class="matt">2 KÄLLOR</span>
+            </div>
+            <p class="ans-text">Ja — andrahandsuthyrning är tillåten om styrelsen lämnar tillstånd. Enligt stadgarna krävs skriftligt godkännande i förväg, och tillståndet får begränsas till högst ett år i taget.</p>
+            <p class="ans-text">Styrelsen får neka om det finns risk för skador på föreningens egendom eller om uthyrningen strider mot föreningens ordningsregler.</p>
+            <div class="cites">
+              <span class="cite"><span class="no">1</span> Stadgar 2023 <span class="pg">S. 7 §12</span></span>
+              <span class="cite"><span class="no">2</span> Protokoll årsmöte 2026 <span class="pg">S. 3</span></span>
+            </div>
+            <div class="ans-foot">
+              <a class="lnk" href="#">Öppna källan i dokumentet <svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right" aria-hidden="true"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></a>
+              <span class="matt">SVAR GENERERAT 2026-08-08 09:41</span>
+            </div>
+          </div>
+
+          <div class="q">
+            <span class="q-who">Du</span>
+            <div class="q-body">Vad kostade hissen när den installerades?</div>
+          </div>
+
+          <div class="card ans is-ejbelagt">
+            <div class="ans-head">
+              <span class="st st--vagran"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-triangle-alert" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg> Ej belagt</span>
+              <span class="matt">0 KÄLLOR</span>
+            </div>
+            <p class="ans-text">Det finns inget underlag i föreningens dokument som anger vad hissen kostade. Underhållsplanen nämner en planerad modernisering, men inget historiskt inköpspris.</p>
+            <div class="ans-foot">
+              <span class="matt">GENOMSÖKTE 37 DOKUMENT · 354 SIDOR</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="composer">
+          <div class="composer-row">
+            <div class="input"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-search" aria-hidden="true"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg><input placeholder="Ställ en fråga om föreningens dokument…"></div>
+            <button class="btn btn--primary"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-send" aria-hidden="true"><path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"></path><path d="m21.854 2.147-10.94 10.939"></path></svg> Fråga</button>
+          </div>
+          <div class="composer-hint">Svaren grundas alltid i föreningens egna dokument</div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

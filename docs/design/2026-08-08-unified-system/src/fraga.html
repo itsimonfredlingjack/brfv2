@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <title>Träff — Fråga dokumenten</title>
+  <link rel="stylesheet" href="src/system.css">
+  <style>
+    .chat-scroll { display: flex; flex-direction: column; gap: var(--s6); }
+
+    .q { display: flex; flex-direction: column; gap: 6px; }
+    .q-who { font-size: 11px; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-subtle); }
+    .q-body {
+      background: var(--surface-3); border-radius: var(--r-card);
+      padding: 12px 16px; font-size: 14.5px; color: var(--ink-strong);
+      max-width: 560px;
+    }
+
+    .ans { padding: 18px 20px 16px; display: flex; flex-direction: column; gap: 12px; }
+    .ans-head { display: flex; align-items: center; justify-content: space-between; }
+    .ans-text { font-size: 15px; line-height: 1.65; color: var(--ink); max-width: 70ch; }
+    .ans-text + .ans-text { margin-top: -4px; }
+    .ans.is-ejbelagt { background: var(--surface-1); border-style: dashed; }
+
+    .cites { display: flex; flex-wrap: wrap; gap: 8px; padding-top: 2px; }
+    .cite {
+      display: inline-flex; align-items: center; gap: 7px;
+      height: 28px; padding: 0 11px;
+      background: var(--field); border: 1px solid var(--border); border-radius: var(--r-pill);
+      font-size: 12px; font-weight: 500; color: var(--ink);
+    }
+    .cite .no { font-family: var(--font-mono); font-size: 11px; font-weight: 700; color: var(--belagt); }
+    .cite .pg { font-family: var(--font-mono); font-size: 11px; color: var(--ink-muted); }
+    .cite:hover { border-color: var(--border-strong); box-shadow: var(--shadow-xs); }
+
+    .ans-foot { border-top: 1px solid var(--border); padding-top: 10px; display: flex; justify-content: space-between; align-items: center; }
+
+    .composer { margin-top: var(--s8); display: flex; flex-direction: column; gap: 8px; }
+    .composer-row { display: flex; gap: 10px; }
+    .composer .input { flex: 1; height: 44px; font-size: 14px; border-radius: 12px; }
+    .composer .btn { height: 44px; border-radius: 12px; padding: 0 18px; }
+    .composer-hint { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-subtle); text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    {{sidebar:fraga}}
+    <main class="main">
+      <div class="page page--chat">
+        <div class="page-head">
+          <div>
+            <div class="eyebrow">{{i:MessageSquare}} AI-chatt</div>
+            <h1 class="page-title">Fråga dokumenten</h1>
+            <p class="page-sub">Svar bygger alltid på föreningens egna dokument. Kan inget belägg hittas säger Träff det — aldrig en gissning.</p>
+          </div>
+        </div>
+
+        <div class="chat-scroll">
+          <div class="q">
+            <span class="q-who">Du</span>
+            <div class="q-body">Får man hyra ut sin lägenhet i andra hand, och i så fall hur länge?</div>
+          </div>
+
+          <div class="card ans">
+            <div class="ans-head">
+              <span class="st st--belagt">{{i:CircleCheck}} Belagt</span>
+              <span class="matt">2 KÄLLOR</span>
+            </div>
+            <p class="ans-text">Ja — andrahandsuthyrning är tillåten om styrelsen lämnar tillstånd. Enligt stadgarna krävs skriftligt godkännande i förväg, och tillståndet får begränsas till högst ett år i taget.</p>
+            <p class="ans-text">Styrelsen får neka om det finns risk för skador på föreningens egendom eller om uthyrningen strider mot föreningens ordningsregler.</p>
+            <div class="cites">
+              <span class="cite"><span class="no">1</span> Stadgar 2023 <span class="pg">S. 7 §12</span></span>
+              <span class="cite"><span class="no">2</span> Protokoll årsmöte 2026 <span class="pg">S. 3</span></span>
+            </div>
+            <div class="ans-foot">
+              <a class="lnk" href="#">Öppna källan i dokumentet {{i:ArrowUpRight}}</a>
+              <span class="matt">SVAR GENERERAT 2026-08-08 09:41</span>
+            </div>
+          </div>
+
+          <div class="q">
+            <span class="q-who">Du</span>
+            <div class="q-body">Vad kostade hissen när den installerades?</div>
+          </div>
+
+          <div class="card ans is-ejbelagt">
+            <div class="ans-head">
+              <span class="st st--vagran">{{i:AlertTriangle}} Ej belagt</span>
+              <span class="matt">0 KÄLLOR</span>
+            </div>
+            <p class="ans-text">Det finns inget underlag i föreningens dokument som anger vad hissen kostade. Underhållsplanen nämner en planerad modernisering, men inget historiskt inköpspris.</p>
+            <div class="ans-foot">
+              <span class="matt">GENOMSÖKTE 37 DOKUMENT · 354 SIDOR</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="composer">
+          <div class="composer-row">
+            <div class="input">{{i:Search}}<input placeholder="Ställ en fråga om föreningens dokument…"></div>
+            <button class="btn btn--primary">{{i:Send}} Fråga</button>
+          </div>
+          <div class="composer-hint">Svaren grundas alltid i föreningens egna dokument</div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

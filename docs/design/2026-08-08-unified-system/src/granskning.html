@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <title>Träff — Granskning</title>
+  <link rel="stylesheet" href="src/system.css">
+  <style>
+    .split { display: grid; grid-template-columns: 400px 1fr; gap: var(--s6); align-items: start; }
+
+    .fr { display: flex; gap: 12px; padding: 13px 16px; cursor: pointer; }
+    .fr:hover { background: var(--surface-1); }
+    .fr.on { background: #FFFFFF; box-shadow: inset 3px 0 0 var(--ink); }
+    .fr-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 7px; flex-shrink: 0; }
+    .fr-dot.ok { background: var(--belagt); }
+    .fr-dot.warn { background: var(--vagran); }
+    .fr-main { min-width: 0; }
+    .fr-title { font-size: 14px; font-weight: 600; color: var(--ink-strong); line-height: 1.35; }
+    .fr-meta { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-subtle); margin-top: 3px; }
+
+    .detail { padding: var(--s6) var(--s8); display: flex; flex-direction: column; gap: var(--s5); }
+    .detail-top { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s4); }
+    .detail-title { font-family: var(--font-display); font-weight: 600; font-size: 19px; letter-spacing: -0.01em; color: var(--ink-strong); line-height: 1.3; max-width: 46ch; }
+
+    .reason {
+      border-left: 3px solid var(--vagran);
+      background: var(--surface-1);
+      border-radius: 0 10px 10px 0;
+      padding: 12px 16px;
+      font-size: 14px; line-height: 1.6; color: var(--ink);
+      max-width: 68ch;
+    }
+
+    .rule-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .underlag { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+    .underlag > * + * { border-top: 1px solid var(--border); }
+    .urow { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: #fff; }
+    .urow:hover { background: var(--surface-1); }
+    .urow svg.ic { width: 15px; height: 15px; color: var(--ink-subtle); }
+    .urow .uname { font-size: 13.5px; font-weight: 500; }
+    .urow .upg { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--ink-muted); }
+    .urow .lnk { font-size: 12.5px; }
+
+    .status-note { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-muted); }
+    .status-note svg.ic { width: 14px; height: 14px; }
+
+    .detail-actions { display: flex; gap: 10px; padding-top: var(--s1); }
+  </style>
+</head>
+<body>
+  <div class="app">
+    {{sidebar:granskning}}
+    <main class="main">
+      <div class="page page--wide">
+        <div class="page-head">
+          <div>
+            <div class="eyebrow">{{i:ClipboardCheck}} Kontroll</div>
+            <h1 class="page-title">Granskning</h1>
+            <p class="page-sub">Dokumenten granskas mot föreningens regler och avtal. Maskinen hittar, människan avgör — inget markeras utan ditt godkännande.</p>
+          </div>
+          <div class="page-actions">
+            <button class="btn btn--outline">{{i:RefreshCw}} Uppdatera</button>
+          </div>
+        </div>
+
+        <div class="toolbar">
+          <div class="seg">
+            <span class="seg-item on">Alla granskningar <span class="n">3</span></span>
+            <span class="seg-item">Matchande dokument <span class="n">2</span></span>
+            <span class="seg-item">Potentiella avvikelser <span class="n">1</span></span>
+          </div>
+        </div>
+
+        <div class="split">
+          <div class="rows">
+            <div class="fr on">
+              <span class="fr-dot warn"></span>
+              <div class="fr-main">
+                <div class="fr-title">Tomma elradiatorer i föreningens lägenheter</div>
+                <div class="fr-meta">Teknisk rapport fasad · S. 14</div>
+              </div>
+            </div>
+            <div class="fr">
+              <span class="fr-dot ok"></span>
+              <div class="fr-main">
+                <div class="fr-title">Andrahandsuthyrning mot stadgarna</div>
+                <div class="fr-meta">Stadgar 2023 · S. 7</div>
+              </div>
+            </div>
+            <div class="fr">
+              <span class="fr-dot ok"></span>
+              <div class="fr-main">
+                <div class="fr-title">Beslut om loftvåning följer protokollet</div>
+                <div class="fr-meta">Protokoll årsmöte 2026 · S. 2</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card detail">
+            <div class="detail-top">
+              <h2 class="detail-title">Tomma elradiatorer i föreningens lägenheter</h2>
+              <span class="st st--vagran">{{i:AlertTriangle}} Avvikelse</span>
+            </div>
+
+            <div>
+              <div class="sec-label" style="margin-top: 0;">Härledning</div>
+              <div class="reason">Tekniska rapporten anger att radiatorerna i trapphus B är ur drift sedan 2024, men underhållsplanen saknar åtgärd eller budgetpost för detta. Det strider mot föreningens egen plan för löpande underhåll.</div>
+            </div>
+
+            <div>
+              <div class="sec-label">Regler som används</div>
+              <div class="rule-chips">
+                <span class="st st--neutral">Underhållsplan §4</span>
+                <span class="st st--neutral">Bokföringslagen</span>
+              </div>
+            </div>
+
+            <div>
+              <div class="sec-label">Underlag</div>
+              <div class="underlag">
+                <div class="urow">
+                  {{i:FileText}}<span class="uname">Teknisk rapport fasad</span>
+                  <a class="lnk" href="#">Öppna {{i:ArrowUpRight}}</a>
+                  <span class="upg">S. 14</span>
+                </div>
+                <div class="urow">
+                  {{i:FileText}}<span class="uname">Underhållsplan 2026–2030</span>
+                  <a class="lnk" href="#">Öppna {{i:ArrowUpRight}}</a>
+                  <span class="upg">S. 5</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="status-note">{{i:Eye}} Väntar på granskning — ingen åtgärd registrerad ännu.</div>
+
+            <div class="detail-actions">
+              <button class="btn btn--primary">{{i:Check}} Markera som granskad</button>
+              <button class="btn btn--outline">{{i:MessageSquare}} Ställ följdfråga</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

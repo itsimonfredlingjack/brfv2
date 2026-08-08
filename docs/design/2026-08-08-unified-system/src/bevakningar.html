@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <title>Träff — Bevakningar</title>
+  <link rel="stylesheet" href="src/system.css">
+  <style>
+    .wrow { padding: 15px 18px; display: flex; flex-direction: column; gap: 0; cursor: pointer; }
+    .wrow:hover { background: var(--surface-1); }
+    .wrow.open { background: #FFFFFF; cursor: default; }
+    .wrow-head { display: flex; align-items: center; gap: 14px; }
+    .wrow-main { flex: 1; min-width: 0; }
+    .wrow-name { font-size: 14.5px; font-weight: 600; color: var(--ink-strong); }
+    .wrow-desc { font-size: 13px; color: var(--ink-muted); margin-top: 2px; max-width: 72ch; }
+    .wrow-right { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
+    .wrow-right .hits { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--ink); }
+    .wrow-right .hits.none { color: var(--ink-subtle); font-weight: 500; }
+    .wrow-right svg.ic { width: 15px; height: 15px; color: var(--ink-subtle); }
+
+    .wrow-body { margin-top: 14px; border-top: 1px dashed var(--border); padding-top: 14px; display: flex; flex-direction: column; gap: 12px; }
+    .wrow-scan { display: flex; align-items: center; gap: 10px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-subtle); }
+    .scanbar { flex: 1; max-width: 260px; height: 4px; border-radius: 2px; background: var(--surface-3); overflow: hidden; }
+    .scanbar i { display: block; height: 100%; width: 100%; background: var(--belagt); border-radius: 2px; }
+
+    .hit {
+      display: flex; align-items: center; gap: 10px;
+      background: var(--surface-1); border: 1px solid var(--border); border-left: 3px solid var(--vagran);
+      border-radius: 10px; padding: 10px 14px;
+    }
+    .hit svg.ic { width: 15px; height: 15px; color: var(--ink-subtle); }
+    .hit .hname { font-size: 13px; font-weight: 500; }
+    .hit .hpg { font-family: var(--font-mono); font-size: 11px; color: var(--ink-muted); }
+    .hit .st { margin-left: auto; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    {{sidebar:bevakningar}}
+    <main class="main">
+      <div class="page">
+        <div class="page-head">
+          <div>
+            <div class="eyebrow">{{i:CalendarClock}} Övervakning</div>
+            <h1 class="page-title">Bevakningar</h1>
+            <p class="page-sub">Bevakar dokument efter villkor som inte längre bör gälla — t.ex. gamla avtalspriser eller upphörda regler. Träff hittar, du avgör.</p>
+          </div>
+          <div class="page-actions">
+            <button class="btn btn--outline">{{i:RefreshCw}} Uppdatera</button>
+            <button class="btn btn--primary">{{i:Plus}} Ny bevakning</button>
+          </div>
+        </div>
+
+        <div class="rows">
+          <div class="wrow open">
+            <div class="wrow-head">
+              <div class="wrow-main">
+                <div class="wrow-name">Brf Nova — gamla elpriser</div>
+                <div class="wrow-desc">Villkor från det gamla elavtalet som inte ska användas efter 2025.</div>
+              </div>
+              <div class="wrow-right">
+                <span class="hits">2 träffar</span>
+                <span class="matt">2026-07-31</span>
+                {{i:ChevronDown}}
+              </div>
+            </div>
+            <div class="wrow-body">
+              <div class="wrow-scan"><span>37 av 37 dokument genomsökta · senast 2026-07-31</span><span class="scanbar"><i></i></span></div>
+              <div class="hit">
+                {{i:FileText}}<span class="hname">Kontrakt hisservice</span>
+                <span class="hpg">S. 4</span>
+                <span class="st st--vagran">Villkor hittat</span>
+              </div>
+              <div class="hit">
+                {{i:FileText}}<span class="hname">Teknisk rapport fasad</span>
+                <span class="hpg">S. 9</span>
+                <span class="st st--vagran">Villkor hittat</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="wrow">
+            <div class="wrow-head">
+              <div class="wrow-main">
+                <div class="wrow-name">Brf Solbacken — upphörda ordningsregler</div>
+                <div class="wrow-desc">Regler som ersattes av årsmötet 2025 men kan finnas kvar i äldre dokument.</div>
+              </div>
+              <div class="wrow-right">
+                <span class="hits none">0 träffar</span>
+                <span class="matt">2026-07-31</span>
+                {{i:ChevronRight}}
+              </div>
+            </div>
+          </div>
+
+          <div class="wrow">
+            <div class="wrow-head">
+              <div class="wrow-main">
+                <div class="wrow-name">Brf Åsen — stambytets tidsplan</div>
+                <div class="wrow-desc">Datum och milstolpar som passerats utan att protokoll visar beslut.</div>
+              </div>
+              <div class="wrow-right">
+                <span class="hits none">0 träffar</span>
+                <span class="matt">2026-07-30</span>
+                {{i:ChevronRight}}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
