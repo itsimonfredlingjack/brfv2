@@ -95,23 +95,8 @@
   font-variant-numeric: tabular-nums;
 }
 
-.integrations .refresh {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  height: 32px;
-  padding: 0 12px;
-  border: 1px solid transparent;
-  border-radius: var(--radius-2xl);
-  background: transparent;
-  color: var(--muted-foreground);
-  font-size: var(--text-base);
-  font-weight: 500;
-  cursor: pointer;
-}
-
-.integrations .refresh:hover:not(:disabled) { background: var(--surface-accent); color: var(--foreground); }
-.integrations .refresh:disabled { opacity: 0.5; cursor: not-allowed; }
+/* The refresh control is the system's ghost button (ui-btn ui-btn--ghost
+   ui-btn--sm in IntakeQueue.jsx) — no domain override here. */
 
 .integrations-banner {
   display: flex;

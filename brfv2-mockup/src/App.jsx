@@ -730,10 +730,10 @@ function App() {
             <h3 id="delete-dialog-title">Ta bort dokument?</h3>
             <p>Är du säker på att du vill ta bort <strong>"{deleteConfirm.name}"</strong>? Dokumentet tas bort permanent och kan inte längre sökas eller citeras av AI-chatten.</p>
             <div className="confirm-dialog-actions">
-              <button className="secondary-action-btn" onClick={() => setDeleteConfirm(null)} disabled={!!deletingId}>
+              <button className="ui-btn ui-btn--outline" onClick={() => setDeleteConfirm(null)} disabled={!!deletingId}>
                 Avbryt
               </button>
-              <button className="primary-action-btn danger" onClick={() => executeDelete(deleteConfirm)} disabled={!!deletingId}>
+              <button className="ui-btn ui-btn--destructive" onClick={() => executeDelete(deleteConfirm)} disabled={!!deletingId}>
                 {deletingId === deleteConfirm.id ? <Loader2 size={16} className="spin" /> : <Trash2 size={16} />}
                 {deletingId === deleteConfirm.id ? 'Tar bort…' : 'Ta bort'}
               </button>
@@ -893,11 +893,11 @@ function App() {
                     </div>
 
                     <div className="extraction-actions">
-                       <button className="primary-action-btn ok" onClick={handleApproveQa}>
+                       <button className="ui-btn ui-btn--primary" onClick={handleApproveQa}>
                          <CheckCircle2 size={16}/> <span className="action-label">Godkänn dokument</span>
                        </button>
                        <div ref={reportMenuRef} style={{ position: 'relative' }}>
-                         <button className="primary-action-btn warning" onClick={() => setReportMenuOpen(!reportMenuOpen)} aria-haspopup="true" aria-expanded={reportMenuOpen}>
+                         <button className="ui-btn ui-btn--warning" onClick={() => setReportMenuOpen(!reportMenuOpen)} aria-haspopup="true" aria-expanded={reportMenuOpen}>
                            <ThumbsDown size={16}/> <span className="action-label">Rapportera problem</span>
                          </button>
                          {reportMenuOpen && (
@@ -1107,7 +1107,7 @@ function App() {
                         onChange={(e) => executeUpload(e.target.files?.[0] || null)}
                       />
                       <button
-                        className="primary-action-btn desktop-only"
+                        className="ui-btn ui-btn--primary desktop-only"
                         onClick={() => uploadInputRef.current?.click()}
                         disabled={!!uploadState}
                         title="Ladda upp ett nytt PDF-dokument"
@@ -1182,7 +1182,7 @@ function App() {
                       <FileText size={48} color="var(--panel-border)" style={{ marginBottom: '16px' }} />
                       <h3>Inga dokument matchar din sökning</h3>
                       <p>Prova att ändra sökordet.</p>
-                      <button className="secondary-action-btn" onClick={() => setDocsSearchQuery('')}>
+                      <button className="ui-btn ui-btn--outline" onClick={() => setDocsSearchQuery('')}>
                         Rensa sökning
                       </button>
                     </div>

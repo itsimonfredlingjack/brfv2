@@ -532,16 +532,18 @@ code, pre, kbd, samp { font-family: var(--font-mono); }
 /* Controls — the site's own metrics                                         */
 /* ========================================================================= */
 
+/* The one button primitive. 36px default (30px small), 10px radius —
+   spec: docs/design/2026-08-08-unified-system/IMPLEMENTATION.md, Beslut 1. */
 .ui-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: 8px;
   flex-shrink: 0;
-  height: 32px;
+  height: var(--h-control);
   padding: 0 12px;
   border: 1px solid transparent;
-  border-radius: var(--radius-2xl);
+  border-radius: var(--r-control);
   background: transparent;
   background-clip: padding-box;
   color: var(--foreground);
@@ -554,7 +556,7 @@ code, pre, kbd, samp { font-family: var(--font-mono); }
   transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
 }
 
-.ui-btn > svg { flex-shrink: 0; width: 16px; height: 16px; }
+.ui-btn > svg { flex-shrink: 0; width: 15px; height: 15px; }
 
 .ui-btn:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 .ui-btn:disabled,
@@ -581,13 +583,18 @@ code, pre, kbd, samp { font-family: var(--font-mono); }
 }
 .ui-btn--destructive:hover { background: var(--avbrott-soft-hover); }
 
-.ui-btn--sm { height: 28px; padding: 0 10px; font-size: var(--text-sm); }
+/* Vagran — a caution that is not a refusal: "report a problem", never a
+   destructive act (those are --destructive). */
+.ui-btn--warning { background: var(--warn); color: #FFFFFF; }
+.ui-btn--warning:hover { background: #6F4A04; }
+
+.ui-btn--sm { height: 30px; padding: 0 10px; font-size: var(--text-sm); }
 .ui-btn--sm > svg { width: 14px; height: 14px; }
 .ui-btn--xs { height: 24px; padding: 0 9px; font-size: var(--text-xs); }
 .ui-btn--xs > svg { width: 13px; height: 13px; }
 
-.ui-btn--icon { width: 32px; padding: 0; }
-.ui-btn--icon.ui-btn--sm { width: 28px; }
+.ui-btn--icon { width: var(--h-control); padding: 0; }
+.ui-btn--icon.ui-btn--sm { width: 30px; }
 .ui-btn--icon.ui-btn--xs { width: 24px; }
 
 .ui-link {

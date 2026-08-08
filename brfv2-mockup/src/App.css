@@ -499,8 +499,6 @@
 /* Buttons                                                                   */
 /* ========================================================================= */
 
-.primary-action-btn,
-.secondary-action-btn,
 .small-action-btn,
 .search-action-btn,
 .scope-btn,
@@ -520,8 +518,6 @@
   transition: background-color 0.14s ease, border-color 0.14s ease, color 0.14s ease;
 }
 
-.primary-action-btn:focus-visible,
-.secondary-action-btn:focus-visible,
 .small-action-btn:focus-visible,
 .search-action-btn:focus-visible,
 .followup-btn:focus-visible,
@@ -536,36 +532,6 @@
   box-shadow: 0 0 0 3px var(--ring-glow);
 }
 
-.primary-action-btn {
-  height: 32px;
-  padding: 0 16px;
-  background: var(--primary);
-  color: var(--primary-foreground);
-  font-size: var(--text-md);
-  font-weight: 600;
-}
-.primary-action-btn:hover { background: var(--primary-action-hover); }
-.primary-action-btn.ok { background: var(--primary); color: var(--primary-foreground); }
-.primary-action-btn.ok:hover { background: var(--primary-action-hover); }
-.primary-action-btn.warning { background: var(--warn); color: #FFFFFF; }
-.primary-action-btn.warning:hover { background: #6F4A04; }
-.primary-action-btn.danger {
-  background: var(--danger-soft);
-  border-color: var(--danger-border);
-  color: var(--danger);
-}
-.primary-action-btn.danger:hover { background: var(--avbrott-soft-hover); }
-
-.secondary-action-btn {
-  height: 32px;
-  padding: 0 14px;
-  border-color: var(--input);
-  background: var(--field);
-  color: var(--foreground);
-  font-size: var(--text-md);
-}
-.secondary-action-btn:hover { background: var(--surface-3); }
-
 .small-action-btn {
   height: 28px;
   padding: 0 11px;
@@ -579,8 +545,6 @@
 .small-action-btn.ai { border-color: var(--input); color: var(--muted-foreground); }
 .small-action-btn.ai:hover { background: var(--surface-accent); color: var(--foreground); }
 
-.primary-action-btn:disabled,
-.secondary-action-btn:disabled,
 .small-action-btn:disabled,
 .icon-action-btn:disabled,
 .icon-action-btn.danger:disabled {
