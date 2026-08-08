@@ -349,8 +349,79 @@ export default function WorkspaceShell({
     selected_text: selectedText,
   };
 
+  const publishedCount = pages.filter((p) => p.published).length;
+  const reviewCount = pages.reduce((sum, p) => sum + (p.needs_review?.length || 0), 0);
+
   return (
-    <div className={`site-ws ${aiCollapsed ? 'ai-collapsed' : ''}`}>
+    /* Hemsidan takes the same plate as every other workspace — no exceptions,
+       so the app has no screen that behaves like a detached web page. The
+       editor's own topbar keeps only what is about the page currently open
+       (which page, its state, the width it is being judged at); everything
+       that is about the site as a whole — publish, versions, add block — is a
+       masthead action, where every other workspace puts its actions. */
+    <div className="site-workspace">
+      <header className="page-header">
+        <div className="page-header-text">
+          <h2 className="page-title">Hemsidan</h2>
+          <p className="page-header-sub">
+            Sidan medlemmarna läser, byggd ur föreningens egna handlingar.
+          </p>
+        </div>
+
+        <div className="page-header-actions">
+          {isAdmin && (
+            <button type="button" className="site-btn" onClick={() => setDrawerOpen(true)}>
+              <Plus size={15} aria-hidden="true" /> Lägg till block
+            </button>
+          )}
+          <button type="button" className="site-btn" onClick={onOpenRevisions} title="Tidigare versioner">
+            <History size={15} aria-hidden="true" /> Versioner
+          </button>
+          {isAdmin && (
+            <>
+              {page?.published && (
+                <button type="button" className="site-btn" onClick={onUnpublish}>
+                  Avpublicera
+                </button>
+              )}
+              <button
+                type="button"
+                className="site-btn ui-btn--primary"
+                onClick={onPublish}
+                disabled={Boolean(page && page.published && !page.has_unpublished_changes)}
+                title={
+                  page && page.published && !page.has_unpublished_changes
+                    ? 'Det finns inget nytt att publicera.'
+                    : 'Publicera sidan'
+                }
+              >
+                Publicera
+              </button>
+            </>
+          )}
+        </div>
+
+        {/* The site's standing: how much of it exists, how much of it is live,
+            and how much AI-written text nobody has confirmed yet. The last one
+            is the number that decides whether the site may be published at
+            all, so it belongs on the faceplate and not in a chip. */}
+        <div className="page-header-instrument">
+          <div className="invoices-ledger">
+            <div className="invoices-ledger-figure">
+              <span className="ledger-label">Sidor</span>
+              <span className="ledger-amount">{pages.length}</span>
+            </div>
+            <dl className="watches-standing">
+              <div><dt>Publicerade</dt><dd>{publishedCount}</dd></div>
+              <div className={reviewCount > 0 ? 'flagged' : ''}>
+                <dt>Att bekräfta</dt><dd>{reviewCount}</dd>
+              </div>
+            </dl>
+          </div>
+        </div>
+      </header>
+
+      <div className={`site-ws ${aiCollapsed ? 'ai-collapsed' : ''}`}>
       <CanvasSync nonce={syncNonce} data={syncData} />
 
       <AiPartner
@@ -398,38 +469,6 @@ export default function WorkspaceShell({
             {busy && <Loader2 size={14} className="site-spin" aria-label="Sparar" />}
           </div>
 
-          <div className="site-topbar__right">
-            {isAdmin && (
-              <button type="button" className="site-btn" onClick={() => setDrawerOpen(true)}>
-                <Plus size={15} aria-hidden="true" /> Lägg till block
-              </button>
-            )}
-            <button type="button" className="site-btn" onClick={onOpenRevisions} title="Tidigare versioner">
-              <History size={15} aria-hidden="true" /> Versioner
-            </button>
-            {isAdmin && (
-              <>
-                {page?.published && (
-                  <button type="button" className="site-btn" onClick={onUnpublish}>
-                    Avpublicera
-                  </button>
-                )}
-                <button
-                  type="button"
-                  className="site-btn site-btn--primary"
-                  onClick={onPublish}
-                  disabled={Boolean(page && page.published && !page.has_unpublished_changes)}
-                  title={
-                    page && page.published && !page.has_unpublished_changes
-                      ? 'Det finns inget nytt att publicera.'
-                      : 'Publicera sidan'
-                  }
-                >
-                  Publicera
-                </button>
-              </>
-            )}
-          </div>
         </header>
 
         {error && (
@@ -486,6 +525,7 @@ export default function WorkspaceShell({
           vocabulary={vocabulary}
           onInsertBlock={onInsertBlock}
         />
+      </div>
       </div>
     </div>
   );

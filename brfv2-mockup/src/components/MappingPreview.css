@@ -25,7 +25,7 @@
 
 .mp-field input {
   padding: 9px 11px;
-  border-radius: 9px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--panel-border);
   background: var(--surface-2);
   color: var(--text-primary);
@@ -38,7 +38,7 @@
   align-items: center;
   gap: 7px;
   padding: 10px 14px;
-  border-radius: 9px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--accent, #6384ff);
   background: transparent;
   color: var(--text-primary);
@@ -54,7 +54,7 @@
 
 .mp-result {
   border: 1px solid var(--panel-border);
-  border-radius: 14px;
+  border-radius: var(--r-sm);
   padding: 18px 20px;
   background: var(--panel-bg, var(--surface-2));
   overflow-x: auto;
@@ -70,7 +70,7 @@
 .mp-note {
   margin: 10px 0 0;
   padding: 11px 13px;
-  border-radius: 10px;
+  border-radius: var(--r-sm);
   background: var(--surface-1);
   border: 1px solid var(--border-strong);
   font-size: 13px;

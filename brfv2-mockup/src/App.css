@@ -61,7 +61,7 @@
   flex-shrink: 0;
   padding: 2px 8px;
   border: 1px solid var(--border-strong);
-  border-radius: 999px;
+  border-radius: var(--r-sm);
   color: var(--foreground);
   font-family: var(--font-mono);
   font-size: 0.625rem;
@@ -931,7 +931,7 @@
   gap: 5px;
   padding: 2px 8px;
   border: 1px solid transparent;
-  border-radius: 999px;
+  border-radius: var(--r-sm);
   font-size: var(--text-xs);
   font-weight: 500;
   white-space: nowrap;
@@ -950,7 +950,7 @@
   flex-shrink: 0;
   padding: 1px 7px;
   border: 1px solid var(--border-strong);
-  border-radius: 999px;
+  border-radius: var(--r-sm);
   color: var(--foreground);
   font-size: var(--text-xs);
   font-weight: 500;
@@ -1142,10 +1142,14 @@
 /* Document library                                                          */
 /* ========================================================================= */
 
+/* On the plane, not in a card. The register was a bordered, rounded, white
+   box wrapped around a table that already draws its own rows — the box and
+   the hairlines were saying the same thing, and one of them was a web idiom. */
 .docs-collection-container {
-  border: 1px solid var(--border);
-  border-radius: var(--radius-3xl);
-  background: var(--card);
+  border: none;
+  border-top: 1px solid var(--border-strong);
+  border-radius: 0;
+  background: transparent;
   overflow-x: auto;
 }
 
@@ -1156,8 +1160,8 @@
 .docs-table { width: 100%; border-collapse: collapse; text-align: left; font-size: var(--text-md); }
 
 .docs-table th {
-  height: 42px;
-  padding: 0 20px;
+  height: var(--h-md);
+  padding: 0 var(--s4) 0 0;
   border-bottom: 1px solid var(--border);
   color: var(--subtle-foreground);
   font-family: var(--font-mono);
@@ -1167,7 +1171,18 @@
   text-transform: uppercase;
 }
 
-.docs-table td { padding: 0 20px; height: 52px; border-bottom: 1px solid var(--border); }
+.docs-table td {
+  padding: 0 var(--s4) 0 0;
+  height: 44px;
+  border-bottom: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Flush left at the workspace gutter; flush right at its far edge. */
+.docs-table th:first-child,
+.docs-table td:first-child { padding-left: 0; }
+.docs-table th:last-child,
+.docs-table td:last-child { padding-right: 0; }
 .docs-table tr:last-child td { border-bottom: none; }
 .docs-table tbody tr:hover td { background: var(--surface-2); }
 .docs-table .doc-name-cell { font-weight: 500; max-width: 0; width: 99%; }
@@ -1338,7 +1353,7 @@
 
 mark.search-highlight {
   padding: 1px 3px;
-  border-radius: 3px;
+  border-radius: var(--r-sm);
   background: rgb(255 214 0 / 0.42);
   color: var(--foreground);
   font-style: normal;
@@ -1633,30 +1648,35 @@ mark.search-highlight {
 
 .chat-input-area { margin-top: auto; padding-top: 16px; }
 
+/* The composer is a prompt line, not a floating capsule. It was a shadowed,
+   rounded, white lozenge hovering over the paper — the most web-chat object in
+   the product, on the screen whose whole job is reading source text. Now it is
+   a field with a hard edge, flush to the column, and the send key is a square
+   block of ink on the end of it. */
 .chat-input-wrapper {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 7px 7px 7px 16px;
-  border: 1px solid var(--input);
-  border-radius: var(--radius-block);
+  gap: var(--s2);
+  padding: 0 0 0 var(--s4);
+  border: 1px solid var(--border-strong);
+  border-radius: 0;
   background: var(--field);
-  box-shadow: var(--shadow-xs);
-  transition: border-color 0.14s ease, box-shadow 0.14s ease;
+  box-shadow: none;
+  transition: border-color 0.14s ease;
 }
 .chat-input-wrapper:focus-within { border-color: var(--ring); outline: 2px solid var(--ring);
   outline-offset: 2px; }
-.chat-input-wrapper input { flex: 1; min-width: 0; border: none; background: transparent; color: var(--foreground); font-size: var(--text-md); outline: none; }
+.chat-input-wrapper input { flex: 1; min-width: 0; height: var(--h-lg); border: none; background: transparent; color: var(--foreground); font-size: var(--text-md); outline: none; }
 .chat-input-wrapper input::placeholder { color: var(--subtle-foreground); }
 
 .chat-send-btn {
   display: grid;
   place-items: center;
-  width: 34px;
-  height: 34px;
+  width: var(--h-lg);
+  height: var(--h-lg);
   flex-shrink: 0;
   border: none;
-  border-radius: var(--radius-md);
+  border-radius: 0;
   background: var(--primary);
   color: var(--primary-foreground);
   cursor: pointer;
@@ -1700,7 +1720,7 @@ mark.search-highlight {
   margin-top: 10px;
   padding: 4px 10px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: var(--r-sm);
   background: var(--card);
   cursor: default;
 }
@@ -1803,7 +1823,7 @@ mark.search-highlight {
   place-items: center;
   width: 18px;
   height: 18px;
-  border-radius: 999px;
+  border-radius: var(--r-sm);
   background: var(--warn);
   color: var(--primary-foreground);
   font-family: var(--font-mono);
@@ -1881,7 +1901,7 @@ mark.search-highlight {
 
 .pdf-page-shell {
   position: relative;
-  border-radius: 2px;
+  border-radius: var(--r-sm);
   background: #fff;
   box-shadow: var(--shadow-lg);
   transform-origin: top center;
@@ -1898,7 +1918,7 @@ mark.search-highlight {
   position: absolute;
   background: rgb(255 214 0 / 0.42);
   outline: 1.5px solid rgb(214 176 0 / 0.9);
-  border-radius: 2px;
+  border-radius: var(--r-sm);
   pointer-events: none;
   mix-blend-mode: multiply;
 }

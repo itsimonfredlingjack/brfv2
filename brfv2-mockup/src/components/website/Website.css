@@ -14,10 +14,30 @@
 
 /* The workspace owns the whole area. `:has()` keeps this scoped to the website
    tab, so the shell's usual padding still applies to every other workspace. */
-.main-content:has(.site-ws),
+/* The editor takes the window *below* the plate. `.site-workspace` is the
+   column that owns both: the masthead keeps the shell's padding so its
+   full-bleed negative margin cancels, and the canvas fills whatever is left. */
 .main-content:has(.site-loading) {
   padding: 0;
   overflow: hidden;
+}
+
+/* The editor owns the window, so the shell's padding is removed rather than
+   cancelled: the plate then carries its own gutter instead of relying on a
+   negative margin to reach the edges, which is what clipped it here. */
+.main-content:has(.site-workspace) { padding: 0; overflow: hidden; }
+
+.site-workspace {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.site-workspace > .page-header {
+  margin: 0;
+  padding: var(--s8) var(--gutter) var(--s6);
+  flex: none;
 }
 
 /* The zero state is not the canvas — it is a workspace like any other and
@@ -25,7 +45,7 @@
    the shell's own padding to cancel. Only the editor takes the window. */
 .main-content:has(.site-start) { overflow: auto; }
 
-.tab-content:has(.site-ws),
+.tab-content:has(.site-workspace),
 .tab-content:has(.site-loading) {
   height: 100%;
   min-height: 0;
@@ -47,7 +67,7 @@
 
 .site-ws {
   display: flex;
-  height: 100%;
+  flex: 1;
   min-height: 0;
   background: var(--bg-workspace);
 }
@@ -127,7 +147,7 @@
   color: var(--text-muted);
   cursor: pointer;
   padding: 5px;
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   display: grid;
   place-items: center;
 }
@@ -163,7 +183,7 @@
 .ai-empty li {
   background: var(--panel-bg);
   border: 1px solid var(--panel-border);
-  border-radius: 9px;
+  border-radius: var(--r-sm);
   padding: 9px 11px;
   font-size: 12.5px;
   color: var(--text-secondary);
@@ -180,7 +200,7 @@
 .ai-msg {
   font-size: 13px;
   line-height: 1.55;
-  border-radius: 11px;
+  border-radius: var(--r-sm);
   padding: 11px 13px;
 }
 
@@ -275,7 +295,7 @@
   text-align: left;
   background: var(--surface-2);
   border: 1px solid var(--panel-border);
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   padding: 6px 9px;
   color: var(--text-secondary);
   font-size: 12px;
@@ -296,7 +316,7 @@
   margin-top: 11px;
   background: var(--surface-3);
   border: 1px solid var(--panel-border);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   padding: 7px 11px;
   color: var(--text-primary);
   font-size: 12.5px;
@@ -333,7 +353,7 @@
   color: var(--text-muted);
   margin-bottom: 9px;
   padding: 6px 9px;
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   background: var(--panel-bg);
   border: 1px solid var(--panel-border);
   overflow: hidden;
@@ -358,7 +378,7 @@
   resize: none;
   background: var(--panel-bg);
   border: 1px solid var(--panel-border);
-  border-radius: 10px;
+  border-radius: var(--r-sm);
   padding: 10px 12px;
   color: var(--text-primary);
   font-family: inherit;
@@ -379,7 +399,7 @@
   flex: none;
   width: 38px;
   height: 38px;
-  border-radius: 10px;
+  border-radius: var(--r-sm);
   border: 0;
   background: var(--primary);
   color: var(--primary-foreground);
@@ -407,17 +427,19 @@
 /* Wraps rather than clips: at 150 % zoom the fixed row cut "Publicera" in
    half at the window edge — a hidden control on the one button that ships
    the page. */
+/* What is left here is only what is about the page currently open: which page,
+   its state, and whether it is saving. The site-wide actions are masthead
+   actions now. */
 .site-topbar {
   flex: none;
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px 16px;
-  padding: 8px 16px;
-  min-height: 52px;
-  border-bottom: 1px solid var(--panel-border);
-  background: var(--sidebar);
+  gap: var(--s2) var(--s4);
+  padding: var(--s2) var(--s4);
+  min-height: 44px;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
 }
 
 .site-topbar__left {
@@ -449,7 +471,7 @@
   padding: 3px;
   background: var(--popover);
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-pill);
+  border-radius: var(--r-sm);
   box-shadow: var(--shadow-md);
   z-index: 15;
 }
@@ -461,7 +483,7 @@
   gap: 7px;
   padding: 0 9px;
   height: 34px;
-  border-radius: 9px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--panel-border);
   background: var(--panel-bg);
   color: var(--text-secondary);
@@ -502,7 +524,7 @@
   font-size: var(--text-xs);
   font-weight: 600;
   padding: 4px 9px;
-  border-radius: 999px;
+  border-radius: var(--r-sm);
   white-space: nowrap;
 }
 
@@ -531,7 +553,7 @@
   gap: 6px;
   background: none;
   border: 0;
-  border-radius: var(--radius-pill);
+  border-radius: var(--r-sm);
   padding: 6px 12px;
   color: var(--text-muted);
   font-family: inherit;
@@ -553,16 +575,16 @@
 .site-btn {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  height: 34px;
-  padding: 0 13px;
-  border-radius: 9px;
+  gap: var(--s2);
+  height: var(--h-md);
+  padding: 0 var(--s3);
+  border-radius: var(--r-sm);
   border: 1px solid var(--panel-border);
   background: var(--panel-bg);
   color: var(--text-primary);
   font-family: inherit;
-  font-size: 13px;
-  font-weight: 550;
+  font-size: var(--text-sm);
+  font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
 }
@@ -632,7 +654,7 @@
   max-width: 100%;
   /* The association's own page, which is paper like every document here. */
   background: var(--field);
-  border-radius: 12px;
+  border-radius: var(--r-sm);
   overflow: hidden;
   box-shadow: var(--shadow-md);
   border: 1px solid var(--surface-3);
@@ -662,7 +684,7 @@
   flex-direction: column;
   background: var(--popover);
   border: 1px solid var(--border-strong);
-  border-radius: 13px;
+  border-radius: var(--r-sm);
   box-shadow: var(--shadow-lg);
   overflow: hidden;
   z-index: 20;
@@ -704,7 +726,7 @@
   color: var(--text-muted);
   cursor: pointer;
   padding: 4px;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   display: grid;
   place-items: center;
 }
@@ -735,7 +757,7 @@
 .site-inspector__actions button {
   flex: 1;
   height: 30px;
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--panel-border);
   background: var(--panel-bg);
   color: var(--text-secondary);
@@ -794,7 +816,7 @@
   text-align: left;
   background: var(--surface-2);
   border: 1px solid var(--panel-border);
-  border-radius: 7px;
+  border-radius: var(--r-sm);
   padding: 6px 9px;
   color: var(--text-secondary);
   font-size: 12px;
@@ -859,7 +881,7 @@
   color: var(--text-muted);
   cursor: pointer;
   padding: 4px;
-  border-radius: 6px;
+  border-radius: var(--r-sm);
   display: grid;
   place-items: center;
 }
@@ -940,7 +962,7 @@
   overflow-y: auto;
   background: var(--bg-workspace);
   border: 1px solid var(--panel-border);
-  border-radius: 14px;
+  border-radius: var(--r-sm);
   padding: 20px 22px 22px;
   box-shadow: var(--shadow-lg);
 }
@@ -995,7 +1017,7 @@
   gap: 14px;
   padding: 12px 14px;
   border: 1px solid var(--panel-border);
-  border-radius: 10px;
+  border-radius: var(--r-sm);
   background: var(--panel-bg);
 }
 
@@ -1111,7 +1133,7 @@
 .site-drawer__add {
   flex: none;
   width: 34px;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--panel-border);
   background: var(--panel-bg);
   color: var(--text-secondary);
@@ -1164,7 +1186,7 @@
   gap: 7px;
   margin-top: 11px;
   padding: 7px 12px;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--status-warning);
   background: var(--surface-3);
   color: var(--text-primary);
@@ -1216,7 +1238,7 @@
   color: var(--avbrott);
   background: var(--avbrott-soft);
   border: 1px solid var(--avbrott-border);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   padding: 10px 14px;
   word-break: break-word;
 }

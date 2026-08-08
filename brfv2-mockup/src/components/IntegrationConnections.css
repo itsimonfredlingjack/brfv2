@@ -12,7 +12,7 @@
   align-items: flex-start;
   gap: 9px;
   padding: 11px 14px;
-  border-radius: 10px;
+  border-radius: var(--r-sm);
   margin-bottom: 14px;
   font-size: 14px;
   line-height: 1.5;
@@ -33,7 +33,7 @@
 
 .ic-provider {
   border: 1px solid var(--panel-border);
-  border-radius: 14px;
+  border-radius: var(--r-sm);
   padding: 18px 20px;
   margin-bottom: 16px;
   background: var(--panel-bg, var(--surface-2));
@@ -61,7 +61,7 @@
   font-size: 12px;
   font-weight: 600;
   padding: 3px 10px;
-  border-radius: 999px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--panel-border);
   color: var(--text-secondary);
   white-space: nowrap;
@@ -164,7 +164,7 @@
   gap: 10px;
   margin-top: 14px;
   padding: 12px 14px;
-  border-radius: 10px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--warn-border);
   background: var(--warn-soft);
 }
@@ -190,7 +190,7 @@
   align-items: center;
   gap: 7px;
   padding: 9px 14px;
-  border-radius: 9px;
+  border-radius: var(--r-sm);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
@@ -232,7 +232,7 @@
 .ic-device {
   margin-top: 12px;
   padding: 14px 16px;
-  border-radius: 11px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--border-strong);
   background: var(--surface-1);
 }
@@ -271,7 +271,7 @@
   align-items: center;
   gap: 6px;
   padding: 6px 11px;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--panel-border);
   background: transparent;
   color: var(--text-secondary);
@@ -317,7 +317,7 @@
 .ic-confirm {
   margin-top: 12px;
   padding: 14px 16px;
-  border-radius: 11px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--avbrott-border);
   background: var(--avbrott-soft);
 }

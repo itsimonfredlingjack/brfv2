@@ -25,7 +25,7 @@
   align-items: center;
   gap: 6px;
   padding: 8px 13px;
-  border-radius: 9px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--panel-border);
   background: transparent;
   color: var(--text-primary);
@@ -47,7 +47,7 @@
 
 .task-create-panel {
   border: 1px solid var(--panel-border);
-  border-radius: 11px;
+  border-radius: var(--r-sm);
   padding: 13px 15px 15px;
   background: var(--surface-2);
 }
@@ -80,7 +80,7 @@
 .task-create-panel input,
 .task-create-panel textarea {
   padding: 7px 10px;
-  border-radius: 9px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--panel-border);
   background: var(--surface-2);
   color: var(--text-primary);
@@ -113,7 +113,7 @@
 .task-create-unknown {
   margin: 0 0 10px;
   padding: 9px 12px;
-  border-radius: 9px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--warn-border);
   background: var(--warn-soft);
   font-size: 13px;
@@ -124,7 +124,7 @@
 .task-create-duplicate {
   margin: 0 0 12px;
   padding: 11px 13px;
-  border-radius: 10px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--warn-border);
   background: var(--warn-soft);
 }
@@ -172,7 +172,7 @@
 .task-create-error {
   margin: 0 0 10px;
   padding: 9px 12px;
-  border-radius: 9px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--avbrott-border);
   background: var(--avbrott-soft);
   font-size: 13px;
@@ -193,7 +193,7 @@
   align-items: center;
   gap: 6px;
   padding: 8px 13px;
-  border-radius: 9px;
+  border-radius: var(--r-sm);
   border: 1px solid var(--panel-border);
   background: transparent;
   color: var(--text-primary);

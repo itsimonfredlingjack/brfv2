@@ -625,7 +625,7 @@ export default function Invoices({ brfId, isAdmin = false, onOpenDocument, onOpe
                 <thead>
                   <tr>
                     <th>Faktura</th>
-                    <th className="col-amount">Belopp</th>
+                    <th className="numeric col-amount">Belopp</th>
                     <th>Förfaller</th>
                     <th>I ekonomisystemet</th>
                     <th>Vår granskning</th>

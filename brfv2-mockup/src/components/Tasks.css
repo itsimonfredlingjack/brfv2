@@ -235,7 +235,7 @@
 .task-badge {
   padding: 2px 9px;
   border: 1px solid var(--border-strong);
-  border-radius: var(--radius-pill);
+  border-radius: var(--r-sm);
   color: var(--muted-foreground);
   font-size: var(--text-xs);
   font-weight: 500;

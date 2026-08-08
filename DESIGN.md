@@ -182,11 +182,15 @@ The audit that prompted this found the stylesheets carrying **seven radii**
 in `theme.css` and then used essentially nowhere. A scale nobody spends is a
 comment, not a system.
 
-- **Radius: `--r-sm` 8px operated / `--r-md` 12px held / `--r-lg` 18px sheets.**
+- **Radius: `--r-sm` 0 operated / `--r-md` 0 held / `--r-lg` 2px overlays.**
   The old names (`--radius-2xl` etc.) are aliases onto these, so 100+ existing
-  declarations inherit the correction untouched. Controls came **down from
-  18px** — an 18px corner on a 32px button is 56% of its own height, which is a
-  lozenge, and a screen of lozenges is the toy look.
+  declarations inherit the correction untouched. This went 18px → 8px → 0 in
+  two passes: an 18px corner on a 32px button is 56% of its own height, which
+  is a lozenge, and 8px was still a web affordance — a rounded corner exists to
+  make a rectangle look like a soft tappable object, and this is a desktop
+  instrument for reading contracts. Only genuine circles (status dots, the
+  mark) and the platform scrollbar keep a radius. **`components/website/site.css`
+  is exempt** — that is the published public website, a separate system.
 - **Height: `--h-sm` 28 / `--h-md` 36 / `--h-lg` 44**, chosen by role. `--h-md`
   is the default for every button, input, select and filter.
 - **`<select>` is styled at the element level**, not via `.ui-select`. Fakturor's
@@ -195,9 +199,45 @@ comment, not a system.
   widgets in a row inside the product's own fields. Watch for the
   `background:` **shorthand** in component sheets: it resets `background-image`
   and silently erases the chevron. Use `background-color`.
-- **The sidebar is paper (`#FBFAF9`), not `#FFFFFF`.** The app was running three
+- **The sidebar is paper (`--papper`), not `#FFFFFF`.** The app was running three
   grounds at once and the coldest was the one permanently on screen. `#FFFFFF`
   stays reserved for a document.
+
+### 2d. No nested cards — content sits on the plane
+
+The rule: **controls and data sit directly on the workspace plane, separated by
+grid alignment, whitespace or a hairline — never inside a padded box.** A card
+inside a card inside a card was the app's most common structure and it was
+always drawing a boundary the hairlines already drew.
+
+- Fakturor's register was a white, rounded, drop-shadowed sheet with the filter
+  row nested in it and the table nested in that — three boxes deep to show one
+  list. Now: one hairline where the register starts, rows flush to the gutter.
+- Dokument's table had the same wrapper; same treatment.
+- `.ui-empty` no longer draws a dashed box around emptiness.
+- The chat composer was a shadowed rounded capsule floating over the paper —
+  the most web-chat object in the product, on the screen whose job is reading
+  source text. Now a hard-edged field with a square ink send block.
+- Registers use `font-variant-numeric: tabular-nums` on every cell, `--font-mono`
+  and `text-align: right` on numeric columns, and flush-left/flush-right edges
+  (`padding-left: 0` on the first column, `padding-right: 0` on the last) so the
+  data reads as terminal output rather than as a web grid.
+
+### 2e. Hemsidan is on the plate, editor included
+
+No exceptions: a unified desktop app cannot have one screen behaving like a
+detached web page. `WorkspaceShell` wraps the Puck editor in `.site-workspace`,
+a column whose first child is the standard `.page-header`. The site-wide actions
+(Publicera, Versioner, Lägg till block) are masthead actions like every other
+workspace's; the editor's own topbar keeps only what is about the page currently
+open — which page, its state, the width it is judged at. The instrument reads
+pages / published / att bekräfta, the last being the number that decides whether
+the site may be published at all.
+
+One trap: the shell's padding is **removed** for this workspace and the plate
+carries its own gutter (`padding: var(--s8) var(--gutter) var(--s6)`). Cancelling
+the padding with a negative margin instead clips the band, because the editor's
+container is `overflow: hidden`.
 
 ### 3. Masthead weight — every workspace's name is the one assertion
 
