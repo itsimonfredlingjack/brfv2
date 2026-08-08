@@ -80,7 +80,7 @@
 
 .integrations-tabs button > svg { display: none; }
 .integrations-tabs button:hover { color: var(--foreground); }
-.integrations-tabs button:focus-visible { outline: 2px solid var(--ring); outline-offset: 4px; border-radius: 2px; }
+.integrations-tabs button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: 2px; }
 .integrations-tabs button.active {
   color: var(--foreground);
   border-bottom-color: var(--ink);
@@ -406,7 +406,8 @@
   outline: none;
 }
 
-.alias-actions input:focus-visible { border-color: var(--ring); box-shadow: 0 0 0 3px var(--ring-glow); }
+.alias-actions input:focus-visible { border-color: var(--ring); outline: 2px solid var(--ring);
+  outline-offset: 2px; }
 
 .alias-confirm,
 .alias-rerun {
@@ -455,7 +456,8 @@
   outline: none;
 }
 
-.decision-note:focus-visible { border-color: var(--ring); box-shadow: 0 0 0 3px var(--ring-glow); }
+.decision-note:focus-visible { border-color: var(--ring); outline: 2px solid var(--ring);
+  outline-offset: 2px; }
 .decision-note::placeholder { color: var(--subtle-foreground); }
 
 .decision-buttons { display: flex; gap: 7px; flex-wrap: wrap; }

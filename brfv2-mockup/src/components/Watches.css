@@ -452,7 +452,8 @@
   transition: border-color 0.14s ease, box-shadow 0.14s ease;
 }
 
-.watches input:focus-visible { border-color: var(--ring); box-shadow: 0 0 0 3px var(--ring-glow); }
+.watches input:focus-visible { border-color: var(--ring); outline: 2px solid var(--ring);
+  outline-offset: 2px; }
 .watches input:disabled { opacity: 0.55; }
 
 .watch-invalid { margin: 0 0 8px; font-size: var(--text-sm); color: var(--warn); }

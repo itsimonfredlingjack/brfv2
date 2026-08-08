@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Folders, Search as SearchIcon, FileText, ArrowRight, Loader2, AlertCircle, Upload, CheckCircle2, AlertTriangle, X, ChevronRight, CornerDownRight, ArrowLeft, ZoomIn, ZoomOut, ThumbsDown, MessageCircle, Info, Trash2 } from 'lucide-react';
 import TraffMark from './components/TraffMark';
 import EmptyState from './components/EmptyState';
+import useSlashFocus from './useSlashFocus';
 import Login from './components/Login';
 import PdfPane from './components/PdfPane';
 import Setup from './components/Setup';
@@ -210,6 +211,9 @@ function App() {
   // Upload/delete state — see the [activeBrfId] effect below for how these
   // get invalidated on a tenant switch.
   const uploadInputRef = React.useRef(null);
+  const docsSearchRef = React.useRef(null);
+  // "/" focuses the document search, but only where that field is on screen.
+  useSlashFocus(docsSearchRef, currentTab === 'docs');
   const uploadRequestIdRef = React.useRef(0);
   const [uploadState, setUploadState] = useState(null); // { fileName } while an upload is in flight
   const [uploadError, setUploadError] = useState(null); // { fileName, message }
@@ -1138,11 +1142,16 @@ function App() {
                     <SearchIcon size={16} />
                     <input
                       type="text"
+                      ref={docsSearchRef}
                       placeholder="Sök dokumentnamn…"
                       value={docsSearchQuery}
                       onChange={(e) => setDocsSearchQuery(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Escape' && docsSearchQuery) setDocsSearchQuery('');
+                      }}
                       aria-label="Sök dokument"
                     />
+                    {!docsSearchQuery && <kbd className="kbd" aria-hidden="true">/</kbd>}
                     {docsSearchQuery && (
                       <button className="icon-action-btn clear-search" onClick={() => setDocsSearchQuery('')} aria-label="Rensa sökning">
                         <X size={14} />

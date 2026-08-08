@@ -286,7 +286,8 @@
 .invoices-filters select:focus-visible,
 .invoices-filters input:focus-visible {
   border-color: var(--ring);
-  box-shadow: 0 0 0 3px var(--ring-glow);
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 
 /* WebKitGTK draws a closed <select> with the *platform* widget, so the scheme
@@ -316,10 +317,13 @@
   color: var(--muted-foreground);
 }
 
-.invoices-search:focus-within { border-color: var(--ring); box-shadow: 0 0 0 3px var(--ring-glow); }
+.invoices-search:focus-within { border-color: var(--ring); outline: 2px solid var(--ring);
+  outline-offset: 2px; }
 .invoices-search input { flex: 1; height: auto; border: none; background: transparent; padding: 0; }
 .invoices-search input:focus { outline: none; }
 .invoices-search input:focus-visible { box-shadow: none; }
+.invoices-search .kbd { flex-shrink: 0; }
+.invoices-search:focus-within .kbd { display: none; }
 
 /* ---- the queue ---- */
 
@@ -383,6 +387,13 @@
 
 .invoices-queue tbody tr { cursor: pointer; transition: background-color 0.12s ease; }
 .invoices-queue tbody tr:hover { background: var(--surface-2); }
+/* Keyboard mark: inset ring (a table row's outline clips in WebKitGTK) plus
+   the soft Handling tint — the same treatment as .thread-row. */
+.invoices-queue tbody tr:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--ring);
+  background: var(--handling-soft);
+}
 .invoices-queue tbody tr:last-child td { border-bottom: none; }
 
 .invoices-queue th.col-amount,
@@ -1019,7 +1030,8 @@
 .case-responsible-form input:focus-visible,
 .case-comment-form textarea:focus-visible {
   border-color: var(--ring);
-  box-shadow: 0 0 0 3px var(--ring-glow);
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 
 .case-status-current { font-size: var(--text-lg); font-weight: 600; }

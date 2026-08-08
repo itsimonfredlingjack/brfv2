@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Archive,
   CalendarClock,
@@ -22,6 +22,7 @@ import {
   X,
 } from 'lucide-react';
 import { intakeApi, integrationsApi } from '../api';
+import useSlashFocus from '../useSlashFocus';
 import EmptyState from './EmptyState';
 import './IntakeQueue.css';
 
@@ -220,10 +221,11 @@ function FetchBar({ mailbox, connected, busy, onFetch, onImportFile, format, las
 }
 
 /** One row in the queue: enough to choose from, never enough to decide from. */
-function ThreadRow({ thread, selected, onSelect }) {
+function ThreadRow({ thread, selected, onSelect, rowRef }) {
   return (
     <button
       type="button"
+      ref={rowRef}
       className={`thread-row${selected ? ' selected' : ''}${thread.resolved ? ' resolved' : ''}`}
       aria-current={selected ? 'true' : undefined}
       onClick={() => onSelect(thread.key)}
@@ -898,6 +900,36 @@ export default function IntakeQueue({
 
   const counts = queue?.counts || {};
 
+  // Keyboard flow: "/" lands on the filter tabs, arrows move the mark in the
+  // list, Enter steps into the detail, Escape steps back to the marked row.
+  const firstTabRef = useRef(null);
+  const rowRefs = useRef(new Map());
+  const detailRef = useRef(null);
+  useSlashFocus(firstTabRef);
+
+  const onListKeyDown = (event) => {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      const index = threads.findIndex((t) => t.key === selected?.key);
+      const nextIndex = event.key === 'ArrowDown'
+        ? Math.min(index + 1, threads.length - 1)
+        : Math.max(index - 1, 0);
+      const next = threads[nextIndex];
+      if (next) {
+        setSelectedKey(next.key);
+        rowRefs.current.get(next.key)?.focus();
+      }
+    } else if (event.key === 'Enter') {
+      detailRef.current?.focus();
+    }
+  };
+
+  const onDetailKeyDown = (event) => {
+    if (event.key !== 'Escape') return;
+    const key = selected?.key;
+    if (key) rowRefs.current.get(key)?.focus();
+  };
+
   return (
     <div className="intake">
       {/* The mailbox promise lives beside Spara beslutet — not as a page
@@ -921,6 +953,7 @@ export default function IntakeQueue({
         <div className="ui-tabs intake-counts" role="group" aria-label="Filtrera kön">
           <button
             type="button"
+            ref={firstTabRef}
             className={filter === 'open' ? 'active' : ''}
             aria-pressed={filter === 'open'}
             data-filter="open"
@@ -991,18 +1024,27 @@ export default function IntakeQueue({
 
       {!loading && threads.length > 0 && (
         <div className="intake-layout">
-          <div className="intake-list" role="list" aria-label="Trådar i kön">
+          <div className="intake-list" role="list" aria-label="Trådar i kön" onKeyDown={onListKeyDown}>
             {threads.map((thread) => (
               <ThreadRow
                 key={thread.key}
                 thread={thread}
                 selected={selected?.key === thread.key}
                 onSelect={setSelectedKey}
+                rowRef={(el) => {
+                  if (el) rowRefs.current.set(thread.key, el);
+                  else rowRefs.current.delete(thread.key);
+                }}
               />
             ))}
           </div>
 
-          <div className="intake-detail">
+          <div
+            className="intake-detail"
+            ref={detailRef}
+            tabIndex={-1}
+            onKeyDown={onDetailKeyDown}
+          >
             {selected && (
               <ThreadDetail
                 thread={selected}

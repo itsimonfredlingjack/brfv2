@@ -520,18 +520,19 @@
   transition: background-color 0.14s ease, border-color 0.14s ease, color 0.14s ease;
 }
 
+/* .nav-item keeps its own sidebar ring (2px box-shadow, no offset) — the
+   nav is too densely packed for an offset outline. */
 .small-action-btn:focus-visible,
 .search-action-btn:focus-visible,
 .followup-btn:focus-visible,
 .filter-pill:focus-visible,
 .icon-action-btn:focus-visible,
-.nav-item:focus-visible,
 .example-prompt-btn:focus-visible,
 .chat-send-btn:focus-visible,
 .doc-open-btn:focus-visible {
-  outline: none;
   border-color: var(--ring);
-  box-shadow: 0 0 0 3px var(--ring-glow);
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 
 .small-action-btn {
@@ -624,8 +625,12 @@
 .search-input-large-wrapper:focus-within,
 .search-input-small:focus-within {
   border-color: var(--ring);
-  box-shadow: 0 0 0 3px var(--ring-glow);
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
+
+.search-input-small .kbd { flex-shrink: 0; margin-right: 4px; }
+.search-input-small:focus-within .kbd { display: none; }
 
 .search-action-btn {
   height: 32px;
@@ -1165,7 +1170,8 @@ mark.search-highlight {
   box-shadow: var(--shadow-xs);
   transition: border-color 0.14s ease, box-shadow 0.14s ease;
 }
-.chat-input-wrapper:focus-within { border-color: var(--ring); box-shadow: 0 0 0 3px var(--ring-glow); }
+.chat-input-wrapper:focus-within { border-color: var(--ring); outline: 2px solid var(--ring);
+  outline-offset: 2px; }
 .chat-input-wrapper input { flex: 1; min-width: 0; border: none; background: transparent; color: var(--foreground); font-size: var(--text-md); outline: none; }
 .chat-input-wrapper input::placeholder { color: var(--subtle-foreground); }
 
@@ -1315,7 +1321,8 @@ mark.search-highlight {
 .workspace-tab:hover:not(:disabled) { color: var(--foreground); background: var(--surface-accent); }
 .workspace-tab.active { background: var(--secondary); color: var(--foreground); }
 .workspace-tab:disabled { cursor: not-allowed; opacity: 0.5; }
-.workspace-tab:focus-visible { border-color: var(--ring); box-shadow: 0 0 0 3px var(--ring-glow); }
+.workspace-tab:focus-visible { border-color: var(--ring); outline: 2px solid var(--ring);
+  outline-offset: 2px; }
 
 .tab-badge {
   display: grid;

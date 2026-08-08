@@ -134,7 +134,8 @@
 .ds-field input:focus,
 .ds-inline-form input:focus {
   border-color: var(--ring);
-  box-shadow: 0 0 0 3px var(--ring-glow);
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 
 .ds-field small {

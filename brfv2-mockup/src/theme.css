@@ -169,6 +169,10 @@
   /* Handling — links and text actions. Never a state. */
   --handling: #1A4FD0;
   --handling-hover: #123CA8;
+  /* The keyboard mark: a soft Handling tint behind the row focus has moved
+     to, so the position reads in peripheral vision without becoming a state
+     color. */
+  --handling-soft: #E9EEFB;
   /* The marked passage inside a document. Lives only within the paper. */
   --remsgul: #FFD600;
 
@@ -191,7 +195,6 @@
   --border-strong: #CDC7C1;
   --input: #DAD5D0;
   --ring: var(--handling);
-  --ring-glow: rgb(26 79 208 / 20%);
   --muted-hover: #E6E2DD;
 
   /* The primary action is the ink, as it is on paper. Handling stays what the
@@ -493,9 +496,29 @@ code, pre, kbd, samp { font-family: var(--font-mono); }
 ::-webkit-scrollbar-thumb:hover { background: #B3ACA6; background-clip: content-box; }
 
 /* ---- one focus treatment for the whole product ---- */
+/* 2px Handling-blue, 2px offset — the same ring on a primary button, a tab,
+   a link and an input, because focus is an action, not a state. List rows
+   are the one exception: they draw the ring inset (see .thread-row and
+   .invoices-queue) so a card's rounding never clips it, plus a
+   --handling-soft tint. Never reintroduce a 3px glow — design-lock tests it. */
 :focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
+}
+
+/* Keyboard hint chip — the shortcut shown where it works ("/" in a filter
+   field). Hidden by the field's :focus-within once the hint has done its job. */
+.kbd {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 600;
+  padding: 1px 7px;
+  background: #FFFFFF;
+  border: 1px solid var(--border-strong);
+  border-bottom-width: 2px;
+  border-radius: 6px;
+  color: var(--foreground);
+  white-space: nowrap;
 }
 
 /* ========================================================================= */
@@ -651,9 +674,9 @@ code, pre, kbd, samp { font-family: var(--font-mono); }
 .ui-input:focus-visible,
 .ui-select:focus-visible,
 .ui-textarea:focus-visible {
-  outline: none;
   border-color: var(--ring);
-  box-shadow: 0 0 0 3px var(--ring-glow);
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 
 .ui-input:disabled,

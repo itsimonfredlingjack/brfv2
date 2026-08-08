@@ -143,7 +143,8 @@
 
 .hidden-file-input:focus-visible + .import-button {
   border-color: var(--ring);
-  box-shadow: 0 0 0 3px var(--ring-glow);
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 
 /* Reading post in and importing a file by hand are the same weight of act, so
@@ -287,7 +288,13 @@
   box-shadow: var(--shadow-xs);
 }
 
-.thread-row:focus-visible { border-color: var(--ring); box-shadow: 0 0 0 3px var(--ring-glow); }
+/* The list row draws the ring inset, so the card rounding never clips it,
+   plus a soft Handling tint that reads in peripheral vision. */
+.thread-row:focus-visible {
+  outline: none;
+  box-shadow: inset 0 0 0 2px var(--ring);
+  background: var(--handling-soft);
+}
 .thread-row.resolved .thread-subject { color: var(--muted-foreground); font-weight: 500; }
 
 .thread-row-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
@@ -891,7 +898,8 @@
 .resolve-section select:focus-visible,
 .resolve-note input:focus-visible {
   border-color: var(--ring);
-  box-shadow: 0 0 0 3px var(--ring-glow);
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 
 .category-save {

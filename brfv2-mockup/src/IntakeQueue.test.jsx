@@ -864,3 +864,62 @@ describe('a member who is not an administrator', () => {
     expect(screen.getByRole('checkbox', { name: 'Ta in' })).toBeDisabled();
   });
 });
+
+describe('the keyboard flow', () => {
+  const TWO_THREADS = [
+    THREAD,
+    { ...THREAD, key: 't2', subject: 'Faktura hisservice', open_count: 3 },
+  ];
+  const TWO_COUNTS = { threads: 2, openThreads: 2, openMessages: 4, awaitingReply: 0, unclear: 0 };
+
+  it('"/" lands on the filter tabs, unless the user is typing', async () => {
+    mountWith();
+    await waitForQueue();
+    fireEvent.keyDown(window, { key: '/' });
+    expect(document.activeElement).toBe(document.querySelector('button[data-filter="open"]'));
+
+    document.activeElement.blur();
+    fireEvent.keyDown(document.querySelector('#intake-eml-import'), { key: '/' });
+    expect(document.activeElement).not.toBe(document.querySelector('button[data-filter="open"]'));
+  });
+
+  it('moves the mark with the arrow keys', async () => {
+    mountWith({ threads: TWO_THREADS, counts: TWO_COUNTS });
+    const list = await waitForQueue();
+    const rows = list.querySelectorAll('.thread-row');
+    rows[0].focus();
+
+    fireEvent.keyDown(list, { key: 'ArrowDown' });
+    expect(document.activeElement).toBe(rows[1]);
+    expect(rows[1]).toHaveAttribute('aria-current', 'true');
+
+    fireEvent.keyDown(list, { key: 'ArrowUp' });
+    expect(document.activeElement).toBe(rows[0]);
+    expect(rows[0]).toHaveAttribute('aria-current', 'true');
+  });
+
+  it('does not move past the ends of the list', async () => {
+    mountWith();
+    const list = await waitForQueue();
+    const row = list.querySelector('.thread-row');
+    row.focus();
+    fireEvent.keyDown(list, { key: 'ArrowUp' });
+    expect(document.activeElement).toBe(row);
+    fireEvent.keyDown(list, { key: 'ArrowDown' });
+    expect(document.activeElement).toBe(row);
+  });
+
+  it('Enter steps into the detail, Escape steps back to the marked row', async () => {
+    mountWith();
+    const list = await waitForQueue();
+    const row = list.querySelector('.thread-row');
+    row.focus();
+
+    fireEvent.keyDown(list, { key: 'Enter' });
+    const detail = document.querySelector('.intake-detail');
+    expect(document.activeElement).toBe(detail);
+
+    fireEvent.keyDown(detail, { key: 'Escape' });
+    expect(document.activeElement).toBe(row);
+  });
+});

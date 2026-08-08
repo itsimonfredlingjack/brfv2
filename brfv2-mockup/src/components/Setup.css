@@ -123,7 +123,8 @@
 
 .setup-field input:focus-visible {
   border-color: var(--ring);
-  box-shadow: 0 0 0 3px var(--ring-glow);
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 
 .setup-field small {
@@ -215,7 +216,8 @@
 .setup-secondary:focus-visible {
   outline: none;
   border-color: var(--ring);
-  box-shadow: 0 0 0 3px var(--ring-glow);
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 
 .setup-submit:disabled,

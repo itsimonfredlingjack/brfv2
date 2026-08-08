@@ -1054,3 +1054,36 @@ describe('the wire', () => {
     expect(block).not.toMatch(/approve|attest|book|pay/i);
   });
 });
+
+describe('the keyboard flow', () => {
+  it('"/" focuses the queue search', async () => {
+    mount();
+    await screen.findByText('2026-131');
+    fireEvent.keyDown(window, { key: '/' });
+    expect(document.activeElement).toBe(screen.getByLabelText('Sök i fakturakön'));
+  });
+
+  it('arrows move between rows and Enter opens the marked case', async () => {
+    mount();
+    await screen.findByText('2026-131');
+    fireEvent.change(screen.getByLabelText('Filtrera på granskningsläge'), { target: { value: 'all' } });
+    const rows = document.querySelectorAll('.invoices-queue tbody tr');
+    expect(rows.length).toBe(2);
+
+    rows[0].focus();
+    fireEvent.keyDown(rows[0], { key: 'ArrowDown' });
+    expect(document.activeElement).toBe(rows[1]);
+
+    fireEvent.keyDown(rows[1], { key: 'Enter' });
+    expect(await screen.findByText(/Källor och härkomst/)).toBeInTheDocument();
+  });
+
+  it('Escape empties the search field', async () => {
+    mount();
+    await screen.findByText('2026-131');
+    const input = screen.getByLabelText('Sök i fakturakön');
+    fireEvent.change(input, { target: { value: 'zzz' } });
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(input).toHaveValue('');
+  });
+});

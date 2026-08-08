@@ -522,7 +522,8 @@
 
 .tasks input:focus-visible,
 .tasks select:focus-visible,
-.tasks textarea:focus-visible { border-color: var(--ring); box-shadow: 0 0 0 3px var(--ring-glow); }
+.tasks textarea:focus-visible { border-color: var(--ring); outline: 2px solid var(--ring);
+  outline-offset: 2px; }
 
 .tasks input:disabled,
 .tasks select:disabled,

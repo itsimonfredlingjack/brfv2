@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   Building2,
@@ -15,6 +15,7 @@ import {
   X,
 } from 'lucide-react';
 import { integrationsApi, invoicesApi } from '../api';
+import useSlashFocus from '../useSlashFocus';
 import EmptyState from './EmptyState';
 import InvoiceCase from './InvoiceCase';
 import { formatAmount } from './money';
@@ -245,6 +246,20 @@ export default function Invoices({ brfId, isAdmin = false, onOpenDocument, onOpe
     panel.querySelector('summary')?.focus();
   };
 
+  const searchRef = useRef(null);
+  useSlashFocus(searchRef);
+
+  // Working through a pile without leaving the keyboard: arrows move between
+  // rows, Enter opens the marked one — the same act as clicking it.
+  const onQueueKeyDown = (event) => {
+    if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    const row = event.target.closest('tr');
+    if (!row) return;
+    event.preventDefault();
+    const sibling = event.key === 'ArrowDown' ? row.nextElementSibling : row.previousElementSibling;
+    sibling?.focus();
+  };
+
   const refresh = useCallback(async () => {
     if (!brfId) return;
     setLoading(true);
@@ -434,11 +449,16 @@ export default function Invoices({ brfId, isAdmin = false, onOpenDocument, onOpe
               <Search size={14} aria-hidden="true" />
               <input
                 type="search"
+                ref={searchRef}
                 value={query}
                 placeholder="Sök leverantör, nummer, ansvarig…"
                 aria-label="Sök i fakturakön"
                 onChange={(e) => setQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape' && query) { setQuery(''); e.stopPropagation(); }
+                }}
               />
+              <kbd className="kbd" aria-hidden="true">/</kbd>
             </label>
             <label>
               <span>Läge</span>
@@ -525,12 +545,14 @@ export default function Invoices({ brfId, isAdmin = false, onOpenDocument, onOpe
                     <th>Aktivitet</th>
                   </tr>
                 </thead>
-                <tbody>
+                <tbody onKeyDown={onQueueKeyDown}>
                   {visible.map((row) => (
                     <tr
                       key={row.id}
                       className={row.overdue ? 'overdue' : ''}
+                      tabIndex={0}
                       onClick={() => setSelected(row.id)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') setSelected(row.id); }}
                     >
                       <td>
                         <button type="button" className="case-link" onClick={() => setSelected(row.id)}>

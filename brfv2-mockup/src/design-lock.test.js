@@ -52,3 +52,18 @@ describe('design lock: four breakpoints', () => {
     expect(offenders).toEqual([]);
   });
 });
+
+// Beslut 3 (tangentbordsflödet): one focus ring — 2px solid var(--ring), 2px
+// offset. The 3px glow was swept away in the keyboard-flow commit; the token
+// is deleted, so the string itself failing to appear is the lock.
+describe('design lock: one focus ring', () => {
+  it('no 3px glow ring or ring-glow token under src/', () => {
+    const offenders = [];
+    for (const file of walk(SRC)) {
+      if (file === SELF || !file.endsWith('.css')) continue;
+      const text = readFileSync(file, 'utf8');
+      if (text.includes('ring-glow')) offenders.push(`${relative(SRC, file)} mentions ring-glow`);
+    }
+    expect(offenders).toEqual([]);
+  });
+});

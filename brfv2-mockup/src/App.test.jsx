@@ -570,3 +570,24 @@ describe('desktop delivery', () => {
     expect(within(dialog).getByRole('button', { name: /Starta om nu/ })).toBeInTheDocument();
   });
 });
+
+describe('the keyboard flow', () => {
+  it('"/" focuses the document search on the Dokument tab', async () => {
+    api.me.mockResolvedValue({ user: MAX_USER, memberships: MAX_MEMBERSHIPS });
+    render(<App />);
+
+    const input = await screen.findByLabelText('Sök dokument');
+    fireEvent.keyDown(window, { key: '/' });
+    expect(document.activeElement).toBe(input);
+  });
+
+  it('"/" stays inert on tabs where the field is not on screen', async () => {
+    api.me.mockResolvedValue({ user: MAX_USER, memberships: MAX_MEMBERSHIPS });
+    render(<App />);
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Fråga dokumenten' }));
+    await screen.findByPlaceholderText('Fråga rakt in i högen…');
+    fireEvent.keyDown(window, { key: '/' });
+    expect(document.activeElement).toBe(document.body);
+  });
+});
