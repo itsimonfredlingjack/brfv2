@@ -212,7 +212,7 @@
      identity reserves #FFFFFF for one thing: a document. A navigation column
      is not a document, so it joins the paper and the app reads as two
      materials instead of three. */
-  --sidebar: #FBFAF9;
+  --sidebar: var(--papper);
   --sidebar-foreground: var(--ink);
   --sidebar-accent: var(--surface-3);
   --sidebar-accent-foreground: var(--ink);

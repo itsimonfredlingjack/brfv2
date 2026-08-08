@@ -1376,25 +1376,45 @@ function App() {
             )}
 
             {currentTab === 'chat' && (
-              <div className="tab-content tab-content--fill">
-                <div className="chat-container">
-                  <div className="chat-header">
-                    <h2 className="chat-title">Fråga dokumenten</h2>
-                    <p className="chat-header-sub">Frågan går till föreningens egna dokument. Ingenting annat.</p>
+              <div className="tab-content tab-content--fill chat-workspace">
+                {/* The conversation runs on the same plate as every register.
+                    It used to open on a centred 780px column with its own
+                    header treatment — the one workspace still floating on the
+                    paper instead of hanging off the app's grid. Its instrument
+                    is the corpus the question will actually be put to, which is
+                    the same archive Dokument measures and the one fact that
+                    decides whether an answer can exist. */}
+                <header className="page-header">
+                  <div className="page-header-text">
+                    <h2 className="page-title">Fråga dokumenten</h2>
+                    <p className="page-header-sub">Svaret citerar det dokument det kommer ur — eller uteblir.</p>
                   </div>
+                  <div className="page-header-actions" />
+                  <div className="page-header-instrument">
+                    <div className="invoices-ledger">
+                      <div className="invoices-ledger-figure">
+                        <span className="ledger-label">Sökbara sidor</span>
+                        <span className="ledger-amount">
+                          {documents.reduce((sum, d) => sum + (d.pages || 0), 0)}
+                        </span>
+                      </div>
+                      <dl className="watches-standing">
+                        <div><dt>Dokument</dt><dd>{documents.length}</dd></div>
+                      </dl>
+                    </div>
+                  </div>
+                </header>
 
+                <div className="chat-container">
                   <div className="chat-messages-area">
                     {chatMessages.length === 0 ? (
                       <div className="chat-empty-state">
-                         {/* Same split the login screen uses: ink carries the
-                             thesis, paper carries the work. Not a bigger
-                             version of one card — a different composition. */}
-                         <div className="chat-empty-brand">
-                           <TraffMark size={72} variant="status" state="vila" decorative />
-                           <p className="chat-empty-thesis">
-                             Svaret citerar det dokument det kommer ur — eller uteblir.
-                           </p>
-                         </div>
+                         {/* The split panel that used to stand here said the
+                             thesis a second time — the band above now carries
+                             it, in ink, at masthead scale. What is left is the
+                             only thing the empty screen still owes a reader:
+                             two questions they could actually ask. The split
+                             composition returns to being login's alone. */}
                          <div className="chat-empty-body">
                            <h3 className="chat-empty-title">Ställ en fråga om föreningens dokument</h3>
                            <div className="chat-empty-examples">
@@ -1492,8 +1512,9 @@ function App() {
                     {/* Provenance where the question is asked: what will be
                         searched, and what will do the generating. */}
                     <div className="chat-composer-meta">
+                      {/* The band states the corpus at instrument scale; this
+                          line said the same count a second time. */}
                       <ModelStatusBadge status={llmStatus} />
-                      <span className="chat-composer-scope">Söker i alla {documents.length} dokument</span>
                     </div>
                   </div>
                 </div>

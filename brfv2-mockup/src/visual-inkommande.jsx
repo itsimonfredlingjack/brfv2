@@ -1,16 +1,18 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { Inbox, Plug } from 'lucide-react';
-import IntakeQueue from './components/IntakeQueue';
+import AppNavigation from './components/AppNavigation';
+import Integrations from './components/Integrations';
 import { intakeApi, integrationsApi } from './api';
 import './theme.css';
 import './App.css';
-import './components/Integrations.css';
 
 /**
- * Visual harness for Inkommande iteration-1 comparison.
- * Not a product route — opens via visual-inkommande.html under Vite.
- * `?empty=1` renders the unified empty state (empty queue, connected mailbox).
+ * Visual harness for Inkommande — design audit, not a product route.
+ * Opens via visual-inkommande.html under Vite. `?empty=1` renders the
+ * unified empty state (connected mailbox, nothing in the queue).
+ *
+ * Mounts the real `Integrations` component (not a hand-copied shell) so
+ * header/tab/masthead changes there are actually exercised by the screenshot.
  */
 
 const EMPTY_MODE = new URLSearchParams(window.location.search).has('empty');
@@ -98,39 +100,16 @@ const THREADS = [
     suggested_by: 'regelmotor',
     uncertainty: '',
     signals: [
-      {
-        kind: 'date',
-        value: '2025-11-01',
-        source: 'body',
-        quote: 'avtalet om vinterväghållning och snöröjning för säsongen 2025/2026',
-      },
-      {
-        kind: 'supplier',
-        value: 'Fastighetsservice & Trädgårdsentreprenad i Mälardalen Aktiebolag',
-        source: 'from',
-        quote: 'kundtjanst@fastighetsservice.example',
-      },
+      { kind: 'date', value: '2025-11-01', source: 'body', quote: 'avtalet om vinterväghållning och snöröjning för säsongen 2025/2026' },
+      { kind: 'supplier', value: 'Fastighetsservice & Trädgårdsentreprenad i Mälardalen Aktiebolag', source: 'from', quote: 'kundtjanst@fastighetsservice.example' },
     ],
-    related: [
-      {
-        kind: 'document',
-        ref_id: 'doc-snorojning',
-        label: 'Snöröjningsavtal 2025.pdf',
-        basis: 'föreslaget av sökningen på ämne och avsändare',
-      },
-    ],
-    events: [
-      eventStub({
-        id: 'ev1',
-        subject: 'Angående ert avtal om vinterväghållning och snöröjning 2025/2026',
-        origin: 'kundtjanst@fastighetsservice.example',
-        originDisplay: 'Fastighetsservice & Trädgårdsentreprenad i Mälardalen Aktiebolag',
-        body: 'Hej styrelsen,\n\nVi återkommer gällande avtalet om vinterväghållning och snöröjning för säsongen 2025/2026. Vänligen återkom med eventuella synpunkter.\n\nMed vänlig hälsning,\nKundtjänst',
-        category: 'contract_or_quote',
-        categoryLabel: 'Avtal eller offert',
-        at: '2026-08-04T09:12:00+02:00',
-      }),
-    ],
+    related: [{ kind: 'document', ref_id: 'doc-snorojning', label: 'Snöröjningsavtal 2025.pdf', basis: 'föreslaget av sökningen på ämne och avsändare' }],
+    events: [eventStub({
+      id: 'ev1', subject: 'Angående ert avtal om vinterväghållning och snöröjning 2025/2026',
+      origin: 'kundtjanst@fastighetsservice.example', originDisplay: 'Fastighetsservice & Trädgårdsentreprenad i Mälardalen Aktiebolag',
+      body: 'Hej styrelsen,\n\nVi återkommer gällande avtalet om vinterväghållning och snöröjning för säsongen 2025/2026. Vänligen återkom med eventuella synpunkter.\n\nMed vänlig hälsning,\nKundtjänst',
+      category: 'contract_or_quote', categoryLabel: 'Avtal eller offert', at: '2026-08-04T09:12:00+02:00',
+    })],
   },
   {
     key: 't2',
@@ -155,18 +134,10 @@ const THREADS = [
     uncertainty: '',
     signals: [],
     related: [],
-    events: [
-      eventStub({
-        id: 'ev2',
-        subject: 'Faktura 4521 — hisservice augusti',
-        origin: 'ekonomi@hisspartner.example',
-        originDisplay: 'Hisspartner Väst AB',
-        body: 'Hej,\n\nBifogat faktura för periodiskt underhåll.\n\nVänliga hälsningar',
-        category: 'invoice',
-        categoryLabel: 'Faktura',
-        at: '2026-08-03T14:20:00+02:00',
-      }),
-    ],
+    events: [eventStub({
+      id: 'ev2', subject: 'Faktura 4521 — hisservice augusti', origin: 'ekonomi@hisspartner.example', originDisplay: 'Hisspartner Väst AB',
+      body: 'Hej,\n\nBifogat faktura för periodiskt underhåll.\n\nVänliga hälsningar', category: 'invoice', categoryLabel: 'Faktura', at: '2026-08-03T14:20:00+02:00',
+    })],
   },
   {
     key: 't3',
@@ -191,19 +162,11 @@ const THREADS = [
     uncertainty: '',
     signals: [],
     related: [],
-    events: [
-      eventStub({
-        id: 'ev3',
-        subject: 'Påminnelse: OVK-besiktning maj 2026',
-        origin: 'info@driftia.example',
-        originDisplay: 'Driftia Fastighetsservice AB',
-        body: 'Hej styrelsen,\n\nDetta är en påminnelse om kommande OVK. Vi återkommer med tider.\n\nMvh Driftia',
-        category: 'authority_or_manager',
-        categoryLabel: 'Myndighet eller förvaltare',
-        awaiting: true,
-        at: '2026-08-02T11:05:00+02:00',
-      }),
-    ],
+    events: [eventStub({
+      id: 'ev3', subject: 'Påminnelse: OVK-besiktning maj 2026', origin: 'info@driftia.example', originDisplay: 'Driftia Fastighetsservice AB',
+      body: 'Hej styrelsen,\n\nDetta är en påminnelse om kommande OVK. Vi återkommer med tider.\n\nMvh Driftia',
+      category: 'authority_or_manager', categoryLabel: 'Myndighet eller förvaltare', awaiting: true, at: '2026-08-02T11:05:00+02:00',
+    })],
   },
   {
     key: 't4',
@@ -228,19 +191,11 @@ const THREADS = [
     uncertainty: '',
     signals: [],
     related: [],
-    events: [
-      eventStub({
-        id: 'ev4',
-        subject: 'Fråga om jourtid för snöröjning',
-        origin: 'medlem@gjutformen12.example',
-        originDisplay: 'Medlem i föreningen',
-        body: 'Hej!\n\nVilken jourtid gäller för snöröjning i vinter?\n\nTack',
-        category: 'question_awaiting_reply',
-        categoryLabel: 'Fråga som väntar svar',
-        awaiting: false,
-        at: '2026-08-01T16:40:00+02:00',
-      }),
-    ],
+    events: [eventStub({
+      id: 'ev4', subject: 'Fråga om jourtid för snöröjning', origin: 'medlem@gjutformen12.example', originDisplay: 'Medlem i föreningen',
+      body: 'Hej!\n\nVilken jourtid gäller för snöröjning i vinter?\n\nTack', category: 'question_awaiting_reply', categoryLabel: 'Fråga som väntar svar',
+      awaiting: false, at: '2026-08-01T16:40:00+02:00',
+    })],
   },
 ];
 
@@ -264,31 +219,26 @@ intakeApi.queue = async () => ({
   },
   counts: EMPTY_MODE
     ? { threads: 0, openThreads: 0, openMessages: 0, awaitingReply: 0, unclear: 0 }
-    : {
-      threads: 4,
-      openThreads: 4,
-      openMessages: 4,
-      awaitingReply: 1,
-      unclear: 0,
-    },
-  mailbox: { hasFetched: false, last_new_count: 0, last_fetched_at: '', last_error: '' },
+    : { threads: 4, openThreads: 4, openMessages: 4, awaitingReply: 1, unclear: 0 },
+  mailbox: EMPTY_MODE
+    ? { hasFetched: false, last_new_count: 0, last_fetched_at: '', last_error: '' }
+    : { hasFetched: false, last_new_count: 0, last_fetched_at: '', last_error: '' },
 });
-
 intakeApi.fetch = async () => ({ seen: 0, new: 0, alreadyKnown: 0, items: [], skipped: [], checkpoint: {} });
 intakeApi.resolve = async () => ({});
 intakeApi.confirmCategory = async () => ({});
 intakeApi.reopen = async () => ({});
 intakeApi.retriage = async () => ({});
+
+integrationsApi.listSourceEvents = async () => (EMPTY_MODE ? [] : THREADS.flatMap((t) => t.events));
+integrationsApi.format = async () => ({
+  mail: { extension: '.eml', maxAttachments: 10, attachmentTypes: ['application/pdf'] },
+});
+integrationsApi.connections = async () => ({
+  'microsoft-graph': { connection: { status: EMPTY_MODE ? 'connected' : 'not_connected' } },
+});
 integrationsApi.importSourceEvent = async () => ({ subject: 'Importerat' });
 
-/**
- * Shell mirrors App.jsx / AppNavigation layout classes so screenshots are
- * comparable to product evidence (design-pass-final-inkommande.png).
- *
- * Critical: `.app-shell` is column (banner above workspace). Sidebar + main
- * must live inside `.main-layout` (row). Putting them as direct `.app-shell`
- * children stacks the sidebar above the workspace and invalidates comparison.
- */
 function Shell() {
   return (
     <div className="app-shell">
@@ -296,64 +246,29 @@ function Shell() {
         <span className="mock-badge-inline">PILOT</span>
         Verifierad pilotslinga: förening, dokument, uppladdning, AI-svar, källor och PDF-markering använder den riktiga tjänsten. Sök, dokumentchatt, kvalitetskontroll och inställningar ingår inte i piloten.
       </div>
-      <div className="main-layout">
-        <aside className="sidebar">
-          <div className="sidebar-brand" style={{ marginBottom: 28 }}>
-            <div style={{ fontFamily: 'var(--font-display)', fontSize: 28, letterSpacing: '-0.015em' }}>Träff</div>
-            <div className="matt" style={{ fontSize: 11, letterSpacing: '0.08em', color: 'var(--ink-subtle)' }}>
-              BRF &amp; STYRELSE
-            </div>
-          </div>
-          <nav style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <div className="sidebar-section-label" style={{ paddingTop: 6 }}>Fråga &amp; arkiv</div>
-            <div className="nav-item" style={{ opacity: 0.55 }}>Fråga dokumenten</div>
-            <div className="nav-item" style={{ opacity: 0.55 }}>Dokument</div>
-            <div className="sidebar-section-label">Arbete</div>
-            <div className="nav-item" style={{ opacity: 0.55 }}>Bevakningar</div>
-            <div className="nav-item" style={{ opacity: 0.55 }}>Uppgifter</div>
-            <div className="nav-item" style={{ opacity: 0.55 }}>Hemsidan</div>
-            <div className="sidebar-section-label">Post &amp; ekonomi</div>
-            <div className="nav-item" style={{ background: 'var(--surface-2)', borderRadius: 10, padding: '8px 10px' }}>
-              Inkommande
-            </div>
-            <div className="nav-item" style={{ opacity: 0.55 }}>Fakturor</div>
-          </nav>
-        </aside>
+      <AppNavigation
+        navigationVisible
+        mobileMenuOpen={false}
+        onToggleMobileMenu={() => {}}
+        onCloseMobileMenu={() => {}}
+        currentTab="integrations"
+        onNavigate={() => {}}
+        desktopState={{ mode: 'desktop' }}
+        activeMembership={{ role: 'admin' }}
+        activeBrfId="brf-a"
+        activeBrfName="Brf Gjutformen 12"
+        memberships={[{ brf_id: 'brf-a', name: 'Brf Gjutformen 12', role: 'admin' }]}
+        onSwitchTenant={() => {}}
+        user={{ name: 'Anna Lindqvist', email: 'anna@gjutformen12.example' }}
+        onOpenDesktopSettings={() => {}}
+        onLogout={() => {}}
+      >
         <main className="main-content">
-          {/* App.jsx wraps every workspace in .tab-content — the harness does
-              too, or fill-layout rules scoped to it would silently not apply
-              here. */}
-          <div className="tab-content">
-            <div className="integrations">
-            <div className="integrations-header">
-              <div className="integrations-tabs" role="tablist">
-                <button type="button" role="tab" aria-selected="true" className="active">
-                  <Inbox size={16} /> Inkommande
-                  <span className="pill">{EMPTY_MODE ? 0 : 4}</span>
-                </button>
-                <button type="button" role="tab" aria-selected="false">
-                  <Plug size={16} /> Anslutningar
-                </button>
-              </div>
-            </div>
-            <section className="pane">
-              <IntakeQueue
-                brfId="brf-a"
-                isAdmin
-                mailboxConnected={EMPTY_MODE}
-                format={{
-                  mail: {
-                    extension: '.eml',
-                    maxAttachments: 10,
-                    attachmentTypes: ['application/pdf'],
-                  },
-                }}
-              />
-            </section>
-            </div>
+          <div className="tab-content tab-content--wide">
+            <Integrations brfId="brf-a" isAdmin />
           </div>
         </main>
-      </div>
+      </AppNavigation>
     </div>
   );
 }

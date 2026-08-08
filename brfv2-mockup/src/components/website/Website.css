@@ -15,19 +15,24 @@
 /* The workspace owns the whole area. `:has()` keeps this scoped to the website
    tab, so the shell's usual padding still applies to every other workspace. */
 .main-content:has(.site-ws),
-.main-content:has(.site-start),
 .main-content:has(.site-loading) {
   padding: 0;
   overflow: hidden;
 }
 
+/* The zero state is not the canvas — it is a workspace like any other and
+   opens on the shared masthead plate, whose full-bleed negative margin needs
+   the shell's own padding to cancel. Only the editor takes the window. */
+.main-content:has(.site-start) { overflow: auto; }
+
 .tab-content:has(.site-ws),
-.tab-content:has(.site-start),
 .tab-content:has(.site-loading) {
   height: 100%;
   min-height: 0;
   max-width: none;
 }
+
+.tab-content:has(.site-start) { max-width: none; }
 
 /* The editor library renders a wrapper of its own between `.tab-content` and
    our shell, and it sizes to its content rather than to the space it is given —
@@ -889,52 +894,28 @@
   font-size: 14px;
 }
 
-.site-start {
-  display: grid;
-  place-items: center;
-  height: 100%;
-  padding: 40px;
-}
+.site-start { display: block; }
 
-.site-start__card {
-  max-width: 460px;
-  text-align: center;
-  background: var(--panel-bg);
-  border: 1px solid var(--panel-border);
-  border-radius: 16px;
-  padding: 40px 36px;
-  color: var(--text-secondary);
-}
+.site-start__body { max-width: var(--measure); }
 
-.site-start__card svg {
-  color: var(--primary-action);
-  margin-bottom: 16px;
-}
-
-.site-start__card h1 {
-  font-size: var(--text-xl);
-  font-weight: 400;
-  letter-spacing: -0.03em;
-  color: var(--text-primary);
-  margin-bottom: 12px;
-}
-
-.site-start__card p {
-  font-size: 14px;
+.site-start__lead {
+  max-width: 62ch;
+  margin: 0;
+  font-size: var(--text-base);
   line-height: 1.65;
-  margin-bottom: 24px;
+  color: var(--muted-foreground);
 }
 
 .site-start__note {
-  font-size: 13px;
-  color: var(--text-muted);
+  margin-top: var(--s4);
+  font-size: var(--text-sm);
+  color: var(--subtle-foreground);
 }
 
 .site-start__error {
+  margin: var(--s4) 0 0;
+  font-size: var(--text-sm);
   color: var(--status-error);
-  font-size: 13px;
-  margin-top: 14px;
-  margin-bottom: 0;
 }
 
 .site-modal {

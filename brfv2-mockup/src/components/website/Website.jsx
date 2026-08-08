@@ -17,7 +17,7 @@ import { Puck } from '@puckeditor/core';
 // injecting the default. Inter is still used when the system has it, and the
 // platform UI font otherwise — exactly what the rest of the product does.
 import '@puckeditor/core/no-external.css';
-import { Globe, Loader2, RotateCcw, X } from 'lucide-react';
+import { Loader2, RotateCcw, X } from 'lucide-react';
 import { api, websiteApi } from '../../api';
 import { createWebsiteConfig } from './websiteConfig';
 import WorkspaceShell from './WorkspaceShell';
@@ -373,20 +373,45 @@ export default function Website({ brfId, isAdmin, onOpenCitation }) {
 
   if (workspace && workspace.pages.length === 0) {
     return (
+      /* Hemsidan opens on the same plate as every other workspace. It used to
+         open on a centred card floating in an empty canvas with no masthead at
+         all — the one screen that gave no sign of which product it belonged to.
+         Its instrument is the site's own standing, which at zero is honestly
+         zero: no pages, nothing published. */
       <div className="site-start">
-        <div className="site-start__card">
-          <Globe size={28} aria-hidden="true" />
-          <h1>Föreningens webbplats</h1>
-          <p>
-            Bygg den sida medlemmarna faktiskt läser — i samma system som dokumenten,
-            posten och uppgifterna. Sakuppgifter hämtas ur föreningens egna handlingar,
-            med källhänvisning, och det som inte går att belägga skrivs inte.
+        <header className="page-header">
+          <div className="page-header-text">
+            <h2 className="page-title">Hemsidan</h2>
+            <p className="page-header-sub">
+              Sidan medlemmarna läser, byggd ur föreningens egna handlingar.
+            </p>
+          </div>
+          <div className="page-header-actions">
+            {isAdmin && (
+              <button type="button" className="ui-btn ui-btn--primary" onClick={startSite} disabled={busy}>
+                {busy ? 'Skapar…' : 'Skapa startsidan'}
+              </button>
+            )}
+          </div>
+          <div className="page-header-instrument">
+            <div className="invoices-ledger">
+              <div className="invoices-ledger-figure">
+                <span className="ledger-label">Sidor</span>
+                <span className="ledger-amount">0</span>
+              </div>
+              <dl className="watches-standing">
+                <div><dt>Publicerade</dt><dd>0</dd></div>
+              </dl>
+            </div>
+          </div>
+        </header>
+
+        <div className="site-start__body">
+          <p className="site-start__lead">
+            Sakuppgifter hämtas ur föreningens egna handlingar, med källhänvisning.
+            Det som inte går att belägga skrivs inte.
           </p>
-          {isAdmin ? (
-            <button type="button" className="site-btn site-btn--primary" onClick={startSite} disabled={busy}>
-              {busy ? 'Skapar…' : 'Skapa startsidan'}
-            </button>
-          ) : (
+          {!isAdmin && (
             <p className="site-start__note">En administratör behöver komma igång med webbplatsen först.</p>
           )}
           {error && <p className="site-start__error">{error}</p>}
