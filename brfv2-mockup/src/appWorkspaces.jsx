@@ -80,13 +80,24 @@ export const PRODUCT_WORKSPACES = [
   },
 ];
 
+// Sidebar grouping (IMPLEMENTATION.md commit 4): three quiet mono labels
+// replace one flat list — ask/archive, the work, and the incoming flow.
+export const NAV_GROUPS = [
+  { id: 'fraga-arkiv', label: 'Fråga & arkiv' },
+  { id: 'arbete', label: 'Arbete' },
+  { id: 'post-ekonomi', label: 'Post & ekonomi' },
+];
+
+const workspaceNav = Object.fromEntries(
+  PRODUCT_WORKSPACES.map(({ id, label, icon }) => [id, { id, label, icon, desktopOnly: true }]),
+);
+
 export const NAV_ITEMS = [
-  { id: 'docs', label: 'Dokument', icon: Folders },
-  { id: 'chat', label: 'AI-chatt', icon: MessageSquare },
-  ...PRODUCT_WORKSPACES.map(({ id, label, icon }) => ({
-    id,
-    label,
-    icon,
-    desktopOnly: true,
-  })),
+  { id: 'chat', label: 'Fråga dokumenten', icon: MessageSquare, group: 'fraga-arkiv' },
+  { id: 'docs', label: 'Dokument', icon: Folders, group: 'fraga-arkiv' },
+  { ...workspaceNav.watches, group: 'arbete' },
+  { ...workspaceNav.tasks, group: 'arbete' },
+  { ...workspaceNav.website, group: 'arbete' },
+  { ...workspaceNav.integrations, group: 'post-ekonomi' },
+  { ...workspaceNav.invoices, group: 'post-ekonomi' },
 ];

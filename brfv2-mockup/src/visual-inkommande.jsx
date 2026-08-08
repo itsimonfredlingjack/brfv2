@@ -300,18 +300,18 @@ function Shell() {
             </div>
           </div>
           <nav style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div className="sidebar-section-label" style={{ paddingTop: 6 }}>Fråga &amp; arkiv</div>
+            <div className="nav-item" style={{ opacity: 0.55 }}>Fråga dokumenten</div>
             <div className="nav-item" style={{ opacity: 0.55 }}>Dokument</div>
-            <div className="nav-item" style={{ opacity: 0.55 }}>AI-chatt</div>
-            <div className="matt" style={{ margin: '16px 0 6px', fontSize: 11, letterSpacing: '0.1em', color: 'var(--ink-subtle)' }}>
-              ARBETSYTOR
-            </div>
-            <div className="nav-item" style={{ background: 'var(--surface-2)', borderRadius: 12, padding: '8px 10px' }}>
-              Inkommande
-            </div>
-            <div className="nav-item" style={{ opacity: 0.55 }}>Fakturor</div>
+            <div className="sidebar-section-label">Arbete</div>
             <div className="nav-item" style={{ opacity: 0.55 }}>Bevakningar</div>
             <div className="nav-item" style={{ opacity: 0.55 }}>Uppgifter</div>
             <div className="nav-item" style={{ opacity: 0.55 }}>Hemsidan</div>
+            <div className="sidebar-section-label">Post &amp; ekonomi</div>
+            <div className="nav-item" style={{ background: 'var(--surface-2)', borderRadius: 10, padding: '8px 10px' }}>
+              Inkommande
+            </div>
+            <div className="nav-item" style={{ opacity: 0.55 }}>Fakturor</div>
           </nav>
         </aside>
         <main className="main-content">

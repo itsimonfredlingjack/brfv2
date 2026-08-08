@@ -7,7 +7,7 @@ import {
   Settings,
   X,
 } from 'lucide-react';
-import { NAV_ITEMS } from '../appWorkspaces';
+import { NAV_ITEMS, NAV_GROUPS } from '../appWorkspaces';
 import TraffMark from './TraffMark';
 
 const roleLabel = (role) => (role === 'admin' ? 'Admin' : 'Medlem');
@@ -107,6 +107,19 @@ export default function AppNavigation({
     onCloseMobileMenu();
   };
 
+  // A group label only prints when the group has at least one visible item —
+  // on clients where the desktop workspaces are hidden, their groups vanish
+  // with them rather than heading nothing.
+  const visibleNavRows = NAV_ITEMS
+    .filter((item) => !item.desktopOnly || desktopState)
+    .map((item, index, visible) => ({
+      ...item,
+      groupLabel:
+        item.group !== visible[index - 1]?.group
+          ? NAV_GROUPS.find((g) => g.id === item.group)?.label ?? null
+          : null,
+    }));
+
   return (
     <>
       {navigationVisible && (
@@ -144,28 +157,18 @@ export default function AppNavigation({
             </div>
 
             <div className="sidebar-menu">
-              {NAV_ITEMS.map(({ id, label, icon, desktopOnly }, index) => {
-                if (desktopOnly && !desktopState) return null;
-                const Icon = icon;
-                // The product areas are a different kind of thing from the two
-                // that come before them — asking a question and reading the
-                // archive are always available; these are places work is
-                // handled. One quiet label is cheaper for a reader than eight
-                // undifferentiated rows.
-                const startsWorkspaces = desktopOnly && !NAV_ITEMS[index - 1]?.desktopOnly;
-                return (
-                  <React.Fragment key={id}>
-                    {startsWorkspaces && <div className="sidebar-section-label">Arbetsytor</div>}
-                    <button
-                      className={`nav-item ${currentTab === id ? 'active' : ''}`}
-                      onClick={() => selectTab(id)}
-                      aria-current={currentTab === id ? 'page' : undefined}
-                    >
-                      <Icon size={16} /> <span className="nav-item-label">{label}</span>
-                    </button>
-                  </React.Fragment>
-                );
-              })}
+              {visibleNavRows.map(({ id, label, icon: Icon, groupLabel }) => (
+                <React.Fragment key={id}>
+                  {groupLabel && <div className="sidebar-section-label">{groupLabel}</div>}
+                  <button
+                    className={`nav-item ${currentTab === id ? 'active' : ''}`}
+                    onClick={() => selectTab(id)}
+                    aria-current={currentTab === id ? 'page' : undefined}
+                  >
+                    <Icon size={16} /> <span className="nav-item-label">{label}</span>
+                  </button>
+                </React.Fragment>
+              ))}
             </div>
 
             <div className="sidebar-footer">

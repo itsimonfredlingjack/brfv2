@@ -228,7 +228,7 @@ describe('tenant switching', () => {
     });
     render(<App />);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'AI-chatt' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Fråga dokumenten' }));
     const input = await screen.findByPlaceholderText('Fråga rakt in i högen…');
     fireEvent.change(input, { target: { value: 'Hej?' } });
     fireEvent.click(screen.getByRole('button', { name: 'Skicka fråga' }));
@@ -263,7 +263,7 @@ describe('model status indicator', () => {
     api.health.mockImplementation(() => new Promise((resolve) => { resolveHealth = resolve; }));
     render(<App />);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'AI-chatt' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Fråga dokumenten' }));
     expect(await screen.findByText('Kontrollerar modell…')).toBeInTheDocument();
 
     resolveHealth({
@@ -281,7 +281,7 @@ describe('model status indicator', () => {
     });
     render(<App />);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'AI-chatt' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Fråga dokumenten' }));
     await screen.findByText('Gemma 4 12B');
     expect(screen.getByText('Self-hosted · agenntserver')).toBeInTheDocument();
 
@@ -296,7 +296,7 @@ describe('model status indicator', () => {
     api.health.mockRejectedValue(new Error('network down'));
     render(<App />);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'AI-chatt' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Fråga dokumenten' }));
     expect(await screen.findByText('Modellstatus ej tillgänglig')).toBeInTheDocument();
   });
 
@@ -307,7 +307,7 @@ describe('model status indicator', () => {
     });
     render(<App />);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'AI-chatt' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Fråga dokumenten' }));
     expect(await screen.findByText('Testleverantör – inte redo')).toBeInTheDocument();
     expect(screen.queryByText('Modellstatus ej tillgänglig')).not.toBeInTheDocument();
   });
@@ -319,7 +319,7 @@ describe('model status indicator', () => {
     });
     render(<App />);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'AI-chatt' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Fråga dokumenten' }));
     // No display_name from the backend and an unrecognized provider/model id —
     // the shared normalizer must fall back to the raw identifiers, never
     // Gemma, and never invent a friendly name for something it does not know.
@@ -337,7 +337,7 @@ describe('answer-level provenance', () => {
     api.ask.mockImplementation(() => new Promise((resolve) => { resolveAsk = resolve; }));
     const { container } = render(<App />);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'AI-chatt' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Fråga dokumenten' }));
     const input = await screen.findByPlaceholderText('Fråga rakt in i högen…');
     fireEvent.change(input, { target: { value: 'Vilket regelverk gäller?' } });
     fireEvent.click(screen.getByRole('button', { name: 'Skicka fråga' }));
@@ -371,7 +371,7 @@ describe('answer-level provenance', () => {
     });
     render(<App />);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'AI-chatt' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Fråga dokumenten' }));
     const input = await screen.findByPlaceholderText('Fråga rakt in i högen…');
     fireEvent.change(input, { target: { value: 'Finns det dokument?' } });
     fireEvent.click(screen.getByRole('button', { name: 'Skicka fråga' }));
@@ -392,7 +392,7 @@ describe('answer-level provenance', () => {
     });
     render(<App />);
 
-    fireEvent.click(await screen.findByRole('button', { name: 'AI-chatt' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Fråga dokumenten' }));
     const input = await screen.findByPlaceholderText('Fråga rakt in i högen…');
     fireEvent.change(input, { target: { value: 'Något komplext?' } });
     fireEvent.click(screen.getByRole('button', { name: 'Skicka fråga' }));

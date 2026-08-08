@@ -133,13 +133,15 @@
 
 .sidebar-section-label {
   padding: 20px 8px 7px;
-  color: var(--subtle-foreground);
+  color: var(--muted-foreground);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   font-weight: 600;
   letter-spacing: 0.14em;
   text-transform: uppercase;
 }
+/* The first label sits right under the brand — it needs air, not a cliff. */
+.sidebar-menu > .sidebar-section-label:first-child { padding-top: 6px; }
 
 .nav-item {
   display: flex;
