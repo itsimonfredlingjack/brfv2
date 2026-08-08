@@ -268,10 +268,39 @@ def plan(
             provider=provider.name,
             model=model,
         )
+    except Exception:
+        # A provider seam must fail closed even when an installed adapter leaks
+        # an exception outside the shared LLMError contract. The draft has not
+        # been touched yet, so this is safe to turn into an honest refusal.
+        logger.exception("AI-planeringen misslyckades oväntat")
+        return AiOutcome(
+            refusal=(
+                "AI-assistenten gick inte att nå just nu. Ingenting skrevs. "
+                "Försök igen senare."
+            ),
+            provider=getattr(provider, "name", ""),
+            model=model,
+        )
 
-    operations = payload.get("operations")
+    if "operations" not in payload:
+        return AiOutcome(
+            refusal=(
+                "AI-assistentens svar saknade en operationslista. Ingenting skrevs. "
+                "Försök formulera om."
+            ),
+            provider=provider.name,
+            model=model,
+        )
+    operations = payload["operations"]
     if not isinstance(operations, list):
-        operations = []
+        return AiOutcome(
+            refusal=(
+                "AI-assistentens operationslista gick inte att läsa. Ingenting skrevs. "
+                "Försök formulera om."
+            ),
+            provider=provider.name,
+            model=model,
+        )
     if len(operations) > MAX_OPERATIONS:
         return AiOutcome(
             refusal=(
@@ -296,6 +325,11 @@ def plan(
                 model=model,
             )
         op = dict(op)
+        # Citations are evidence, not model claims. Only the ordinary grounding
+        # pipeline may put them back after verifying the requested document
+        # answer; otherwise a model could cite a fabricated quote and bypass
+        # the website's grounding gate.
+        op.pop("sources", None)
         query = str(op.pop("grounded_from", "") or "").strip()
         if query:
             citations, refusal = _ground(store, query, trusted_names=trusted_names)

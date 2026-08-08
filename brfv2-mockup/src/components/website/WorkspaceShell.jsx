@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Drawer, Puck, usePuck } from '@puckeditor/core';
+import { createUsePuck, Drawer, Puck } from '@puckeditor/core';
 import {
   ChevronDown,
   Check,
@@ -37,6 +37,25 @@ const VIEWPORTS = [
   { id: 'desktop', label: 'Dator', width: 0, icon: Monitor },
 ];
 
+const useWebsitePuck = createUsePuck();
+
+function readSelectedText() {
+  const selections = [];
+  if (typeof window !== 'undefined') {
+    selections.push(window.getSelection?.()?.toString() || '');
+  }
+  if (typeof document !== 'undefined') {
+    document.querySelectorAll('iframe').forEach((frame) => {
+      try {
+        selections.push(frame.contentWindow?.getSelection?.()?.toString() || '');
+      } catch {
+        // A future cross-origin frame is not website content; ignore it.
+      }
+    });
+  }
+  return selections.map((value) => value.trim()).sort((a, b) => b.length - a.length)[0] || '';
+}
+
 function StatusPill({ page }) {
   if (!page) return null;
   if (!page.published) {
@@ -55,7 +74,7 @@ function StatusPill({ page }) {
  * AI change or an undo cannot loop back into another write.
  */
 function CanvasSync({ nonce, data }) {
-  const { dispatch } = usePuck();
+  const dispatch = useWebsitePuck((state) => state.dispatch);
   const seen = useRef(nonce);
   useEffect(() => {
     if (nonce === seen.current || !data) return;
@@ -67,7 +86,10 @@ function CanvasSync({ nonce, data }) {
 
 /** Detailed fields for the selected block — over the canvas, never beside it. */
 function BlockInspector({ readOnly, onDelete, onDuplicate, onNudge, onConfirmBlock, grounding, onOpenCitation, labelForType }) {
-  const { appState, selectedItem, dispatch, getSelectorForId } = usePuck();
+  const appState = useWebsitePuck((state) => state.appState);
+  const selectedItem = useWebsitePuck((state) => state.selectedItem);
+  const dispatch = useWebsitePuck((state) => state.dispatch);
+  const getSelectorForId = useWebsitePuck((state) => state.getSelectorForId);
   const [open, setOpen] = useState(true);
   const blockId = selectedItem?.props?.id;
 
@@ -284,7 +306,36 @@ export default function WorkspaceShell({
   const [viewport, setViewport] = useState('desktop');
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [aiCollapsed, setAiCollapsed] = useState(false);
-  const { selectedItem, appState } = usePuck();
+  const [selectedText, setSelectedText] = useState('');
+  const selectedItem = useWebsitePuck((state) => state.selectedItem);
+  const appState = useWebsitePuck((state) => state.appState);
+
+  useEffect(() => {
+    const updateSelection = () => setSelectedText(readSelectedText());
+    const frames = new Set();
+    const bindFrames = () => {
+      document.querySelectorAll('iframe').forEach((frame) => {
+        if (frames.has(frame)) return;
+        try {
+          frame.contentDocument?.addEventListener('selectionchange', updateSelection);
+          frames.add(frame);
+        } catch {
+          // Ignore a future cross-origin frame; it cannot contain this page.
+        }
+      });
+    };
+    document.addEventListener('selectionchange', updateSelection);
+    document.addEventListener('pointerup', updateSelection);
+    bindFrames();
+    const observer = new MutationObserver(bindFrames);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => {
+      document.removeEventListener('selectionchange', updateSelection);
+      document.removeEventListener('pointerup', updateSelection);
+      frames.forEach((frame) => frame.contentDocument?.removeEventListener('selectionchange', updateSelection));
+      observer.disconnect();
+    };
+  }, []);
 
   const active = VIEWPORTS.find((v) => v.id === viewport) || VIEWPORTS[2];
   const canvasStyle = active.width ? { width: `${active.width}px` } : { width: '100%' };
@@ -295,7 +346,7 @@ export default function WorkspaceShell({
     page_id: activePageId,
     block_id: selectedItem?.props?.id || '',
     field: appState?.ui?.field?.focus || '',
-    selected_text: typeof window !== 'undefined' ? (window.getSelection?.()?.toString() || '') : '',
+    selected_text: selectedText,
   };
 
   return (

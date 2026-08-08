@@ -188,6 +188,31 @@ describe('Hemsidan — AI-partnern', () => {
     expect(screen.getByText(/finns inte i föreningens dokument/)).toBeInTheDocument();
   });
 
+  it('visar källan till en AI-ändring och öppnar den via den vanliga källvägen', async () => {
+    const citation = {
+      document_id: 'doc-1', document_name: 'Stadgar.pdf', page: 4, quote: 'Citatet',
+    };
+    websiteApi.ai.mockResolvedValue({
+      applied: true,
+      message: 'Jag skrev från stadgarna.',
+      transaction: { id: 'tx-source', summary: 'Ur stadgarna', operation_count: 1 },
+      sources: [citation],
+      workspace: workspace(),
+    });
+    const onOpenCitation = vi.fn();
+    render(<Website brfId="brf-1" isAdmin onOpenCitation={onOpenCitation} />);
+    await screen.findByLabelText('Välj sida');
+
+    fireEvent.change(screen.getByLabelText('Instruktion till AI-partnern'), {
+      target: { value: 'Skriv utifrån stadgarna' },
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Skicka' }));
+
+    const source = await screen.findByRole('button', { name: /Stadgar\.pdf, s\. 4/ });
+    fireEvent.click(source);
+    expect(onOpenCitation).toHaveBeenCalledWith(citation);
+  });
+
   it('skickar med vad som är markerat så att "detta" går att tolka', async () => {
     websiteApi.ai.mockResolvedValue({ applied: false, refusal: '', message: 'Klart.', workspace: workspace() });
     render(<Website brfId="brf-1" isAdmin />);

@@ -553,6 +553,48 @@ class TestAiPartner:
         assert r.json()["applied"] is False
         assert _blocks(site) == []
 
+    def test_a_partial_model_object_is_refused_honestly(self, site, monkeypatch):
+        self._fake(monkeypatch, {"summary": "Saknar operationer"})
+        r = site.post("/ai", {"instruction": "Gör något"})
+        assert r.status_code == 200
+        assert r.json()["applied"] is False
+        assert "operationslista" in r.json()["refusal"]
+        assert _blocks(site) == []
+
+    def test_model_supplied_citations_cannot_bypass_grounding(self, site, monkeypatch):
+        self._fake(monkeypatch, {
+            "summary": "Påhittad källa",
+            "operations": [{
+                "command": "insert_block", "page_id": site.home_id, "type": "ImportantNotice",
+                "props": {"heading": "Avgiften", "body": "<p>Avgiften höjs med 4,5 procent.</p>"},
+                "sources": [{
+                    "document_id": "not-this-tenant", "document_name": "Påhittad.pdf", "page": 99,
+                    "quote": "4,5 procent", "quotes": ["4,5 procent"], "chunk_id": "fake",
+                    "rects": [], "score": 1.0,
+                }],
+            }],
+        })
+        r = site.post("/ai", {"instruction": "Skriv om avgiften"})
+        assert r.status_code == 200
+        assert r.json()["applied"] is False
+        assert "4,5" in r.json()["refusal"]
+        assert _blocks(site) == []
+
+    def test_an_unexpected_provider_failure_is_a_refusal(self, site, monkeypatch):
+        class BrokenProvider:
+            name = "broken"
+            model = "test-model"
+
+            def complete(self, *_args, **_kwargs):
+                raise RuntimeError("transport exploded")
+
+        monkeypatch.setattr("app.website.ai.pick_provider", lambda: BrokenProvider())
+        r = site.post("/ai", {"instruction": "Gör något"})
+        assert r.status_code == 200
+        assert r.json()["applied"] is False
+        assert "gick inte att nå" in r.json()["refusal"]
+        assert _blocks(site) == []
+
     def test_the_editor_context_reaches_the_model(self, site, monkeypatch):
         site.run([{"command": "insert_block", "page_id": site.home_id, "type": "TextSection",
                    "props": {"heading": "Om huset", "body": "<p>En lång text.</p>"}}])
