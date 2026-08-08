@@ -790,7 +790,7 @@ body:has(.brf-site) {
  * viewport, so these are the breakpoints the published site actually uses and
  * the mobile control in the header shows the true result. */
 
-@media (max-width: 860px) {
+@media (max-width: 1024px) {
   .blk-hero--image .blk-hero__inner,
   .blk-imgtext__inner {
     grid-template-columns: minmax(0, 1fr);

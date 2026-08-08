@@ -641,7 +641,7 @@
 
 .task-closed-history .task-events { margin-top: 8px; }
 
-@media (max-width: 720px) {
+@media (max-width: 768px) {
   .task { grid-template-columns: 1fr; gap: 8px; }
   .task-who {
     flex-direction: row;

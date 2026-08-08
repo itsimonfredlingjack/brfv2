@@ -601,7 +601,7 @@
 .settled-meta,
 .settled-note { font-size: var(--text-sm); color: var(--muted-foreground); }
 
-@media (max-width: 720px) {
+@media (max-width: 768px) {
   .watch.board { grid-template-columns: 1fr; gap: 8px; }
   .watch-when { flex-direction: row; align-items: baseline; gap: 10px; }
 

@@ -533,6 +533,6 @@ button.decision.reopen { border-style: dashed; }
   text-underline-offset: 3px;
 }
 
-@media (max-width: 720px) {
+@media (max-width: 768px) {
   .finding-facts dl > div { grid-template-columns: 1fr; gap: 1px; }
 }

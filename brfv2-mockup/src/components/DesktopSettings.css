@@ -346,7 +346,7 @@
   min-width: 0;
 }
 
-@media (max-width: 640px) {
+@media (max-width: 768px) {
   .ds-grid { grid-template-columns: 1fr; }
   .ds-facts { grid-template-columns: 1fr; gap: 2px 0; }
   .ds-facts dd { margin-bottom: 8px; }

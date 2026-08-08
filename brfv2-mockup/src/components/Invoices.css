@@ -738,7 +738,7 @@
   align-items: start;
 }
 
-@media (max-width: 1180px) {
+@media (max-width: 1200px) {
   .case-columns { grid-template-columns: minmax(0, 1fr); }
 }
 
@@ -1302,7 +1302,7 @@
 .replaced-facts dt { color: var(--subtle-foreground); }
 .replaced-facts dd { margin: 0; color: var(--muted-foreground); min-width: 0; }
 
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
   .invoices-counts > div { border-right: none; padding: 0 14px 0 4px; }
   .case-header { flex-direction: column; gap: 10px; }
 }

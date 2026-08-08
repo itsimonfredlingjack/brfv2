@@ -1695,7 +1695,7 @@ mark.search-highlight {
   .report-menu { width: 100%; bottom: 100%; }
 }
 
-@media (max-width: 390px) {
+@media (max-width: 560px) {
   .app-shell { overflow-x: hidden; }
   .responsive-search { max-width: 100%; }
   .filter-pill-container { gap: 4px; }
