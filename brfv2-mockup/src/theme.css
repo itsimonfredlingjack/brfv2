@@ -295,6 +295,10 @@
   --shadow-sm: 0 1px 3px 0 rgb(55 50 47 / 0.07), 0 1px 2px -1px rgb(55 50 47 / 0.06);
   --shadow-md: 0 4px 12px -2px rgb(55 50 47 / 0.09);
   --shadow-lg: 0 16px 40px -12px rgb(55 50 47 / 0.18);
+  /* The workspace sheet at rest: lifted one plane off the paper. WebKitGTK
+     eats subtle shadows — the work surface needs a readable edge in Tauri. */
+  --shadow-sheet: 0 1px 2px 0 rgb(55 50 47 / 0.06), 0 2px 6px -1px rgb(55 50 47 / 0.08),
+    0 16px 40px -12px rgb(55 50 47 / 0.16);
 
   /* ---- type: three cuts, three jobs, never mixed (§07) ----
    * Sans-first since 2026-08-08: Poppins displays, Inter explains,
@@ -526,6 +530,7 @@ code, pre, kbd, samp { font-family: var(--font-mono); }
 /* ========================================================================= */
 
 .traff-mark {
+  position: relative;
   display: grid;
   place-items: center;
   flex-shrink: 0;
@@ -534,9 +539,42 @@ code, pre, kbd, samp { font-family: var(--font-mono); }
   border-radius: 50%;
   /* The gap is always empty. No tint, no gradient — it is the search. */
   background: transparent;
+  transition: border-color 0.3s ease;
 }
 
-.traff-mark-core { border-radius: 50%; background: currentColor; }
+.traff-mark-core {
+  border-radius: 50%;
+  background: currentColor;
+  /* Plays once, exactly when the core mounts — the instant the distance
+     in §02 actually closes, not a generic fade applied on every render. */
+  animation: traff-core-in 0.42s cubic-bezier(0.34, 1.4, 0.4, 1) both;
+}
+
+@keyframes traff-core-in {
+  0% { transform: scale(0.3); opacity: 0; }
+  65% { transform: scale(1.16); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+/* Söker: the ring stays fully sökljus-blue at rest (§01 — meaning must never
+   depend on motion alone), and a travelling highlight turns on top of it —
+   light hunting the edge of the gap, additive, never the only carrier of
+   the state. A reduced-motion viewer still sees a plain solid blue ring. */
+.traff-mark-seek {
+  position: absolute;
+  inset: calc(var(--mark-ring) * -1);
+  box-sizing: border-box;
+  border-radius: 50%;
+  border-style: solid;
+  border-width: var(--mark-ring);
+  border-color: transparent;
+  border-top-color: rgb(255 255 255 / 0.85);
+  animation: traff-seek-spin 1s linear infinite;
+}
+
+@keyframes traff-seek-spin {
+  to { transform: rotate(360deg); }
+}
 
 /* A · Varumärket — complete, monochrome, never a state colour. */
 .traff-mark--brand { border-color: var(--foreground); color: var(--foreground); }
@@ -844,19 +882,9 @@ select option { background: #FFFFFF; color: var(--ink); }
 .ui-empty-media {
   display: grid;
   place-items: center;
-  width: 48px;
-  height: 48px;
-  margin-bottom: 10px;
-  border-radius: 12px;
-  border: 1px solid var(--border);
-  background: var(--surface-2);
-  color: var(--muted-foreground);
-}
-
-.ui-empty--ok .ui-empty-media {
-  background: var(--ok-soft);
-  border-color: var(--ok-border);
-  color: var(--ok);
+  width: 40px;
+  height: 40px;
+  margin-bottom: 14px;
 }
 
 .ui-empty-text { max-width: 46ch; font-size: var(--text-base); line-height: 1.6; color: var(--muted-foreground); }

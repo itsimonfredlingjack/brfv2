@@ -59,12 +59,18 @@ export default function TraffMark({ size = 22, variant = 'brand', state = 'belag
   return (
     <span
       className={`traff-mark traff-mark--${shown}`}
-      style={{ width: size, height: size, borderWidth: `${ring}px` }}
+      style={{ width: size, height: size, borderWidth: `${ring}px`, '--mark-ring': `${ring}px` }}
       role={decorative ? undefined : 'img'}
       aria-hidden={decorative ? 'true' : undefined}
       aria-label={decorative ? undefined : label}
     >
-      {/* The core exists only where something has actually been established. */}
+      {/* Söker draws a second ring on top of the resting one and turns it —
+          the identity's own "sökljus": a light hunting for the edge of the
+          gap, not a generic spinner borrowed from elsewhere. */}
+      {shown === 'soker' && <span className="traff-mark-seek" aria-hidden="true" />}
+      {/* The core exists only where something has actually been established,
+          and it plays its arrival once, the instant it mounts — the moment
+          the distance in §02 actually closes. */}
       {(shown === 'brand' || shown === 'belagt') && (
         <span className="traff-mark-core" style={{ width: core, height: core }} />
       )}

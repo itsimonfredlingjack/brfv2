@@ -9,7 +9,6 @@ import {
   Download,
   FileText,
   HelpCircle,
-  Inbox,
   Link2,
   ListTodo,
   Loader2,
@@ -17,7 +16,6 @@ import {
   Paperclip,
   RefreshCw,
   RotateCcw,
-  SearchX,
   Upload,
   X,
 } from 'lucide-react';
@@ -996,7 +994,6 @@ export default function IntakeQueue({
       {!loading && threads.length === 0 && (
         filter === 'awaiting' ? (
           <EmptyState
-            icon={SearchX}
             title="Inga träffar."
             actions={(
               <button type="button" className="ui-btn ui-btn--outline" onClick={() => setFilter('all')}>
@@ -1008,7 +1005,6 @@ export default function IntakeQueue({
           </EmptyState>
         ) : (
           <EmptyState
-            icon={Inbox}
             tone="ok"
             title="Inkorgen är tom."
             actions={isAdmin && mailboxConnected ? (

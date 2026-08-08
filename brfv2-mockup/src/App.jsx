@@ -1183,7 +1183,6 @@ function App() {
                     </div>
                   ) : documents.length === 0 ? (
                     <EmptyState
-                      icon={Folders}
                       title="Arkivet är tomt."
                       actions={isAdmin ? (
                         <button type="button" className="ui-btn ui-btn--primary" onClick={() => uploadInputRef.current?.click()}>
@@ -1195,7 +1194,6 @@ function App() {
                     </EmptyState>
                   ) : filteredDocs.length === 0 ? (
                     <EmptyState
-                      icon={SearchIcon}
                       title="Inga träffar."
                       actions={(
                         <button type="button" className="ui-btn ui-btn--outline" onClick={() => setDocsSearchQuery('')}>
@@ -1368,18 +1366,25 @@ function App() {
                   <div className="chat-messages-area">
                     {chatMessages.length === 0 ? (
                       <div className="chat-empty-state">
-                         <TraffMark size={26} decorative />
-                         <h3 className="chat-empty-title">Ställ en fråga om föreningens dokument</h3>
-                         <p className="chat-empty-hint">
-                           Svaret citerar det dokument det kommer ur — eller uteblir.
-                         </p>
-                         <div className="chat-empty-examples">
-                           <button className="example-prompt-btn" onClick={() => executeGeneralChat('Vad säger stadgarna om andrahandsuthyrning?')} disabled={chatBusy}>
-                             Vad säger stadgarna om andrahandsuthyrning?
-                           </button>
-                           <button className="example-prompt-btn" onClick={() => executeGeneralChat('Vilka datum gäller för snöröjningsjouren?')} disabled={chatBusy}>
-                             Vilka datum gäller för snöröjningsjouren?
-                           </button>
+                         {/* Same split the login screen uses: ink carries the
+                             thesis, paper carries the work. Not a bigger
+                             version of one card — a different composition. */}
+                         <div className="chat-empty-brand">
+                           <TraffMark size={72} variant="status" state="vila" decorative />
+                           <p className="chat-empty-thesis">
+                             Svaret citerar det dokument det kommer ur — eller uteblir.
+                           </p>
+                         </div>
+                         <div className="chat-empty-body">
+                           <h3 className="chat-empty-title">Ställ en fråga om föreningens dokument</h3>
+                           <div className="chat-empty-examples">
+                             <button className="example-prompt-btn" onClick={() => executeGeneralChat('Vad säger stadgarna om andrahandsuthyrning?')} disabled={chatBusy}>
+                               Vad säger stadgarna om andrahandsuthyrning?
+                             </button>
+                             <button className="example-prompt-btn" onClick={() => executeGeneralChat('Vilka datum gäller för snöröjningsjouren?')} disabled={chatBusy}>
+                               Vilka datum gäller för snöröjningsjouren?
+                             </button>
+                           </div>
                          </div>
                       </div>
                     ) : (
@@ -1477,7 +1482,12 @@ function App() {
 
             {PRODUCT_WORKSPACES.map((workspace) => (
               workspace.id === currentTab && desktopState && activeBrfId ? (
-                <div key={workspace.id} className="tab-content">
+                // Hemsidan owns a canvas, not a register — every other
+                // workspace here is a list/table and gets the wide-window cap.
+                <div
+                  key={workspace.id}
+                  className={`tab-content${workspace.id === 'website' ? '' : ' tab-content--wide'}`}
+                >
                   {workspace.render({
                     brfId: activeBrfId,
                     isAdmin,

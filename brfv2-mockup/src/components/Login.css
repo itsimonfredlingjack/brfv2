@@ -1,56 +1,98 @@
+/* Two panels, not one card in a void. The ink panel gives the screen real
+   weight before any text loads; the mark's own gap (§02) stays untouched —
+   no tint, no gradient *inside the ring* — the ink is the panel's ground,
+   not a plate placed behind it. Below 768px (Beslut 2's own breakpoint) the
+   brand panel drops and a compact lockup takes over inside the form panel. */
 .login-screen {
   height: 100vh;
   width: 100vw;
+  display: grid;
+  grid-template-columns: minmax(380px, 40%) 1fr;
+}
+
+.login-brand {
+  background: var(--ink);
+  color: var(--papper);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 48px;
+}
+
+.login-brand-inner { max-width: 340px; }
+
+.login-brand .traff-mark--brand {
+  border-color: var(--papper);
+  color: var(--papper);
+  margin-bottom: 22px;
+}
+
+.login-brand-qualifier {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(247 245 243 / 0.5);
+  margin-bottom: 28px;
+}
+
+.login-brand-title {
+  font-family: var(--font-display);
+  font-size: 2.75rem;   /* 44px — the name gets real scale exactly once */
+  font-weight: 600;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
+  color: var(--papper);
+  margin: 0 0 18px;
+}
+
+.login-brand-tagline {
+  font-size: var(--text-lg);
+  line-height: 1.6;
+  color: rgb(247 245 243 / 0.78);
+  max-width: 30ch;
+}
+
+.login-form-col {
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 24px;
+  background: var(--papper);
 }
 
 .login-panel {
   width: 100%;
-  max-width: 400px;
-  padding: 44px 36px 36px;
+  max-width: 380px;
+  padding: 40px 36px 36px;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
 }
 
-/* A mark, not a glowing orb. The gradient-and-halo treatment said "AI product"
-   before the product had said anything at all — and the plate that replaced it
-   was still a tone behind the gap, which §02 forbids outright: "Mellanrummet —
-   alltid tomt. Ingen tonplatta, ingen gradient. Det är avståndet mellan frågan
-   och belägget." So the mark now sits on the panel itself, with the frizon its
-   own margin. */
-.login-lockup {
-  display: flex;
+.login-lockup-compact {
+  display: none;
   align-items: center;
-  /* §05: the gap is the diameter of the core. */
-  /* §05: the mark stands at the name's cap height — the identity's own ratio
-     is a 50px mark against 56px of display type. */
-  gap: 15px;
-  margin-bottom: 14px;
+  gap: 12px;
+  margin-bottom: 26px;
   color: var(--foreground);
 }
 
 .login-title {
   font-family: var(--font-display);
-  font-size: 2.125rem;   /* 34px */
+  font-size: 1.5rem;
   font-weight: 600;
   letter-spacing: -0.015em;
-  /* The diacritic belongs to the name and is never clipped (§05). */
   line-height: 1.1;
   padding-top: 0.04em;
   color: var(--foreground);
 }
 
-.login-subtitle {
-  max-width: 34ch;
-  font-size: var(--text-md);
-  line-height: 1.55;
-  color: var(--muted-foreground);
-  margin-bottom: 26px;
+@media (max-width: 768px) {
+  .login-screen { grid-template-columns: 1fr; }
+  .login-brand { display: none; }
+  .login-lockup-compact { display: flex; }
 }
 
 .login-form {

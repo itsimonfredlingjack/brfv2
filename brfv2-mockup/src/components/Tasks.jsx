@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   AlertTriangle,
-  ClipboardList,
   FileText,
   Loader2,
   Plus,
@@ -541,7 +540,7 @@ export default function Tasks({ brfId, isAdmin = false, onOpenCitation }) {
     <div className="tasks">
       <header className="tasks-header">
         <div>
-          <h2>Uppgifter</h2>
+          <h2 className="page-title">Uppgifter</h2>
           <p className="muted">
             Arbete som en människa har tagit på sig: vem som äger det, till när,
             och allt som hänt sedan dess. Ingen motor skapar en uppgift — att
@@ -620,7 +619,6 @@ export default function Tasks({ brfId, isAdmin = false, onOpenCitation }) {
             </p>
             {active.length === 0 ? (
               <EmptyState
-                icon={ClipboardList}
                 title="Inga uppgifter på gång."
                 actions={isAdmin ? (
                   <button type="button" className="ui-btn ui-btn--primary" onClick={openCreate}>

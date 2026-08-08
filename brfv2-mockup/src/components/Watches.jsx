@@ -1,7 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
-  CalendarClock,
   CheckCircle2,
   FileText,
   HelpCircle,
@@ -609,7 +608,6 @@ export default function Watches({ brfId, isAdmin = false, onOpenCitation }) {
 
           {nothingYet && (
             <EmptyState
-              icon={CalendarClock}
               title="Inga bevakningar ännu."
               actions={isAdmin ? (
                 <button type="button" className="ui-btn ui-btn--primary" onClick={scan} disabled={busy || scanning}>

@@ -9,7 +9,6 @@ import {
   Receipt,
   RefreshCw,
   Search,
-  SearchX,
   Table2,
   User,
   X,
@@ -367,58 +366,30 @@ export default function Invoices({ brfId, isAdmin = false, onOpenDocument, onOpe
 
   return (
     <div className="invoices">
-      <header className="page-header invoices-masthead">
-        <div className="page-header-text">
-          <h2 className="page-title">Fakturor</h2>
-          <p className="page-header-sub">
-            Varje faktura är ett ärende: vad den är, vad som ändrats, vad den stämmer mot och
-            vem som gör något åt det. Ingenting här ändrar något i ekonomisystemet.
-          </p>
-        </div>
-      </header>
-
-      <Banner tone="error" onDismiss={() => setError('')}>{error}</Banner>
-      <Banner tone="ok" onDismiss={() => setNotice('')}>{notice}</Banner>
-
-      <div className="invoices-toolbar">
-        {/* One pane needs no switch: the tablist appears with the second pane. */}
-        {fortnoxReady ? (
-          <div className="invoices-tabs" role="tablist">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={pane === 'queue'}
-              className={pane === 'queue' ? 'active' : ''}
-              onClick={() => setPane('queue')}
-            >
-              <Receipt size={15} /> Granskningskö
-              {counts.open > 0 && <span className="pill">{counts.open}</span>}
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={pane === 'mapping'}
-              className={pane === 'mapping' ? 'active' : ''}
-              onClick={() => setPane('mapping')}
-            >
-              <Table2 size={15} /> Fältkontroll
+      <div className="invoices-chrome">
+        <header className="invoices-topline">
+          <div className="invoices-topline-text">
+            <h2 className="page-title">Fakturor</h2>
+            <p className="invoices-tagline">
+              Ärenden att granska — inget här skrivs till ekonomisystemet.
+            </p>
+          </div>
+          <div className="invoices-topline-actions">
+            {isAdmin && (
+              <button type="button" className="invoices-read-in-btn" onClick={openReadIn}>
+                <Download size={14} /> Läs in
+              </button>
+            )}
+            <button type="button" className="invoices-refresh" onClick={refresh} disabled={loading || busy}>
+              <RefreshCw size={14} /> Uppdatera
             </button>
           </div>
-        ) : <span />}
-        <button type="button" className="invoices-refresh" onClick={refresh} disabled={loading || busy}>
-          <RefreshCw size={14} /> Uppdatera
-        </button>
-      </div>
+        </header>
 
-      {pane === 'mapping' && fortnoxReady && (
-        <MappingPreview brfId={brfId} initialRef={mappingRef} key={mappingRef} />
-      )}
+        <Banner tone="error" onDismiss={() => setError('')}>{error}</Banner>
+        <Banner tone="ok" onDismiss={() => setNotice('')}>{notice}</Banner>
 
-      {pane === 'queue' && (
-        <>
-          {/* Five numbers, not five cards. A row of stat tiles is the shape of
-              an analytics dashboard, and this is a work queue: the numbers say
-              how much is left, and then get out of the way. */}
+        {pane === 'queue' && (
           <dl className="invoices-counts">
             <div><dt>Att granska</dt><dd>{counts.open ?? 0}</dd></div>
             <div><dt>Med signal</dt><dd>{counts.withSignal ?? 0}</dd></div>
@@ -429,22 +400,59 @@ export default function Invoices({ brfId, isAdmin = false, onOpenDocument, onOpe
               <dd>{formatAmount(counts.amountOpen, 'SEK')}</dd>
             </div>
           </dl>
+        )}
 
-          {isAdmin && (
-            <ReadInPanel
-              brfId={brfId}
-              sources={data?.sources || ['fixture']}
-              fortnoxReady={fortnoxReady}
-              known={known}
-              busy={busy}
-              source={source}
-              onSource={setSource}
-              onImport={importInvoice}
-              onCheckFields={(ref) => { setMappingRef(ref); setPane('mapping'); }}
-            />
-          )}
+        {isAdmin && (
+          <ReadInPanel
+            brfId={brfId}
+            sources={data?.sources || ['fixture']}
+            fortnoxReady={fortnoxReady}
+            known={known}
+            busy={busy}
+            source={source}
+            onSource={setSource}
+            onImport={importInvoice}
+            onCheckFields={(ref) => { setMappingRef(ref); setPane('mapping'); }}
+          />
+        )}
+      </div>
 
-          <div className="invoices-filters">
+      <div className="invoices-work">
+        {fortnoxReady && (
+          <div className="invoices-work-head">
+            <div className="invoices-tabs" role="tablist">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={pane === 'queue'}
+                className={pane === 'queue' ? 'active' : ''}
+                onClick={() => setPane('queue')}
+              >
+                <Receipt size={15} /> Granskningskö
+                {counts.open > 0 && <span className="pill">{counts.open}</span>}
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={pane === 'mapping'}
+                className={pane === 'mapping' ? 'active' : ''}
+                onClick={() => setPane('mapping')}
+              >
+                <Table2 size={15} /> Fältkontroll
+              </button>
+            </div>
+          </div>
+        )}
+
+        {pane === 'mapping' && fortnoxReady && (
+          <div className="invoices-work-body">
+            <MappingPreview brfId={brfId} initialRef={mappingRef} key={mappingRef} />
+          </div>
+        )}
+
+        {pane === 'queue' && (
+          <>
+            <div className="invoices-filters">
             <label className="invoices-search">
               <Search size={14} aria-hidden="true" />
               <input
@@ -505,7 +513,6 @@ export default function Invoices({ brfId, isAdmin = false, onOpenDocument, onOpe
           {!loading && visible.length === 0 && (
             cases.length === 0 ? (
               <EmptyState
-                icon={Receipt}
                 title="Inga fakturor att granska."
                 actions={isAdmin ? (
                   <button type="button" className="ui-btn ui-btn--primary" onClick={openReadIn}>
@@ -517,7 +524,6 @@ export default function Invoices({ brfId, isAdmin = false, onOpenDocument, onOpe
               </EmptyState>
             ) : (
               <EmptyState
-                icon={SearchX}
                 title="Inga träffar."
                 actions={(
                   <button type="button" className="ui-btn ui-btn--outline" onClick={resetFilters}>
@@ -588,8 +594,9 @@ export default function Invoices({ brfId, isAdmin = false, onOpenDocument, onOpe
               </table>
             </div>
           )}
-        </>
-      )}
+          </>
+        )}
+      </div>
     </div>
   );
 }

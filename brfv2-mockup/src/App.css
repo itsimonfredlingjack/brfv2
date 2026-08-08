@@ -73,6 +73,8 @@
   padding: 12px;
   background: var(--sidebar);
   border-right: 1px solid var(--sidebar-border);
+  /* The chrome stands one plane above the paper: the seam casts, faintly. */
+  box-shadow: 1px 0 2px 0 rgb(55 50 47 / 0.04);
   color: var(--sidebar-foreground);
   z-index: 40;
   transition: transform 0.24s ease;
@@ -91,8 +93,9 @@
   align-items: center;
   /* §05: the gap is the diameter of the core. */
   gap: 11px;
-  padding: 6px 8px 0;
-  margin-bottom: 18px;
+  padding: 8px 10px 10px;
+  margin: 0 -4px 14px;
+  border-bottom: 1px solid var(--sidebar-border);
 }
 
 /* §05 Lockup — the mark stands before the name at cap height: a mark of
@@ -132,7 +135,7 @@
 .sidebar-menu { display: flex; flex-direction: column; gap: 2px; }
 
 .sidebar-section-label {
-  padding: 20px 8px 7px;
+  padding: 18px 10px 6px;
   color: var(--muted-foreground);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
@@ -149,9 +152,9 @@
   gap: 10px;
   width: 100%;
   height: 34px;
-  padding: 0 8px;
+  padding: 0 10px;
   border: none;
-  border-radius: var(--radius-2xl);
+  border-radius: var(--r-control);
   background: transparent;
   color: var(--muted-foreground);
   font-size: var(--text-md);
@@ -168,14 +171,16 @@
 /* Hover and selected must not be the same surface, or the sidebar tells you
    where the pointer is instead of where you are. */
 .nav-item:hover { background: var(--surface-2); color: var(--sidebar-accent-foreground); }
-/* The one place in the navigation the product's own colour appears: where you
-   are. It is the same amber as the mark and as a painted citation. */
+/* Where you are: muted fill, stronger ink — and a 2px ink tick on the leading
+   edge. Ink claims nothing, so the mark can sit on the navigation without
+   borrowing a state colour. */
 .nav-item.active {
   background: var(--sidebar-accent);
   color: var(--sidebar-accent-foreground);
   font-weight: 500;
+  box-shadow: inset 2px 0 0 var(--ink);
 }
-.nav-item.active > svg { color: var(--brand); }
+.nav-item.active > svg { color: var(--ink); }
 .nav-item.active:hover { background: var(--muted-hover); }
 .nav-item:focus-visible { outline: none; box-shadow: 0 0 0 2px var(--sidebar-ring); }
 
@@ -187,16 +192,21 @@
   position: relative;
 }
 
+/* The active association is a card, not a text row: it is the one piece of
+   identity in the chrome that is *about the tenant*, so it gets a surface. */
 .active-brf-panel {
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
   padding: 8px;
-  border-radius: var(--radius-2xl);
+  border: 1px solid var(--border);
+  border-radius: var(--r-control);
+  background: var(--surface-1);
 }
 
-.active-brf-panel.switchable:hover { background: var(--sidebar-accent); }
+.active-brf-panel.switchable { cursor: pointer; transition: background-color 0.12s ease, border-color 0.12s ease; }
+.active-brf-panel.switchable:hover { background: var(--surface-3); border-color: var(--border-strong); }
 
 .active-brf-tile {
   display: grid;
@@ -204,10 +214,11 @@
   width: 30px;
   height: 30px;
   flex-shrink: 0;
-  border: 1px solid var(--border-strong);
+  border: none;
   border-radius: var(--radius-md);
-  color: var(--foreground);
-  font-size: var(--text-base);
+  background: var(--ink);
+  color: var(--primary-foreground);
+  font-size: var(--text-sm);
   font-weight: 600;
   letter-spacing: -0.02em;
 }
@@ -341,7 +352,7 @@
   flex-direction: column;
   min-width: 0;
   overflow-y: auto;
-  padding: 28px 32px 40px;
+  padding: 24px 28px 32px;
 }
 
 /* A workspace that owns the window rather than the top of it — the chat, whose
@@ -366,6 +377,24 @@
   min-height: 0;
 }
 
+/* Fakturor owns its own sheet inside `.invoices-work` — not the global wrapper. */
+.tab-content:has(.invoices) {
+  flex: 1;
+  min-height: 0;
+}
+
+/* Inkommande, Fakturor, Bevakningar, Uppgifter are registers, not canvases —
+   on an ultrawide window an uncapped table doesn't gain more rows, it just
+   gains dead gutter between short cells and the far edge. Capped and
+   centered, the paper carries the extra width instead of the row. Hemsidan
+   is the one PRODUCT_WORKSPACES page that stays uncapped (App.jsx opts it
+   out): it owns a canvas, not a register. */
+.tab-content--wide {
+  max-width: 1600px;
+  margin: 0 auto;
+  width: 100%;
+}
+
 .main-content > * { min-width: 0; }
 
 /* ========================================================================= */
@@ -380,16 +409,28 @@
   margin-bottom: 20px;
 }
 
+/* Chrome on paper: when the header sits outside the sheet it belongs to the
+   window, not to the article — closer to the content, no card padding. */
+.page-header.is-on-paper {
+  margin: -2px 4px 14px;
+}
+
 .page-header-text { display: flex; flex-direction: column; gap: 5px; }
 
-/* The one title on a workspace. Serif, 400 — and at masthead size: §07 gives
-   the serif 22–200px, and a workspace's name is the one assertion the screen
-   opens with. 24px read as a form label; 30px reads as a heading. */
+/* The one title on a workspace — Poppins at masthead size and real weight.
+   The global `h1, h2` rule already set the family; this class was still
+   pinning weight to 400 and tracking to a serif-era −0.03em, which is
+   exactly the "everything the same weight" flatness the identity's own
+   sans-first pass (DESIGN.md, 2026-08-08) was meant to fix and never
+   reached here. 34px, matching the login lockup's own hero size, so a
+   workspace's name is visibly the one assertion the screen opens with, not
+   a form label that happens to sit at the top. */
 .page-title {
   margin: 0;
-  font-size: var(--text-2xl);
-  font-weight: 400;
-  letter-spacing: -0.03em;
+  font-family: var(--font-display);
+  font-size: 2.125rem;
+  font-weight: 600;
+  letter-spacing: -0.02em;
   line-height: 1.1;
 }
 .page-header-sub { max-width: 72ch; font-size: var(--text-base); line-height: 1.6; color: var(--muted-foreground); }
@@ -906,28 +947,52 @@ mark.search-highlight {
 
 /* The empty chat used to be a heading floating in the middle of a thousand
    pixels of nothing, which reads as a screen that failed to load rather than
-   one waiting for a question. It is a panel now: it starts where the content
-   starts, and it has edges. The line under the title is the product's whole
-   contract, so the panel is built around saying it well. */
+   one waiting for a question. A bigger version of the same centered card
+   still read as the same layout, so this is the login screen's own split
+   instead: ink carries the thesis (the mark at real size, in its vila
+   state — §03, empty until the proof exists), paper carries the actual
+   work. Two zones, not one card scaled up. */
 .chat-empty-state {
+  display: grid;
+  grid-template-columns: 1fr 1.35fr;
+  align-items: stretch;
+  margin-top: 4px;
+  border-radius: var(--radius-3xl);
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+
+.chat-empty-brand {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: flex-start;
-  gap: 8px;
-  margin-top: 4px;
-  padding: 44px 32px 36px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-3xl);
-  background: var(--card);
-  text-align: center;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 20px;
+  padding: 48px 40px;
+  background: var(--ink);
 }
-.chat-empty-state > .traff-mark { margin-bottom: 10px; }
+.chat-empty-brand .traff-mark--vila { border-color: var(--papper); opacity: 0.85; }
+.chat-empty-thesis { font-size: var(--text-lg); line-height: 1.55; color: rgb(247 245 243 / 0.82); max-width: 26ch; }
 
-.chat-empty-title { font-family: var(--font-display); font-weight: 600; font-size: 1.5rem; letter-spacing: -0.015em; line-height: 1.2; }
-.chat-empty-hint { margin-bottom: 24px; font-size: var(--text-base); color: var(--muted-foreground); }
-.chat-empty-examples { display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 440px; }
-.chat-title { font-family: var(--font-display); font-weight: 600; font-size: var(--text-2xl); letter-spacing: -0.015em; }
+.chat-empty-body {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 20px;
+  padding: 48px 40px;
+  background: var(--card);
+  text-align: left;
+}
+
+.chat-empty-title { font-family: var(--font-display); font-weight: 600; font-size: 1.75rem; letter-spacing: -0.015em; line-height: 1.25; max-width: 18ch; }
+.chat-empty-examples { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+.chat-title { font-family: var(--font-display); font-weight: 600; font-size: 2.125rem; letter-spacing: -0.02em; }
+
+@media (max-width: 768px) {
+  .chat-empty-state { grid-template-columns: 1fr; }
+  .chat-empty-brand { padding: 32px 28px; }
+  .chat-empty-body { padding: 32px 28px; }
+}
 
 .example-prompt-btn {
   padding: 11px 14px;
