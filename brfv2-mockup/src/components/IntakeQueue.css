@@ -209,10 +209,13 @@
   .intake-toolbar { flex-wrap: nowrap; }
 }
 
+/* A segmented filter that stretches the full content width turns three short
+   labels into three halls of empty paper; it only ever governs the list, so
+   it keeps roughly the list's own measure. */
 .intake-counts {
-  flex: 1 1 auto;
+  flex: 0 1 auto;
+  width: min(460px, 100%);
   min-width: 0;
-  max-width: 100%;
 }
 
 .intake-counts button {
@@ -464,6 +467,15 @@
   font-weight: 500;
   color: var(--foreground);
   overflow-wrap: anywhere;
+}
+
+/* The display name is who this is from; the bare address is mail-client
+   vernacular that only matters when the name is ambiguous, so it is demoted
+   to meta rather than set as half of the sender line. */
+.message-sender-addr {
+  margin-left: 8px;
+  font-weight: 400;
+  color: var(--ink-subtle);
 }
 
 .message-meta {
@@ -918,6 +930,16 @@
 }
 
 .resolve-options { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+
+/* The seam between what stacks and what closes: take-in/task/watch combine;
+   already-handled/not-relevant exclude everything else. */
+.resolve-divider {
+  align-self: center;
+  width: 1px;
+  height: 20px;
+  margin: 0 4px;
+  background: var(--border-strong);
+}
 
 /* The five outcomes are chips, not form rows: one press each, combinable, and
    a chosen one is marked with ink — a person has touched it. */

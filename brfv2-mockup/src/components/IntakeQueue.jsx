@@ -6,6 +6,7 @@ import {
   ChevronDown,
   ChevronRight,
   Clock,
+  Download,
   FileText,
   HelpCircle,
   Inbox,
@@ -163,7 +164,9 @@ function FetchBar({ mailbox, connected, busy, onFetch, onImportFile, format, las
             title="Hämta nytt"
             aria-label="Hämta nytt"
           >
-            {busy ? <Loader2 size={14} className="spin" /> : <RefreshCw size={14} />} Hämta
+            {/* Pull from the mailbox, not reload the view — Uppdatera owns the
+                sync glyph; this one is paired with the .eml import's Upload. */}
+            {busy ? <Loader2 size={14} className="spin" /> : <Download size={14} />} Hämta
           </button>
         </span>
       </div>
@@ -225,9 +228,11 @@ function ThreadRow({ thread, selected, onSelect }) {
     >
       <span className="thread-row-top">
         <span className="thread-subject">{thread.subject}</span>
+        {/* A bare "1" adds nothing to a one-message thread — the number earns
+            its place when there is more than one undecided message inside. */}
         {thread.resolved
           ? <span className="thread-row-state settled"><CheckCircle2 size={12} /> Avgjord</span>
-          : <span className="thread-row-state open">{thread.open_count}</span>}
+          : thread.open_count > 1 && <span className="thread-row-state open">{thread.open_count}</span>}
       </span>
       <span className="thread-meta">
         {thread.latest_sender_display || thread.latest_sender}
@@ -432,11 +437,32 @@ function ResolveForm({ event, resolutions, busy, onResolve }) {
   const needsNote = chosen.includes('take_in');
   const canSubmit = chosen.length > 0 && (!needsNote || note.trim().length > 0) && !busy;
 
+  // Combinable outcomes first, the two closing-out outcomes after a divider —
+  // the row says which acts stack and which end the discussion before any
+  // checkbox logic has to.
+  const entries = Object.entries(resolutions);
+  const combinable = entries.filter(([kind]) => !exclusive.includes(kind));
+  const closing = entries.filter(([kind]) => exclusive.includes(kind));
+
   return (
     <div className="resolve">
       <h5>Vad ska hända med den här posten?</h5>
       <div className="resolve-options">
-        {Object.entries(resolutions).map(([kind, label]) => (
+        {combinable.map(([kind, label]) => (
+          <label key={kind} className={chosen.includes(kind) ? 'chosen' : ''}>
+            <input
+              type="checkbox"
+              checked={chosen.includes(kind)}
+              onChange={() => toggle(kind)}
+              disabled={busy}
+            />
+            {label}
+          </label>
+        ))}
+        {combinable.length > 0 && closing.length > 0 && (
+          <span className="resolve-divider" aria-hidden="true" />
+        )}
+        {closing.map(([kind, label]) => (
           <label key={kind} className={chosen.includes(kind) ? 'chosen' : ''}>
             <input
               type="checkbox"
@@ -621,7 +647,10 @@ function Message({ event, showSubject = true, busy, onRetriage, onOpenDocument }
         {showSubject && <h5>{event.subject || '(utan ämne)'}</h5>}
         <span className="message-from">
           <span className="message-sender">
-            {event.origin_display ? `${event.origin_display} <${event.origin}>` : event.origin}
+            {event.origin_display || event.origin}
+            {event.origin_display && event.origin_display !== event.origin && (
+              <span className="message-sender-addr">{event.origin}</span>
+            )}
           </span>
           <span className="message-meta">
             <time dateTime={event.occurred_at || event.received_at}>

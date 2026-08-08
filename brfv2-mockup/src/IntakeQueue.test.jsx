@@ -307,6 +307,20 @@ describe('the queue, before anything is decided', () => {
     expect(list).toBeTruthy();
     expect(toolbar.compareDocumentPosition(list) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   });
+
+  it('spares the bare count on a one-message thread, shows it when more remain', async () => {
+    mountWith({
+      threads: [
+        THREAD,
+        { ...THREAD, key: 't2', subject: 'Faktura hisservice', open_count: 3 },
+      ],
+      counts: { threads: 2, openThreads: 2, awaitingReply: 0 },
+    });
+    const list = await waitForQueue();
+    const rows = list.querySelectorAll('.thread-row');
+    expect(rows[0].querySelector('.thread-row-state')).toBeNull();
+    expect(rows[1].querySelector('.thread-row-state')).toHaveTextContent('3');
+  });
 });
 
 describe('what the app believes', () => {
@@ -544,6 +558,16 @@ describe('fetching', () => {
 });
 
 describe('the message itself', () => {
+  it('demotes the bare address beside a display name, without the brackets', async () => {
+    mountWith();
+    await waitForQueue();
+    const sender = document.querySelector('.message-sender');
+    expect(sender).toHaveTextContent('Anna Lind');
+    const addr = sender.querySelector('.message-sender-addr');
+    expect(addr).toHaveTextContent('anna@snosvangen.example');
+    expect(addr.textContent).not.toMatch(/[<>]/);
+  });
+
   it('shows provenance the operator can check the message against', async () => {
     mountWith();
     await waitForQueue();
@@ -638,6 +662,19 @@ describe('resolving', () => {
     for (const label of Object.values(RESOLUTION_LABELS)) {
       expect(screen.getByRole('checkbox', { name: label })).toBeInTheDocument();
     }
+  });
+
+  it('separates the combinable outcomes from the ones that close the item', async () => {
+    mountWith();
+    await waitForQueue();
+    openForm();
+    const options = document.querySelector('.resolve-options');
+    const divider = options.querySelector('.resolve-divider');
+    expect(divider).toBeTruthy();
+    expect(divider.previousElementSibling).toHaveTextContent('Bevaka');
+    expect(divider.nextElementSibling).toHaveTextContent('Redan hanterat');
+    const labels = [...options.querySelectorAll('label')].map((l) => l.textContent);
+    expect(labels).toEqual(['Ta in', 'Skapa uppgift', 'Bevaka', 'Redan hanterat', 'Inte relevant']);
   });
 
   it('refuses to take anything in without a stated reason, before the backend is asked', async () => {
