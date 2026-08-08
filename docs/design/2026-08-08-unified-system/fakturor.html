@@ -9,29 +9,17 @@
     .stat { flex: 1; padding: 13px 18px; display: flex; flex-direction: column; gap: 2px; }
     .stat + .stat { border-left: 1px solid var(--border); }
     .stat b { font-family: var(--font-mono); font-size: 17px; font-weight: 600; letter-spacing: -0.02em; color: var(--ink-strong); }
-    .stat span { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-subtle); }
+    .stat span { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-muted); }
 
-    .irow { padding: 14px 18px; cursor: pointer; }
-    .irow:hover { background: var(--surface-1); }
-    .irow.open { background: #FFFFFF; cursor: default; }
-    .irow-head { display: flex; align-items: center; gap: 16px; }
-    .irow-main { flex: 1; min-width: 0; }
-    .irow-supp { font-size: 14.5px; font-weight: 600; color: var(--ink-strong); display: flex; align-items: center; gap: 10px; }
-    .irow-meta { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-subtle); margin-top: 3px; }
-    .irow-amount { text-align: right; flex-shrink: 0; }
-    .irow-amount .sum { font-family: var(--font-mono); font-size: 15px; font-weight: 600; letter-spacing: -0.01em; color: var(--ink-strong); }
-    .irow-amount .due { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.04em; color: var(--ink-subtle); margin-top: 2px; }
-    .irow-head > svg.ic { width: 15px; height: 15px; color: var(--ink-subtle); }
+    /* Register: LEVERANTÖR | REFERENS | BELLOPP | FÖRFALLER | pil */
+    .reg--fakturor { --reg-cols: minmax(0, 1.5fr) minmax(0, 1.2fr) 110px 116px 18px; }
 
-    .irow-body { margin-top: 14px; border-top: 1px dashed var(--border); padding-top: 14px; display: flex; flex-direction: column; gap: 10px; }
-    .dev {
-      display: flex; align-items: center; gap: 12px;
-      background: var(--surface-1); border: 1px solid var(--border); border-left: 3px solid var(--vagran);
-      border-radius: 10px; padding: 10px 14px;
-    }
-    .dev .dname { font-size: 13px; font-weight: 500; }
-    .dev .dsum { font-family: var(--font-mono); font-size: 12.5px; font-weight: 600; }
-    .dev .st { margin-left: auto; }
+    .supp { font-size: 14.5px; font-weight: 600; color: var(--ink-strong); display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .ref { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-muted); }
+
+    .dev-name { font-size: 13px; font-weight: 500; grid-column: 1 / 3; }
+    .dev .st { grid-column: 4 / 6; justify-self: end; }
+
     .irow-actions { display: flex; gap: 10px; padding-top: 4px; }
     .okline { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--belagt); font-weight: 500; }
     .okline svg.ic { width: 14px; height: 14px; }
@@ -43,13 +31,22 @@
       <div class="brand"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="8.6" stroke="#37322F" stroke-width="2.1"/><circle cx="11" cy="11" r="3.4" fill="#37322F"/></svg><span class="brand-name">Träff</span></div>
       <div class="scope">BRF Norra Stackholm</div>
       <nav class="nav">
-        <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-square" aria-hidden="true"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"></path></svg><span>Fråga dokumenten</span></a>
-        <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-folders" aria-hidden="true"><path d="M20 5a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h2.5a1.5 1.5 0 0 1 1.2.6l.6.8a1.5 1.5 0 0 0 1.2.6z"></path><path d="M3 8.268a2 2 0 0 0-1 1.738V19a2 2 0 0 0 2 2h11a2 2 0 0 0 1.732-1"></path></svg><span>Dokument</span></a>
-        <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard-check" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></svg><span>Granskning</span></a>
-        <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-calendar-clock" aria-hidden="true"><path d="M16 14v2.2l1.6 1"></path><path d="M16 2v4"></path><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"></path><path d="M3 10h5"></path><path d="M8 2v4"></path><circle cx="16" cy="16" r="6"></circle></svg><span>Bevakningar</span></a>
-        <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard-list" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M12 11h4"></path><path d="M12 16h4"></path><path d="M8 11h.01"></path><path d="M8 16h.01"></path></svg><span>Uppgifter</span></a>
-        <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-inbox" aria-hidden="true"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg><span>Inkommande</span></a>
-        <a class="nav-item active" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-receipt" aria-hidden="true"><path d="M12 17V7"></path><path d="M16 8h-6a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H8"></path><path d="M4 3a1 1 0 0 1 1-1 1.3 1.3 0 0 1 .7.2l.933.6a1.3 1.3 0 0 0 1.4 0l.934-.6a1.3 1.3 0 0 1 1.4 0l.933.6a1.3 1.3 0 0 0 1.4 0l.933-.6a1.3 1.3 0 0 1 1.4 0l.934.6a1.3 1.3 0 0 0 1.4 0l.933-.6A1.3 1.3 0 0 1 19 2a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1 1.3 1.3 0 0 1-.7-.2l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.934.6a1.3 1.3 0 0 1-1.4 0l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-1.4 0l-.934-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-.7.2 1 1 0 0 1-1-1z"></path></svg><span>Fakturor</span></a>
+        <div class="nav-group">
+        <div class="nav-label">Fråga &amp; arkiv</div>
+          <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-square" aria-hidden="true"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"></path></svg><span>Fråga dokumenten</span></a>
+          <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-folders" aria-hidden="true"><path d="M20 5a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h2.5a1.5 1.5 0 0 1 1.2.6l.6.8a1.5 1.5 0 0 0 1.2.6z"></path><path d="M3 8.268a2 2 0 0 0-1 1.738V19a2 2 0 0 0 2 2h11a2 2 0 0 0 1.732-1"></path></svg><span>Dokument</span></a>
+        </div>
+        <div class="nav-group">
+        <div class="nav-label">Arbete</div>
+          <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard-check" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></svg><span>Granskning</span></a>
+          <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-calendar-clock" aria-hidden="true"><path d="M16 14v2.2l1.6 1"></path><path d="M16 2v4"></path><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"></path><path d="M3 10h5"></path><path d="M8 2v4"></path><circle cx="16" cy="16" r="6"></circle></svg><span>Bevakningar</span></a>
+          <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard-list" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M12 11h4"></path><path d="M12 16h4"></path><path d="M8 11h.01"></path><path d="M8 16h.01"></path></svg><span>Uppgifter</span></a>
+        </div>
+        <div class="nav-group">
+        <div class="nav-label">Post &amp; ekonomi</div>
+          <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-inbox" aria-hidden="true"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg><span>Inkommande</span></a>
+          <a class="nav-item active" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-receipt" aria-hidden="true"><path d="M12 17V7"></path><path d="M16 8h-6a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H8"></path><path d="M4 3a1 1 0 0 1 1-1 1.3 1.3 0 0 1 .7.2l.933.6a1.3 1.3 0 0 0 1.4 0l.934-.6a1.3 1.3 0 0 1 1.4 0l.933.6a1.3 1.3 0 0 0 1.4 0l.933-.6a1.3 1.3 0 0 1 1.4 0l.934.6a1.3 1.3 0 0 0 1.4 0l.933-.6A1.3 1.3 0 0 1 19 2a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1 1.3 1.3 0 0 1-.7-.2l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.934.6a1.3 1.3 0 0 1-1.4 0l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-1.4 0l-.934-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-.7.2 1 1 0 0 1-1-1z"></path></svg><span>Fakturor</span></a>
+        </div>
       </nav>
       <div class="sidebar-foot">
         <div class="foot-name">Anders Andersson</div>
@@ -79,61 +76,53 @@
           <div class="stat"><b>0 kr</b><span>Förfallen</span></div>
         </div>
 
-        <div class="rows">
-          <div class="irow">
-            <div class="irow-head">
-              <div class="irow-main">
-                <div class="irow-supp">Nolia <span class="st st--neutral">Inkorg</span></div>
-                <div class="irow-meta">OCR 5566778890 · Fakturadatum 2026-07-14</div>
-              </div>
-              <div class="irow-amount">
-                <div class="sum">9 750 kr</div>
-                <div class="due">Förfaller 2026-08-13</div>
-              </div>
-              <svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+        <div class="reg reg--fakturor">
+          <div class="reg-head">
+            <span>Leverantör</span><span>Referens</span><span class="r">Belopp</span><span class="r">Förfaller</span><span></span>
+          </div>
+
+          <div class="reg-item">
+            <div class="reg-row">
+              <div class="supp">Nolia <span class="st st--neutral">Inkorg</span></div>
+              <span class="ref">OCR 5566778890 · Fakt 2026-07-14</span>
+              <span class="num strong">9 750 kr</span>
+              <span class="num">2026-08-13</span>
+              <span class="chev"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></span>
             </div>
           </div>
 
-          <div class="irow">
-            <div class="irow-head">
-              <div class="irow-main">
-                <div class="irow-supp">Ramböll <span class="st st--belagt"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-check" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg> Matchar avtal</span></div>
-                <div class="irow-meta">OCR 1122334455 · Fakturadatum 2026-07-11</div>
-              </div>
-              <div class="irow-amount">
-                <div class="sum">12 000 kr</div>
-                <div class="due">Förfaller 2026-08-10</div>
-              </div>
-              <svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+          <div class="reg-item">
+            <div class="reg-row">
+              <div class="supp">Ramböll <span class="st st--belagt"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-check" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg> Matchar avtal</span></div>
+              <span class="ref">OCR 1122334455 · Fakt 2026-07-11</span>
+              <span class="num strong">12 000 kr</span>
+              <span class="num">2026-08-10</span>
+              <span class="chev"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></span>
             </div>
           </div>
 
-          <div class="irow open">
-            <div class="irow-head">
-              <div class="irow-main">
-                <div class="irow-supp">Ellevio <span class="st st--vagran"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-triangle-alert" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg> 3 avvikelser</span></div>
-                <div class="irow-meta">OCR 9988776655 · Fakturadatum 2026-07-08</div>
-              </div>
-              <div class="irow-amount">
-                <div class="sum">5 550 kr</div>
-                <div class="due">Förfaller 2026-08-07</div>
-              </div>
-              <svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
+          <div class="reg-item open">
+            <div class="reg-row">
+              <div class="supp">Ellevio <span class="st st--vagran"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-triangle-alert" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg> 3 avvikelser</span></div>
+              <span class="ref">OCR 9988776655 · Fakt 2026-07-08</span>
+              <span class="num strong">5 550 kr</span>
+              <span class="num">2026-08-07</span>
+              <span class="chev"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span>
             </div>
-            <div class="irow-body">
-              <div class="dev">
-                <span class="dname">Felpristillägg</span>
-                <span class="dsum">4 164 kr</span>
+            <div class="reg-body">
+              <div class="reg-sub dev warn">
+                <span class="dev-name">Felpristillägg</span>
+                <span class="num">4 164 kr</span>
                 <span class="st st--vagran">Saknas i avtalet</span>
               </div>
-              <div class="dev">
-                <span class="dname">Administrativ avgift</span>
-                <span class="dsum">145 kr</span>
+              <div class="reg-sub dev warn">
+                <span class="dev-name">Administrativ avgift</span>
+                <span class="num">145 kr</span>
                 <span class="st st--vagran">Ej avtalad</span>
               </div>
-              <div class="dev">
-                <span class="dname">Elcertifikat</span>
-                <span class="dsum">1 241 kr</span>
+              <div class="reg-sub dev warn">
+                <span class="dev-name">Elcertifikat</span>
+                <span class="dsum num">1 241 kr</span>
                 <span class="st st--vagran">Avtalat tak 900 kr</span>
               </div>
               <div class="irow-actions">
@@ -145,16 +134,15 @@
         </div>
 
         <div class="sec-label">Matchade mot avtal <span class="n">1</span></div>
-        <div class="rows">
-          <div class="irow">
-            <div class="irow-head">
-              <div class="irow-main">
-                <div class="okline"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-check" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg> Stadsnät AB — belopp, referens och villkor överensstämmer med avtalet.</div>
+        <div class="reg reg--fakturor">
+          <div class="reg-item">
+            <div class="reg-row">
+              <div class="supp" style="grid-column: 1 / 3; font-weight: 500;">
+                <span class="okline"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-check" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg> Stadsnät AB — belopp, referens och villkor överensstämmer</span>
               </div>
-              <div class="irow-amount">
-                <div class="sum">3 400 kr</div>
-                <div class="due">Betald 2026-07-31</div>
-              </div>
+              <span class="num strong">3 400 kr</span>
+              <span class="num">Betald 2026-07-31</span>
+              <span class="chev"></span>
             </div>
           </div>
         </div>

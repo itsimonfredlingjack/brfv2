@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <title>Träff — Faktura Nolia</title>
+  <link rel="stylesheet" href="src/system.css">
+  <style>
+    .back { margin-bottom: var(--s4); }
+    .back .lnk { font-size: 12.5px; }
+    .back .lnk svg.ic { width: 14px; height: 14px; }
+
+    .detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: var(--s6); align-items: start; }
+    .stack { display: flex; flex-direction: column; gap: var(--s5); }
+
+    .panel { padding: var(--s5) var(--s6); }
+    .panel .sec-label { margin: 0 0 var(--s3); }
+
+    /* Fältrader: EN etikettstil, EN värdes stil — samma överallt */
+    .frow { display: grid; grid-template-columns: 170px 1fr; gap: var(--s4); padding: 9px 0; align-items: center; }
+    .frow + .frow { border-top: 1px solid var(--border); }
+    .frow-label { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-muted); }
+    .frow-val { font-size: 14px; color: var(--ink); }
+    .frow-val.num, .frow .num { font-family: var(--font-mono); font-size: 12.5px; font-weight: 500; letter-spacing: -0.01em; text-align: left; }
+    .frow.total { background: var(--surface-1); border-radius: 10px; padding: 10px 12px; margin: 4px -12px 0; border-top: none; }
+    .frow.total .frow-val { font-size: 15px; font-weight: 600; color: var(--ink-strong); }
+
+    /* Kontering: redigerbara rader med samma 36px-inputs som övriga appen */
+    .krow { display: grid; grid-template-columns: 1fr 140px 100px; gap: 10px; margin-bottom: 10px; }
+    .krow .input { font-family: var(--font-mono); font-size: 12.5px; }
+    .krow .input:first-child { font-family: var(--font-ui); font-size: 13.5px; }
+    .panel-hint { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-muted); margin-top: 2px; }
+
+    .rail-amount { font-family: var(--font-mono); font-size: 24px; font-weight: 600; letter-spacing: -0.02em; color: var(--ink-strong); margin: 2px 0 10px; }
+    .rail-rows { display: flex; flex-direction: column; gap: 7px; }
+    .rail-row { display: flex; justify-content: space-between; align-items: baseline; font-size: 12.5px; color: var(--ink-muted); }
+    .rail-row .num { text-align: right; }
+
+    .rail-actions { display: flex; flex-direction: column; gap: 8px; }
+    .rail-actions .btn { width: 100%; justify-content: flex-start; }
+    .rail-actions .btn--primary { justify-content: center; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="8.6" stroke="#37322F" stroke-width="2.1"/><circle cx="11" cy="11" r="3.4" fill="#37322F"/></svg><span class="brand-name">Träff</span></div>
+      <div class="scope">BRF Norra Stackholm</div>
+      <nav class="nav">
+        <div class="nav-group">
+        <div class="nav-label">Fråga &amp; arkiv</div>
+          <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-square" aria-hidden="true"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"></path></svg><span>Fråga dokumenten</span></a>
+          <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-folders" aria-hidden="true"><path d="M20 5a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h2.5a1.5 1.5 0 0 1 1.2.6l.6.8a1.5 1.5 0 0 0 1.2.6z"></path><path d="M3 8.268a2 2 0 0 0-1 1.738V19a2 2 0 0 0 2 2h11a2 2 0 0 0 1.732-1"></path></svg><span>Dokument</span></a>
+        </div>
+        <div class="nav-group">
+        <div class="nav-label">Arbete</div>
+          <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard-check" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></svg><span>Granskning</span></a>
+          <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-calendar-clock" aria-hidden="true"><path d="M16 14v2.2l1.6 1"></path><path d="M16 2v4"></path><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"></path><path d="M3 10h5"></path><path d="M8 2v4"></path><circle cx="16" cy="16" r="6"></circle></svg><span>Bevakningar</span></a>
+          <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard-list" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M12 11h4"></path><path d="M12 16h4"></path><path d="M8 11h.01"></path><path d="M8 16h.01"></path></svg><span>Uppgifter</span></a>
+        </div>
+        <div class="nav-group">
+        <div class="nav-label">Post &amp; ekonomi</div>
+          <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-inbox" aria-hidden="true"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg><span>Inkommande</span></a>
+          <a class="nav-item active" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-receipt" aria-hidden="true"><path d="M12 17V7"></path><path d="M16 8h-6a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H8"></path><path d="M4 3a1 1 0 0 1 1-1 1.3 1.3 0 0 1 .7.2l.933.6a1.3 1.3 0 0 0 1.4 0l.934-.6a1.3 1.3 0 0 1 1.4 0l.933.6a1.3 1.3 0 0 0 1.4 0l.933-.6a1.3 1.3 0 0 1 1.4 0l.934.6a1.3 1.3 0 0 0 1.4 0l.933-.6A1.3 1.3 0 0 1 19 2a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1 1.3 1.3 0 0 1-.7-.2l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.934.6a1.3 1.3 0 0 1-1.4 0l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-1.4 0l-.934-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-.7.2 1 1 0 0 1-1-1z"></path></svg><span>Fakturor</span></a>
+        </div>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="foot-name">Anders Andersson</div>
+        <div class="foot-role">Styrelsemedlem</div>
+        <div class="foot-logout">Logga ut</div>
+      </div>
+    </aside>
+    <main class="main">
+      <div class="page page--wide">
+        <div class="back"><a class="lnk" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-left" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg> Fakturor</a></div>
+
+        <div class="page-head">
+          <div>
+            <div class="eyebrow"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-receipt" aria-hidden="true"><path d="M12 17V7"></path><path d="M16 8h-6a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H8"></path><path d="M4 3a1 1 0 0 1 1-1 1.3 1.3 0 0 1 .7.2l.933.6a1.3 1.3 0 0 0 1.4 0l.934-.6a1.3 1.3 0 0 1 1.4 0l.933.6a1.3 1.3 0 0 0 1.4 0l.933-.6a1.3 1.3 0 0 1 1.4 0l.934.6a1.3 1.3 0 0 0 1.4 0l.933-.6A1.3 1.3 0 0 1 19 2a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1 1.3 1.3 0 0 1-.7-.2l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.934.6a1.3 1.3 0 0 1-1.4 0l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-1.4 0l-.934-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-.7.2 1 1 0 0 1-1-1z"></path></svg> Ekonomi · Faktura</div>
+            <h1 class="page-title" style="display: flex; align-items: center; gap: 12px;">Nolia <span class="st st--neutral">Inkorg</span></h1>
+          </div>
+          <div class="page-actions">
+            <button class="btn btn--outline"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-text" aria-hidden="true"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg> Öppna PDF</button>
+          </div>
+        </div>
+
+        <div class="detail-grid">
+          <div class="stack">
+            <div class="card panel">
+              <div class="sec-label">Belopp</div>
+              <div class="frow"><span class="frow-label">Belopp exkl. moms</span><span class="frow-val num">21 840 kr</span></div>
+              <div class="frow"><span class="frow-label">Moms 25%</span><span class="frow-val num">5 460 kr</span></div>
+              <div class="frow total"><span class="frow-label">Att betala</span><span class="frow-val num">27 300 kr</span></div>
+            </div>
+
+            <div class="card panel">
+              <div class="sec-label">Referenser</div>
+              <div class="frow"><span class="frow-label">Fakturanummer</span><span class="frow-val num">2026-1147</span></div>
+              <div class="frow"><span class="frow-label">OCR</span><span class="frow-val num">5566778890</span></div>
+              <div class="frow"><span class="frow-label">Plusgiro</span><span class="frow-val num">90 01 02-3</span></div>
+              <div class="frow"><span class="frow-label">Betalningsmottagare</span><span class="frow-val">Nolia AB</span></div>
+              <div class="frow"><span class="frow-label">Betalningsreferens</span><span class="frow-val num">556677</span></div>
+            </div>
+
+            <div class="card panel">
+              <div class="sec-label">Kontera och exportera</div>
+              <div class="krow">
+                <div class="input"><input value="4010 · Förvaltning" aria-label="Konto"></div>
+                <div class="input"><input value="21 840 kr" aria-label="Belopp"></div>
+                <div class="input"><input value="80 %" aria-label="Andel"></div>
+              </div>
+              <div class="krow">
+                <div class="input"><input value="5190 · Övriga kostnader" aria-label="Konto"></div>
+                <div class="input"><input value="5 460 kr" aria-label="Belopp"></div>
+                <div class="input"><input value="20 %" aria-label="Andel"></div>
+              </div>
+              <button class="btn btn--ghost"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-plus" aria-hidden="true"><path d="M5 12h14"></path><path d="M12 5v14"></path></svg> Lägg till rad</button>
+              <div class="panel-hint">2 kontorader · fördelningen låses vid export</div>
+            </div>
+
+            <div class="card panel">
+              <div class="sec-label">Avtal och överensstämmelse</div>
+              <div class="frow"><span class="frow-label">Belopp</span><span class="st st--belagt"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-check" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg> Matchar avtal</span></div>
+              <div class="frow"><span class="frow-label">Betalningsvillkor</span><span class="st st--belagt"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-circle-check" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg> Matchar avtal</span></div>
+              <div class="frow"><span class="frow-label">Felpristillägg</span><span class="st st--vagran"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-triangle-alert" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path></svg> Saknas i avtalet</span></div>
+            </div>
+          </div>
+
+          <div class="stack">
+            <div class="card panel">
+              <div class="frow-label">Att betala</div>
+              <div class="rail-amount">27 300 kr</div>
+              <div class="rail-rows">
+                <div class="rail-row"><span>Förfaller</span><span class="num">2026-08-13</span></div>
+                <div class="rail-row"><span>Betalningsvillkor</span><span class="num">30 dagar netto</span></div>
+                <div class="rail-row"><span>Fakturadatum</span><span class="num">2026-07-14</span></div>
+              </div>
+            </div>
+
+            <div class="card panel">
+              <div class="sec-label">Åtgärder</div>
+              <div class="rail-actions">
+                <button class="btn btn--primary"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg> Markera som granskad</button>
+                <button class="btn btn--outline"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download" aria-hidden="true"><path d="M12 15V3"></path><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><path d="m7 10 5 5 5-5"></path></svg> Betalningspåminnelse</button>
+                <button class="btn btn--outline"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-text" aria-hidden="true"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg> Öppna underlag</button>
+              </div>
+            </div>
+
+            <div class="card panel">
+              <div class="sec-label">Beslut och anteckningar</div>
+              <textarea class="ta" placeholder="Anteckning inför beslut — syns i historiken…"></textarea>
+              <div style="margin-top: 10px; display: flex; justify-content: flex-end;">
+                <button class="btn btn--ghost">Spara anteckning</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

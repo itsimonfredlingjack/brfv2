@@ -5,32 +5,20 @@
   <title>Träff — Bevakningar</title>
   <link rel="stylesheet" href="src/system.css">
   <style>
-    .wrow { padding: 15px 18px; display: flex; flex-direction: column; gap: 0; cursor: pointer; }
-    .wrow:hover { background: var(--surface-1); }
-    .wrow.open { background: #FFFFFF; cursor: default; }
-    .wrow-head { display: flex; align-items: center; gap: 14px; }
-    .wrow-main { flex: 1; min-width: 0; }
-    .wrow-name { font-size: 14.5px; font-weight: 600; color: var(--ink-strong); }
-    .wrow-desc { font-size: 13px; color: var(--ink-muted); margin-top: 2px; max-width: 72ch; }
-    .wrow-right { display: flex; align-items: center; gap: 14px; flex-shrink: 0; }
-    .wrow-right .hits { font-family: var(--font-mono); font-size: 12px; font-weight: 600; color: var(--ink); }
-    .wrow-right .hits.none { color: var(--ink-subtle); font-weight: 500; }
-    .wrow-right svg.ic { width: 15px; height: 15px; color: var(--ink-subtle); }
+    /* Register: BEVAKNING | TRÄFFAR | SENAST GENOMSÖKT | pil */
+    .reg--bevakningar { --reg-cols: minmax(0, 1fr) 90px 160px 18px; }
 
-    .wrow-body { margin-top: 14px; border-top: 1px dashed var(--border); padding-top: 14px; display: flex; flex-direction: column; gap: 12px; }
-    .wrow-scan { display: flex; align-items: center; gap: 10px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-subtle); }
+    .w-name { font-size: 14.5px; font-weight: 600; color: var(--ink-strong); }
+    .w-desc { font-size: 13px; color: var(--ink-muted); margin-top: 2px; }
+    .hits.on { color: var(--ink); font-weight: 600; }
+
+    .wrow-scan { display: flex; align-items: center; gap: 10px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-muted); }
     .scanbar { flex: 1; max-width: 260px; height: 4px; border-radius: 2px; background: var(--surface-3); overflow: hidden; }
     .scanbar i { display: block; height: 100%; width: 100%; background: var(--belagt); border-radius: 2px; }
 
-    .hit {
-      display: flex; align-items: center; gap: 10px;
-      background: var(--surface-1); border: 1px solid var(--border); border-left: 3px solid var(--vagran);
-      border-radius: 10px; padding: 10px 14px;
-    }
-    .hit svg.ic { width: 15px; height: 15px; color: var(--ink-subtle); }
-    .hit .hname { font-size: 13px; font-weight: 500; }
-    .hit .hpg { font-family: var(--font-mono); font-size: 11px; color: var(--ink-muted); }
-    .hit .st { margin-left: auto; }
+    .hit-name { display: flex; align-items: center; gap: 10px; font-size: 13px; font-weight: 500; }
+    .hit-name svg.ic { width: 15px; height: 15px; color: var(--ink-muted); }
+    .hit .st { grid-column: 3 / 5; justify-self: end; }
   </style>
 </head>
 <body>
@@ -39,13 +27,22 @@
       <div class="brand"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="8.6" stroke="#37322F" stroke-width="2.1"/><circle cx="11" cy="11" r="3.4" fill="#37322F"/></svg><span class="brand-name">Träff</span></div>
       <div class="scope">BRF Norra Stackholm</div>
       <nav class="nav">
-        <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-square" aria-hidden="true"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"></path></svg><span>Fråga dokumenten</span></a>
-        <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-folders" aria-hidden="true"><path d="M20 5a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h2.5a1.5 1.5 0 0 1 1.2.6l.6.8a1.5 1.5 0 0 0 1.2.6z"></path><path d="M3 8.268a2 2 0 0 0-1 1.738V19a2 2 0 0 0 2 2h11a2 2 0 0 0 1.732-1"></path></svg><span>Dokument</span></a>
-        <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard-check" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></svg><span>Granskning</span></a>
-        <a class="nav-item active" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-calendar-clock" aria-hidden="true"><path d="M16 14v2.2l1.6 1"></path><path d="M16 2v4"></path><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"></path><path d="M3 10h5"></path><path d="M8 2v4"></path><circle cx="16" cy="16" r="6"></circle></svg><span>Bevakningar</span></a>
-        <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard-list" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M12 11h4"></path><path d="M12 16h4"></path><path d="M8 11h.01"></path><path d="M8 16h.01"></path></svg><span>Uppgifter</span></a>
-        <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-inbox" aria-hidden="true"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg><span>Inkommande</span></a>
-        <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-receipt" aria-hidden="true"><path d="M12 17V7"></path><path d="M16 8h-6a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H8"></path><path d="M4 3a1 1 0 0 1 1-1 1.3 1.3 0 0 1 .7.2l.933.6a1.3 1.3 0 0 0 1.4 0l.934-.6a1.3 1.3 0 0 1 1.4 0l.933.6a1.3 1.3 0 0 0 1.4 0l.933-.6a1.3 1.3 0 0 1 1.4 0l.934.6a1.3 1.3 0 0 0 1.4 0l.933-.6A1.3 1.3 0 0 1 19 2a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1 1.3 1.3 0 0 1-.7-.2l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.934.6a1.3 1.3 0 0 1-1.4 0l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-1.4 0l-.934-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-.7.2 1 1 0 0 1-1-1z"></path></svg><span>Fakturor</span></a>
+        <div class="nav-group">
+        <div class="nav-label">Fråga &amp; arkiv</div>
+          <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-square" aria-hidden="true"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"></path></svg><span>Fråga dokumenten</span></a>
+          <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-folders" aria-hidden="true"><path d="M20 5a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h2.5a1.5 1.5 0 0 1 1.2.6l.6.8a1.5 1.5 0 0 0 1.2.6z"></path><path d="M3 8.268a2 2 0 0 0-1 1.738V19a2 2 0 0 0 2 2h11a2 2 0 0 0 1.732-1"></path></svg><span>Dokument</span></a>
+        </div>
+        <div class="nav-group">
+        <div class="nav-label">Arbete</div>
+          <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard-check" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></svg><span>Granskning</span></a>
+          <a class="nav-item active" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-calendar-clock" aria-hidden="true"><path d="M16 14v2.2l1.6 1"></path><path d="M16 2v4"></path><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"></path><path d="M3 10h5"></path><path d="M8 2v4"></path><circle cx="16" cy="16" r="6"></circle></svg><span>Bevakningar</span></a>
+          <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard-list" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M12 11h4"></path><path d="M12 16h4"></path><path d="M8 11h.01"></path><path d="M8 16h.01"></path></svg><span>Uppgifter</span></a>
+        </div>
+        <div class="nav-group">
+        <div class="nav-label">Post &amp; ekonomi</div>
+          <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-inbox" aria-hidden="true"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg><span>Inkommande</span></a>
+          <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-receipt" aria-hidden="true"><path d="M12 17V7"></path><path d="M16 8h-6a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H8"></path><path d="M4 3a1 1 0 0 1 1-1 1.3 1.3 0 0 1 .7.2l.933.6a1.3 1.3 0 0 0 1.4 0l.934-.6a1.3 1.3 0 0 1 1.4 0l.933.6a1.3 1.3 0 0 0 1.4 0l.933-.6a1.3 1.3 0 0 1 1.4 0l.934.6a1.3 1.3 0 0 0 1.4 0l.933-.6A1.3 1.3 0 0 1 19 2a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1 1.3 1.3 0 0 1-.7-.2l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.934.6a1.3 1.3 0 0 1-1.4 0l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-1.4 0l-.934-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-.7.2 1 1 0 0 1-1-1z"></path></svg><span>Fakturor</span></a>
+        </div>
       </nav>
       <div class="sidebar-foot">
         <div class="foot-name">Anders Andersson</div>
@@ -67,59 +64,57 @@
           </div>
         </div>
 
-        <div class="rows">
-          <div class="wrow open">
-            <div class="wrow-head">
-              <div class="wrow-main">
-                <div class="wrow-name">Brf Nova — gamla elpriser</div>
-                <div class="wrow-desc">Villkor från det gamla elavtalet som inte ska användas efter 2025.</div>
+        <div class="reg reg--bevakningar">
+          <div class="reg-head">
+            <span>Bevakning</span><span class="r">Träffar</span><span class="r">Senast genomsökt</span><span></span>
+          </div>
+
+          <div class="reg-item open">
+            <div class="reg-row">
+              <div>
+                <div class="w-name">Brf Nova — gamla elpriser</div>
+                <div class="w-desc">Villkor från det gamla elavtalet som inte ska användas efter 2025.</div>
               </div>
-              <div class="wrow-right">
-                <span class="hits">2 träffar</span>
-                <span class="matt">2026-07-31</span>
-                <svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg>
-              </div>
+              <span class="num hits on">2</span>
+              <span class="num">2026-07-31</span>
+              <span class="chev"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-down" aria-hidden="true"><path d="m6 9 6 6 6-6"></path></svg></span>
             </div>
-            <div class="wrow-body">
-              <div class="wrow-scan"><span>37 av 37 dokument genomsökta · senast 2026-07-31</span><span class="scanbar"><i></i></span></div>
-              <div class="hit">
-                <svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-text" aria-hidden="true"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg><span class="hname">Kontrakt hisservice</span>
-                <span class="hpg">S. 4</span>
+            <div class="reg-body">
+              <div class="wrow-scan"><span>37 av 37 dokument genomsökta</span><span class="scanbar"><i></i></span></div>
+              <div class="reg-sub hit warn">
+                <span class="hit-name"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-text" aria-hidden="true"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg> Kontrakt hisservice</span>
+                <span class="num">S. 4</span>
                 <span class="st st--vagran">Villkor hittat</span>
               </div>
-              <div class="hit">
-                <svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-text" aria-hidden="true"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg><span class="hname">Teknisk rapport fasad</span>
-                <span class="hpg">S. 9</span>
+              <div class="reg-sub hit warn">
+                <span class="hit-name"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-text" aria-hidden="true"><path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path><path d="M14 2v5a1 1 0 0 0 1 1h5"></path><path d="M10 9H8"></path><path d="M16 13H8"></path><path d="M16 17H8"></path></svg> Teknisk rapport fasad</span>
+                <span class="num">S. 9</span>
                 <span class="st st--vagran">Villkor hittat</span>
               </div>
             </div>
           </div>
 
-          <div class="wrow">
-            <div class="wrow-head">
-              <div class="wrow-main">
-                <div class="wrow-name">Brf Solbacken — upphörda ordningsregler</div>
-                <div class="wrow-desc">Regler som ersattes av årsmötet 2025 men kan finnas kvar i äldre dokument.</div>
+          <div class="reg-item">
+            <div class="reg-row">
+              <div>
+                <div class="w-name">Brf Solbacken — upphörda ordningsregler</div>
+                <div class="w-desc">Regler som ersattes av årsmötet 2025 men kan finnas kvar i äldre dokument.</div>
               </div>
-              <div class="wrow-right">
-                <span class="hits none">0 träffar</span>
-                <span class="matt">2026-07-31</span>
-                <svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
-              </div>
+              <span class="num">0</span>
+              <span class="num">2026-07-31</span>
+              <span class="chev"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></span>
             </div>
           </div>
 
-          <div class="wrow">
-            <div class="wrow-head">
-              <div class="wrow-main">
-                <div class="wrow-name">Brf Åsen — stambytets tidsplan</div>
-                <div class="wrow-desc">Datum och milstolpar som passerats utan att protokoll visar beslut.</div>
+          <div class="reg-item">
+            <div class="reg-row">
+              <div>
+                <div class="w-name">Brf Åsen — stambytets tidsplan</div>
+                <div class="w-desc">Datum och milstolpar som passerats utan att protokoll visar beslut.</div>
               </div>
-              <div class="wrow-right">
-                <span class="hits none">0 träffar</span>
-                <span class="matt">2026-07-30</span>
-                <svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
-              </div>
+              <span class="num">0</span>
+              <span class="num">2026-07-30</span>
+              <span class="chev"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></span>
             </div>
           </div>
         </div>

@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <title>Träff — Tangentbordsflöde</title>
+  <link rel="stylesheet" href="src/system.css">
+  <style>
+    .pattern { display: flex; flex-direction: column; gap: var(--s8); }
+
+    /* Genvägstabell */
+    .keys { overflow: hidden; }
+    .krow2 { display: flex; align-items: center; gap: 12px; padding: 12px 18px; }
+    .krow2 + .krow2 { border-top: 1px solid var(--border); }
+    .krow2 .combo { display: flex; gap: 6px; width: 170px; flex-shrink: 0; }
+    .krow2 .what { font-size: 13.5px; font-weight: 500; }
+    .krow2 .why { font-size: 12.5px; color: var(--ink-muted); margin-left: auto; text-align: right; }
+
+    /* Demoytor */
+    .demo { padding: var(--s6); display: flex; flex-direction: column; gap: var(--s4); }
+    .demo-cap { font-size: 12.5px; color: var(--ink-muted); max-width: 72ch; }
+    .demo-cap strong { color: var(--ink); font-weight: 600; }
+
+    .reg--demo { --reg-cols: minmax(0, 1.5fr) minmax(0, 1.2fr) 110px 116px 18px; }
+    .supp { font-size: 14px; font-weight: 600; color: var(--ink-strong); }
+    .ref { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-muted); }
+
+    .focus-pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4); }
+    .focus-cell { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: var(--s4); display: flex; flex-direction: column; gap: 10px; }
+    .focus-cell .cap { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-muted); }
+    .input.demo-focused { border-color: var(--handling); outline: 2px solid var(--handling); outline-offset: 2px; }
+
+    .ring-row { display: flex; align-items: center; gap: var(--s6); flex-wrap: wrap; }
+    .ring-demo { outline: 2px solid var(--handling); outline-offset: 2px; }
+    .seg-item.demo-focused { outline: 2px solid var(--handling); outline-offset: 2px; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand"><svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true"><circle cx="11" cy="11" r="8.6" stroke="#37322F" stroke-width="2.1"/><circle cx="11" cy="11" r="3.4" fill="#37322F"/></svg><span class="brand-name">Träff</span></div>
+      <div class="scope">BRF Norra Stackholm</div>
+      <nav class="nav">
+        <div class="nav-group">
+        <div class="nav-label">Fråga &amp; arkiv</div>
+          <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-message-square" aria-hidden="true"><path d="M22 17a2 2 0 0 1-2 2H6.828a2 2 0 0 0-1.414.586l-2.202 2.202A.71.71 0 0 1 2 21.286V5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2z"></path></svg><span>Fråga dokumenten</span></a>
+          <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-folders" aria-hidden="true"><path d="M20 5a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h2.5a1.5 1.5 0 0 1 1.2.6l.6.8a1.5 1.5 0 0 0 1.2.6z"></path><path d="M3 8.268a2 2 0 0 0-1 1.738V19a2 2 0 0 0 2 2h11a2 2 0 0 0 1.732-1"></path></svg><span>Dokument</span></a>
+        </div>
+        <div class="nav-group">
+        <div class="nav-label">Arbete</div>
+          <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard-check" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="m9 14 2 2 4-4"></path></svg><span>Granskning</span></a>
+          <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-calendar-clock" aria-hidden="true"><path d="M16 14v2.2l1.6 1"></path><path d="M16 2v4"></path><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"></path><path d="M3 10h5"></path><path d="M8 2v4"></path><circle cx="16" cy="16" r="6"></circle></svg><span>Bevakningar</span></a>
+          <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-clipboard-list" aria-hidden="true"><rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><path d="M12 11h4"></path><path d="M12 16h4"></path><path d="M8 11h.01"></path><path d="M8 16h.01"></path></svg><span>Uppgifter</span></a>
+        </div>
+        <div class="nav-group">
+        <div class="nav-label">Post &amp; ekonomi</div>
+          <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-inbox" aria-hidden="true"><polyline points="22 12 16 12 14 15 10 15 8 12 2 12"></polyline><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"></path></svg><span>Inkommande</span></a>
+          <a class="nav-item" href="#"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-receipt" aria-hidden="true"><path d="M12 17V7"></path><path d="M16 8h-6a2 2 0 0 0 0 4h4a2 2 0 0 1 0 4H8"></path><path d="M4 3a1 1 0 0 1 1-1 1.3 1.3 0 0 1 .7.2l.933.6a1.3 1.3 0 0 0 1.4 0l.934-.6a1.3 1.3 0 0 1 1.4 0l.933.6a1.3 1.3 0 0 0 1.4 0l.933-.6a1.3 1.3 0 0 1 1.4 0l.934.6a1.3 1.3 0 0 0 1.4 0l.933-.6A1.3 1.3 0 0 1 19 2a1 1 0 0 1 1 1v18a1 1 0 0 1-1 1 1.3 1.3 0 0 1-.7-.2l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.934.6a1.3 1.3 0 0 1-1.4 0l-.933-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-1.4 0l-.934-.6a1.3 1.3 0 0 0-1.4 0l-.933.6a1.3 1.3 0 0 1-.7.2 1 1 0 0 1-1-1z"></path></svg><span>Fakturor</span></a>
+        </div>
+      </nav>
+      <div class="sidebar-foot">
+        <div class="foot-name">Anders Andersson</div>
+        <div class="foot-role">Styrelsemedlem</div>
+        <div class="foot-logout">Logga ut</div>
+      </div>
+    </aside>
+    <main class="main">
+      <div class="page">
+        <div class="page-head">
+          <div>
+            <div class="eyebrow"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-layers" aria-hidden="true"><path d="M12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83z"></path><path d="M2 12a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 12"></path><path d="M2 17a1 1 0 0 0 .58.91l8.6 3.91a2 2 0 0 0 1.65 0l8.58-3.9A1 1 0 0 0 22 17"></path></svg> Interaktion</div>
+            <h1 class="page-title">Tangentbordsflöde</h1>
+            <p class="page-sub">Designat för kraftanvändare: jobba igenom en hel fakturahög utan att lämna tangentbordet. En fokusring — 2px, samma blå, samma offset — oavsett vad som har fokus.</p>
+          </div>
+        </div>
+
+        <div class="sec-label" style="margin-top: 0;">Genvägar</div>
+        <div class="card keys">
+          <div class="krow2"><span class="combo"><span class="kbd">/</span></span><span class="what">Fokusera sidans filter</span><span class="why">händerna stannar på hemraden</span></div>
+          <div class="krow2"><span class="combo"><span class="kbd">↑</span><span class="kbd">↓</span></span><span class="what">Flytta markering i listan</span><span class="why">raden får fokusring + svag toning</span></div>
+          <div class="krow2"><span class="combo"><span class="kbd">Enter</span></span><span class="what">Öppna markerat objekt</span><span class="why">samma som klick — expanderar eller öppnar detalj</span></div>
+          <div class="krow2"><span class="combo"><span class="kbd">Esc</span></span><span class="what">Stäng / återgå</span><span class="why">lämnar detalj, tömmer filter, släpper fokus</span></div>
+        </div>
+
+        <div class="sec-label">Markering i register</div>
+        <div class="card demo">
+          <div class="reg reg--demo">
+            <div class="reg-head"><span>Leverantör</span><span>Referens</span><span class="r">Belopp</span><span class="r">Förfaller</span><span></span></div>
+            <div class="reg-item">
+              <div class="reg-row"><div class="supp">Nolia</div><span class="ref">OCR 5566778890</span><span class="num strong">9 750 kr</span><span class="num">2026-08-13</span><span class="chev"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></span></div>
+            </div>
+            <div class="reg-item">
+              <div class="reg-row is-focused"><div class="supp">Ramböll</div><span class="ref">OCR 1122334455</span><span class="num strong">12 000 kr</span><span class="num">2026-08-10</span><span class="chev"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></span></div>
+            </div>
+            <div class="reg-item">
+              <div class="reg-row"><div class="supp">Ellevio</div><span class="ref">OCR 9988776655</span><span class="num strong">5 550 kr</span><span class="num">2026-08-07</span><span class="chev"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-chevron-right" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></span></div>
+            </div>
+          </div>
+          <p class="demo-cap"><strong>Ramböll är markerad via pil-ner.</strong> Ringen ritas inset så den aldrig klipps av kortets rundning — och toningen är Handling-blå, inte grå, så markeringen syns i periferin.</p>
+        </div>
+
+        <div class="sec-label">Filterfältet</div>
+        <div class="focus-pair">
+          <div class="focus-cell">
+            <span class="cap">Vilan — genvägen syns</span>
+            <div class="input"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-search" aria-hidden="true"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg><input placeholder="Filtrera på titel…" readonly><span class="kbd">/</span></div>
+          </div>
+          <div class="focus-cell">
+            <span class="cap">Efter / — fokuserad</span>
+            <div class="input demo-focused"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-search" aria-hidden="true"><path d="m21 21-4.34-4.34"></path><circle cx="11" cy="11" r="8"></circle></svg><input value="stadg" readonly></div>
+          </div>
+        </div>
+
+        <div class="sec-label">En ring — alla kontroller</div>
+        <div class="card demo">
+          <div class="ring-row">
+            <button class="btn btn--primary ring-demo"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-check" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg> Markera som granskad</button>
+            <button class="btn btn--outline ring-demo"><svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-refresh-cw" aria-hidden="true"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"></path><path d="M21 3v5h-5"></path><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"></path><path d="M8 16H3v5"></path></svg> Uppdatera</button>
+            <span class="seg"><span class="seg-item on demo-focused">Alla <span class="n">3</span></span><span class="seg-item">Avvikelser <span class="n">1</span></span></span>
+            <a class="lnk ring-demo" href="#">Öppna underlag <svg class="ic" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-arrow-up-right" aria-hidden="true"><path d="M7 7h10v10"></path><path d="M7 17 17 7"></path></svg></a>
+          </div>
+          <p class="demo-cap">Primär knapp, outline-knapp, segmentval och länk — identiska 2px-ringar med 2px offset. Ringen är alltid Handling-blå: fokus är en handling, inte ett tillstånd.</p>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

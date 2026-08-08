@@ -7,15 +7,18 @@
   <style>
     .split { display: grid; grid-template-columns: 400px 1fr; gap: var(--s6); align-items: start; }
 
-    .fr { display: flex; gap: 12px; padding: 13px 16px; cursor: pointer; }
-    .fr:hover { background: var(--surface-1); }
-    .fr.on { background: #FFFFFF; box-shadow: inset 3px 0 0 var(--ink); }
+    /* Register i railen: FYND | SIDA */
+    .reg--fynd { --reg-cols: minmax(0, 1fr) 52px; }
+    .reg--fynd .reg-row { align-items: start; padding-top: 13px; padding-bottom: 13px; }
+    .reg--fynd .reg-item.open .reg-row { box-shadow: inset 3px 0 0 var(--ink); }
+
+    .fr { display: flex; gap: 12px; min-width: 0; }
     .fr-dot { width: 8px; height: 8px; border-radius: 50%; margin-top: 7px; flex-shrink: 0; }
     .fr-dot.ok { background: var(--belagt); }
     .fr-dot.warn { background: var(--vagran); }
-    .fr-main { min-width: 0; }
     .fr-title { font-size: 14px; font-weight: 600; color: var(--ink-strong); line-height: 1.35; }
-    .fr-meta { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-subtle); margin-top: 3px; }
+    .fr-meta { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-muted); margin-top: 3px; }
+    .reg--fynd .num { padding-top: 2px; }
 
     .detail { padding: var(--s6) var(--s8); display: flex; flex-direction: column; gap: var(--s5); }
     .detail-top { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s4); }
@@ -36,7 +39,7 @@
     .underlag > * + * { border-top: 1px solid var(--border); }
     .urow { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: #fff; }
     .urow:hover { background: var(--surface-1); }
-    .urow svg.ic { width: 15px; height: 15px; color: var(--ink-subtle); }
+    .urow svg.ic { width: 15px; height: 15px; color: var(--ink-muted); }
     .urow .uname { font-size: 13.5px; font-weight: 500; }
     .urow .upg { margin-left: auto; font-family: var(--font-mono); font-size: 11px; color: var(--ink-muted); }
     .urow .lnk { font-size: 12.5px; }
@@ -72,26 +75,42 @@
         </div>
 
         <div class="split">
-          <div class="rows">
-            <div class="fr on">
-              <span class="fr-dot warn"></span>
-              <div class="fr-main">
-                <div class="fr-title">Tomma elradiatorer i föreningens lägenheter</div>
-                <div class="fr-meta">Teknisk rapport fasad · S. 14</div>
+          <div class="reg reg--fynd">
+            <div class="reg-head"><span>Fynd</span><span class="r">Sida</span></div>
+            <div class="reg-item open">
+              <div class="reg-row">
+                <div class="fr">
+                  <span class="fr-dot warn"></span>
+                  <div>
+                    <div class="fr-title">Tomma elradiatorer i föreningens lägenheter</div>
+                    <div class="fr-meta">Teknisk rapport fasad</div>
+                  </div>
+                </div>
+                <span class="num">S. 14</span>
               </div>
             </div>
-            <div class="fr">
-              <span class="fr-dot ok"></span>
-              <div class="fr-main">
-                <div class="fr-title">Andrahandsuthyrning mot stadgarna</div>
-                <div class="fr-meta">Stadgar 2023 · S. 7</div>
+            <div class="reg-item">
+              <div class="reg-row">
+                <div class="fr">
+                  <span class="fr-dot ok"></span>
+                  <div>
+                    <div class="fr-title">Andrahandsuthyrning mot stadgarna</div>
+                    <div class="fr-meta">Stadgar 2023</div>
+                  </div>
+                </div>
+                <span class="num">S. 7</span>
               </div>
             </div>
-            <div class="fr">
-              <span class="fr-dot ok"></span>
-              <div class="fr-main">
-                <div class="fr-title">Beslut om loftvåning följer protokollet</div>
-                <div class="fr-meta">Protokoll årsmöte 2026 · S. 2</div>
+            <div class="reg-item">
+              <div class="reg-row">
+                <div class="fr">
+                  <span class="fr-dot ok"></span>
+                  <div>
+                    <div class="fr-title">Beslut om loftvåning följer protokollet</div>
+                    <div class="fr-meta">Protokoll årsmöte 2026</div>
+                  </div>
+                </div>
+                <span class="num">S. 2</span>
               </div>
             </div>
           </div>

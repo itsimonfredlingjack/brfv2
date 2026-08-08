@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <title>Träff — Tangentbordsflöde</title>
+  <link rel="stylesheet" href="src/system.css">
+  <style>
+    .pattern { display: flex; flex-direction: column; gap: var(--s8); }
+
+    /* Genvägstabell */
+    .keys { overflow: hidden; }
+    .krow2 { display: flex; align-items: center; gap: 12px; padding: 12px 18px; }
+    .krow2 + .krow2 { border-top: 1px solid var(--border); }
+    .krow2 .combo { display: flex; gap: 6px; width: 170px; flex-shrink: 0; }
+    .krow2 .what { font-size: 13.5px; font-weight: 500; }
+    .krow2 .why { font-size: 12.5px; color: var(--ink-muted); margin-left: auto; text-align: right; }
+
+    /* Demoytor */
+    .demo { padding: var(--s6); display: flex; flex-direction: column; gap: var(--s4); }
+    .demo-cap { font-size: 12.5px; color: var(--ink-muted); max-width: 72ch; }
+    .demo-cap strong { color: var(--ink); font-weight: 600; }
+
+    .reg--demo { --reg-cols: minmax(0, 1.5fr) minmax(0, 1.2fr) 110px 116px 18px; }
+    .supp { font-size: 14px; font-weight: 600; color: var(--ink-strong); }
+    .ref { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.05em; text-transform: uppercase; color: var(--ink-muted); }
+
+    .focus-pair { display: grid; grid-template-columns: 1fr 1fr; gap: var(--s4); }
+    .focus-cell { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: var(--s4); display: flex; flex-direction: column; gap: 10px; }
+    .focus-cell .cap { font-family: var(--font-mono); font-size: 10.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-muted); }
+    .input.demo-focused { border-color: var(--handling); outline: 2px solid var(--handling); outline-offset: 2px; }
+
+    .ring-row { display: flex; align-items: center; gap: var(--s6); flex-wrap: wrap; }
+    .ring-demo { outline: 2px solid var(--handling); outline-offset: 2px; }
+    .seg-item.demo-focused { outline: 2px solid var(--handling); outline-offset: 2px; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    {{sidebar:inget}}
+    <main class="main">
+      <div class="page">
+        <div class="page-head">
+          <div>
+            <div class="eyebrow">{{i:Layers}} Interaktion</div>
+            <h1 class="page-title">Tangentbordsflöde</h1>
+            <p class="page-sub">Designat för kraftanvändare: jobba igenom en hel fakturahög utan att lämna tangentbordet. En fokusring — 2px, samma blå, samma offset — oavsett vad som har fokus.</p>
+          </div>
+        </div>
+
+        <div class="sec-label" style="margin-top: 0;">Genvägar</div>
+        <div class="card keys">
+          <div class="krow2"><span class="combo"><span class="kbd">/</span></span><span class="what">Fokusera sidans filter</span><span class="why">händerna stannar på hemraden</span></div>
+          <div class="krow2"><span class="combo"><span class="kbd">↑</span><span class="kbd">↓</span></span><span class="what">Flytta markering i listan</span><span class="why">raden får fokusring + svag toning</span></div>
+          <div class="krow2"><span class="combo"><span class="kbd">Enter</span></span><span class="what">Öppna markerat objekt</span><span class="why">samma som klick — expanderar eller öppnar detalj</span></div>
+          <div class="krow2"><span class="combo"><span class="kbd">Esc</span></span><span class="what">Stäng / återgå</span><span class="why">lämnar detalj, tömmer filter, släpper fokus</span></div>
+        </div>
+
+        <div class="sec-label">Markering i register</div>
+        <div class="card demo">
+          <div class="reg reg--demo">
+            <div class="reg-head"><span>Leverantör</span><span>Referens</span><span class="r">Belopp</span><span class="r">Förfaller</span><span></span></div>
+            <div class="reg-item">
+              <div class="reg-row"><div class="supp">Nolia</div><span class="ref">OCR 5566778890</span><span class="num strong">9 750 kr</span><span class="num">2026-08-13</span><span class="chev">{{i:ChevronRight}}</span></div>
+            </div>
+            <div class="reg-item">
+              <div class="reg-row is-focused"><div class="supp">Ramböll</div><span class="ref">OCR 1122334455</span><span class="num strong">12 000 kr</span><span class="num">2026-08-10</span><span class="chev">{{i:ChevronRight}}</span></div>
+            </div>
+            <div class="reg-item">
+              <div class="reg-row"><div class="supp">Ellevio</div><span class="ref">OCR 9988776655</span><span class="num strong">5 550 kr</span><span class="num">2026-08-07</span><span class="chev">{{i:ChevronRight}}</span></div>
+            </div>
+          </div>
+          <p class="demo-cap"><strong>Ramböll är markerad via pil-ner.</strong> Ringen ritas inset så den aldrig klipps av kortets rundning — och toningen är Handling-blå, inte grå, så markeringen syns i periferin.</p>
+        </div>
+
+        <div class="sec-label">Filterfältet</div>
+        <div class="focus-pair">
+          <div class="focus-cell">
+            <span class="cap">Vilan — genvägen syns</span>
+            <div class="input">{{i:Search}}<input placeholder="Filtrera på titel…" readonly><span class="kbd">/</span></div>
+          </div>
+          <div class="focus-cell">
+            <span class="cap">Efter / — fokuserad</span>
+            <div class="input demo-focused">{{i:Search}}<input value="stadg" readonly></div>
+          </div>
+        </div>
+
+        <div class="sec-label">En ring — alla kontroller</div>
+        <div class="card demo">
+          <div class="ring-row">
+            <button class="btn btn--primary ring-demo">{{i:Check}} Markera som granskad</button>
+            <button class="btn btn--outline ring-demo">{{i:RefreshCw}} Uppdatera</button>
+            <span class="seg"><span class="seg-item on demo-focused">Alla <span class="n">3</span></span><span class="seg-item">Avvikelser <span class="n">1</span></span></span>
+            <a class="lnk ring-demo" href="#">Öppna underlag {{i:ArrowUpRight}}</a>
+          </div>
+          <p class="demo-cap">Primär knapp, outline-knapp, segmentval och länk — identiska 2px-ringar med 2px offset. Ringen är alltid Handling-blå: fokus är en handling, inte ett tillstånd.</p>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

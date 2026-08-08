@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <title>Träff — Faktura Nolia</title>
+  <link rel="stylesheet" href="src/system.css">
+  <style>
+    .back { margin-bottom: var(--s4); }
+    .back .lnk { font-size: 12.5px; }
+    .back .lnk svg.ic { width: 14px; height: 14px; }
+
+    .detail-grid { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: var(--s6); align-items: start; }
+    .stack { display: flex; flex-direction: column; gap: var(--s5); }
+
+    .panel { padding: var(--s5) var(--s6); }
+    .panel .sec-label { margin: 0 0 var(--s3); }
+
+    /* Fältrader: EN etikettstil, EN värdes stil — samma överallt */
+    .frow { display: grid; grid-template-columns: 170px 1fr; gap: var(--s4); padding: 9px 0; align-items: center; }
+    .frow + .frow { border-top: 1px solid var(--border); }
+    .frow-label { font-size: 11px; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase; color: var(--ink-muted); }
+    .frow-val { font-size: 14px; color: var(--ink); }
+    .frow-val.num, .frow .num { font-family: var(--font-mono); font-size: 12.5px; font-weight: 500; letter-spacing: -0.01em; text-align: left; }
+    .frow.total { background: var(--surface-1); border-radius: 10px; padding: 10px 12px; margin: 4px -12px 0; border-top: none; }
+    .frow.total .frow-val { font-size: 15px; font-weight: 600; color: var(--ink-strong); }
+
+    /* Kontering: redigerbara rader med samma 36px-inputs som övriga appen */
+    .krow { display: grid; grid-template-columns: 1fr 140px 100px; gap: 10px; margin-bottom: 10px; }
+    .krow .input { font-family: var(--font-mono); font-size: 12.5px; }
+    .krow .input:first-child { font-family: var(--font-ui); font-size: 13.5px; }
+    .panel-hint { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-muted); margin-top: 2px; }
+
+    .rail-amount { font-family: var(--font-mono); font-size: 24px; font-weight: 600; letter-spacing: -0.02em; color: var(--ink-strong); margin: 2px 0 10px; }
+    .rail-rows { display: flex; flex-direction: column; gap: 7px; }
+    .rail-row { display: flex; justify-content: space-between; align-items: baseline; font-size: 12.5px; color: var(--ink-muted); }
+    .rail-row .num { text-align: right; }
+
+    .rail-actions { display: flex; flex-direction: column; gap: 8px; }
+    .rail-actions .btn { width: 100%; justify-content: flex-start; }
+    .rail-actions .btn--primary { justify-content: center; }
+  </style>
+</head>
+<body>
+  <div class="app">
+    {{sidebar:fakturor}}
+    <main class="main">
+      <div class="page page--wide">
+        <div class="back"><a class="lnk" href="#">{{i:ChevronLeft}} Fakturor</a></div>
+
+        <div class="page-head">
+          <div>
+            <div class="eyebrow">{{i:Receipt}} Ekonomi · Faktura</div>
+            <h1 class="page-title" style="display: flex; align-items: center; gap: 12px;">Nolia <span class="st st--neutral">Inkorg</span></h1>
+          </div>
+          <div class="page-actions">
+            <button class="btn btn--outline">{{i:FileText}} Öppna PDF</button>
+          </div>
+        </div>
+
+        <div class="detail-grid">
+          <div class="stack">
+            <div class="card panel">
+              <div class="sec-label">Belopp</div>
+              <div class="frow"><span class="frow-label">Belopp exkl. moms</span><span class="frow-val num">21 840 kr</span></div>
+              <div class="frow"><span class="frow-label">Moms 25%</span><span class="frow-val num">5 460 kr</span></div>
+              <div class="frow total"><span class="frow-label">Att betala</span><span class="frow-val num">27 300 kr</span></div>
+            </div>
+
+            <div class="card panel">
+              <div class="sec-label">Referenser</div>
+              <div class="frow"><span class="frow-label">Fakturanummer</span><span class="frow-val num">2026-1147</span></div>
+              <div class="frow"><span class="frow-label">OCR</span><span class="frow-val num">5566778890</span></div>
+              <div class="frow"><span class="frow-label">Plusgiro</span><span class="frow-val num">90 01 02-3</span></div>
+              <div class="frow"><span class="frow-label">Betalningsmottagare</span><span class="frow-val">Nolia AB</span></div>
+              <div class="frow"><span class="frow-label">Betalningsreferens</span><span class="frow-val num">556677</span></div>
+            </div>
+
+            <div class="card panel">
+              <div class="sec-label">Kontera och exportera</div>
+              <div class="krow">
+                <div class="input"><input value="4010 · Förvaltning" aria-label="Konto"></div>
+                <div class="input"><input value="21 840 kr" aria-label="Belopp"></div>
+                <div class="input"><input value="80 %" aria-label="Andel"></div>
+              </div>
+              <div class="krow">
+                <div class="input"><input value="5190 · Övriga kostnader" aria-label="Konto"></div>
+                <div class="input"><input value="5 460 kr" aria-label="Belopp"></div>
+                <div class="input"><input value="20 %" aria-label="Andel"></div>
+              </div>
+              <button class="btn btn--ghost">{{i:Plus}} Lägg till rad</button>
+              <div class="panel-hint">2 kontorader · fördelningen låses vid export</div>
+            </div>
+
+            <div class="card panel">
+              <div class="sec-label">Avtal och överensstämmelse</div>
+              <div class="frow"><span class="frow-label">Belopp</span><span class="st st--belagt">{{i:CircleCheck}} Matchar avtal</span></div>
+              <div class="frow"><span class="frow-label">Betalningsvillkor</span><span class="st st--belagt">{{i:CircleCheck}} Matchar avtal</span></div>
+              <div class="frow"><span class="frow-label">Felpristillägg</span><span class="st st--vagran">{{i:AlertTriangle}} Saknas i avtalet</span></div>
+            </div>
+          </div>
+
+          <div class="stack">
+            <div class="card panel">
+              <div class="frow-label">Att betala</div>
+              <div class="rail-amount">27 300 kr</div>
+              <div class="rail-rows">
+                <div class="rail-row"><span>Förfaller</span><span class="num">2026-08-13</span></div>
+                <div class="rail-row"><span>Betalningsvillkor</span><span class="num">30 dagar netto</span></div>
+                <div class="rail-row"><span>Fakturadatum</span><span class="num">2026-07-14</span></div>
+              </div>
+            </div>
+
+            <div class="card panel">
+              <div class="sec-label">Åtgärder</div>
+              <div class="rail-actions">
+                <button class="btn btn--primary">{{i:Check}} Markera som granskad</button>
+                <button class="btn btn--outline">{{i:Download}} Betalningspåminnelse</button>
+                <button class="btn btn--outline">{{i:FileText}} Öppna underlag</button>
+              </div>
+            </div>
+
+            <div class="card panel">
+              <div class="sec-label">Beslut och anteckningar</div>
+              <textarea class="ta" placeholder="Anteckning inför beslut — syns i historiken…"></textarea>
+              <div style="margin-top: 10px; display: flex; justify-content: flex-end;">
+                <button class="btn btn--ghost">Spara anteckning</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

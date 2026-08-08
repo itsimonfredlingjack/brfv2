@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <title>Träff — Tomma tillstånd</title>
+  <link rel="stylesheet" href="src/system.css">
+  <style>
+    .pattern { display: flex; flex-direction: column; gap: var(--s8); }
+    .pattern .empty { padding: var(--s10) var(--s8); }
+    .pattern-label { margin-bottom: var(--s3); }
+  </style>
+</head>
+<body>
+  <div class="app">
+    {{sidebar:inget}}
+    <main class="main">
+      <div class="page">
+        <div class="page-head">
+          <div>
+            <div class="eyebrow">{{i:Layers}} Designsystem</div>
+            <h1 class="page-title">Tomma tillstånd</h1>
+            <p class="page-sub">Samma mönster i varje sektion: ikonplatta, en mening om vad som saknas, en primär åtgärd. Primär knapp när handlingen skapar innehåll — outline när den navigerar vidare.</p>
+          </div>
+        </div>
+
+        <div class="pattern">
+          <div>
+            <div class="sec-label pattern-label">Fråga dokumenten</div>
+            <div class="empty">
+              <span class="empty-tile">{{i:MessageSquare}}</span>
+              <p class="empty-text"><strong>Inga frågor ännu.</strong> Ställ din första fråga — svaret hämtas alltid ur föreningens egna dokument, med sidhänvisning.</p>
+              <div class="empty-chips">
+                <span class="empty-chip">{{i:ArrowUpRight}} Vad säger stadgarna om andrahandsuthyrning?</span>
+                <span class="empty-chip">{{i:ArrowUpRight}} Vilka avtal löper ut i år?</span>
+                <span class="empty-chip">{{i:ArrowUpRight}} När planeras nästa stambyte?</span>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="sec-label pattern-label">Dokument</div>
+            <div class="empty">
+              <span class="empty-tile">{{i:Folders}}</span>
+              <p class="empty-text"><strong>Arkivet är tomt.</strong> Ladda upp stadgar, protokoll och avtal — varje sida blir sökbar och citerbar.</p>
+              <div class="empty-actions">
+                <button class="btn btn--primary">{{i:Upload}} Ladda upp ditt första dokument</button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="sec-label pattern-label">Granskning</div>
+            <div class="empty">
+              <span class="empty-tile ok">{{i:ClipboardCheck}}</span>
+              <p class="empty-text"><strong>Inget att granska just nu.</strong> När dokument matchar regler, eller avvikelser upptäcks, samlas de här.</p>
+              <div class="empty-actions">
+                <button class="btn btn--outline">{{i:Eye}} Visa tidigare granskningar</button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="sec-label pattern-label">Bevakningar</div>
+            <div class="empty">
+              <span class="empty-tile">{{i:CalendarClock}}</span>
+              <p class="empty-text"><strong>Inga bevakningar ännu.</strong> Skapa en bevakning så håller Träff koll på villkor som inte längre bör gälla.</p>
+              <div class="empty-actions">
+                <button class="btn btn--primary">{{i:Plus}} Skapa din första bevakning</button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="sec-label pattern-label">Uppgifter</div>
+            <div class="empty">
+              <span class="empty-tile">{{i:ClipboardList}}</span>
+              <p class="empty-text"><strong>Inga uppgifter på gång.</strong> Skapa den första så syns vem som gör vad, till när.</p>
+              <div class="empty-actions">
+                <button class="btn btn--primary">{{i:Plus}} Skapa första uppgiften</button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="sec-label pattern-label">Inkommande</div>
+            <div class="empty">
+              <span class="empty-tile ok">{{i:Inbox}}</span>
+              <p class="empty-text"><strong>Inkorgen är tom.</strong> Allt är hanterat — eller hämta ny post från mejlen.</p>
+              <div class="empty-actions">
+                <button class="btn btn--primary">{{i:Download}} Hämta post</button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="sec-label pattern-label">Fakturor</div>
+            <div class="empty">
+              <span class="empty-tile">{{i:Receipt}}</span>
+              <p class="empty-text"><strong>Inga fakturor att granska.</strong> När leverantörsfakturor anländer jämförs belopp och villkor mot era avtal här.</p>
+              <div class="empty-actions">
+                <button class="btn btn--outline">Gå till Inkommande {{i:ArrowUpRight}}</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

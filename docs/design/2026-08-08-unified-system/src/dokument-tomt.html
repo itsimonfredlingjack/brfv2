@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="sv">
+<head>
+  <meta charset="utf-8">
+  <title>Träff — Dokument (tomt)</title>
+  <link rel="stylesheet" href="src/system.css">
+  <style>
+    /* Tom tillståndsbrunn ersätter verktygsrad + rutnät när det inte finns
+       något att filtrera eller visa — headern och dess åtgärder står kvar. */
+    .page-empty { margin-top: var(--s6); }
+  </style>
+</head>
+<body>
+  <div class="app">
+    {{sidebar:dokument}}
+    <main class="main">
+      <div class="page page--wide">
+        <div class="page-head">
+          <div>
+            <div class="eyebrow">{{i:Folders}} Arkiv</div>
+            <h1 class="page-title">Dokument</h1>
+            <p class="page-sub">Allt svar som Träff ger spårar hit — varje uppladdat dokument blir indexerat och sökbart per sida.</p>
+          </div>
+          <div class="page-actions">
+            <button class="btn btn--primary">{{i:Upload}} Ladda upp PDF</button>
+          </div>
+        </div>
+
+        <div class="empty page-empty">
+          <span class="empty-tile">{{i:Folders}}</span>
+          <p class="empty-text"><strong>Arkivet är tomt.</strong> Ladda upp stadgar, protokoll och avtal — varje sida blir sökbar och citerbar.</p>
+          <div class="empty-actions">
+            <button class="btn btn--primary">{{i:Upload}} Ladda upp ditt första dokument</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

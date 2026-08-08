@@ -14,14 +14,20 @@ MARK = (
     '<circle cx="11" cy="11" r="3.4" fill="#37322F"/></svg>'
 )
 
-NAV = [
-    ("fraga", "MessageSquare", "Fråga dokumenten"),
-    ("dokument", "Folders", "Dokument"),
-    ("granskning", "ClipboardCheck", "Granskning"),
-    ("bevakningar", "CalendarClock", "Bevakningar"),
-    ("uppgifter", "ClipboardList", "Uppgifter"),
-    ("inkommande", "Inbox", "Inkommande"),
-    ("fakturor", "Receipt", "Fakturor"),
+NAV_GROUPS = [
+    ("Fråga &amp; arkiv", [
+        ("fraga", "MessageSquare", "Fråga dokumenten"),
+        ("dokument", "Folders", "Dokument"),
+    ]),
+    ("Arbete", [
+        ("granskning", "ClipboardCheck", "Granskning"),
+        ("bevakningar", "CalendarClock", "Bevakningar"),
+        ("uppgifter", "ClipboardList", "Uppgifter"),
+    ]),
+    ("Post &amp; ekonomi", [
+        ("inkommande", "Inbox", "Inkommande"),
+        ("fakturor", "Receipt", "Fakturor"),
+    ]),
 ]
 
 
@@ -31,11 +37,20 @@ def icon(name: str) -> str:
 
 
 def sidebar(active: str) -> str:
-    items = []
-    for slug, ic, label in NAV:
-        cls = "nav-item active" if slug == active else "nav-item"
-        items.append(f'<a class="{cls}" href="#">{icon(ic)}<span>{label}</span></a>')
-    nav_html = "\n        ".join(items)
+    groups = []
+    for group_label, items in NAV_GROUPS:
+        rows = []
+        for slug, ic, label in items:
+            cls = "nav-item active" if slug == active else "nav-item"
+            rows.append(f'<a class="{cls}" href="#">{icon(ic)}<span>{label}</span></a>')
+        rows_html = "\n          ".join(rows)
+        groups.append(
+            f'<div class="nav-group">\n'
+            f'        <div class="nav-label">{group_label}</div>\n'
+            f'          {rows_html}\n'
+            f'        </div>'
+        )
+    nav_html = "\n        ".join(groups)
     return f"""<aside class="sidebar">
       <div class="brand">{MARK}<span class="brand-name">Träff</span></div>
       <div class="scope">BRF Norra Stackholm</div>
