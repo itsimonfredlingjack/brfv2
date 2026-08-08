@@ -622,7 +622,7 @@
   font-weight: 500;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--subtle-foreground);
+  color: var(--muted-foreground);
 }
 
 /* The one sentence the machine wants to say. Stronger than the prose around

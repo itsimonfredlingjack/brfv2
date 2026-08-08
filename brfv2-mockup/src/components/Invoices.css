@@ -148,7 +148,7 @@
 .invoices-counts > div:first-child { padding-left: 4px; }
 
 .invoices-counts dt {
-  color: var(--subtle-foreground);
+  color: var(--muted-foreground);
   font-family: var(--font-mono);
   font-size: 0.6875rem;
   font-weight: 500;
@@ -327,7 +327,7 @@
    vertically, the columns scroll here. */
 .invoices-queue-wrap {
   border: 1px solid var(--border);
-  border-radius: var(--radius-3xl);
+  border-radius: var(--r-card);
   background: var(--card);
   overflow-x: auto;
 }
@@ -341,14 +341,14 @@
 }
 
 .invoices-queue th {
-  height: 40px;
+  height: 34px;
   padding: 0 10px;
   border-bottom: 1px solid var(--border);
-  color: var(--subtle-foreground);
+  color: var(--muted-foreground); /* contrast rule: <12px mono needs 6.2:1 */
   font-family: var(--font-mono);
   font-size: 0.6875rem;
   font-weight: 500;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   text-align: left;
   white-space: nowrap;

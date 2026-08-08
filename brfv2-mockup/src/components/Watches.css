@@ -257,7 +257,7 @@
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--subtle-foreground);
+  color: var(--muted-foreground);
 }
 
 .watch-badge {

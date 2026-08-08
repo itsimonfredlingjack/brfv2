@@ -130,7 +130,7 @@
 .tasks-counts > div:first-child { padding-left: 4px; }
 
 .tasks-counts dt {
-  color: var(--subtle-foreground);
+  color: var(--muted-foreground); /* contrast rule: <12px mono needs 6.2:1 */
   font-family: var(--font-mono);
   font-size: 0.6875rem;
   font-weight: 500;
@@ -269,7 +269,7 @@
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--subtle-foreground);
+  color: var(--muted-foreground);
 }
 
 .task-badges { display: inline-flex; gap: 6px; flex-wrap: wrap; }
@@ -411,7 +411,7 @@
   font-weight: 600;
   letter-spacing: 0.12em;
   text-transform: uppercase;
-  color: var(--subtle-foreground);
+  color: var(--muted-foreground);
 }
 
 .task-history-earlier { margin-bottom: 8px; }
