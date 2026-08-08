@@ -231,14 +231,7 @@
   padding: 18px 4px;
 }
 
-.intake-empty {
-  display: flex;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-3xl);
-  background: var(--card);
-}
-
-.intake-empty .empty { max-width: 46ch; font-size: var(--text-base); line-height: 1.6; color: var(--muted-foreground); }
+/* The empty queue renders the shared .ui-empty card — no local chrome. */
 
 /* ---------- master / detail ---------- */
 

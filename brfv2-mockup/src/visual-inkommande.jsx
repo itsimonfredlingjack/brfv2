@@ -10,7 +10,10 @@ import './components/Integrations.css';
 /**
  * Visual harness for Inkommande iteration-1 comparison.
  * Not a product route — opens via visual-inkommande.html under Vite.
+ * `?empty=1` renders the unified empty state (empty queue, connected mailbox).
  */
+
+const EMPTY_MODE = new URLSearchParams(window.location.search).has('empty');
 
 function eventStub({
   id, subject, origin, originDisplay, body, category, categoryLabel, awaiting = false, at,
@@ -242,7 +245,7 @@ const THREADS = [
 ];
 
 intakeApi.queue = async () => ({
-  threads: THREADS,
+  threads: EMPTY_MODE ? [] : THREADS,
   categoryLabels: {
     invoice: 'Faktura',
     contract_or_quote: 'Avtal eller offert',
@@ -259,13 +262,15 @@ intakeApi.queue = async () => ({
     already_handled: 'Redan hanterat',
     not_relevant: 'Inte relevant',
   },
-  counts: {
-    threads: 4,
-    openThreads: 4,
-    openMessages: 4,
-    awaitingReply: 1,
-    unclear: 0,
-  },
+  counts: EMPTY_MODE
+    ? { threads: 0, openThreads: 0, openMessages: 0, awaitingReply: 0, unclear: 0 }
+    : {
+      threads: 4,
+      openThreads: 4,
+      openMessages: 4,
+      awaitingReply: 1,
+      unclear: 0,
+    },
   mailbox: { hasFetched: false, last_new_count: 0, last_fetched_at: '', last_error: '' },
 });
 
@@ -324,7 +329,7 @@ function Shell() {
               <div className="integrations-tabs" role="tablist">
                 <button type="button" role="tab" aria-selected="true" className="active">
                   <Inbox size={16} /> Inkommande
-                  <span className="pill">4</span>
+                  <span className="pill">{EMPTY_MODE ? 0 : 4}</span>
                 </button>
                 <button type="button" role="tab" aria-selected="false">
                   <Plug size={16} /> Anslutningar
@@ -335,7 +340,7 @@ function Shell() {
               <IntakeQueue
                 brfId="brf-a"
                 isAdmin
-                mailboxConnected={false}
+                mailboxConnected={EMPTY_MODE}
                 format={{
                   mail: {
                     extension: '.eml',

@@ -17,10 +17,12 @@ import {
   Paperclip,
   RefreshCw,
   RotateCcw,
+  SearchX,
   Upload,
   X,
 } from 'lucide-react';
 import { intakeApi, integrationsApi } from '../api';
+import EmptyState from './EmptyState';
 import './IntakeQueue.css';
 
 /**
@@ -959,17 +961,32 @@ export default function IntakeQueue({
           say "empty" on the left and "nothing selected" on the right would be
           the layout insisting on itself. */}
       {!loading && threads.length === 0 && (
-        <div className="intake-empty">
-          <div className="ui-empty">
-            <div className="ui-empty-media"><Inbox size={20} /></div>
-            <h3>{filter === 'open' ? 'Kön är tom' : 'Inga träffar'}</h3>
-            <p className="empty">
-              {filter === 'open'
-                ? 'Ingenting väntar på ett beslut.'
-                : 'Inga trådar matchar filtret.'}
-            </p>
-          </div>
-        </div>
+        filter === 'awaiting' ? (
+          <EmptyState
+            icon={SearchX}
+            title="Inga träffar."
+            actions={(
+              <button type="button" className="ui-btn ui-btn--outline" onClick={() => setFilter('all')}>
+                Visa hela kön
+              </button>
+            )}
+          >
+            Inga trådar väntar på svar just nu.
+          </EmptyState>
+        ) : (
+          <EmptyState
+            icon={Inbox}
+            tone="ok"
+            title="Inkorgen är tom."
+            actions={isAdmin && mailboxConnected ? (
+              <button type="button" className="ui-btn ui-btn--primary" onClick={handleFetch} disabled={busy}>
+                {busy ? <Loader2 size={15} className="spin" /> : <Download size={15} />} Hämta post
+              </button>
+            ) : null}
+          >
+            Allt är hanterat — eller hämta ny post från mejlen.
+          </EmptyState>
+        )
       )}
 
       {!loading && threads.length > 0 && (

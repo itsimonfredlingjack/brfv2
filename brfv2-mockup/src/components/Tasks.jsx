@@ -1,13 +1,16 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   AlertTriangle,
+  ClipboardList,
   FileText,
   Loader2,
+  Plus,
   RefreshCw,
   X,
 } from 'lucide-react';
 import { tasksApi } from '../api';
 import CreateTask from './CreateTask';
+import EmptyState from './EmptyState';
 import './Tasks.css';
 
 /**
@@ -463,6 +466,13 @@ export default function Tasks({ brfId, isAdmin = false, onOpenCitation }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  const newSectionRef = useRef(null);
+
+  // The empty state's action presses the section's own "Ny uppgift" button,
+  // so the panel that opens is the same one the toolbar offers.
+  const openCreate = () => {
+    newSectionRef.current?.querySelector('.task-create-open')?.click();
+  };
 
   const refresh = useCallback(async () => {
     if (!brfId) return;
@@ -581,7 +591,7 @@ export default function Tasks({ brfId, isAdmin = false, onOpenCitation }) {
           {/* Nothing here for a member who cannot create one: the summary above
               already says why the section is missing. */}
           {isAdmin && (
-            <section className="tasks-new" aria-label="Ny uppgift">
+            <section className="tasks-new" aria-label="Ny uppgift" ref={newSectionRef}>
               <h3>Ta på er ett arbete</h3>
               <p className="muted">
                 För arbete som börjar i ett styrelsemöte i stället för i ett
@@ -609,7 +619,17 @@ export default function Tasks({ brfId, isAdmin = false, onOpenCitation }) {
               datum, odaterat sist.
             </p>
             {active.length === 0 ? (
-              <p className="empty">Ingen uppgift är pågående.</p>
+              <EmptyState
+                icon={ClipboardList}
+                title="Inga uppgifter på gång."
+                actions={isAdmin ? (
+                  <button type="button" className="ui-btn ui-btn--primary" onClick={openCreate}>
+                    <Plus size={15} /> Skapa första uppgiften
+                  </button>
+                ) : null}
+              >
+                Skapa den första så syns vem som gör vad, till när.
+              </EmptyState>
             ) : active.map((task) => (
               <TaskCard
                 key={task.id}

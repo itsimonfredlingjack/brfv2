@@ -731,7 +731,7 @@ describe('creating work', () => {
 
   it('creates manual work with no origin claimed for it', async () => {
     mountTasks({ active: [] });
-    await screen.findByText('Ingen uppgift är pågående.');
+    await screen.findByText('Inga uppgifter på gång.');
 
     fireEvent.click(screen.getByRole('button', { name: /Ny uppgift/ }));
     fireEvent.change(screen.getByLabelText('Rubrik'), {

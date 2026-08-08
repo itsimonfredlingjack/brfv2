@@ -801,30 +801,44 @@ select option { background: #FFFFFF; color: var(--ink); }
 .ui-table tbody tr:hover { background: var(--surface-2); }
 
 /* ---- empty state ---- */
+/* One empty state, everywhere: dashed card, icon tile, one sentence saying
+   what is missing, and at most one action. A strong lead names the state;
+   the rest of the sentence says what would fill it. Tone "ok" marks the
+   emptiness as a finished state (all handled), not a missing one. */
 .ui-empty {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 56px 24px;
+  padding: var(--s14) var(--s8);
   text-align: center;
+  background: var(--card);
+  border: 1px dashed var(--border-strong);
+  border-radius: var(--r-card);
 }
 
 .ui-empty-media {
   display: grid;
   place-items: center;
-  width: 40px;
-  height: 40px;
+  width: 48px;
+  height: 48px;
   margin-bottom: 10px;
-  border-radius: var(--radius-xl);
-  background: var(--muted);
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface-2);
   color: var(--muted-foreground);
 }
 
-.ui-empty h3 { font-size: var(--text-lg); font-weight: 500; letter-spacing: -0.01em; color: var(--foreground); }
-.ui-empty p { max-width: 46ch; font-size: var(--text-base); line-height: 1.5; color: var(--muted-foreground); }
-.ui-empty .ui-btn { margin-top: 10px; }
+.ui-empty--ok .ui-empty-media {
+  background: var(--ok-soft);
+  border-color: var(--ok-border);
+  color: var(--ok);
+}
+
+.ui-empty-text { max-width: 46ch; font-size: var(--text-base); line-height: 1.6; color: var(--muted-foreground); }
+.ui-empty-text strong { color: var(--foreground); font-weight: 600; }
+.ui-empty-actions { display: flex; gap: 10px; justify-content: center; margin-top: 10px; }
 
 /* ---- loading ---- */
 .ui-loading {

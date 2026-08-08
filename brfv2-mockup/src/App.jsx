@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Folders, Search as SearchIcon, FileText, ArrowRight, Loader2, AlertCircle, Upload, CheckCircle2, AlertTriangle, X, ChevronRight, CornerDownRight, ArrowLeft, ZoomIn, ZoomOut, ThumbsDown, MessageCircle, Info, Trash2 } from 'lucide-react';
 import TraffMark from './components/TraffMark';
+import EmptyState from './components/EmptyState';
 import Login from './components/Login';
 import PdfPane from './components/PdfPane';
 import Setup from './components/Setup';
@@ -1172,20 +1173,29 @@ function App() {
                       <p>{documentsError}</p>
                     </div>
                   ) : documents.length === 0 ? (
-                    <div className="docs-empty-state">
-                      <FileText size={48} color="var(--panel-border)" style={{ marginBottom: '16px' }} />
-                      <h3>Inga dokument ännu</h3>
-                      <p>Det finns inga dokument för {activeBrfName || 'den här föreningen'} än.</p>
-                    </div>
+                    <EmptyState
+                      icon={Folders}
+                      title="Arkivet är tomt."
+                      actions={isAdmin ? (
+                        <button type="button" className="ui-btn ui-btn--primary" onClick={() => uploadInputRef.current?.click()}>
+                          <Upload size={15} /> Ladda upp ditt första dokument
+                        </button>
+                      ) : null}
+                    >
+                      Ladda upp stadgar, protokoll och avtal — varje sida blir sökbar och citerbar.
+                    </EmptyState>
                   ) : filteredDocs.length === 0 ? (
-                    <div className="docs-empty-state">
-                      <FileText size={48} color="var(--panel-border)" style={{ marginBottom: '16px' }} />
-                      <h3>Inga dokument matchar din sökning</h3>
-                      <p>Prova att ändra sökordet.</p>
-                      <button className="ui-btn ui-btn--outline" onClick={() => setDocsSearchQuery('')}>
-                        Rensa sökning
-                      </button>
-                    </div>
+                    <EmptyState
+                      icon={SearchIcon}
+                      title="Inga träffar."
+                      actions={(
+                        <button type="button" className="ui-btn ui-btn--outline" onClick={() => setDocsSearchQuery('')}>
+                          Rensa sökning
+                        </button>
+                      )}
+                    >
+                      Inga dokument matchar sökningen — prova att ändra sökordet.
+                    </EmptyState>
                   ) : (
                     <>
                       {/* Desktop Table */}

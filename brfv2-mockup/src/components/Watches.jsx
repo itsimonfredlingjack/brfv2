@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
+  CalendarClock,
   CheckCircle2,
   FileText,
   HelpCircle,
@@ -13,6 +14,7 @@ import {
 } from 'lucide-react';
 import { watchesApi } from '../api';
 import CreateTask from './CreateTask';
+import EmptyState from './EmptyState';
 import './Watches.css';
 
 /**
@@ -561,6 +563,11 @@ export default function Watches({ brfId, isAdmin = false, onOpenCitation }) {
     () => BUCKET_ORDER.reduce((sum, key) => sum + (board?.buckets?.[key]?.length || 0), 0),
     [board],
   );
+  // A board that has never held anything is one state, not four empty
+  // sections stacked on each other. Once anything exists — even only settled
+  // history — the sections render and say their own emptiness in words.
+  const nothingYet = watchedCount === 0
+    && proposed.length === 0 && unresolved.length === 0 && settled.length === 0;
 
   return (
     <div className="watches">
@@ -600,6 +607,22 @@ export default function Watches({ brfId, isAdmin = false, onOpenCitation }) {
             {!isAdmin && ' Bara administratörer kan besluta om bevakningar.'}
           </p>
 
+          {nothingYet && (
+            <EmptyState
+              icon={CalendarClock}
+              title="Inga bevakningar ännu."
+              actions={isAdmin ? (
+                <button type="button" className="ui-btn ui-btn--primary" onClick={scan} disabled={busy || scanning}>
+                  {scanning ? <Loader2 size={15} className="spin" /> : <ScanLine size={15} />} Läs om arkivet
+                </button>
+              ) : null}
+            >
+              Läs om arkivet så håller Träff koll på villkor som inte längre bör gälla.
+            </EmptyState>
+          )}
+
+          {!nothingYet && (
+          <>
           <section className="watches-board" aria-label="Bevakas">
             <h3>Bevakas</h3>
             <p className="muted">
@@ -702,6 +725,8 @@ export default function Watches({ brfId, isAdmin = false, onOpenCitation }) {
               </ul>
             )}
           </details>
+          </>
+          )}
         </>
       )}
 

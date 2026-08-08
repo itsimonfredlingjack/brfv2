@@ -9,11 +9,13 @@ import {
   Receipt,
   RefreshCw,
   Search,
+  SearchX,
   Table2,
   User,
   X,
 } from 'lucide-react';
 import { integrationsApi, invoicesApi } from '../api';
+import EmptyState from './EmptyState';
 import InvoiceCase from './InvoiceCase';
 import { formatAmount } from './money';
 import MappingPreview from './MappingPreview';
@@ -226,6 +228,22 @@ export default function Invoices({ brfId, isAdmin = false, onOpenDocument, onOpe
   const [signalFilter, setSignalFilter] = useState('all');
   const [responsibleFilter, setResponsibleFilter] = useState('all');
   const [sort, setSort] = useState('activity');
+
+  const resetFilters = () => {
+    setQuery('');
+    setStatusFilter('open');
+    setSignalFilter('all');
+    setResponsibleFilter('all');
+  };
+
+  // The empty queue's action opens the same intake panel the toolbar offers —
+  // the empty state points at the section's own verb, never a new one.
+  const openReadIn = () => {
+    const panel = document.querySelector('.invoices-read-in');
+    if (!panel) return;
+    panel.open = true;
+    panel.querySelector('summary')?.focus();
+  };
 
   const refresh = useCallback(async () => {
     if (!brfId) return;
@@ -465,11 +483,31 @@ export default function Invoices({ brfId, isAdmin = false, onOpenDocument, onOpe
           {loading && <p className="invoices-loading"><Loader2 size={16} className="spin" /> Hämtar…</p>}
 
           {!loading && visible.length === 0 && (
-            <p className="empty">
-              {cases.length === 0
-                ? 'Ingen faktura är inläst ännu. Läs in en ovan för att börja.'
-                : 'Ingen faktura matchar filtret.'}
-            </p>
+            cases.length === 0 ? (
+              <EmptyState
+                icon={Receipt}
+                title="Inga fakturor att granska."
+                actions={isAdmin ? (
+                  <button type="button" className="ui-btn ui-btn--primary" onClick={openReadIn}>
+                    <Download size={15} /> Läs in fakturor
+                  </button>
+                ) : null}
+              >
+                När leverantörsfakturor läses in jämförs belopp och villkor mot era avtal här.
+              </EmptyState>
+            ) : (
+              <EmptyState
+                icon={SearchX}
+                title="Inga träffar."
+                actions={(
+                  <button type="button" className="ui-btn ui-btn--outline" onClick={resetFilters}>
+                    Rensa filter
+                  </button>
+                )}
+              >
+                Ingen faktura matchar filtret.
+              </EmptyState>
+            )
           )}
 
           {!loading && visible.length > 0 && (
