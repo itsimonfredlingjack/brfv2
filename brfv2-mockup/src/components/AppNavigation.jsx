@@ -149,7 +149,8 @@ export default function AppNavigation({
             inert={isMobile && !mobileMenuOpen ? true : undefined}
           >
             <div className="sidebar-brand desktop-only">
-              <TraffMark size={22} />
+              {/* Sized to the wordmark's cap, not to the block beside it. */}
+              <TraffMark size={19} />
               <div className="logo">
                 <span className="logo-name">Träff</span>
                 <span className="logo-qualifier">BRF &amp; styrelse</span>
