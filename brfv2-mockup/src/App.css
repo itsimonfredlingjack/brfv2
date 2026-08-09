@@ -986,7 +986,8 @@
 .followup-btn:focus-visible,
 .filter-pill:focus-visible,
 .icon-action-btn:focus-visible,
-.example-prompt-btn:focus-visible,
+/* `.example-prompt-btn` is not in this list: its focus state is the same ink
+   inversion as its hover, stated with the rule that draws it. */
 .chat-send-btn:focus-visible,
 .doc-open-btn:focus-visible {
   border-color: var(--ring);
@@ -1418,19 +1419,54 @@ mark.search-highlight {
 
 .chat-title { font-family: var(--font-display); font-weight: 600; font-size: 2.125rem; letter-spacing: -0.02em; }
 
+/* Questions offered, not buttons. These were bordered rectangles floating in
+   the canvas — even squared off, a box around a sentence reads as a web
+   control, and what is actually on offer here is a line you could type. So:
+   no border, no fill, no box. A mono caret marks each one as enterable, the
+   sentence itself is the target, and the whole row inverts on hover the way
+   the navigation does — the same selection language, so a reader learns it
+   once.
+
+   `display: flex` rather than a list marker: the caret must not scroll away
+   from a question that wraps to two lines. */
 .example-prompt-btn {
-  padding: 11px 14px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-block);
-  background: var(--card);
-  color: var(--muted-foreground);
+  display: flex;
+  align-items: baseline;
+  gap: var(--s3);
+  width: 100%;
+  padding: var(--s2) var(--s3);
+  margin-left: calc(var(--s3) * -1);
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: var(--ink-muted);
   font-size: var(--text-md);
   text-align: left;
   cursor: pointer;
   outline: none;
-  transition: background-color 0.14s ease, border-color 0.14s ease, color 0.14s ease;
+  transition: background-color 0.1s ease, color 0.1s ease;
 }
-.example-prompt-btn:hover { background: var(--card-hover); border-color: var(--border-strong); color: var(--foreground); }
+
+.example-prompt-btn::before {
+  content: '>';
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: 0.8125rem;
+  font-weight: 700;
+  line-height: inherit;
+  color: var(--ink-subtle);
+  transition: color 0.1s ease;
+}
+
+.example-prompt-btn:hover,
+.example-prompt-btn:focus-visible {
+  background: var(--ink);
+  color: var(--papper);
+  outline: none;
+}
+
+.example-prompt-btn:hover::before,
+.example-prompt-btn:focus-visible::before { color: var(--papper); }
 
 /* The conversation is a record, not a messenger: the person's question is a
    labelled line in it, and the answer is a sheet under that line. Nothing
@@ -1646,29 +1682,63 @@ mark.search-highlight {
 }
 .followup-btn:hover { background: var(--surface-accent); color: var(--foreground); }
 
-.chat-input-area { margin-top: auto; padding-top: 16px; }
+/* The composer is the page's own bottom edge, not a form resting on it. A
+   single hairline spans the column and everything below it is the command
+   line: a mono caret, the field, and the key that sends it. No box, no fill,
+   no second surface — the field is the paper, and the rule above it is the
+   only thing marking where the reading stops and the typing starts. */
+.chat-input-area {
+  margin-top: auto;
+  padding-top: 0;
+  border-top: 1px solid var(--border-strong);
+}
 
-/* The composer is a prompt line, not a floating capsule. It was a shadowed,
-   rounded, white lozenge hovering over the paper — the most web-chat object in
-   the product, on the screen whose whole job is reading source text. Now it is
-   a field with a hard edge, flush to the column, and the send key is a square
-   block of ink on the end of it. */
 .chat-input-wrapper {
   display: flex;
   align-items: center;
-  gap: var(--s2);
-  padding: 0 0 0 var(--s4);
-  border: 1px solid var(--border-strong);
+  gap: var(--s3);
+  padding: 0;
+  border: none;
   border-radius: 0;
-  background: var(--field);
+  background: transparent;
   box-shadow: none;
-  transition: border-color 0.14s ease;
 }
-.chat-input-wrapper:focus-within { border-color: var(--ring); outline: 2px solid var(--ring);
-  outline-offset: 2px; }
-.chat-input-wrapper input { flex: 1; min-width: 0; height: var(--h-lg); border: none; background: transparent; color: var(--foreground); font-size: var(--text-md); outline: none; }
-.chat-input-wrapper input::placeholder { color: var(--subtle-foreground); }
 
+/* The prompt mark. It belongs to the line, not to the input, so a focus ring
+   never has to draw around it. */
+.chat-input-wrapper::before {
+  content: '>';
+  flex-shrink: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--ink-subtle);
+  transition: color 0.12s ease;
+}
+
+.chat-input-wrapper:focus-within::before { color: var(--ink); }
+
+/* The caret is the focus indicator, plus an ink rule under the line itself —
+   an outline drawn around a borderless row would invent the box this whole
+   pass removed. */
+.chat-input-wrapper:focus-within { box-shadow: inset 0 -2px 0 var(--ink); }
+
+.chat-input-wrapper input {
+  flex: 1;
+  min-width: 0;
+  height: var(--h-lg);
+  border: none;
+  background: transparent;
+  color: var(--foreground);
+  font-family: var(--font-mono);
+  font-size: var(--text-md);
+  outline: none;
+}
+.chat-input-wrapper input::placeholder { color: var(--subtle-foreground); font-family: var(--font-sans); }
+
+/* A key on the end of the line, sized to it. Ink when it can send, and simply
+   absent-looking when it cannot — no grey slab parked at the end of an empty
+   prompt. */
 .chat-send-btn {
   display: grid;
   place-items: center;
@@ -1681,19 +1751,26 @@ mark.search-highlight {
   color: var(--primary-foreground);
   cursor: pointer;
   outline: none;
-  transition: background-color 0.14s ease;
+  transition: background-color 0.14s ease, opacity 0.14s ease;
 }
 .chat-send-btn:hover:not(:disabled) { background: var(--primary-action-hover); }
-.chat-send-btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* Nothing to send: the key steps off the line rather than sitting at the end
+   of it as a dead grey block. */
+.chat-send-btn:disabled {
+  background: transparent;
+  color: var(--border-strong);
+  cursor: not-allowed;
+}
 
 /* Provenance at the point of asking: which corpus, which machinery. */
 .chat-composer-meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-top: 8px;
-  padding: 0 2px;
+  gap: var(--s3);
+  margin-top: 0;
+  padding: 0 0 var(--s3);
 }
 .chat-composer-meta .model-status-badge {
   margin-top: 0;

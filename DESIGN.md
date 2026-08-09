@@ -223,6 +223,23 @@ always drawing a boundary the hairlines already drew.
   (`padding-left: 0` on the first column, `padding-right: 0` on the last) so the
   data reads as terminal output rather than as a web grid.
 
+### 2d-bis. Offered choices are lines, not boxes
+
+A box drawn around a sentence reads as a web control even at zero radius. Where
+the product offers something a person could ask or run — the chat's example
+prompts — it is set as a **raw list**: no border, no fill, a mono `>` caret, and
+the whole row inverting to ink/paper on hover and focus. That is the same
+selection language the sidebar uses, so a reader learns it once and it means the
+same thing in both places. Focus and hover are deliberately identical here; an
+outline drawn around a borderless row would reinvent the box.
+
+The composer follows the same rule: **a command line, not a form field.** One
+hairline spans the column, and under it sit a mono caret, the field (mono, so
+what is typed matches what a citation will look like) and the ink send key. No
+box, no second surface, no grey slab parked at the end of an empty prompt — the
+key goes transparent until there is something to send. Focus is a 2px ink rule
+under the line itself.
+
 ### 2e. Hemsidan is on the plate, editor included
 
 No exceptions: a unified desktop app cannot have one screen behaving like a
