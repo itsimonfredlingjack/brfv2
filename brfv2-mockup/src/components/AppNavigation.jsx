@@ -149,8 +149,11 @@ export default function AppNavigation({
             inert={isMobile && !mobileMenuOpen ? true : undefined}
           >
             <div className="sidebar-brand desktop-only">
-              {/* Sized to the wordmark's cap, not to the block beside it. */}
-              <TraffMark size={19} />
+              {/* The mark is the product's one real symbol — a ring whose gap
+                  is the distance between a question and its proof (§02). At
+                  cap height it was correct and invisible; at 26 it reads as
+                  the thing the panel is named after. */}
+              <TraffMark size={26} />
               <div className="logo">
                 <span className="logo-name">Träff</span>
                 <span className="logo-qualifier">BRF &amp; styrelse</span>

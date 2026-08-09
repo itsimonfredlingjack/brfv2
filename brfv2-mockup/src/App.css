@@ -129,7 +129,11 @@
   border-bottom: 1px solid var(--border-strong);
 }
 
-.sidebar-brand > :first-child { margin-top: 3px; flex-shrink: 0; }
+/* At 26px the ring is taller than the wordmark's cap, so it no longer hangs
+   off the cap line — it centres against the name itself and the qualifier
+   hangs below both. `margin-top: 1px` is optical, not arithmetic: a circle
+   reads a hair low against a flat cap. */
+.sidebar-brand > :first-child { margin-top: 1px; flex-shrink: 0; }
 
 .sidebar-brand .logo { margin-top: 0; }
 
