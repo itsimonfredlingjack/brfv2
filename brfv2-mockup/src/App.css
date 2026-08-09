@@ -112,15 +112,20 @@
   z-index: 35;
 }
 
-/* The lockup sits on the panel's grid like everything else in it. Two things
-   were off: the mark was centred against the two-line block, so it did not
-   stand at the wordmark's cap height the way §05 specifies, and the row was
-   73px tall in a panel whose rows are 28 and 32 — the brand towered over the
-   thing it belongs to. `align-items: flex-start` plus the mark's own optical
-   offset puts the ring back on the cap. */
+/* The lockup sits on the panel's grid like everything else in it: 64px, two
+   nav rows, instead of an ad-hoc 73.
+
+   The mark centres on the **whole two-line block**, not on the wordmark. §05's
+   "at cap height" was written for the mark beside a single line of type; here
+   the lockup is a name over a qualifier, and a 26px ring aligned to a 22.4px
+   name hangs 4.6px below its baseline — it stops belonging to "Träff" and
+   starts crowding "BRF & STYRELSE", which is what read as wrong. Centred, the
+   ring's axis and the block's axis are the same line (measured: 0.00px apart)
+   and the 26px mark sits inside the 36.4px block with equal air above and
+   below. */
 .sidebar-brand {
   display: flex;
-  align-items: flex-start;
+  align-items: center;
   /* §05: the gap is the diameter of the core. */
   gap: 11px;
   height: 64px;
@@ -129,11 +134,7 @@
   border-bottom: 1px solid var(--border-strong);
 }
 
-/* At 26px the ring is taller than the wordmark's cap, so it no longer hangs
-   off the cap line — it centres against the name itself and the qualifier
-   hangs below both. `margin-top: 1px` is optical, not arithmetic: a circle
-   reads a hair low against a flat cap. */
-.sidebar-brand > :first-child { margin-top: 1px; flex-shrink: 0; }
+.sidebar-brand > :first-child { flex-shrink: 0; }
 
 .sidebar-brand .logo { margin-top: 0; }
 
