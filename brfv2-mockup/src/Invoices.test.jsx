@@ -795,7 +795,10 @@ describe('the case', () => {
     fireEvent.change(within(panel).getByRole('combobox'), {
       target: { value: 'reviewed_no_objection' },
     });
-    expect(within(panel).getByText(/inte ett godkännande, en attest eller en bokföringsåtgärd/))
+    // findBy, not getBy: the disclaimer appears on a re-render that does not
+    // always land in the same tick as the change event, which made this fail
+    // about twice in twelve full-suite runs and never in isolation.
+    expect(await within(panel).findByText(/inte ett godkännande, en attest eller en bokföringsåtgärd/))
       .toBeInTheDocument();
   });
 
