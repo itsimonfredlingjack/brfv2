@@ -229,11 +229,11 @@
 
 /* Where the work came from: a classification, in the measuring cut. */
 .task-origin-kind {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-family: var(--etikett-family);
+  font-size: var(--etikett-size);
+  font-weight: var(--etikett-weight);
+  letter-spacing: var(--etikett-tracking);
+  text-transform: var(--etikett-case);
   color: var(--muted-foreground);
 }
 
@@ -371,11 +371,11 @@
 .task-history h5,
 .task-change h5 {
   margin: 0 0 var(--s2);
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  font-weight: 600;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
+  font-family: var(--etikett-family);
+  font-size: var(--etikett-size);
+  font-weight: var(--etikett-weight);
+  letter-spacing: var(--etikett-tracking);
+  text-transform: var(--etikett-case);
   color: var(--muted-foreground);
 }
 

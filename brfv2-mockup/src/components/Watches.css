@@ -119,11 +119,11 @@
    instrument row below it now, not the row's own weight. */
 .watches-today {
   margin: 0 0 var(--s2h);
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  font-weight: 500;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
+  font-family: var(--etikett-family);
+  font-size: var(--etikett-size);
+  font-weight: var(--etikett-weight);
+  letter-spacing: var(--etikett-tracking);
+  text-transform: var(--etikett-case);
   line-height: 1.7;
   color: var(--muted-foreground);
 }
@@ -176,11 +176,11 @@
   margin: 0 0 var(--s2h);
   padding-bottom: var(--s2);
   border-bottom: 1px solid var(--border);
-  font-family: var(--font-mono);
-  font-size: var(--text-xs);
-  font-weight: 600;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
+  font-family: var(--etikett-family);
+  font-size: var(--etikett-size);
+  font-weight: var(--etikett-weight);
+  letter-spacing: var(--etikett-tracking);
+  text-transform: var(--etikett-case);
   color: var(--muted-foreground);
 }
 
@@ -282,11 +282,11 @@
 
 /* What kind of obligation: a classification, in the measuring cut. */
 .watch-kind {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
+  font-family: var(--etikett-family);
+  font-size: var(--etikett-size);
+  font-weight: var(--etikett-weight);
+  letter-spacing: var(--etikett-tracking);
+  text-transform: var(--etikett-case);
   color: var(--muted-foreground);
 }
 
@@ -616,11 +616,11 @@
 }
 
 .horizon-label {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-family: var(--etikett-family);
+  font-size: var(--etikett-size);
+  font-weight: var(--etikett-weight);
+  letter-spacing: var(--etikett-tracking);
+  text-transform: var(--etikett-case);
   color: var(--muted-foreground);
 }
 

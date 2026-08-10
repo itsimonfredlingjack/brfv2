@@ -173,6 +173,36 @@ describe('design lock: the instrument is one component', () => {
   });
 });
 
+// Beslut 7 (etiketten): §07 gives the mono a closed list — "sidnummer,
+// paragrafer, poäng, tillstånd" — and everything else that explains belongs to
+// the sans. Uppercase mono had spread to seventeen captions, table heads and
+// section labels that are on none of that list, which is what made the product
+// read as instrumentation. They now go through --etikett-*; this lock keeps the
+// list closed, so a new caption cannot quietly join them.
+const MONO_CAPS_ALLOWED = [
+  'matt', 'answer-state', 'verdict', 'overdue-flag', 'signal-chip',
+  'task-badge', 'logo-qualifier', 'login-brand-qualifier', 'docs-register-count',
+];
+
+describe('design lock: the measuring cut keeps its closed list', () => {
+  it('no uppercase mono outside the states, scores and qualifiers', () => {
+    const offenders = [];
+    for (const file of walk(SRC)) {
+      if (!file.endsWith('.css')) continue;
+      const text = readFileSync(file, 'utf8');
+      for (const rule of text.matchAll(/([^{}]*)\{([^{}]*)\}/g)) {
+        const body = rule[2];
+        if (!body.includes('var(--font-mono)')) continue;
+        if (!/text-transform:\s*uppercase/.test(body)) continue;
+        const selector = rule[1].replace(/\/\*[\s\S]*?\*\//g, '').trim();
+        if (MONO_CAPS_ALLOWED.some((name) => selector.includes(name))) continue;
+        offenders.push(`${relative(SRC, file)}: ${selector} sets uppercase mono — use var(--etikett-*)`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+});
+
 // Beslut 6 (typrollerna): the identity (docs/design/2026-08-10-identitet) gives
 // the three faces three jobs — serif asserts, sans explains, mono measures — and
 // says the roles are never mixed, because that is how a reader tells the

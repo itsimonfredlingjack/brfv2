@@ -593,6 +593,34 @@ h3, h4, h5, h6 {
   letter-spacing: -0.005em;
 }
 
+/* The label: the caption that says what a thing is.
+ *
+ * §07 gives it to the sans — "sans för det som förklaras" — and §07's mono is a
+ * closed list: "sidnummer, paragrafer, poäng, tillstånd." A table head, a
+ * section label, an eyebrow and the caption under a figure are on none of that
+ * list. They explain. Set in uppercase mono they read as machine readout, which
+ * is the single largest reason the product looked like instrumentation rather
+ * than something a board reads.
+ *
+ * It is five custom properties rather than a class because the seventeen places
+ * that need it already have their own selectors, in their own components, and
+ * moving them all under one class would mean one file knowing about every
+ * screen. What matters is that the *values* live in one place: before this,
+ * those seventeen rules had drifted to six different letter-spacings and two
+ * weights for what was supposed to be a single style, because there was no
+ * label to change — only seventeen copies of one.
+ *
+ * Sentence case, so the words keep their shape and Swedish keeps its ÅÄÖ; near
+ * zero tracking, because tracking is what open uppercase needs and lowercase
+ * does not; 12px throughout, since dropping the caps costs apparent size. */
+:root {
+  --etikett-family: var(--font-sans);
+  --etikett-size: var(--text-xs);
+  --etikett-weight: 500;
+  --etikett-tracking: 0.005em;
+  --etikett-case: none;
+}
+
 /* The measurement: page numbers, paragraph marks, states, scores. Uppercase at
    +0.10…+0.20em, and always as data rather than as prose. */
 .matt {
