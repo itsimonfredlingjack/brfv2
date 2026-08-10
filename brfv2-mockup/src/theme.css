@@ -310,21 +310,26 @@
    * correction without being touched — and so the next stylesheet that reaches
    * for `--radius-2xl` gets the right answer instead of the old one.
    *
-   * **Superseded again, same day: the radii go to zero.** 8/12/18 was the right
-   * direction and stopped halfway. A rounded corner is a web affordance — it
-   * exists to make a rectangle look like a soft, tappable object — and this is
-   * a desktop instrument for reading contracts and invoices. Every remaining
-   * corner was doing the same work the hairlines and the grid already do,
-   * twice, more softly.
+   * **Superseded 2026-08-10: the radii come back, at the phone's values.**
+   * Zero radius was argued from what a desktop instrument is *not* — not a
+   * soft tappable web object — and the argument was sound but it was made in
+   * a vacuum. Träff already has a second half, and it is not hypothetical:
+   * xs_mobilapp implements the same identity, the same six meanings and the
+   * same three cuts, and it holds 12px cards, 10px fields and pill chips.
    *
-   * So: 0 on everything operated, 2px on the few surfaces that hold content
-   * and need to read as a plate rather than as a region of the page. `--r-lg`
-   * keeps 2px for genuine overlays (modals, popovers) where the shadow needs
-   * an edge to sit on. Nothing in this product is a pill any more except the
-   * status dots that are literally circles. */
-  --r-sm: 0;      /* operated: buttons, inputs, selects, chips, rows */
-  --r-md: 0;      /* held: cards, panels, tables, empty states */
-  --r-lg: 2px;    /* overlays only: modals, popovers, drawers */
+   * Two halves of one product were shaped by two different theories. Reading
+   * them side by side, the phone is the one that looks like Träff and the
+   * desktop is the one Simon called "plåttrigt" — sheet metal. Zero radius
+   * was the last piece of the brutalist pass he rejected on 2026-08-09; the
+   * typography went back to the identity before it, and this is the geometry
+   * following.
+   *
+   * The values are the phone's, not new inventions, so the two halves cannot
+   * drift apart again: --r-field 10px, --r-card 12px. Overlays take one step
+   * more so a shadow has an edge to sit on. */
+  --r-sm: 10px;   /* operated: buttons, inputs, selects, chips, rows */
+  --r-md: 12px;   /* held: cards, panels, tables, empty states */
+  --r-lg: 16px;   /* overlays only: modals, popovers, drawers */
   --radius-pill: 999px;
 
   --radius: var(--r-sm);
@@ -338,6 +343,13 @@
      not a control and must not be shaped like one. A 64px-tall pill is what
      makes an operational screen read as a toy. */
   --radius-block: var(--r-md);
+
+  /* Motion, at the phone's curve and durations (xs_mobilapp/src/styles/
+     tokens.css). One easing for the whole product: a control settling, a sheet
+     arriving. Reduced motion is honoured globally further down this file. */
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  --d-push: 180ms;
+  --d-sheet: 240ms;
 
   --shadow-xs: 0 1px 2px 0 rgb(55 50 47 / 0.05);
   --shadow-sm: 0 1px 3px 0 rgb(55 50 47 / 0.07), 0 1px 2px -1px rgb(55 50 47 / 0.06);
