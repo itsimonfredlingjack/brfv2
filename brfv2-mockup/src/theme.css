@@ -194,6 +194,29 @@
   --skal-sunken: #100E0D;   /* wells */
   --skal-pressed: #262320;  /* pressed, hovered, or genuinely inert */
 
+  /* The mat, and the sheet that lies on it.
+   *
+   * This is the thing the note at the top of this file said the dark shell was
+   * not finished without, and it is the one place the 2026-08-08 argument for
+   * paper is still right: a board reads a full-size PDF here for an hour, and
+   * an A4 glowing straight out of near-black is genuinely harder on the eyes.
+   * That is about eyes, not taste.
+   *
+   * A reading room does not hang a white sheet on a black wall; it lays it on
+   * a mat. --matta is that mat — the lightest surface in the shell family, and
+   * warm, so the step from surround to paper is a step rather than a cliff.
+   * Between #0A0908 and white the jump is the whole range; via #33302C it is
+   * two smaller ones, and the glare that made the old decision right mostly
+   * goes away without giving the shell back.
+   *
+   * --dokument is white, and it is the only white in the product. §06:
+   * "dokumenten är det enda i gränssnittet som är vitt." It must not be an
+   * alias of --field: --field lifts *off* the shell and is therefore dark, so
+   * pointing paper at it turned the document's own page dark — which is what
+   * had happened here until the mat was built. */
+  --matta: #33302C;
+  --dokument: #FFFFFF;
+
   /* Ljus — the shell's text. */
   --ljus: #ECEDEF;
   --ljus-muted: #B3B8C0;

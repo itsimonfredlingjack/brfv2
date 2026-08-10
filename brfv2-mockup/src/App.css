@@ -1864,14 +1864,19 @@ mark.search-highlight {
   justify-content: safe center;
   padding: var(--s7);
   overflow: auto;
-  background: var(--muted-hover);
+  /* The mat the sheet lies on — see --matta. Not --muted-hover: that is an
+     interaction colour and it was cold, so the one warm white in the product
+     sat in a cold grey surround. */
+  background: var(--matta);
 }
 
+/* The page itself: the only white in the product (§06). It sits on the mat
+   with a real shadow, because a sheet lying on something casts one. */
 .pdf-page-shell {
   position: relative;
   border-radius: var(--r-sm);
-  background: var(--field);
-  box-shadow: var(--shadow-lg);
+  background: var(--dokument);
+  box-shadow: var(--lyft-2);
   transform-origin: top center;
   transition: transform 0.18s ease;
   line-height: 0;
@@ -1892,7 +1897,7 @@ mark.search-highlight {
 }
 .pdf-highlight.approximate { outline-style: dashed; opacity: 0.7; }
 
-.pdf-pane-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgb(247 245 243 / 0.72); color: var(--ink); }
+.pdf-pane-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: rgb(255 255 255 / 0.72); color: #37322F; }
 .pdf-pane-error {
   display: flex;
   flex-direction: column;
