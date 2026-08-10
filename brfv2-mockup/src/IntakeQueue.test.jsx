@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import IntakeQueue from './components/IntakeQueue';
 import { intakeApi, integrationsApi } from './api';
+import { datum } from './components/datum';
 
 /**
  * The review queue for incoming post.
@@ -236,7 +237,7 @@ describe('the queue, before anything is decided', () => {
     const list = await screen.findByRole('list', { name: 'Trådar i kön' });
     expect(within(list).getByText('Offert takomläggning')).toBeInTheDocument();
     const meta = within(list).getByText(/Anna Lind/);
-    expect(meta).toHaveTextContent('2026-02-10');
+    expect(meta).toHaveTextContent(datum('2026-02-10'));
     expect(meta).not.toHaveTextContent('Senast från');
     expect(meta).not.toHaveTextContent('meddelande');
     expect(meta).not.toHaveTextContent('bilag');
@@ -271,7 +272,7 @@ describe('the queue, before anything is decided', () => {
     expect(detail).toHaveTextContent('Offert takomläggning');
     expect(detail).not.toHaveTextContent('att ta ställning till');
     expect(detail).not.toHaveTextContent('Beslut eller godkännande');
-    expect(detail).not.toHaveTextContent('2026-02-03');
+    expect(detail).not.toHaveTextContent(datum('2026-02-03'));
     expect(detail).not.toHaveTextContent('bilag');
   });
 

@@ -21,6 +21,7 @@ import { formatAmount } from './money';
 import MappingPreview from './MappingPreview';
 import Instrument from './Instrument';
 import './Invoices.css';
+import { datum } from './datum';
 
 /**
  * Fakturor — the board's own invoice review, as an operational queue.
@@ -667,7 +668,7 @@ export default function Invoices({ brfId, isAdmin = false, onOpenDocument, onOpe
                           ? <span className="responsible" title={row.responsible}><User size={12} /> <span className="truncate">{row.responsible}</span></span>
                           : <span className="muted">ej utsedd</span>}
                       </td>
-                      <td className="muted numeric">{(row.last_activity_at || '').slice(0, 10)}</td>
+                      <td className="muted numeric">{datum(row.last_activity_at)}</td>
                     </tr>
                   ))}
                 </tbody>

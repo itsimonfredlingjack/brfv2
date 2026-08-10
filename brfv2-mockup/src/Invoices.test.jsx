@@ -5,6 +5,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, within } from '@testing-library/react';
 import Invoices from './components/Invoices';
 import { integrationsApi, invoicesApi } from './api';
+import { datum } from './components/datum';
 
 /**
  * The invoice workspace.
@@ -933,7 +934,7 @@ describe('the analysis audit trail', () => {
     expect(within(latest).getByText('Version 2')).toBeInTheDocument();
     expect(within(latest).getByText('gäller nu')).toBeInTheDocument();
     expect(within(latest).getByText(/Ersatte den föregående granskningen/)).toBeInTheDocument();
-    expect(within(latest).getAllByText(/2026-08-01/).length).toBeGreaterThan(0);
+    expect(within(latest).getAllByText(new RegExp(datum('2026-08-01'))).length).toBeGreaterThan(0);
     // And the first run is still there, as its own version.
     expect(within(panel).getByText('Version 1')).toBeInTheDocument();
   });

@@ -23,6 +23,7 @@ import { intakeApi, integrationsApi } from '../api';
 import useSlashFocus from '../useSlashFocus';
 import EmptyState from './EmptyState';
 import './IntakeQueue.css';
+import { datum, datumTid } from './datum';
 
 /**
  * The review queue for incoming post.
@@ -84,21 +85,7 @@ const SOURCE_LABEL = {
   attachment: 'en bilaga',
 };
 
-function formatDateTime(iso) {
-  if (!iso) return '—';
-  try {
-    return new Date(iso).toLocaleString('sv-SE', {
-      year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
-    });
-  } catch {
-    return iso;
-  }
-}
 
-function formatDate(iso) {
-  if (!iso) return '—';
-  return String(iso).slice(0, 10);
-}
 
 function Banner({ tone, children, onDismiss }) {
   if (!children) return null;
@@ -131,7 +118,7 @@ function FetchBar({ mailbox, connected, busy, onFetch, onImportFile, format, las
             <span>
               Ansluten brevlåda
               {mailbox?.hasFetched
-                ? ` · senast ${formatDateTime(mailbox.last_fetched_at)} · ${mailbox.last_new_count} nya`
+                ? ` · senast ${datumTid(mailbox.last_fetched_at)} · ${mailbox.last_new_count} nya`
                 : ' · aldrig hämtat'}
             </span>
           ) : (
@@ -238,7 +225,7 @@ function ThreadRow({ thread, selected, onSelect, rowRef }) {
       </span>
       <span className="thread-meta">
         {thread.latest_sender_display || thread.latest_sender}
-        {' · '}<span className="thread-date">{formatDate(thread.latest_at)}</span>
+        {' · '}<span className="thread-date">{datum(thread.latest_at)}</span>
       </span>
     </button>
   );
@@ -611,7 +598,7 @@ function ResolutionSummary({ event, busy, onReopen, onOpenDocument }) {
   if (!resolution) return null;
   return (
     <div className="resolution">
-      <h5><CheckCircle2 size={14} /> Beslutat {formatDateTime(resolution.decided_at)} av {resolution.decided_by}</h5>
+      <h5><CheckCircle2 size={14} /> Beslutat {datumTid(resolution.decided_at)} av {resolution.decided_by}</h5>
       <ul>
         {resolution.outcomes.map((outcome, i) => (
           <li key={`${outcome.kind}-${i}`}>
@@ -656,7 +643,7 @@ function Message({ event, showSubject = true, busy, onRetriage, onOpenDocument }
           </span>
           <span className="message-meta">
             <time dateTime={event.occurred_at || event.received_at}>
-              {formatDateTime(event.occurred_at || event.received_at)}
+              {datumTid(event.occurred_at || event.received_at)}
             </time>
             {event.attachments.length > 0 && ` · ${event.attachments.length} bilaga(or)`}
           </span>
@@ -691,7 +678,7 @@ function Message({ event, showSubject = true, busy, onRetriage, onOpenDocument }
       {event.preserved_document_id && (
         <p className="message-preserved">
           <Archive size={13} /> Texten är bevarad som dokument
-          {' '}({event.preserved_by}, {formatDateTime(event.preserved_at)})
+          {' '}({event.preserved_by}, {datumTid(event.preserved_at)})
           {event.preservation_note ? ` — ${event.preservation_note}` : ''}.
           <button
             type="button"
@@ -709,7 +696,7 @@ function Message({ event, showSubject = true, busy, onRetriage, onOpenDocument }
         <details className="message-provenance-toggle">
           <summary>Härkomst</summary>
           <dl className="message-provenance">
-            <div><dt>Mottaget av föreningen</dt><dd>{formatDateTime(event.received_at)}</dd></div>
+            <div><dt>Mottaget av föreningen</dt><dd>{datumTid(event.received_at)}</dd></div>
             <div><dt>Hur det kom hit</dt><dd>{event.provenance.method} / {event.provenance.adapter}</dd></div>
             <div><dt>Importerat av</dt><dd>{event.provenance.imported_by}</dd></div>
             <div><dt>Innehållshash</dt><dd><code>{event.content_sha256.slice(0, 24)}…</code></dd></div>

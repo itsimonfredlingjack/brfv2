@@ -16,6 +16,7 @@ import CreateTask from './CreateTask';
 import EmptyState from './EmptyState';
 import Instrument from './Instrument';
 import './Watches.css';
+import { datum, datumTid } from './datum';
 
 /**
  * The association's dated obligations, and the proposals that are not yet any.
@@ -69,17 +70,6 @@ function daysLeftText(days) {
   return `${late} ${late === 1 ? 'dag' : 'dagar'} försenat`;
 }
 
-function formatDateTime(iso) {
-  if (!iso) return '—';
-  try {
-    return new Date(iso).toLocaleString('sv-SE', {
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit',
-    });
-  } catch {
-    return iso;
-  }
-}
 
 function Banner({ tone, children, onDismiss }) {
   if (!children) return null;
@@ -772,7 +762,7 @@ export default function Watches({ brfId, isAdmin = false, onOpenCitation }) {
                     <span className="settled-title">{watch.title}</span>
                     <span className="settled-meta">
                       {watch.status_label} · {watch.decided_by || 'okänd'}
-                      {' · '}{formatDateTime(watch.decided_at)}
+                      {' · '}{datumTid(watch.decided_at)}
                       {watch.succeeded_by && ' · efterföljare skapad'}
                     </span>
                     {watch.decision_note && (

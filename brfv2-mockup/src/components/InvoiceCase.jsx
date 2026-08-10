@@ -28,6 +28,7 @@ import PdfPane from './PdfPane';
 // design and lives in one stylesheet. Findings look identical here and in
 // Inkommande because they *are* the same thing being shown.
 import './Integrations.css';
+import { datum, datumTid } from './datum';
 
 /**
  * One invoice as one case: the original, the analysis, and the work around it.
@@ -143,16 +144,6 @@ const EVENT_ICON = {
 // Checked here too so the form asks rather than sending a 422 to find out.
 const NOTE_REQUIRED = new Set(['needs_investigation', 'awaiting_documentation', 'question_sent']);
 
-function formatDateTime(iso) {
-  if (!iso) return '—';
-  try {
-    return new Date(iso).toLocaleString('sv-SE', {
-      year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit',
-    });
-  } catch {
-    return iso;
-  }
-}
 
 function Citation({ citation, onOpen }) {
   return (
@@ -494,7 +485,7 @@ function ReviewStatusForm({ caseData, labels, busy, canDecide, onSave }) {
         <strong>{caseData.review_status_label}</strong>
         {caseData.review_status_by && (
           <span className="muted">
-            {' '}— {caseData.review_status_by}, {formatDateTime(caseData.review_status_at)}
+            {' '}— {caseData.review_status_by}, {datumTid(caseData.review_status_at)}
           </span>
         )}
       </p>
@@ -583,7 +574,7 @@ function AnalysisRun({ run, current, busy, replaced, onOpen }) {
       <header className="run-head">
         <strong>Version {run.sequence}</strong>
         {current && <span className="run-badge">gäller nu</span>}
-        <span className="muted">{formatDateTime(run.ran_at)}</span>
+        <span className="muted">{datumTid(run.ran_at)}</span>
       </header>
 
       <p className="run-summary">{run.summary}</p>
@@ -599,7 +590,7 @@ function AnalysisRun({ run, current, busy, replaced, onOpen }) {
             {run.source.adapter} {run.source.external_ref}
             {' · innehållshash '}
             <code>{(run.source.content_sha256 || '').slice(0, 12)}…</code>
-            {' · läst '}{formatDateTime(run.source.retrieved_at)}
+            {' · läst '}{datumTid(run.source.retrieved_at)}
             {run.source_changed && <em> — fakturan hade lästs om sedan förra granskningen.</em>}
           </dd>
         </div>
@@ -692,7 +683,7 @@ function Timeline({ events }) {
                 <span className="event-summary">{event.summary}</span>
                 {event.note && <span className="event-note">{event.note}</span>}
                 <span className="event-meta">
-                  {event.kind_label} · {event.by} · {formatDateTime(event.at)}
+                  {event.kind_label} · {event.by} · {datumTid(event.at)}
                   {!event.human && <span className="event-engine-tag">maskinellt</span>}
                 </span>
               </span>
@@ -832,7 +823,7 @@ export default function InvoiceCase({
           <strong>{kase.source_status_label || 'Ingen status läst'}</strong>
           <p className="muted">
             {kase.source_status
-              ? `Läst ${formatDateTime(kase.source_status.retrieved_at)}. Den här produkten ändrar den aldrig.`
+              ? `Läst ${datumTid(kase.source_status.retrieved_at)}. Den här produkten ändrar den aldrig.`
               : 'Källan har ingen bokföringsstatus att läsa. Ingenting antas i dess ställe.'}
           </p>
         </div>
@@ -914,7 +905,7 @@ export default function InvoiceCase({
                     <span className="observation-meta">
                       {observation.adapter && `${observation.adapter} · `}
                       {observation.external_ref && `${observation.external_ref} · `}
-                      läst {formatDateTime(observation.retrieved_at)}
+                      läst {datumTid(observation.retrieved_at)}
                       {observation.content_sha256 && ` · ${observation.content_sha256.slice(0, 16)}…`}
                     </span>
                     {observation.document_id && (
@@ -928,7 +919,7 @@ export default function InvoiceCase({
             </ul>
             {invoice && (
               <p className="muted case-provenance">
-                Ögonblicksbilden lästes {formatDateTime(invoice.retrieved_at)} ur{' '}
+                Ögonblicksbilden lästes {datumTid(invoice.retrieved_at)} ur{' '}
                 <code>{invoice.source_dataset}</code>, referens <code>{invoice.external_ref}</code>,
                 hash <code>{invoice.content_sha256.slice(0, 24)}…</code>
               </p>
@@ -942,7 +933,7 @@ export default function InvoiceCase({
                 {sourceEvent.origin_display
                   ? `${sourceEvent.origin_display} <${sourceEvent.origin}>`
                   : sourceEvent.origin}
-                {' · '}{formatDateTime(sourceEvent.occurred_at || sourceEvent.received_at)}
+                {' · '}{datumTid(sourceEvent.occurred_at || sourceEvent.received_at)}
               </p>
               <p className="case-mail-subject"><strong>{sourceEvent.subject || '(utan ämne)'}</strong></p>
               {sourceEvent.body_text && <pre className="case-mail-body">{sourceEvent.body_text}</pre>}
@@ -1120,7 +1111,7 @@ export default function InvoiceCase({
               {kase.comments.map((entry) => (
                 <li key={entry.id}>
                   <p>{entry.note}</p>
-                  <span className="muted">{entry.by} · {formatDateTime(entry.at)}</span>
+                  <span className="muted">{entry.by} · {datumTid(entry.at)}</span>
                 </li>
               ))}
             </ul>
@@ -1239,7 +1230,7 @@ export default function InvoiceCase({
                         <strong>{alias.invoice_name}</strong> är samma som{' '}
                         <strong>{alias.document_name}</strong>
                       </span>
-                      <span className="muted">{alias.created_by} · {formatDateTime(alias.created_at)}</span>
+                      <span className="muted">{alias.created_by} · {datumTid(alias.created_at)}</span>
                       {isAdmin && (
                         <button
                           type="button"

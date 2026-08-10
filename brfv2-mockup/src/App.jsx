@@ -13,6 +13,7 @@ import { displayNameForModel, displayNameForProvider } from './modelDisplay';
 import { PRODUCT_WORKSPACES } from './appWorkspaces';
 import Instrument from './components/Instrument';
 import './App.css';
+import { datum } from './components/datum';
 
 // Refusal reasons where the LLM was never invoked (gated on retrieval, not
 // generation) — no model actually produced these responses, so provenance
@@ -251,7 +252,7 @@ function App() {
   const mapDocument = (d) => ({
     id: d.id,
     name: d.name,
-    date: d.uploaded_at.slice(0, 10),
+    date: datum(d.uploaded_at),
     pages: d.pages,
     status: 'Färdigbehandlad', // upload is synchronous server-side — every listed doc is done
   });

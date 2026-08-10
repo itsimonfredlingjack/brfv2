@@ -12,6 +12,7 @@ import CreateTask from './CreateTask';
 import EmptyState from './EmptyState';
 import Instrument from './Instrument';
 import './Tasks.css';
+import { datum, datumTid } from './datum';
 
 /**
  * Uppgifter: the work, who owns it, by when, and everything that happened to it.
@@ -63,17 +64,6 @@ function daysLeftText(days) {
   return `${late} ${late === 1 ? 'dag' : 'dagar'} försenat`;
 }
 
-function formatDateTime(iso) {
-  if (!iso) return '—';
-  try {
-    return new Date(iso).toLocaleString('sv-SE', {
-      year: 'numeric', month: '2-digit', day: '2-digit',
-      hour: '2-digit', minute: '2-digit',
-    });
-  } catch {
-    return iso;
-  }
-}
 
 // An undated task is not urgent, it is unscheduled — and the card says so
 // rather than leaving the field blank.
@@ -164,7 +154,7 @@ function EventList({ events, statusLabels }) {
     <ol className="task-events">
       {events.map((event) => (
         <li key={event.id} className={`task-event ${event.kind}`}>
-          <span className="task-event-when">{formatDateTime(event.at)}</span>
+          <span className="task-event-when">{datumTid(event.at)}</span>
           <span className="task-event-who">{event.by}</span>
           <span className="task-event-what">{describeEvent(event, statusLabels)}</span>
           {event.note && <span className="task-event-note">{event.note}</span>}
@@ -413,7 +403,7 @@ function TaskCard({ task, statusLabels, busy, canDecide, onSave, onComment, onOp
         )}
         <div>
           <dt>Skapad</dt>
-          <dd>{task.created_by} · {formatDateTime(task.created_at)}</dd>
+          <dd>{task.created_by} · {datumTid(task.created_at)}</dd>
         </div>
       </dl>
 
@@ -446,7 +436,7 @@ function ClosedTask({ task, statusLabels, onOpenCitation }) {
       <span className="task-closed-title">{task.title}</span>
       <span className="task-closed-meta">
         {task.status_label} · {closed ? closed.by : task.created_by}
-        {' · '}{formatDateTime(closed ? closed.at : task.created_at)}
+        {' · '}{datumTid(closed ? closed.at : task.created_at)}
         {' · '}{task.responsible || 'ej utsedd'}
       </span>
       {closed?.note && <span className="task-closed-note">Anledning: {closed.note}</span>}

@@ -7,6 +7,7 @@ import Tasks from './components/Tasks';
 import Watches from './components/Watches';
 import InvoiceCase from './components/InvoiceCase';
 import { integrationsApi, invoicesApi, tasksApi, watchesApi } from './api';
+import { datumTid } from './components/datum';
 
 // PdfPane pulls in pdfjs-dist, which needs browser canvas APIs jsdom lacks.
 vi.mock('./components/PdfPane', () => ({
@@ -81,11 +82,10 @@ const ORIGIN_LABELS = {
   manual: 'Skapad för hand',
 };
 
-/** The same sv-SE stamp the components render, so "when" is asserted, not guessed. */
-const when = (iso) => new Date(iso).toLocaleString('sv-SE', {
-  year: 'numeric', month: '2-digit', day: '2-digit',
-  hour: '2-digit', minute: '2-digit',
-});
+/** The same stamp the components render, so "when" is asserted, not guessed.
+    It defers to the formatter rather than restating it — restating it is how
+    this assertion silently stopped matching the product it was checking. */
+const when = (iso) => datumTid(iso);
 
 const event = (overrides) => ({
   id: 'e1',
