@@ -154,7 +154,7 @@
 .logo-name {
   font-family: var(--font-display);
   font-size: var(--text-subhead);
-  font-weight: 600;
+  font-weight: 400;
   letter-spacing: -0.015em;
   /* The diacritic belongs to the name and is never clipped by a tight line
      box (§05 Diakriten Ä). */
@@ -647,7 +647,7 @@
   gap: 0;
   font-family: var(--font-display);
   font-size: var(--text-title-lg);
-  font-weight: 600;
+  font-weight: 400;
   letter-spacing: -0.02em;
   line-height: 1.1;
   color: rgb(247 245 243 / 0.38);
@@ -728,7 +728,7 @@
   margin: 0;
   font-family: var(--font-display);
   font-size: var(--text-title);
-  font-weight: 600;
+  font-weight: 400;
   letter-spacing: -0.02em;
   line-height: 1.1;
 }
@@ -1289,7 +1289,7 @@ mark.search-highlight {
 
 .chat-empty-title {
   font-family: var(--font-display);
-  font-weight: 600;
+  font-weight: 400;
   font-size: var(--text-title-sm);
   letter-spacing: -0.015em;
   line-height: 1.25;
@@ -1298,7 +1298,7 @@ mark.search-highlight {
 
 .chat-empty-examples { display: flex; flex-direction: column; gap: var(--s2); width: 100%; max-width: 560px; }
 
-.chat-title { font-family: var(--font-display); font-weight: 600; font-size: var(--text-title); letter-spacing: -0.02em; }
+.chat-title { font-family: var(--font-display); font-weight: 400; font-size: var(--text-title); letter-spacing: -0.02em; }
 
 /* Questions offered, not buttons. These were bordered rectangles floating in
    the canvas — even squared off, a box around a sentence reads as a web

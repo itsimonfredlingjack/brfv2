@@ -39,7 +39,7 @@
 .login-brand-title {
   font-family: var(--font-display);
   font-size: var(--text-title-lg);   /* 44px — the name gets real scale exactly once */
-  font-weight: 600;
+  font-weight: 400;
   letter-spacing: -0.02em;
   line-height: 1.05;
   color: var(--papper);
@@ -82,7 +82,7 @@
 .login-title {
   font-family: var(--font-display);
   font-size: var(--text-xl);
-  font-weight: 600;
+  font-weight: 400;
   letter-spacing: -0.015em;
   line-height: 1.1;
   padding-top: 0.04em;

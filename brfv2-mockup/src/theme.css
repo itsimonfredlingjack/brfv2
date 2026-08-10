@@ -58,21 +58,28 @@
     U+2113, U+2C60-2C7F, U+A720-A7FF;
 }
 
-/* The display. Poppins sets page titles, section titles and the brand name —
-   the assertion role the serif once held, now in a geometric sans. */
+/* The assertion. Instrument Serif sets page titles, section titles, the brand
+   name and answers — everything the product itself claims. The serif held this
+   role, lost it to Poppins on 2026-08-08, and takes it back here: the identity
+   (docs/design/2026-08-10-identitet) makes the three type roles the way a
+   reader tells the product's words from the document's, so the serif is not a
+   flavour, it is the difference between a claim and an explanation.
+
+   It ships one weight. Ask it for 600 and the browser smears a synthetic bold
+   across a high-contrast face — design-lock.test.js fails if anyone does. */
 @font-face {
-  font-family: 'Poppins';
-  src: url('./assets/fonts/poppins-500.woff2') format('woff2');
-  font-weight: 500;
+  font-family: 'Instrument Serif';
+  src: url('./assets/fonts/instrument-serif-latin-400-normal.woff2') format('woff2');
+  font-weight: 400;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Poppins';
-  src: url('./assets/fonts/poppins-600.woff2') format('woff2');
-  font-weight: 600;
-  font-style: normal;
+  font-family: 'Instrument Serif';
+  src: url('./assets/fonts/instrument-serif-latin-400-italic.woff2') format('woff2');
+  font-weight: 400;
+  font-style: italic;
   font-display: swap;
 }
 
@@ -349,10 +356,10 @@
    * Contrast rule (measured, see docs/design/2026-08-08-unified-system):
    * text below 12px must use --ink-muted (6.2:1 on paper) or darker;
    * --ink-subtle (4.9:1) is for >=12px secondary text and decoration. */
-  --font-display: 'Poppins', 'Inter', system-ui, sans-serif;
-  --font-sans: 'Inter', system-ui, -apple-system, 'Segoe UI', Cantarell,
-    'Noto Sans', sans-serif;
-  --font-serif: var(--font-sans); /* deprecated — kept so stale references degrade to sans */
+  --font-display: 'Instrument Serif', Georgia, 'Times New Roman', serif;
+  --font-sans: 'Instrument Sans', system-ui, -apple-system, 'Segoe UI',
+    Cantarell, 'Noto Sans', sans-serif;
+  --font-serif: var(--font-display); /* the assertion voice, by its other name */
   --font-mono: 'JetBrains Mono', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 
   /* ---- three control heights, and only three -------------------------------
@@ -520,7 +527,7 @@ body {
 h1, h2 {
   margin: 0;
   font-family: var(--font-display);
-  font-weight: 600;
+  font-weight: 400;
   line-height: 1.12;
   letter-spacing: -0.015em;
 }
@@ -1060,7 +1067,7 @@ select,
   gap: var(--s2h);
   font-family: var(--font-display);
   font-size: var(--text-xl);
-  font-weight: 600;
+  font-weight: 400;
   letter-spacing: -0.01em;
   color: var(--foreground);
 }

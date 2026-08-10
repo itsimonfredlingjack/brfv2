@@ -172,3 +172,29 @@ describe('design lock: the instrument is one component', () => {
     expect(offenders).toEqual([]);
   });
 });
+
+// Beslut 6 (typrollerna): the identity (docs/design/2026-08-10-identitet) gives
+// the three faces three jobs — serif asserts, sans explains, mono measures — and
+// says the roles are never mixed, because that is how a reader tells the
+// product's words from the document's. Instrument Serif ships exactly one
+// weight. Asking it for 600 makes the browser smear a synthetic bold across a
+// high-contrast face, which is how the serif quietly stops looking like itself.
+describe('design lock: the assertion face keeps its one weight', () => {
+  it('no font-weight above 400 in a rule that sets --font-display', () => {
+    const offenders = [];
+    for (const file of walk(SRC)) {
+      if (!file.endsWith('.css')) continue;
+      const text = readFileSync(file, 'utf8');
+      // Each rule body, so a weight is only judged against its own selector.
+      for (const rule of text.matchAll(/\{([^{}]*)\}/g)) {
+        const body = rule[1];
+        if (!body.includes('var(--font-display)')) continue;
+        const weight = body.match(/font-weight:\s*(\d+)/);
+        if (weight && Number(weight[1]) > 400) {
+          offenders.push(`${relative(SRC, file)}: --font-display with font-weight ${weight[1]}`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+});

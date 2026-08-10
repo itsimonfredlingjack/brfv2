@@ -36,7 +36,7 @@
   margin: 0 0 var(--s1h);
   font-family: var(--font-display);
   font-size: var(--text-2xl);
-  font-weight: 600;
+  font-weight: 400;
   letter-spacing: -0.015em;
   line-height: 1.1;
   color: var(--foreground);
