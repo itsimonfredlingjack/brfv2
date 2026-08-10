@@ -414,14 +414,14 @@
 
 .thread-decisions .detail-section.decision {
   padding: var(--s4) var(--s6) var(--s5);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--kant);
 }
 
 .thread-decisions .detail-section.decision:last-child {
   border-bottom: none;
 }
 
-.detail-head { padding: var(--s4) var(--s6) var(--s3); border-bottom: 1px solid var(--border); }
+.detail-head { padding: var(--s4) var(--s6) var(--s3); border-bottom: 1px solid var(--kant); }
 
 .detail-head h3 {
   font-family: var(--font-display);
@@ -432,7 +432,7 @@
   text-wrap: balance;
 }
 
-.detail-section { padding: var(--s5) var(--s6); border-bottom: 1px solid var(--border); }
+.detail-section { padding: var(--s5) var(--s6); border-bottom: 1px solid var(--kant); }
 .detail-section:last-child { border-bottom: none; }
 .thread-evidence .detail-section:last-child { border-bottom: none; }
 

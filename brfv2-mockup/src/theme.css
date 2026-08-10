@@ -176,13 +176,23 @@
    *
    * The values are xs_mobilapp's dark mode verbatim, which is the identity's
    * §06 already implemented and measured, so the two halves cannot drift. */
-  --skal: #07080B;          /* the ground */
-  --skal-raised: #181B22;   /* plates that lift off it: the band, cards, fields.
+  /* The ground. Warm-neutral, not blue-black.
+   *
+   * #07080B leaned cold — more blue than red — which is the temperature every
+   * developer tool is set at, and it made the one white sheet on screen read as
+   * a lightbox in a cold room rather than paper on a desk. Paper here is
+   * #E8E5DE, and it is warm; a ground that leans the same way puts the two
+   * materials in the same world. This stops well short of brown: the light app
+   * was brown and it was dull, and the fix for dull was never more brown. It is
+   * three levels of red over blue at a value nobody will name — which is the
+   * point. Temperature is felt, not seen. */
+  --skal: #0A0908;          /* the ground */
+  --skal-raised: #1B1917;   /* plates that lift off it: the band, cards, fields.
                                Raised from #14161B when the outline came off:
                                a surface that has to be seen without a line
                                around it has to actually be separable. */
-  --skal-sunken: #0D0F13;   /* wells */
-  --skal-pressed: #23262D;  /* pressed, hovered, or genuinely inert */
+  --skal-sunken: #100E0D;   /* wells */
+  --skal-pressed: #262320;  /* pressed, hovered, or genuinely inert */
 
   /* Ljus — the shell's text. */
   --ljus: #ECEDEF;

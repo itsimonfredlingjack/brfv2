@@ -135,10 +135,10 @@
 
 /* The active list's own register cap — see Watches.css for the same idiom
    on .watch-bucket > h4. */
-.tasks-active > h3 {
-  padding-bottom: var(--s2);
-  border-bottom: 1px solid var(--border-strong);
-}
+/* The heading names the group; the space above it already says where the
+   group starts. The rule was saying it a second time, in the one idiom that
+   made this product read as a drawing. */
+.tasks-active > h3 { padding-bottom: var(--s1); }
 
 /* --- one task: the ownership rail, then the work, one hairline per row --- */
 

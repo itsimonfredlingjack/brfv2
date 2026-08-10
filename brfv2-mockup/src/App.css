@@ -89,7 +89,7 @@
   width: 244px;
   padding: 0;
   background: var(--sidebar);
-  border-right: 1px solid var(--border-strong);
+  border-right: 1px solid var(--kant);
   color: var(--sidebar-foreground);
   z-index: 40;
   transition: transform 0.24s ease;
@@ -99,7 +99,6 @@
    footer. A terminal panel has a single column of text, not four indents. */
 .sidebar-brand,
 .sidebar-section-label,
-.nav-item,
 .sidebar-footer > * {
   padding-inline: var(--s4);
 }
@@ -131,7 +130,7 @@
   height: 64px;
   padding-block: 0;
   margin: 0;
-  border-bottom: 1px solid var(--border-strong);
+  border-bottom: 1px solid var(--kant);
 }
 
 .sidebar-brand > :first-child { flex-shrink: 0; }
@@ -188,9 +187,8 @@
 .sidebar-section-label {
   display: flex;
   align-items: center;
-  height: 28px;
-  margin-top: var(--s3);
-  border-bottom: 1px solid var(--border);
+  height: 26px;
+  margin-top: var(--s5);
   color: var(--ink-muted);
   font-family: var(--etikett-family);
   font-size: var(--etikett-size);
@@ -208,10 +206,12 @@
   display: flex;
   align-items: center;
   gap: var(--s3);
-  width: 100%;
-  height: 32px;
+  width: auto;
+  height: 34px;
+  margin-inline: var(--s2);
+  padding-inline: var(--s2);
   border: none;
-  border-radius: 0;
+  border-radius: var(--r-sm);
   background: transparent;
   color: var(--ink-muted);
   font-size: var(--text-sm);
@@ -253,8 +253,8 @@
  */
 .sidebar-footer {
   margin-top: auto;
-  padding: 0 0 var(--s1);
-  border-top: 1px solid var(--border-strong);
+  padding: var(--s2) 0;
+  border-top: 1px solid var(--kant);
   position: relative;
 }
 
@@ -263,10 +263,9 @@
   align-items: center;
   gap: var(--s3);
   margin: 0;
-  padding-block: var(--s3);
+  padding-block: var(--s2h);
   border: none;
-  border-radius: 0;
-  border-bottom: 1px solid var(--border);
+  border-radius: var(--r-sm);
   background: transparent;
 }
 
@@ -280,7 +279,7 @@
   height: 26px;
   flex-shrink: 0;
   border: none;
-  border-radius: 0;
+  border-radius: var(--r-sm);
   background: var(--ljus);
   color: var(--skal);
   font-family: var(--font-mono);
@@ -2019,7 +2018,7 @@ mark.search-highlight {
   align-items: center;
   gap: var(--s3);
   padding: var(--s3) var(--s4);
-  border-bottom: 1px solid var(--border);
+  border-bottom: 1px solid var(--kant);
 }
 
 .demo-state-selector { display: flex; align-items: center; gap: var(--s2); }

@@ -17,8 +17,9 @@
    when you are about to look through it rather than read the top sheet. */
 .hogen-stack {
   position: relative;
+  --pitch: 5px;
   width: min(560px, 100%);
-  height: calc(var(--leaves) * 5px + 22px);
+  height: calc(var(--leaves) * var(--pitch) + 22px);
   perspective: 900px;
 }
 
@@ -29,7 +30,7 @@
   position: absolute;
   left: 0;
   right: 0;
-  bottom: calc(var(--i) * 5px);
+  bottom: calc(var(--i) * var(--pitch));
   height: 3px;
   transform: translateX(var(--skew));
   border-radius: 1px;
@@ -111,6 +112,13 @@
   .hogen-beam { display: none; }
   .hogen-leaf.lit,
   .hogen-caption { animation: none; }
+}
+
+/* On a short window the pile is the part that gives, not the page number under
+   it: §04's rule is that the number is always shown. One knob, so the leaves
+   cannot drift out of step with the height they are stacked in. */
+@media (max-height: 900px) {
+  .hogen-stack { --pitch: 4px; }
 }
 
 @media (max-width: 768px) {
