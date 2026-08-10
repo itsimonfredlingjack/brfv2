@@ -56,6 +56,64 @@ describe('design lock: four breakpoints', () => {
 // Beslut 3 (tangentbordsflödet): one focus ring — 2px solid var(--ring), 2px
 // offset. The 3px glow was swept away in the keyboard-flow commit; the token
 // is deleted, so the string itself failing to appear is the lock.
+// Beslut 4 (avståndsskalan): spacing that lands on the scale must go through
+// the scale. Before this lock, 93% of all padding/margin/gap in the product was
+// loose literals — the app's rhythm lived in ~1200 scattered numbers instead of
+// nine tokens, which is the concrete reason its layout could not be redesigned.
+// Values *off* the scale are deliberately still allowed: converting those moves
+// pixels, so each one is a design decision rather than a mechanical rewrite.
+// This lock only stops the mechanical case from coming back.
+const SPACING_PROP = String.raw`(?:padding|margin)(?:-(?:top|right|bottom|left|block|inline)(?:-(?:start|end))?)?|gap|row-gap|column-gap`;
+const SPACING_DECL = new RegExp(String.raw`(?:^|[;{\s])(${SPACING_PROP})\s*:\s*([^;}]+)`, 'gim');
+const LENGTH = /(?<![\w.-])(\d*\.?\d+)(rem|px)(?![\w-])/g;
+// The spacing ramp, in rem — including the half-steps added 2026-08-10.
+const ON_SCALE = new Map([
+  [0.125, '--s0h'], [0.25, '--s1'], [0.375, '--s1h'], [0.5, '--s2'],
+  [0.625, '--s2h'], [0.75, '--s3'], [0.875, '--s3h'], [1, '--s4'],
+  [1.25, '--s5'], [1.5, '--s6'], [2, '--s8'], [2.5, '--s10'], [3.5, '--s14'],
+]);
+
+// The type ramp, in rem.
+const TYPE_SCALE = new Map([
+  [0.6875, '--text-2xs'], [0.75, '--text-xs'], [0.8125, '--text-dense'],
+  [0.875, '--text-sm'], [0.9375, '--text-base'], [1.0625, '--text-lg'],
+  [1.5, '--text-xl'], [1.875, '--text-2xl'],
+]);
+
+function literalsOnScale(declRe, scale, label) {
+  const offenders = [];
+  for (const file of walk(SRC)) {
+    if (!file.endsWith('.css')) continue;
+    const text = readFileSync(file, 'utf8');
+    for (const decl of text.matchAll(declRe)) {
+      const prop = decl[1] ?? label;
+      const value = decl[decl.length - 1];
+      if (value.toLowerCase().includes('calc(')) continue;
+      for (const len of value.matchAll(LENGTH)) {
+        const rem = len[2].toLowerCase() === 'px' ? Number(len[1]) / 16 : Number(len[1]);
+        const token = scale.get(Number(rem.toFixed(6)));
+        if (token) {
+          offenders.push(`${relative(SRC, file)}: ${prop}: …${len[0]}… — use var(${token})`);
+        }
+      }
+    }
+  }
+  return offenders;
+}
+
+describe('design lock: spacing goes through the scale', () => {
+  it('no literal on-scale padding/margin/gap under src/', () => {
+    expect(literalsOnScale(SPACING_DECL, ON_SCALE, 'spacing')).toEqual([]);
+  });
+});
+
+describe('design lock: type goes through the scale', () => {
+  it('no literal on-scale font-size under src/', () => {
+    const FONT_DECL = /(?:^|[;{\s])(font-size)\s*:\s*([^;}]+)/gim;
+    expect(literalsOnScale(FONT_DECL, TYPE_SCALE, 'font-size')).toEqual([]);
+  });
+});
+
 describe('design lock: one focus ring', () => {
   it('no 3px glow ring or ring-glow token under src/', () => {
     const offenders = [];

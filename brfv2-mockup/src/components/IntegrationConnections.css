@@ -10,11 +10,11 @@
 .ic-banner {
   display: flex;
   align-items: flex-start;
-  gap: 9px;
-  padding: 11px 14px;
+  gap: var(--s2h);
+  padding: var(--s3) var(--s3h);
   border-radius: var(--r-sm);
-  margin-bottom: 14px;
-  font-size: 14px;
+  margin-bottom: var(--s3h);
+  font-size: var(--text-sm);
   line-height: 1.5;
   color: var(--text-primary);
 }
@@ -34,8 +34,8 @@
 .ic-provider {
   border: 1px solid var(--panel-border);
   border-radius: var(--r-sm);
-  padding: 18px 20px;
-  margin-bottom: 16px;
+  padding: var(--s5) var(--s5);
+  margin-bottom: var(--s4);
   background: var(--panel-bg, var(--surface-2));
 }
 
@@ -43,24 +43,24 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 14px;
+  gap: var(--s3h);
   flex-wrap: wrap;
 }
 
 .ic-head h4 {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--s2);
   margin: 0;
-  font-size: 16px;
+  font-size: var(--text-lg);
   font-weight: 600;
   color: var(--text-primary);
 }
 
 .ic-status {
-  font-size: 12px;
+  font-size: var(--text-xs);
   font-weight: 600;
-  padding: 3px 10px;
+  padding: var(--s1) var(--s2h);
   border-radius: var(--r-sm);
   border: 1px solid var(--panel-border);
   color: var(--text-secondary);
@@ -88,15 +88,15 @@
 }
 
 .ic-step {
-  margin-top: 16px;
-  padding-top: 14px;
+  margin-top: var(--s4);
+  padding-top: var(--s3h);
   border-top: 1px solid var(--panel-border);
 }
 
 .ic-step > h5,
 .ic-limits h5 {
-  margin: 0 0 10px;
-  font-size: 12px;
+  margin: 0 0 var(--s2h);
+  font-size: var(--text-xs);
   font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -104,8 +104,8 @@
 }
 
 .ic-hint {
-  margin: 0 0 10px;
-  font-size: 13px;
+  margin: 0 0 var(--s2h);
+  font-size: var(--text-dense);
   line-height: 1.6;
   color: var(--text-secondary);
 }
@@ -113,13 +113,13 @@
 .ic-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  gap: 14px;
+  gap: var(--s3h);
 }
 
 .ic-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--s1h);
 }
 
 .ic-field.ic-span {
@@ -127,7 +127,7 @@
 }
 
 .ic-field > span {
-  font-size: 13px;
+  font-size: var(--text-dense);
   font-weight: 600;
   color: var(--text-primary);
 }
@@ -140,14 +140,14 @@
   border: 1px solid var(--panel-border);
   background-color: var(--surface-2);
   color: var(--text-primary);
-  font-size: 13px;
+  font-size: var(--text-dense);
   font-family: inherit;
 }
 
 .ic-field small,
 .ic-check small {
   display: block;
-  font-size: 12px;
+  font-size: var(--text-xs);
   line-height: 1.55;
   color: var(--text-secondary);
 }
@@ -155,15 +155,15 @@
 .ic-field small code,
 .ic-check small code {
   font-size: var(--text-xs);
-  padding: 0 3px;
+  padding: 0 var(--s1);
 }
 
 .ic-check {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
-  margin-top: 14px;
-  padding: 12px 14px;
+  gap: var(--s2h);
+  margin-top: var(--s3h);
+  padding: var(--s3) var(--s3h);
   border-radius: var(--r-sm);
   border: 1px solid var(--warn-border);
   background: var(--warn-soft);
@@ -171,27 +171,27 @@
 
 .ic-check strong {
   display: block;
-  font-size: 13px;
-  margin-bottom: 4px;
+  font-size: var(--text-dense);
+  margin-bottom: var(--s1);
   color: var(--text-primary);
 }
 
 .ic-actions {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--s2h);
   flex-wrap: wrap;
-  margin-top: 14px;
+  margin-top: var(--s3h);
 }
 
 .ic-primary,
 .ic-secondary {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
-  padding: 9px 14px;
+  gap: var(--s2);
+  padding: var(--s2h) var(--s3h);
   border-radius: var(--r-sm);
-  font-size: 13px;
+  font-size: var(--text-dense);
   font-weight: 600;
   cursor: pointer;
 }
@@ -230,16 +230,16 @@
 }
 
 .ic-device {
-  margin-top: 12px;
-  padding: 14px 16px;
+  margin-top: var(--s3);
+  padding: var(--s3h) var(--s4);
   border-radius: var(--r-sm);
   border: 1px solid var(--border-strong);
   background: var(--surface-1);
 }
 
 .ic-device p {
-  margin: 0 0 10px;
-  font-size: 14px;
+  margin: 0 0 var(--s2h);
+  font-size: var(--text-sm);
   line-height: 1.6;
   color: var(--text-primary);
 }
@@ -254,12 +254,12 @@
 .ic-usercode {
   display: flex;
   align-items: center;
-  gap: 14px;
+  gap: var(--s3h);
   flex-wrap: wrap;
 }
 
 .ic-usercode code {
-  font-size: 30px;
+  font-size: var(--text-2xl);
   font-weight: 700;
   letter-spacing: 0.14em;
   user-select: all;
@@ -269,54 +269,54 @@
 .ic-usercode button {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 11px;
+  gap: var(--s1h);
+  padding: var(--s1h) var(--s3);
   border-radius: var(--r-sm);
   border: 1px solid var(--panel-border);
   background: transparent;
   color: var(--text-secondary);
-  font-size: 13px;
+  font-size: var(--text-dense);
   cursor: pointer;
 }
 
 .ic-facts {
   display: grid;
-  gap: 6px;
-  margin: 0 0 12px;
+  gap: var(--s1h);
+  margin: 0 0 var(--s3);
 }
 
 .ic-facts > div {
   display: grid;
   grid-template-columns: minmax(150px, 30%) 1fr;
-  gap: 12px;
+  gap: var(--s3);
 }
 
 .ic-facts dt {
-  font-size: 13px;
+  font-size: var(--text-dense);
   color: var(--text-secondary);
 }
 
 .ic-facts dd {
   margin: 0;
-  font-size: 13px;
+  font-size: var(--text-dense);
   color: var(--text-primary);
   overflow-wrap: anywhere;
 }
 
 .ic-facts dd code {
-  font-size: 12px;
-  margin-right: 8px;
+  font-size: var(--text-xs);
+  margin-right: var(--s2);
 }
 
 .ic-lasterror {
-  margin: 0 0 12px;
+  margin: 0 0 var(--s3);
   font-size: var(--text-sm);
   color: var(--avbrott);
 }
 
 .ic-confirm {
-  margin-top: 12px;
-  padding: 14px 16px;
+  margin-top: var(--s3);
+  padding: var(--s3h) var(--s4);
   border-radius: var(--r-sm);
   border: 1px solid var(--avbrott-border);
   background: var(--avbrott-soft);
@@ -324,7 +324,7 @@
 
 .ic-confirm p {
   margin: 0;
-  font-size: 14px;
+  font-size: var(--text-sm);
   line-height: 1.6;
   color: var(--text-primary);
 }
@@ -332,9 +332,9 @@
 .ic-limits {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 18px;
-  margin-top: 16px;
-  padding-top: 14px;
+  gap: var(--s5);
+  margin-top: var(--s4);
+  padding-top: var(--s3h);
   border-top: 1px solid var(--panel-border);
 }
 
@@ -343,17 +343,17 @@
   margin: 0;
   padding: 0;
   display: grid;
-  gap: 5px;
+  gap: var(--s1h);
 }
 
 .ic-limits code {
-  font-size: 12px;
+  font-size: var(--text-xs);
   color: var(--text-primary);
 }
 
 @media (max-width: 768px) {
   .ic-facts > div {
     grid-template-columns: 1fr;
-    gap: 2px;
+    gap: var(--s0h);
   }
 }

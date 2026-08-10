@@ -17,7 +17,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: var(--s6);
   overflow-y: auto;
   background: var(--background);
 }
@@ -25,7 +25,7 @@
 .setup-panel {
   width: 100%;
   max-width: 540px;
-  padding: 40px 40px 32px;
+  padding: var(--s10) var(--s10) var(--s8);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -38,14 +38,14 @@
 .setup-lockup {
   display: flex;
   align-items: center;
-  gap: 14px;
-  margin-bottom: 22px;
+  gap: var(--s3h);
+  margin-bottom: var(--s6);
   color: var(--foreground);
 }
 
 .setup-lockup-name {
   font-family: var(--font-display);
-  font-size: 2.25rem;   /* 36px */
+  font-size: var(--text-title);   /* 36px */
   font-weight: 600;
   letter-spacing: -0.015em;
   /* The diacritic belongs to the name and is never clipped (§05). */
@@ -60,7 +60,7 @@
   font-weight: 600;
   letter-spacing: -0.015em;
   line-height: 1.15;
-  margin-bottom: 8px;
+  margin-bottom: var(--s2);
   color: var(--foreground);
 }
 
@@ -69,19 +69,19 @@
   font-size: var(--text-md);
   line-height: 1.6;
   color: var(--muted-foreground);
-  margin-bottom: 26px;
+  margin-bottom: var(--s6);
 }
 
 .setup-form {
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: var(--s3h);
 }
 
 .setup-row {
   display: flex;
-  gap: 14px;
+  gap: var(--s3h);
 }
 
 .setup-row .setup-field {
@@ -92,7 +92,7 @@
 .setup-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--s1h);
   text-align: left;
 }
 
@@ -106,7 +106,7 @@
 
 .setup-field input {
   width: 100%;
-  padding: 9px 14px;
+  padding: var(--s2h) var(--s3h);
   background: var(--field);
   border: 1px solid var(--input);
   border-radius: var(--radius-block);
@@ -135,7 +135,7 @@
 
 .setup-field small code {
   font-family: var(--font-mono);
-  font-size: 0.8125rem;
+  font-size: var(--text-dense);
 }
 
 /* A rule that has not been met yet: no support for what was typed. */
@@ -148,8 +148,8 @@
 .setup-probe {
   display: flex;
   align-items: flex-start;
-  gap: 9px;
-  padding: 10px 14px;
+  gap: var(--s2h);
+  padding: var(--s2h) var(--s3h);
   border-radius: var(--radius-xl);
   font-size: var(--text-base);
   line-height: 1.5;
@@ -157,7 +157,7 @@
 }
 
 .setup-error > svg,
-.setup-probe > svg { flex-shrink: 0; margin-top: 2px; }
+.setup-probe > svg { flex-shrink: 0; margin-top: var(--s0h); }
 
 /* The model host could not be reached, or provisioning failed: Avbrott, the one
    thing red means in this product. */
@@ -178,8 +178,8 @@
 
 .setup-actions {
   display: flex;
-  gap: 10px;
-  margin-top: 2px;
+  gap: var(--s2h);
+  margin-top: var(--s0h);
 }
 
 .setup-submit,
@@ -187,9 +187,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--s2);
   height: 40px;
-  padding: 0 18px;
+  padding: 0 var(--s5);
   border-radius: var(--radius-2xl);
   font-size: var(--text-md);
   font-family: inherit;
@@ -203,7 +203,7 @@
   background: var(--primary);
   color: var(--primary-foreground);
   border: 1px solid transparent;
-  margin-top: 4px;
+  margin-top: var(--s1);
 }
 
 /* The button does not grow under the pointer. A control that changes size is a
@@ -230,9 +230,9 @@
   background: var(--field);
   color: var(--muted-foreground);
   border: 1px solid var(--input);
-  margin-top: 4px;
+  margin-top: var(--s1);
   flex: 0 0 auto;
-  padding-inline: 22px;
+  padding-inline: var(--s6);
 }
 
 .setup-secondary:hover:not(:disabled) {
@@ -249,20 +249,20 @@
   line-height: 1.6;
   color: var(--muted-foreground);
   text-align: left;
-  margin: 2px 0 0;
+  margin: var(--s0h) 0 0;
 }
 
 /* Where the association's own material will live. A path is measured, so it is
    set in the mono (§07). */
 .setup-storage {
-  margin-top: 24px;
-  padding-top: 16px;
+  margin-top: var(--s6);
+  padding-top: var(--s4);
   border-top: 1px solid var(--border);
   width: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--s2);
   font-size: var(--text-sm);
   color: var(--muted-foreground);
   max-width: 100%;
@@ -278,7 +278,7 @@
 }
 
 @media (max-width: 560px) {
-  .setup-panel { padding: 28px 20px 24px; }
+  .setup-panel { padding: var(--s7) var(--s5) var(--s6); }
   .setup-row { flex-direction: column; }
-  .setup-lockup-name { font-size: 1.75rem; }
+  .setup-lockup-name { font-size: var(--text-title-sm); }
 }

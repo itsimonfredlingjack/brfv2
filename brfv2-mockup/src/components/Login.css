@@ -16,7 +16,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 48px;
+  padding: var(--s12);
 }
 
 .login-brand-inner { max-width: 340px; }
@@ -24,26 +24,26 @@
 .login-brand .traff-mark--brand {
   border-color: var(--papper);
   color: var(--papper);
-  margin-bottom: 22px;
+  margin-bottom: var(--s6);
 }
 
 .login-brand-qualifier {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--text-2xs);
   letter-spacing: 0.08em;
   text-transform: uppercase;
   color: rgb(247 245 243 / 0.5);
-  margin-bottom: 28px;
+  margin-bottom: var(--s7);
 }
 
 .login-brand-title {
   font-family: var(--font-display);
-  font-size: 2.75rem;   /* 44px — the name gets real scale exactly once */
+  font-size: var(--text-title-lg);   /* 44px — the name gets real scale exactly once */
   font-weight: 600;
   letter-spacing: -0.02em;
   line-height: 1.05;
   color: var(--papper);
-  margin: 0 0 18px;
+  margin: 0 0 var(--s5);
 }
 
 .login-brand-tagline {
@@ -57,14 +57,14 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: var(--s6);
   background: var(--papper);
 }
 
 .login-panel {
   width: 100%;
   max-width: 380px;
-  padding: 40px 36px 36px;
+  padding: var(--s10) var(--s9) var(--s9);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -74,14 +74,14 @@
 .login-lockup-compact {
   display: none;
   align-items: center;
-  gap: 12px;
-  margin-bottom: 26px;
+  gap: var(--s3);
+  margin-bottom: var(--s6);
   color: var(--foreground);
 }
 
 .login-title {
   font-family: var(--font-display);
-  font-size: 1.5rem;
+  font-size: var(--text-xl);
   font-weight: 600;
   letter-spacing: -0.015em;
   line-height: 1.1;
@@ -99,13 +99,13 @@
   width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: var(--s4);
 }
 
 .login-field {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--s1h);
   text-align: left;
 }
 
@@ -117,7 +117,7 @@
 
 .login-field input {
   height: 40px;
-  padding: 0 14px;
+  padding: 0 var(--s3h);
   border: 1px solid var(--input);
   border-radius: var(--radius-2xl);
   background: var(--field);
@@ -140,8 +140,8 @@
 .login-error {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 14px;
+  gap: var(--s2);
+  padding: var(--s2h) var(--s3h);
   border: 1px solid var(--avbrott-border);
   border-radius: var(--radius-2xl);
   background: var(--avbrott-soft);
@@ -154,9 +154,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--s2);
   height: 40px;
-  margin-top: 4px;
+  margin-top: var(--s1);
   border: none;
   border-radius: var(--radius-2xl);
   background: var(--primary);
@@ -182,8 +182,8 @@
 }
 
 .login-demo-hint {
-  margin-top: 22px;
-  padding: 8px 14px;
+  margin-top: var(--s6);
+  padding: var(--s2) var(--s3h);
   border: 1px dashed var(--border-strong);
   border-radius: var(--radius-2xl);
   color: var(--subtle-foreground);

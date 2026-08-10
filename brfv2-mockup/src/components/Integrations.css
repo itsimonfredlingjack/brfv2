@@ -29,7 +29,7 @@
   flex-direction: column;
   min-width: 0;
   min-height: 0;
-  padding-bottom: 8px;
+  padding-bottom: var(--s2);
 }
 
 /* The queue pane fills the window (see App.css `.tab-content:has(.intake)`);
@@ -56,19 +56,19 @@
    Inkommande's own name reads with the same weight every other workspace's
    masthead carries — it is a masthead that happens to also be a switch, not a
    smaller thing standing in for one. */
-.integrations-tabs { display: inline-flex; align-items: baseline; gap: 26px; }
+.integrations-tabs { display: inline-flex; align-items: baseline; gap: var(--s6); }
 
 .integrations-tabs button {
   display: inline-flex;
   align-items: baseline;
-  gap: 9px;
-  padding: 0 1px 7px;
+  gap: var(--s2h);
+  padding: 0 var(--s0h) var(--s2);
   border: none;
   border-bottom: 2px solid transparent;
   background: transparent;
   color: var(--ink-subtle);
   font-family: var(--font-display);
-  font-size: 2.125rem;
+  font-size: var(--text-title);
   font-weight: 600;
   letter-spacing: -0.02em;
   line-height: 1.1;
@@ -86,7 +86,7 @@
 }
 
 .integrations-tabs .tab-count {
-  margin-left: 8px;
+  margin-left: var(--s2);
   color: var(--ink-muted);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
@@ -101,9 +101,9 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-  padding: 10px 14px;
+  gap: var(--s3);
+  margin-bottom: var(--s3);
+  padding: var(--s2h) var(--s3h);
   border: 1px solid var(--border);
   border-radius: var(--radius-2xl);
   font-size: var(--text-base);
@@ -116,7 +116,7 @@
 .banner-dismiss {
   display: flex;
   flex-shrink: 0;
-  padding: 2px;
+  padding: var(--s0h);
   border: none;
   background: transparent;
   color: inherit;
@@ -126,22 +126,22 @@
 .integrations-loading {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 18px 4px;
+  gap: var(--s2h);
+  padding: var(--s5) var(--s1);
   color: var(--muted-foreground);
   font-size: var(--text-base);
 }
 
 .pane-intro {
-  margin-bottom: 16px;
-  padding: 14px 16px;
+  margin-bottom: var(--s4);
+  padding: var(--s3h) var(--s4);
   border: 1px solid var(--border);
   border-radius: var(--radius-3xl);
   background: var(--card);
 }
 
 .pane-intro p {
-  margin-bottom: 8px;
+  margin-bottom: var(--s2);
   max-width: 78ch;
   color: var(--muted-foreground);
   font-size: var(--text-base);
@@ -159,8 +159,8 @@
 /* ========================================================================= */
 
 .finding {
-  margin-bottom: 12px;
-  padding: 15px 17px;
+  margin-bottom: var(--s3);
+  padding: var(--s4) var(--s4);
   border: 1px solid var(--border);
   border-radius: var(--radius-3xl);
   background: var(--background);
@@ -181,8 +181,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 4px;
+  gap: var(--s3);
+  margin-bottom: var(--s1);
 }
 
 /* Sentence case. An uppercase verdict shouts a conclusion the product is
@@ -192,7 +192,7 @@
 .verdict {
   display: inline-flex;
   align-items: center;
-  gap: 9px;
+  gap: var(--s2h);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   font-weight: 600;
@@ -206,7 +206,7 @@
 
 .finding-status {
   flex-shrink: 0;
-  padding: 1px 8px;
+  padding: var(--s0h) var(--s2);
   border: 1px solid var(--border-strong);
   border-radius: var(--r-sm);
   color: var(--muted-foreground);
@@ -221,14 +221,14 @@
 .finding-facts {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-  gap: 8px 20px;
+  gap: var(--s2) var(--s5);
 }
 
 .finding h5 {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin: 14px 0 7px;
+  gap: var(--s1h);
+  margin: var(--s3h) 0 var(--s2);
   font-size: var(--text-base);
   font-weight: 500;
   color: var(--muted-foreground);
@@ -242,8 +242,8 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 14px;
-  padding: 4px 0;
+  gap: var(--s3h);
+  padding: var(--s1) 0;
   border-bottom: 1px solid var(--border);
 }
 
@@ -262,15 +262,15 @@
 
 .finding-facts code { font-family: var(--font-mono); font-size: 0.94em; }
 
-.finding-citations { display: flex; flex-direction: column; gap: 7px; }
+.finding-citations { display: flex; flex-direction: column; gap: var(--s2); }
 
 /* A citation is a control that opens the page it quotes. It looks like the
    evidence it is: the quote set as text, the source as its label. */
 .finding-citation {
   display: grid;
-  gap: 5px;
+  gap: var(--s1h);
   width: 100%;
-  padding: 10px 13px;
+  padding: var(--s2h) var(--s3h);
   border: 1px solid var(--border);
   border-radius: var(--radius-block);
   background: var(--card);
@@ -291,7 +291,7 @@
 .citation-source {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--s1h);
   color: var(--muted-foreground);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
@@ -311,7 +311,7 @@
   display: block;
   font-family: var(--font-sans);
   font-style: italic;
-  font-size: 1.0625rem;
+  font-size: var(--text-lg);
   line-height: 1.42;
   letter-spacing: 0;
   color: var(--foreground);
@@ -320,8 +320,8 @@
 /* The proposal. Prose, under a heading that names who wrote it — separated
    from the verified facts by a rule rather than by a tint. */
 .finding-suggestion {
-  margin-top: 14px;
-  padding-top: 12px;
+  margin-top: var(--s3h);
+  padding-top: var(--s3);
   border-top: 1px solid var(--border);
 }
 
@@ -342,14 +342,14 @@
 /* Uncertainty. The one warm block on the card, because it is the one thing a
  * hurried reader must not slide past. */
 .finding-uncertainty {
-  margin-top: 11px;
-  padding: 11px 13px;
+  margin-top: var(--s3);
+  padding: var(--s3) var(--s3h);
   border: 1px solid var(--warn-border);
   border-radius: var(--radius-2xl);
   background: var(--warn-soft);
 }
 
-.finding-decision-note { margin-top: 11px; font-size: var(--text-base); color: var(--muted-foreground); }
+.finding-decision-note { margin-top: var(--s3); font-size: var(--text-base); color: var(--muted-foreground); }
 
 /* ---- the anchor: which supplier the comparison is even about ---- */
 
@@ -357,8 +357,8 @@
  * the one thing that turns a verified number into a possibly irrelevant one,
  * so it is the coloured one; a sound anchor is simply stated. */
 .finding-anchor {
-  margin: 10px 0 4px;
-  padding: 9px 12px;
+  margin: var(--s2h) 0 var(--s1);
+  padding: var(--s2h) var(--s3);
   border: 1px solid var(--border);
   border-radius: var(--radius-2xl);
 }
@@ -366,8 +366,8 @@
 .finding-anchor h5 {
   display: flex;
   align-items: center;
-  gap: 7px;
-  margin: 0 0 5px;
+  gap: var(--s2);
+  margin: 0 0 var(--s1h);
 }
 
 .finding-anchor p { margin: 0; max-width: 82ch; font-size: var(--text-base); line-height: 1.6; color: var(--foreground); }
@@ -376,27 +376,27 @@
 .finding-anchor.weak { background: var(--warn-soft); border-color: var(--warn-border); }
 
 .anchor-basis { font-weight: 400; color: var(--subtle-foreground); }
-.anchor-warning { margin-top: 6px !important; font-weight: 500; color: var(--warn) !important; }
+.anchor-warning { margin-top: var(--s1h) !important; font-weight: 500; color: var(--warn) !important; }
 
 /* ---- the alias a weak anchor would like confirmed ---- */
 
 .alias-proposal {
-  margin-top: 12px;
-  padding: 12px 14px;
+  margin-top: var(--s3);
+  padding: var(--s3) var(--s3h);
   border: 1px dashed var(--border-strong);
   border-radius: var(--radius-2xl);
 }
 
-.alias-proposal h5 { margin: 0 0 7px; }
-.alias-proposal p { margin: 0 0 8px; max-width: 82ch; font-size: var(--text-base); line-height: 1.6; color: var(--foreground); }
+.alias-proposal h5 { margin: 0 0 var(--s2); }
+.alias-proposal p { margin: 0 0 var(--s2); max-width: 82ch; font-size: var(--text-base); line-height: 1.6; color: var(--foreground); }
 .alias-proposal.confirmed { border-style: solid; border-color: var(--border-strong); background: var(--card); }
 
-.alias-actions { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; margin-bottom: 8px; }
+.alias-actions { display: flex; align-items: center; gap: var(--s2h); flex-wrap: wrap; margin-bottom: var(--s2); }
 
 .alias-actions input {
   flex: 1 1 220px;
   height: 32px;
-  padding: 0 11px;
+  padding: 0 var(--s3);
   border: 1px solid var(--input);
   border-radius: var(--radius-2xl);
   background: var(--field);
@@ -412,9 +412,9 @@
 .alias-rerun {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: var(--s2);
   height: 32px;
-  padding: 0 14px;
+  padding: 0 var(--s3h);
   border: 1px solid var(--input);
   border-radius: var(--radius-2xl);
   background: var(--surface-2);
@@ -435,10 +435,10 @@
 .decision-bar {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--s2h);
   flex-wrap: wrap;
-  margin-top: 14px;
-  padding-top: 13px;
+  margin-top: var(--s3h);
+  padding-top: var(--s3h);
   border-top: 1px solid var(--border);
 }
 
@@ -446,7 +446,7 @@
   flex: 1 1 240px;
   min-width: 180px;
   height: 32px;
-  padding: 0 11px;
+  padding: 0 var(--s3);
   border: 1px solid var(--input);
   border-radius: var(--radius-2xl);
   background: var(--field);
@@ -459,7 +459,7 @@
   outline-offset: 2px; }
 .decision-note::placeholder { color: var(--subtle-foreground); }
 
-.decision-buttons { display: flex; gap: 7px; flex-wrap: wrap; }
+.decision-buttons { display: flex; gap: var(--s2); flex-wrap: wrap; }
 
 /* Three equal decisions, so three equal controls. Making one of them the loud
    one would be the screen recommending an answer it has no business
@@ -469,7 +469,7 @@
    32px inside the B2 detail pane. */
 button.decision {
   height: 32px;
-  padding: 0 13px;
+  padding: 0 var(--s3h);
   border: 1px solid var(--input);
   border-radius: var(--radius-2xl);
   background: var(--field);
@@ -485,15 +485,15 @@ button.decision:hover:not(:disabled) { background: var(--surface-3); }
 button.decision:disabled { opacity: 0.5; cursor: not-allowed; }
 button.decision.reopen { border-style: dashed; }
 
-.decision-bar .muted { flex-basis: 100%; margin-top: 2px; font-size: var(--text-sm); }
+.decision-bar .muted { flex-basis: 100%; margin-top: var(--s0h); font-size: var(--text-sm); }
 
 /* ---- badges shared with the queue ---- */
 
 .badge {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 1px 8px;
+  gap: var(--s1h);
+  padding: var(--s0h) var(--s2);
   border: 1px solid var(--border-strong);
   border-radius: var(--r-sm);
   color: var(--muted-foreground);
@@ -508,12 +508,12 @@ button.decision.reopen { border-style: dashed; }
 
 /* ---- invoice source picker (Fakturor's read-in panel) ---- */
 
-.source-picker { display: flex; gap: 16px; flex-wrap: wrap; margin-top: 6px; }
+.source-picker { display: flex; gap: var(--s4); flex-wrap: wrap; margin-top: var(--s1h); }
 
 .source-picker label {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--s2);
   font-size: var(--text-base);
   color: var(--foreground);
   cursor: pointer;
@@ -535,5 +535,5 @@ button.decision.reopen { border-style: dashed; }
 }
 
 @media (max-width: 768px) {
-  .finding-facts dl > div { grid-template-columns: 1fr; gap: 1px; }
+  .finding-facts dl > div { grid-template-columns: 1fr; gap: var(--s0h); }
 }

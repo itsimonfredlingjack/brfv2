@@ -376,16 +376,39 @@
   /* The spacing ramp. This existed already and went unused — the audit found
      nineteen distinct gap values in the components (2,3,4,5,6,7,8,9,10,11,12,
      14,16,18,20,22,24,40,48) against a nine-step scale sitting right here. A
-     scale nobody spends is not a system, it is a comment. */
-  --s1: 0.25rem;  /* 4px  */
-  --s2: 0.5rem;   /* 8px  */
-  --s3: 0.75rem;  /* 12px */
-  --s4: 1rem;     /* 16px */
-  --s5: 1.25rem;  /* 20px */
-  --s6: 1.5rem;   /* 24px */
-  --s8: 2rem;     /* 32px */
-  --s10: 2.5rem;  /* 40px */
-  --s14: 3.5rem;  /* 56px */
+     scale nobody spends is not a system, it is a comment.
+
+     Resolved 2026-08-10: the scale was not being ignored out of laziness — it
+     could not express the product. Four of the six most-used spacings in the
+     components (2, 6, 10 and 14px, 399 declarations between them) had no step
+     to reach for, so every one of them was written as a literal. A scale with
+     holes in it teaches people to step around it. The half-steps below close
+     those holes; `sN` still means N × 4px, and `sNh` sits half a step above sN. */
+  /* The whole ramp is one number. `--space-unit` is the product's rhythm: every
+     step below is a multiple of it, so making the application denser or airier
+     is editing this line, not 1060 declarations. 0.25rem keeps the ramp exactly
+     where it has always been (s4 = 1rem = 16px). */
+  --space-unit: 0.25rem;
+
+  --s0h: calc(0.5 * var(--space-unit));  /* 2px  — hairline, icon-to-label */
+  --s1:  calc(1 * var(--space-unit));    /* 4px  */
+  --s1h: calc(1.5 * var(--space-unit));  /* 6px  */
+  --s2:  calc(2 * var(--space-unit));    /* 8px  */
+  --s2h: calc(2.5 * var(--space-unit));  /* 10px */
+  --s3:  calc(3 * var(--space-unit));    /* 12px */
+  --s3h: calc(3.5 * var(--space-unit));  /* 14px */
+  --s4:  calc(4 * var(--space-unit));    /* 16px */
+  --s5:  calc(5 * var(--space-unit));    /* 20px */
+  --s6:  calc(6 * var(--space-unit));    /* 24px */
+  --s7:  calc(7 * var(--space-unit));    /* 28px */
+  --s8:  calc(8 * var(--space-unit));    /* 32px */
+  --s9:  calc(9 * var(--space-unit));    /* 36px */
+  --s10: calc(10 * var(--space-unit));   /* 40px */
+  --s11: calc(11 * var(--space-unit));   /* 44px */
+  --s12: calc(12 * var(--space-unit));   /* 48px */
+  --s14: calc(14 * var(--space-unit));   /* 56px */
+  --s16: calc(16 * var(--space-unit));   /* 64px */
+  --s20: calc(20 * var(--space-unit));   /* 80px */
 
   /* ---- the masthead plate ----
    * One height, on every workspace. Measured across the five screens before
@@ -404,13 +427,29 @@
   /* §07 puts the sans between 12 and 17px. The first pass lived at the floor
      of that range and set almost everything at 13–14, which is why the screen
      read as one flat grey block: a ramp needs steps a reader can feel. */
+  /* 13px is, by count, the product's real working size — 42 declarations set it
+     by hand across the queues, panels, fact lists and form fields, more than any
+     token below. It had no step, so it was written out every time. Naming it
+     stops that, and makes the register's density one number to change. */
+  --text-2xs: 0.6875rem;  /* 11px — the smallest legible label */
   --text-xs: 0.75rem;     /* 12px — micro-labels only, never prose */
+  --text-dense: 0.8125rem;/* 13px — registers, queues, dense working UI */
   --text-sm: 0.875rem;    /* 14px — secondary */
   --text-base: 0.9375rem; /* 15px — the interface's size */
   --text-md: 0.9375rem;
   --text-lg: 1.0625rem;   /* 17px — the top of the sans range */
+  --text-subhead: 1.25rem;/* 20px — section heads: above prose, below a title */
   --text-xl: 1.5rem;      /* 24px */
+  --text-title-sm: 1.75rem;/* 28px */
   --text-2xl: 1.875rem;   /* 30px */
+
+  /* The display end. The ramp stopped at 30px while the product actually set its
+     mastheads at 34, 44 and 52 — so every title in the app was a literal, and
+     "make the titles smaller" was a fifteen-file edit. These are the sizes
+     already in use, named. */
+  --text-title: 2.125rem;    /* 34px — the workspace masthead */
+  --text-title-lg: 2.75rem;  /* 44px — the plate title */
+  --text-title-xl: 3.25rem;  /* 52px — first-arrival only */
 
   /* ---- legacy aliases ---- */
   --bg-color: var(--background);
@@ -522,12 +561,12 @@ h3, h4, h5, h6 {
   display: inline-flex;
   align-items: center;
   height: 18px;
-  padding: 0 7px;
+  padding: 0 var(--s2);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
   background: var(--surface-3);
   font-family: var(--font-mono);
-  font-size: 0.6875rem;   /* 11px — a measurement, set below the prose */
+  font-size: var(--text-2xs);   /* 11px — a measurement, set below the prose */
   font-weight: 600;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -545,7 +584,7 @@ h3, h4, h5, h6 {
 .citat {
   font-family: var(--font-sans);
   font-style: italic;
-  font-size: 1.0625rem;   /* 17px — level with the answer, italic carries the voice */
+  font-size: var(--text-lg);   /* 17px — level with the answer, italic carries the voice */
   line-height: 1.42;
   letter-spacing: 0;
   color: var(--foreground);
@@ -587,9 +626,9 @@ code, pre, kbd, samp { font-family: var(--font-mono); }
    field). Hidden by the field's :focus-within once the hint has done its job. */
 .kbd {
   font-family: var(--font-mono);
-  font-size: 11px;
+  font-size: var(--text-2xs);
   font-weight: 600;
-  padding: 1px 7px;
+  padding: var(--s0h) var(--s2);
   background: #FFFFFF;
   border: 1px solid var(--border-strong);
   border-bottom-width: 2px;
@@ -672,10 +711,10 @@ code, pre, kbd, samp { font-family: var(--font-mono); }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: var(--s2);
   flex-shrink: 0;
   height: var(--h-control);
-  padding: 0 12px;
+  padding: 0 var(--s3);
   border: 1px solid transparent;
   border-radius: var(--r-control);
   background: transparent;
@@ -722,9 +761,9 @@ code, pre, kbd, samp { font-family: var(--font-mono); }
 .ui-btn--warning { background: var(--warn); color: #FFFFFF; }
 .ui-btn--warning:hover { background: #6F4A04; }
 
-.ui-btn--sm { height: 30px; padding: 0 10px; font-size: var(--text-sm); }
+.ui-btn--sm { height: 30px; padding: 0 var(--s2h); font-size: var(--text-sm); }
 .ui-btn--sm > svg { width: 14px; height: 14px; }
-.ui-btn--xs { height: 24px; padding: 0 9px; font-size: var(--text-xs); }
+.ui-btn--xs { height: 24px; padding: 0 var(--s2h); font-size: var(--text-xs); }
 .ui-btn--xs > svg { width: 13px; height: 13px; }
 
 .ui-btn--icon { width: var(--h-control); padding: 0; }
@@ -773,7 +812,7 @@ code, pre, kbd, samp { font-family: var(--font-mono); }
 .ui-textarea {
   height: auto;
   min-height: 64px;
-  padding: 8px 12px;
+  padding: var(--s2) var(--s3);
   border-radius: var(--radius-block);
   line-height: 1.5;
   resize: vertical;
@@ -814,7 +853,7 @@ select option { background: #FFFFFF; color: var(--ink); }
 select,
 .ui-select {
   appearance: none;
-  padding-right: 30px;
+  padding-right: var(--s8);
   background-image: linear-gradient(45deg, transparent 50%, var(--muted-foreground) 50%),
                     linear-gradient(135deg, var(--muted-foreground) 50%, transparent 50%);
   background-position: calc(100% - 15px) calc(50% + 1px), calc(100% - 11px) calc(50% + 1px);
@@ -823,7 +862,7 @@ select,
   cursor: pointer;
 }
 
-.ui-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.ui-field { display: flex; flex-direction: column; gap: var(--s1h); min-width: 0; }
 
 .ui-field > span,
 .ui-label {
@@ -841,11 +880,11 @@ select,
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: var(--s1h);
   width: fit-content;
   flex-shrink: 0;
   height: 20px;
-  padding: 0 8px;
+  padding: 0 var(--s2);
   border: 1px solid transparent;
   border-radius: var(--r-sm);
   font-size: var(--text-xs);
@@ -868,7 +907,7 @@ select,
   justify-content: center;
   min-width: 20px;
   height: 20px;
-  padding: 0 7px;
+  padding: 0 var(--s2);
   border-radius: var(--r-sm);
   background: var(--muted);
   color: var(--muted-foreground);
@@ -881,9 +920,9 @@ select,
 .ui-tabs {
   display: inline-flex;
   align-items: center;
-  gap: 3px;
+  gap: var(--s1);
   height: 38px;
-  padding: 3px;
+  padding: var(--s1);
   border-radius: var(--r-sm);
   background: var(--muted);
 }
@@ -892,9 +931,9 @@ select,
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 7px;
+  gap: var(--s2);
   height: 100%;
-  padding: 0 14px;
+  padding: 0 var(--s3h);
   border: 1px solid transparent;
   border-radius: var(--r-sm);
   background: transparent;
@@ -929,7 +968,7 @@ select,
 
 .ui-table th {
   height: 40px;
-  padding: 0 16px;
+  padding: 0 var(--s4);
   border-bottom: 1px solid var(--border);
   color: var(--muted-foreground);
   font-size: var(--text-base);
@@ -940,7 +979,7 @@ select,
   text-transform: none;
 }
 
-.ui-table td { padding: 12px 16px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.ui-table td { padding: var(--s3) var(--s4); border-bottom: 1px solid var(--border); vertical-align: middle; }
 .ui-table tbody tr:last-child td { border-bottom: none; }
 .ui-table tbody tr { transition: background-color 0.12s ease; }
 .ui-table tbody tr:hover { background: var(--surface-2); }
@@ -955,7 +994,7 @@ select,
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 6px;
+  gap: var(--s1h);
   padding: var(--s14) var(--s8);
   text-align: center;
   /* No box drawn around emptiness. The dashed card was a rectangle whose only
@@ -971,19 +1010,19 @@ select,
   place-items: center;
   width: 40px;
   height: 40px;
-  margin-bottom: 14px;
+  margin-bottom: var(--s3h);
 }
 
 .ui-empty-text { max-width: 46ch; font-size: var(--text-base); line-height: 1.6; color: var(--muted-foreground); }
 .ui-empty-text strong { color: var(--foreground); font-weight: 600; }
-.ui-empty-actions { display: flex; gap: 10px; justify-content: center; margin-top: 10px; }
+.ui-empty-actions { display: flex; gap: var(--s2h); justify-content: center; margin-top: var(--s2h); }
 
 /* ---- loading ---- */
 .ui-loading {
   display: flex;
   align-items: center;
-  gap: 9px;
-  padding: 20px 2px;
+  gap: var(--s2h);
+  padding: var(--s5) var(--s0h);
   color: var(--muted-foreground);
   font-size: var(--text-base);
 }
@@ -999,8 +1038,8 @@ select,
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
-  padding: 12px 16px;
+  gap: var(--s3);
+  padding: var(--s3) var(--s4);
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   background: var(--card);
@@ -1018,7 +1057,7 @@ select,
 .ui-section-title {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: var(--s2h);
   font-family: var(--font-display);
   font-size: var(--text-xl);
   font-weight: 600;

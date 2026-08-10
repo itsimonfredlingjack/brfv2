@@ -22,7 +22,7 @@
   flex: 1;
   min-width: 0;
   min-height: 0;
-  padding-bottom: 8px;
+  padding-bottom: var(--s2);
 }
 
 /* ---------- header ---------- */
@@ -35,9 +35,9 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
-  padding: 10px 14px;
+  gap: var(--s3);
+  margin-bottom: var(--s3);
+  padding: var(--s2h) var(--s3h);
   border: 1px solid var(--border);
   border-radius: var(--radius-2xl);
   font-size: var(--text-base);
@@ -50,7 +50,7 @@
 .intake-banner .banner-dismiss {
   display: flex;
   flex-shrink: 0;
-  padding: 2px;
+  padding: var(--s0h);
   border: none;
   background: none;
   color: var(--muted-foreground);
@@ -62,8 +62,8 @@
 /* A strip, not a card: where the post comes from is context, and the queue
    below is the work. One hairline under it, no box around it. */
 .intake-source {
-  margin-bottom: 10px;
-  padding: 8px 0 10px;
+  margin-bottom: var(--s2h);
+  padding: var(--s2) 0 var(--s2h);
   border-bottom: 1px solid var(--border);
   background: transparent;
 }
@@ -72,14 +72,14 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--s3);
   flex-wrap: nowrap;
 }
 
 .intake-source-state {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--s2);
   flex: 1 1 auto;
   min-width: 0;
   color: var(--muted-foreground);
@@ -90,10 +90,10 @@
 .intake-source-state > svg { flex-shrink: 0; margin-top: 0; }
 .intake-source-state strong { color: var(--foreground); font-weight: 500; }
 
-.intake-source-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+.intake-source-actions { display: flex; align-items: center; gap: var(--s2); flex-shrink: 0; }
 
 .intake-format-disclosure {
-  margin-top: 4px;
+  margin-top: var(--s1);
 }
 
 .intake-format-disclosure summary {
@@ -109,7 +109,7 @@
 .intake-format-disclosure summary::before { content: '▸ '; }
 .intake-format-disclosure[open] summary::before { content: '▾ '; }
 
-.intake-format-note { margin-top: 6px; max-width: 82ch; font-size: var(--text-sm); color: var(--subtle-foreground); }
+.intake-format-note { margin-top: var(--s1h); max-width: 82ch; font-size: var(--text-sm); color: var(--subtle-foreground); }
 
 /* A label, not a button, so the file input stays the real control and the
    keyboard path is the input's own. */
@@ -171,8 +171,8 @@
 .fetch-button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .intake-source .fetch-error {
-  margin-top: 9px;
-  padding: 8px 11px;
+  margin-top: var(--s2h);
+  padding: var(--s2) var(--s3);
   border: 1px solid var(--danger-border);
   border-radius: var(--radius-2xl);
   background: var(--danger-soft);
@@ -181,17 +181,17 @@
 }
 
 .fetch-result {
-  margin-top: 10px;
-  padding-top: 10px;
+  margin-top: var(--s2h);
+  padding-top: var(--s2h);
   border-top: 1px solid var(--border);
   font-size: var(--text-base);
 }
 
 /* Refused messages are not an error display — they are the queue being honest
  * that it is not the mailbox. Neutral, readable, not red. */
-.fetch-skipped { margin-top: 8px; }
+.fetch-skipped { margin-top: var(--s2); }
 .fetch-skipped summary { cursor: pointer; color: var(--muted-foreground); }
-.fetch-skipped ul { margin: 8px 0 0; padding-left: 18px; line-height: 1.6; color: var(--muted-foreground); }
+.fetch-skipped ul { margin: var(--s2) 0 0; padding-left: var(--s5); line-height: 1.6; color: var(--muted-foreground); }
 .fetch-skipped strong { color: var(--foreground); font-weight: 500; }
 
 /* ---------- toolbar ---------- */
@@ -230,14 +230,14 @@
 .intake-counts button {
   flex: 1 1 0;
   min-width: 0;
-  gap: 8px;
-  padding: 0 10px;
+  gap: var(--s2);
+  padding: 0 var(--s2h);
 }
 
 .intake-loading {
   color: var(--muted-foreground);
   font-size: var(--text-base);
-  padding: 18px 4px;
+  padding: var(--s5) var(--s1);
 }
 
 /* The empty queue renders the shared .ui-empty card — no local chrome. */
@@ -247,7 +247,7 @@
 .intake-layout {
   display: grid;
   grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
-  gap: 16px;
+  gap: var(--s4);
   /* Fill what the window leaves after the chrome above (the fill chain is
      tab-content → integrations → pane → intake), so the detail card can pin
      decisions at its foot while evidence scrolls — no viewport arithmetic
@@ -263,18 +263,18 @@
 .intake-list {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--s1);
   max-height: 100%;
   overflow-y: auto;
-  padding: 2px;
+  padding: var(--s0h);
 }
 
 .thread-row {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: var(--s1);
   width: 100%;
-  padding: 11px 14px;
+  padding: var(--s3) var(--s3h);
   border: 1px solid transparent;
   border-radius: var(--radius-xl);
   background: transparent;
@@ -305,7 +305,7 @@
 }
 .thread-row.resolved .thread-subject { color: var(--muted-foreground); font-weight: 500; }
 
-.thread-row-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px; }
+.thread-row-top { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s2h); }
 
 .thread-subject {
   font-size: var(--text-md);
@@ -321,14 +321,14 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: var(--s1);
   flex-shrink: 0;
   min-width: 18px;
   height: 16px;
-  padding: 0 5px;
+  padding: 0 var(--s1h);
   border-radius: var(--r-sm);
   font-family: var(--font-mono);
-  font-size: 0.6875rem;
+  font-size: var(--text-2xs);
   font-weight: 500;
   font-variant-numeric: tabular-nums;
 }
@@ -357,8 +357,8 @@
 .intake .badge {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
-  padding: 1px 8px;
+  gap: var(--s1h);
+  padding: var(--s0h) var(--s2);
   border: 1px solid var(--border-strong);
   border-radius: var(--r-sm);
   color: var(--muted-foreground);
@@ -412,7 +412,7 @@
 }
 
 .thread-decisions .detail-section.decision {
-  padding: 16px 26px 18px;
+  padding: var(--s4) var(--s6) var(--s5);
   border-bottom: 1px solid var(--border);
 }
 
@@ -420,7 +420,7 @@
   border-bottom: none;
 }
 
-.detail-head { padding: 16px 22px 12px; border-bottom: 1px solid var(--border); }
+.detail-head { padding: var(--s4) var(--s6) var(--s3); border-bottom: 1px solid var(--border); }
 
 .detail-head h3 {
   font-family: var(--font-display);
@@ -431,7 +431,7 @@
   text-wrap: balance;
 }
 
-.detail-section { padding: 20px 26px; border-bottom: 1px solid var(--border); }
+.detail-section { padding: var(--s5) var(--s6); border-bottom: 1px solid var(--border); }
 .detail-section:last-child { border-bottom: none; }
 .thread-evidence .detail-section:last-child { border-bottom: none; }
 
@@ -441,9 +441,9 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 12px;
+  gap: var(--s3);
   flex-wrap: wrap;
-  margin-bottom: 12px;
+  margin-bottom: var(--s3);
 }
 
 .detail-section-head h4 {
@@ -454,11 +454,11 @@
 
 /* ---------- the message: what actually arrived ---------- */
 
-.message { padding-bottom: 14px; margin-bottom: 14px; border-bottom: 1px solid var(--border); }
+.message { padding-bottom: var(--s3h); margin-bottom: var(--s3h); border-bottom: 1px solid var(--border); }
 .message:last-child { padding-bottom: 0; margin-bottom: 0; border-bottom: none; }
 
-.message-head { margin-bottom: 10px; }
-.message-head h5 { margin-bottom: 4px; font-size: var(--text-md); font-weight: 600; }
+.message-head { margin-bottom: var(--s2h); }
+.message-head h5 { margin-bottom: var(--s1); font-size: var(--text-md); font-weight: 600; }
 
 /* Sender is who this is from; the date and the attachment count are measured
    facts about it, so they sit apart, in the measuring cut. */
@@ -466,7 +466,7 @@
   display: flex;
   align-items: baseline;
   justify-content: space-between;
-  gap: 6px 16px;
+  gap: var(--s1h) var(--s4);
   flex-wrap: wrap;
 }
 
@@ -481,7 +481,7 @@
    vernacular that only matters when the name is ambiguous, so it is demoted
    to meta rather than set as half of the sender line. */
 .message-sender-addr {
-  margin-left: 8px;
+  margin-left: var(--s2);
   font-weight: 400;
   color: var(--ink-subtle);
 }
@@ -498,8 +498,8 @@
    the body font, no monospace. It is not code, and typesetting it as code was
    the screen telling a board member their post is a machine artefact. */
 .message-body {
-  margin: 0 0 12px;
-  padding: 16px 18px;
+  margin: 0 0 var(--s3);
+  padding: var(--s4) var(--s5);
   border: 1px solid var(--border);
   border-radius: var(--radius-block);
   background: var(--field);
@@ -516,17 +516,17 @@
 
 .message-attachments {
   list-style: none;
-  margin: 0 0 10px;
+  margin: 0 0 var(--s2h);
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--s1h);
 }
 
 .message-attachments li {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--s2);
   flex-wrap: wrap;
   font-size: var(--text-base);
 }
@@ -534,7 +534,7 @@
 .intake .link {
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: var(--s1h);
   padding: 0;
   border: none;
   background: none;
@@ -550,10 +550,10 @@
 .message-preserved {
   display: flex;
   align-items: baseline;
-  gap: 7px;
+  gap: var(--s2);
   flex-wrap: wrap;
-  margin: 0 0 10px;
-  padding: 8px 11px;
+  margin: 0 0 var(--s2h);
+  padding: var(--s2) var(--s3);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-2xl);
   background: var(--card);
@@ -561,7 +561,7 @@
   line-height: 1.55;
 }
 
-.message-foot { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.message-foot { display: flex; align-items: center; gap: var(--s4); flex-wrap: wrap; }
 .message-foot .retriage { margin-left: auto; }
 
 .message-provenance-toggle summary {
@@ -578,19 +578,19 @@
 .message-provenance {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
-  gap: 6px 16px;
-  margin: 10px 0 0;
+  gap: var(--s1h) var(--s4);
+  margin: var(--s2h) 0 0;
   font-size: var(--text-sm);
 }
 
 .message-provenance dt { color: var(--muted-foreground); }
-.message-provenance dd { margin: 0 0 4px; color: var(--foreground); overflow-wrap: anywhere; }
+.message-provenance dd { margin: 0 0 var(--s1); color: var(--foreground); overflow-wrap: anywhere; }
 .message-provenance code { font-family: var(--font-mono); font-size: 0.94em; }
 
 .retriage {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--s1h);
   padding: 0;
   border: none;
   background: none;
@@ -606,7 +606,7 @@
 
 .detail-section.reading--secondary {
   background: transparent;
-  padding-top: 8px;
+  padding-top: var(--s2);
 }
 
 .reading--secondary .detail-section-head h4 {
@@ -626,7 +626,7 @@
    about machinery, not part of the prose. */
 .reading-by {
   font-family: var(--font-mono);
-  font-size: 0.6875rem;
+  font-size: var(--text-2xs);
   font-weight: 500;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -649,9 +649,9 @@
 .reading-tools {
   display: flex;
   align-items: baseline;
-  gap: 8px 20px;
+  gap: var(--s2) var(--s5);
   flex-wrap: wrap;
-  margin-top: 14px;
+  margin-top: var(--s3h);
 }
 
 .reading-depth { flex: 1 1 auto; min-width: 0; }
@@ -659,7 +659,7 @@
 .reading-depth summary {
   display: inline-flex;
   align-items: center;
-  gap: 7px;
+  gap: var(--s2);
   color: var(--subtle-foreground);
   font-size: var(--text-sm);
   cursor: pointer;
@@ -678,23 +678,23 @@
   justify-content: center;
   min-width: 17px;
   height: 16px;
-  padding: 0 5px;
+  padding: 0 var(--s1h);
   border-radius: var(--r-sm);
   background: var(--muted);
   color: var(--muted-foreground);
-  font-size: 11px;
+  font-size: var(--text-2xs);
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
 
-.reading-depth-body { margin-top: 10px; }
+.reading-depth-body { margin-top: var(--s2h); }
 
 .reading-why,
 .reading-action {
   display: flex;
   align-items: baseline;
-  gap: 7px;
-  margin-top: 6px;
+  gap: var(--s2);
+  margin-top: var(--s1h);
   font-size: var(--text-base);
   line-height: 1.6;
   color: var(--muted-foreground);
@@ -707,9 +707,9 @@
 .reading-uncertainty {
   display: flex;
   align-items: baseline;
-  gap: 8px;
-  margin-top: 11px;
-  padding: 9px 12px;
+  gap: var(--s2);
+  margin-top: var(--s3);
+  padding: var(--s2h) var(--s3);
   border: 1px solid var(--warn-border);
   border-radius: var(--radius-2xl);
   background: var(--warn-soft);
@@ -722,8 +722,8 @@
 .reading h6 {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin: 16px 0 8px;
+  gap: var(--s1h);
+  margin: var(--s4) 0 var(--s2);
   font-size: var(--text-base);
   font-weight: 500;
   color: var(--muted-foreground);
@@ -736,7 +736,7 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: var(--s2);
 }
 
 /* The value column flexes and wraps; the source label keeps its own width.
@@ -745,7 +745,7 @@
 .reading-signals li {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 3px 8px;
+  gap: var(--s1) var(--s2);
   align-items: baseline;
   min-width: 0;
   font-size: var(--text-base);
@@ -753,7 +753,7 @@
 
 .signal-kind {
   flex-shrink: 0;
-  padding: 1px 7px;
+  padding: var(--s0h) var(--s2);
   border-radius: var(--radius-md);
   background: var(--muted);
   color: var(--muted-foreground);
@@ -779,7 +779,7 @@
   display: block;
   min-width: 0;
   max-width: 90ch;
-  padding: 4px 0 0 9px;
+  padding: var(--s1) 0 0 var(--s2h);
   border-left: 2px solid var(--border-strong);
   color: var(--muted-foreground);
   /* The message's own words, in the message's own voice: sans italic at
@@ -800,8 +800,8 @@
 .signals-more {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  margin-top: 9px;
+  gap: var(--s1h);
+  margin-top: var(--s2h);
   padding: 0;
   border: none;
   background: none;
@@ -813,7 +813,7 @@
 .signals-more:hover { color: var(--foreground); }
 
 .reading h6 .h6-count {
-  padding: 0 6px;
+  padding: 0 var(--s1h);
   border-radius: var(--r-sm);
   background: var(--muted);
   color: var(--muted-foreground);
@@ -824,7 +824,7 @@
 .reading-related li {
   display: flex;
   align-items: baseline;
-  gap: 7px;
+  gap: var(--s2);
   flex-wrap: wrap;
   font-size: var(--text-base);
   color: var(--muted-foreground);
@@ -832,14 +832,14 @@
 
 .reading-related strong { color: var(--foreground); font-weight: 500; }
 
-.reading-category { margin-top: 14px; }
+.reading-category { margin-top: var(--s3h); }
 
 .category-confirmed {
   display: flex;
   align-items: baseline;
-  gap: 7px;
+  gap: var(--s2);
   flex-wrap: wrap;
-  padding: 9px 12px;
+  padding: var(--s2h) var(--s3);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-2xl);
   background: var(--card);
@@ -850,7 +850,7 @@
 .category-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--s1h);
   padding: 0;
   border: none;
   background: none;
@@ -863,10 +863,10 @@
 
 .category-form {
   display: flex;
-  gap: 10px;
+  gap: var(--s2h);
   flex-wrap: wrap;
   align-items: flex-end;
-  margin-top: 12px;
+  margin-top: var(--s3);
 }
 
 .category-form label,
@@ -874,7 +874,7 @@
 .resolve-note {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: var(--s1h);
   font-size: var(--text-base);
   color: var(--muted-foreground);
 }
@@ -890,7 +890,7 @@
   height: 32px;
   min-width: 190px;
   max-width: 100%;
-  padding: 0 10px;
+  padding: 0 var(--s2h);
   border: 1px solid var(--input);
   border-radius: var(--radius-2xl);
   background: var(--field);
@@ -912,7 +912,7 @@
 
 .category-save {
   height: 32px;
-  padding: 0 14px;
+  padding: 0 var(--s3h);
   border: 1px solid var(--input);
   border-radius: var(--radius-2xl);
   background: var(--field);
@@ -929,16 +929,16 @@
 
 .detail-section.decision { background: var(--surface-2); }
 
-.decision-for { margin-bottom: 8px; font-size: var(--text-sm); color: var(--muted-foreground); }
+.decision-for { margin-bottom: var(--s2); font-size: var(--text-sm); color: var(--muted-foreground); }
 
 .resolve h5 {
-  margin-bottom: 12px;
+  margin-bottom: var(--s3);
   font-size: var(--text-md);
   font-weight: 600;
   color: var(--foreground);
 }
 
-.resolve-options { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; }
+.resolve-options { display: flex; gap: var(--s2); flex-wrap: wrap; margin-bottom: var(--s3h); }
 
 /* The seam between what stacks and what closes: take-in/task/watch combine;
    already-handled/not-relevant exclude everything else. */
@@ -946,7 +946,7 @@
   align-self: center;
   width: 1px;
   height: 20px;
-  margin: 0 4px;
+  margin: 0 var(--s1);
   background: var(--border-strong);
 }
 
@@ -955,9 +955,9 @@
 .resolve-options label {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
+  gap: var(--s2);
   height: 34px;
-  padding: 0 14px;
+  padding: 0 var(--s3h);
   border: 1px solid var(--border-strong);
   border-radius: var(--r-sm);
   background: var(--card);
@@ -977,12 +977,12 @@
 
 .resolve-section {
   display: flex;
-  gap: 12px;
+  gap: var(--s3);
   flex-wrap: wrap;
   align-items: flex-end;
   min-width: 0;
-  margin-bottom: 10px;
-  padding: 12px 14px;
+  margin-bottom: var(--s2h);
+  padding: var(--s3) var(--s3h);
   border: 1px solid var(--border);
   border-radius: var(--radius-block);
   background: var(--background);
@@ -992,7 +992,7 @@
 
 .resolve-section p {
   flex-basis: 100%;
-  margin-bottom: 2px;
+  margin-bottom: var(--s0h);
   max-width: 76ch;
   font-size: var(--text-base);
   line-height: 1.6;
@@ -1007,15 +1007,15 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--s1h);
 }
 
-.resolve-attachments li { display: flex; align-items: center; gap: 9px; font-size: var(--text-base); }
+.resolve-attachments li { display: flex; align-items: center; gap: var(--s2h); font-size: var(--text-base); }
 
 .resolve-attachments label {
   flex-direction: row;
   align-items: center;
-  gap: 7px;
+  gap: var(--s2);
   color: var(--foreground);
 }
 
@@ -1024,8 +1024,8 @@
 /* Dates the engine read, offered as chips — pressing one is still the human
  * choosing it, which is why they are buttons and not a prefilled field. */
 .date-chip {
-  margin: 0 4px;
-  padding: 2px 9px;
+  margin: 0 var(--s1);
+  padding: var(--s0h) var(--s2h);
   border: 1px dashed var(--border-strong);
   border-radius: var(--r-sm);
   background: transparent;
@@ -1037,9 +1037,9 @@
 
 .date-chip:hover { background: var(--surface-accent); }
 
-.resolve-note { margin-bottom: 14px; max-width: 520px; }
+.resolve-note { margin-bottom: var(--s3h); max-width: 520px; }
 
-.resolve-actions { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.resolve-actions { display: flex; align-items: center; gap: var(--s3h); flex-wrap: wrap; }
 
 /* The mailbox promise sits at the far end of the act it qualifies — beside
    the button, out of the button's way. */
@@ -1052,7 +1052,7 @@
 
 .resolve-submit {
   height: 32px;
-  padding: 0 18px;
+  padding: 0 var(--s5);
   border: none;
   border-radius: var(--radius-2xl);
   background: var(--primary);
@@ -1071,7 +1071,7 @@
 /* "Det blev uppgift X." A decision is a record of what a person did, not a
    verification of a passage — §06 keeps Belagt for the latter alone. */
 .resolution {
-  padding: 13px 15px;
+  padding: var(--s3h) var(--s4);
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-2xl);
   background: var(--card);
@@ -1080,8 +1080,8 @@
 .resolution h5 {
   display: flex;
   align-items: center;
-  gap: 7px;
-  margin-bottom: 10px;
+  gap: var(--s2);
+  margin-bottom: var(--s2h);
   font-size: var(--text-base);
   font-weight: 600;
   color: var(--foreground);
@@ -1089,25 +1089,25 @@
 
 .resolution ul {
   list-style: none;
-  margin: 0 0 10px;
+  margin: 0 0 var(--s2h);
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: var(--s1h);
   font-size: var(--text-base);
   line-height: 1.55;
 }
 
-.resolution li { display: flex; gap: 8px; flex-wrap: wrap; align-items: baseline; }
-.resolution-note { margin-bottom: 10px; font-size: var(--text-base); color: var(--muted-foreground); }
-.resolution-foot { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.resolution li { display: flex; gap: var(--s2); flex-wrap: wrap; align-items: baseline; }
+.resolution-note { margin-bottom: var(--s2h); font-size: var(--text-base); color: var(--muted-foreground); }
+.resolution-foot { display: flex; align-items: center; gap: var(--s3h); flex-wrap: wrap; }
 
 .reopen {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  gap: var(--s1h);
   height: 28px;
-  padding: 0 12px;
+  padding: 0 var(--s3);
   border: 1px solid var(--input);
   border-radius: var(--radius-2xl);
   background: var(--field);
