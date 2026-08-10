@@ -1281,15 +1281,28 @@ mark.search-highlight {
    just the invitation: a heading and two questions a reader could actually
    ask, on the paper, left-aligned to the same gutter as everything else. No
    card, no split, no border drawn around emptiness. */
+/* The empty screen claims the height it has rather than stacking to whatever
+   its contents happen to measure. The motif below the questions needs the room
+   §04 asks for ("stort, aldrig som liten dekor"), and it can only take it if
+   there is a space for it to sit in the middle of. */
 .chat-empty-state {
   display: flex;
+  flex: 1;
+  min-height: 0;
   flex-direction: column;
   align-items: flex-start;
-  gap: var(--s6);
-  padding: var(--s2) 0 var(--s8);
+  gap: var(--s5);
+  padding: var(--s2) 0 var(--s4);
 }
 
-.chat-empty-body { display: flex; flex-direction: column; gap: var(--s5); width: 100%; }
+.chat-empty-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+  gap: var(--s5);
+  width: 100%;
+}
 
 .chat-empty-title {
   font-family: var(--font-display);

@@ -14,6 +14,7 @@ import { PRODUCT_WORKSPACES } from './appWorkspaces';
 import Instrument from './components/Instrument';
 import './App.css';
 import { datum } from './components/datum';
+import Hogen from './components/Hogen';
 
 // Refusal reasons where the LLM was never invoked (gated on retrieval, not
 // generation) — no model actually produced these responses, so provenance
@@ -1437,6 +1438,10 @@ function App() {
                                Vilka datum gäller för snöröjningsjouren?
                              </button>
                            </div>
+                           <Hogen
+                             pages={documents.reduce((sum, d) => sum + (d.pages || 0), 0)}
+                             documents={documents.length}
+                           />
                          </div>
                       </div>
                     ) : (
