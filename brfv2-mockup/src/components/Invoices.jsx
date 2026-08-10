@@ -19,6 +19,7 @@ import EmptyState from './EmptyState';
 import InvoiceCase from './InvoiceCase';
 import { formatAmount } from './money';
 import MappingPreview from './MappingPreview';
+import Instrument from './Instrument';
 import './Invoices.css';
 
 /**
@@ -454,20 +455,16 @@ export default function Invoices({ brfId, isAdmin = false, onOpenDocument, onOpe
           </div>
 
           {pane === 'queue' && (
-            <div className="page-header-instrument">
-              <div className="invoices-ledger">
-                <div className="invoices-ledger-figure">
-                  <span className="ledger-label">Öppet belopp</span>
-                  <span className="ledger-amount">{formatAmount(counts.amountOpen, 'SEK')}</span>
-                </div>
-                <dl className="invoices-ledger-counts">
-                  <div><dt>Att granska</dt><dd>{counts.open ?? 0}</dd></div>
-                  <div><dt>Med signal</dt><dd>{counts.withSignal ?? 0}</dd></div>
-                  <div><dt>Förfallna</dt><dd className={counts.overdue ? 'attention' : ''}>{counts.overdue ?? 0}</dd></div>
-                  <div><dt>Utan ansvarig</dt><dd>{counts.unassigned ?? 0}</dd></div>
-                </dl>
-              </div>
-            </div>
+            <Instrument
+              label="Öppet belopp"
+              value={formatAmount(counts.amountOpen, 'SEK')}
+              readings={[
+                { label: 'Att granska', value: counts.open ?? 0 },
+                { label: 'Med signal', value: counts.withSignal ?? 0 },
+                { label: 'Förfallna', value: counts.overdue ?? 0, flagged: counts.overdue > 0 },
+                { label: 'Utan ansvarig', value: counts.unassigned ?? 0 },
+              ]}
+            />
           )}
         </header>
 

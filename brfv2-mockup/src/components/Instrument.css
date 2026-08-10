@@ -1,0 +1,117 @@
+/* The instrument. One row, one name, one place to change it. See
+   Instrument.jsx for what it is and why it needed extracting. */
+
+/* It sits on the floor of the plate, whatever the plate's height, so the
+   readings across all eight screens share a baseline instead of each one
+   floating wherever its own content left it. */
+.instrument {
+  grid-area: instrument;
+  align-self: end;
+  min-width: 0;
+  width: 100%;
+  border-top: 1px solid rgb(247 245 243 / 0.13);
+  padding-top: var(--s6);
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: var(--s14);
+}
+
+/* On a short window the plate would eat the register it heads. It gives up its
+   fixed height before the work does, and the instrument is the part that goes. */
+@media (max-height: 780px) {
+  .instrument { display: none; }
+}
+
+/* A chart standing where the figure would: it takes the room the figure never
+   needed, and the readings still land against the far edge. */
+.instrument-lead { flex: 1; min-width: 0; }
+
+.instrument:has(.instrument-lead) { gap: var(--s10); }
+
+.instrument .watches-horizon { margin: 0; }
+
+/* Three or more readings are a scale, so they earn the width and spread to the
+   far edge. One or two are a footnote to the big figure and stay beside it —
+   pinning a single count to the opposite side of a 1200px plate reads as a
+   layout accident, which is exactly what Dokument's lone "5" looked like.
+   Only when something leads them, though: readings that *are* the figure start
+   at the left margin like every other title on the plate. */
+.instrument:has(.instrument-lead, .instrument-figure)
+  > .instrument-readings:has(> :nth-child(3)) { margin-left: auto; }
+
+/* One caption style for every reading on the plate. This rule was written out
+   three times — once for the ledger's label, once for its counts, once for
+   Uppgifter's — with the same six declarations each time, which is how they
+   drift apart. Stated once, they cannot. */
+.instrument-label,
+.instrument dt {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgb(247 245 243 / 0.5);
+}
+
+/* The one number the board came for, at a scale nothing else competes with. */
+.instrument-figure { display: flex; flex-direction: column; gap: var(--s2); }
+
+.instrument-amount {
+  font-family: var(--font-mono);
+  font-size: var(--text-title-xl);
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  color: var(--papper);
+}
+
+.instrument-readings {
+  display: flex;
+  gap: var(--s8);
+  margin: 0;
+  padding-bottom: var(--s1);
+}
+
+.instrument-readings > div { display: flex; flex-direction: column; gap: var(--s2); }
+
+/* Readings were set in Poppins on Uppgifter and in mono on Fakturor and
+   Bevakningar — the same widget, in two typefaces, one tab apart. Mono is the
+   right one and the identity already says so: mono measures. */
+.instrument-readings dd {
+  margin: 0;
+  font-family: var(--font-mono);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--papper);
+}
+
+/* Lateness refuses red on ink, on every screen that reports it: it underlines
+   in paper instead. */
+.instrument-readings > div.flagged dd {
+  width: fit-content;
+  box-shadow: inset 0 -2px 0 var(--papper);
+}
+
+/* An instrument with nothing leading it — Uppgifter has no single figure to
+   name, only three numerals for owned, slipped and unowned — promotes its
+   readings to the figure's size. They *are* the figure. The size difference
+   between screens was never a per-screen decision; it follows from whether
+   something else on the row is already carrying the weight, so it is derived
+   here rather than written out again on each screen that needs it. */
+.instrument:not(:has(.instrument-lead, .instrument-figure)) .instrument-readings {
+  gap: var(--s14);
+  padding-bottom: 0;
+}
+
+.instrument:not(:has(.instrument-lead, .instrument-figure)) .instrument-readings dd {
+  font-size: var(--text-title-xl);
+  letter-spacing: -0.02em;
+}
+
+.instrument:not(:has(.instrument-lead, .instrument-figure)) .instrument-readings > div.flagged dd {
+  box-shadow: inset 0 -3px 0 var(--papper);
+}

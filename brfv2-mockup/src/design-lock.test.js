@@ -125,3 +125,50 @@ describe('design lock: one focus ring', () => {
     expect(offenders).toEqual([]);
   });
 });
+
+// Beslut 5 (instrumentet): the band's instrument is one component with one
+// name. It used to be hand-copied across eight screens under two *borrowed*
+// class names — `invoices-ledger` and `watches-standing` — so Dokument was
+// literally built out of Fakturor's and Bevakningar's parts. The cost was that
+// there was no instrument to change: editing `.ledger-amount` moved Dokument,
+// Fakturor and Anslutningar at once, so touching one screen meant a scoped
+// override, and each override made the next change harder. Two locks keep that
+// from growing back.
+const RETIRED_INSTRUMENT_CLASSES = [
+  'page-header-instrument', 'invoices-ledger', 'invoices-ledger-figure',
+  'invoices-ledger-counts', 'ledger-amount', 'ledger-label',
+  'watches-standing', 'watches-instrument', 'tasks-standing',
+];
+
+describe('design lock: the instrument is one component', () => {
+  // Quoted, because that is how a class is *used* — in a className or a
+  // selector. Instrument.jsx names its predecessors in backticks to explain
+  // what it replaced, which is documentation, not a second implementation.
+  it('no retired instrument class is used under src/', () => {
+    const offenders = [];
+    for (const file of walk(SRC)) {
+      if (file === SELF) continue;
+      const text = readFileSync(file, 'utf8');
+      for (const name of RETIRED_INSTRUMENT_CLASSES) {
+        const used = new RegExp(String.raw`["'.]${name}(?![\w-])`);
+        if (used.test(text)) offenders.push(`${relative(SRC, file)} uses "${name}"`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  // The lock that actually prevents the failure mode. A screen that wants a
+  // different instrument has to change the instrument — it cannot bolt a
+  // scoped override onto someone else's, which is how eight copies happened.
+  it('every .instrument rule lives in Instrument.css', () => {
+    const offenders = [];
+    for (const file of walk(SRC)) {
+      if (!file.endsWith('.css') || file.endsWith('Instrument.css')) continue;
+      const text = readFileSync(file, 'utf8');
+      for (const m of text.matchAll(/\.instrument[\w-]*/g)) {
+        offenders.push(`${relative(SRC, file)} styles ${m[0]} — put it in Instrument.css`);
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+});

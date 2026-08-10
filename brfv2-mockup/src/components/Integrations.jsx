@@ -3,6 +3,7 @@ import { Inbox, Loader2, Plug, RefreshCw, X } from 'lucide-react';
 import { integrationsApi } from '../api';
 import IntegrationConnections from './IntegrationConnections';
 import IntakeQueue from './IntakeQueue';
+import Instrument from './Instrument';
 import './Integrations.css';
 
 /**
@@ -123,18 +124,14 @@ export default function Integrations({ brfId, isAdmin = false, onOpenDocument, o
             for a decision, what has been answered and is waiting on someone
             else, and how much has come in altogether. */}
         {pane === 'inbox' && (
-          <div className="page-header-instrument">
-            <div className="invoices-ledger">
-              <div className="invoices-ledger-figure">
-                <span className="ledger-label">Att avgöra</span>
-                <span className="ledger-amount">{openEvents}</span>
-              </div>
-              <dl className="watches-standing">
-                <div><dt>Väntar svar</dt><dd>{awaitingEvents}</dd></div>
-                <div><dt>Inkommet</dt><dd>{events.length}</dd></div>
-              </dl>
-            </div>
-          </div>
+          <Instrument
+            label="Att avgöra"
+            value={openEvents}
+            readings={[
+              { label: 'Väntar svar', value: awaitingEvents },
+              { label: 'Inkommet', value: events.length },
+            ]}
+          />
         )}
       </div>
 

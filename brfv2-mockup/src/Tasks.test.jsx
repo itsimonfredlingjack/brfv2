@@ -432,9 +432,9 @@ describe('the active list', () => {
     expect(within(card).getByText('2026-08-20 · om 18 dagar')).toBeInTheDocument();
 
     // And the same fact as a number somebody can act on. The three numerals
-    // live in the masthead band now (`.tasks-standing`), not in a counter row
-    // on the paper below it — same three readings, one home.
-    const counts = document.querySelector('.tasks-standing');
+    // live in the masthead band's instrument now, not in a counter row on the
+    // paper below it — same three readings, one home.
+    const counts = document.querySelector('.instrument-readings');
     const unassigned = within(counts).getByText('Utan ansvarig').closest('div');
     expect(within(unassigned).getByText('1')).toBeInTheDocument();
     expect(screen.getByText(/1 av 2 pågående uppgifter har ingen namngiven ansvarig/))

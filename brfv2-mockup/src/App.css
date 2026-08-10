@@ -521,10 +521,10 @@
 
 /* On a short window the plate would eat the register it heads. It gives up its
    fixed height before the work does — still identical across screens, just
-   smaller, and the instrument is the part that goes. */
+   smaller. (The instrument is the part that goes; that half of the rule lives
+   with the instrument, in Instrument.css.) */
 @media (max-height: 780px) {
   .page-header { height: auto; min-height: 0; }
-  .page-header-instrument { display: none; }
 }
 
 .page-header-text,
@@ -538,15 +538,6 @@
   align-items: center;
   gap: var(--s2);
   padding-top: var(--s1h);
-}
-
-/* The instrument sits on the floor of the plate, whatever its height, so the
-   readings across the five screens share a baseline instead of each one
-   floating wherever its own content left it. */
-.page-header-instrument {
-  grid-area: instrument;
-  align-self: end;
-  min-width: 0;
 }
 
 .page-header .page-title { color: var(--papper); font-size: var(--text-title-lg); }
@@ -683,144 +674,12 @@
 
 .invoices-tagline { color: rgb(247 245 243 / 0.72); font-size: var(--text-base); line-height: 1.6; }
 
-/* The faceplate rule. Each band's reading sits on a hairline, so "below this
-   line is a measurement" is stated once, structurally, and holds across every
-   instrument instead of each screen inventing its own spacing. It is on the
-   grid area rather than on the individual instruments, so a screen gets the
-   rule by being a workspace — not by remembering to ask for it. */
-.page-header-instrument {
-  border-top: 1px solid rgb(247 245 243 / 0.13);
-  padding-top: var(--s6);
-}
-
-/* Fakturor — the ledger figure. */
-.invoices-ledger {
-  display: flex;
-  align-items: flex-end;
-  gap: var(--s14);
-  width: 100%;
-  flex-wrap: wrap;
-}
-
-/* Three or more readings are a scale, so they earn the width and spread to the
-   far edge. One or two are a footnote to the big figure and stay beside it —
-   pinning a single count to the opposite side of a 1200px plate reads as a
-   layout accident, which is exactly what Dokument's lone "5" looked like. */
-.invoices-ledger > dl:has(> :nth-child(3)) { margin-left: auto; }
-
-.invoices-ledger-figure { display: flex; flex-direction: column; gap: var(--s2); }
-
-/* One caption style for every reading on the plate. This rule was written out
-   three times — once for the ledger's label, once for its counts, once for
-   Uppgifter's — with the same six declarations each time, which is how they
-   drift apart. Stated once against the grid area, they cannot. */
-.page-header-instrument .ledger-label,
-.page-header-instrument dt {
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgb(247 245 243 / 0.5);
-}
-
-/* The one number the board came for, at a scale nothing else competes with. */
-.ledger-amount {
-  font-family: var(--font-mono);
-  font-size: var(--text-title-xl);
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
-  color: var(--papper);
-}
-
-.invoices-ledger-counts { display: flex; gap: var(--s8); margin: 0; padding-bottom: var(--s1); }
-
-.invoices-ledger-counts > div { display: flex; flex-direction: column; gap: var(--s2); }
-
-.invoices-ledger-counts dd {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: var(--text-xl);
-  font-weight: 700;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  color: var(--papper);
-}
-
-/* Lateness still refuses red — it underlines instead, in paper on ink. */
-.invoices-ledger-counts dd.attention {
-  width: fit-content;
-  box-shadow: inset 0 -2px 0 var(--papper);
-}
-
-/* Uppgifter — three numerals for owned, slipped, unowned. */
 /* An empty Uppgifter offered the same action twice — a loose "Ny uppgift"
    button and, 40px below it, the empty state's "Skapa första uppgiften". The
    empty state is the better invitation, so while there is nothing to list the
    loose button steps aside; it returns the moment its panel is open (the empty
    state's action clicks it) or the moment there is a list to sit above. */
 .tasks.has-no-active .tasks-new:has(.task-create:not(.open)) { display: none; }
-
-.tasks-standing { display: flex; gap: var(--s14); margin: 0; }
-
-.tasks-standing > div { display: flex; flex-direction: column; gap: var(--s2); }
-
-/* Uppgifter's numerals were set in Poppins while Fakturor's and Bevakningar's
-   were set in mono — the same widget, in two typefaces, one tab apart. Mono is
-   the right one and the identity already says so: mono measures. */
-.tasks-standing dd {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: var(--text-title-xl);
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: -0.02em;
-  font-variant-numeric: tabular-nums;
-  color: var(--papper);
-}
-
-.tasks-standing > div.flagged dd {
-  width: fit-content;
-  box-shadow: inset 0 -3px 0 var(--papper);
-}
-
-/* Bevakningar — the horizon, inverted onto ink. Same twelve-month shape the
-   paper version had; only the grounds swap, so the instrument stays one
-   thing rather than becoming a second chart with its own rules. */
-/* Chart left, counts right — the same faceplate arrangement Fakturor uses, so
-   the two registers read as one instrument family rather than two ideas. */
-.watches-instrument {
-  display: flex;
-  align-items: flex-end;
-  gap: var(--s10);
-}
-
-.page-header .watches-horizon { margin: 0; flex: 1; min-width: 0; }
-
-.watches-standing { display: flex; gap: var(--s8); margin: 0; padding-bottom: var(--s1); }
-
-.watches-standing > div { display: flex; flex-direction: column; gap: var(--s2); }
-
-.watches-standing dd {
-  margin: 0;
-  font-family: var(--font-mono);
-  font-size: var(--text-xl);
-  font-weight: 700;
-  line-height: 1;
-  font-variant-numeric: tabular-nums;
-  color: var(--papper);
-}
-
-/* Lateness refuses red on ink, on every screen that reports it: it underlines
-   in paper instead. */
-.watches-standing > div.flagged dd,
-.tasks-standing > div.flagged dd,
-.invoices-ledger-counts dd.attention {
-  width: fit-content;
-  box-shadow: inset 0 -2px 0 var(--papper);
-}
 
 .page-header .horizon-strip { border-bottom-color: rgb(247 245 243 / 0.22); }
 

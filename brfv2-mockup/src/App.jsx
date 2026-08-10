@@ -11,6 +11,7 @@ import AppNavigation from './components/AppNavigation';
 import { api, desktopApi } from './api';
 import { displayNameForModel, displayNameForProvider } from './modelDisplay';
 import { PRODUCT_WORKSPACES } from './appWorkspaces';
+import Instrument from './components/Instrument';
 import './App.css';
 
 // Refusal reasons where the LLM was never invoked (gated on retrieval, not
@@ -1156,19 +1157,11 @@ function App() {
                       three-page contract is not the same asset as a
                       ninety-page annual report. It reads at zero, like every
                       other band on the product. */}
-                  <div className="page-header-instrument">
-                    <div className="invoices-ledger">
-                      <div className="invoices-ledger-figure">
-                        <span className="ledger-label">Sökbara sidor</span>
-                        <span className="ledger-amount">
-                          {documents.reduce((sum, d) => sum + (d.pages || 0), 0)}
-                        </span>
-                      </div>
-                      <dl className="watches-standing">
-                        <div><dt>Dokument</dt><dd>{documents.length}</dd></div>
-                      </dl>
-                    </div>
-                  </div>
+                  <Instrument
+                    label="Sökbara sidor"
+                    value={documents.reduce((sum, d) => sum + (d.pages || 0), 0)}
+                    readings={[{ label: 'Dokument', value: documents.length }]}
+                  />
                 </header>
 
                 {uploadState && (
@@ -1416,19 +1409,11 @@ function App() {
                     <p className="page-header-sub">Svaret citerar det dokument det kommer ur — eller uteblir.</p>
                   </div>
                   <div className="page-header-actions" />
-                  <div className="page-header-instrument">
-                    <div className="invoices-ledger">
-                      <div className="invoices-ledger-figure">
-                        <span className="ledger-label">Sökbara sidor</span>
-                        <span className="ledger-amount">
-                          {documents.reduce((sum, d) => sum + (d.pages || 0), 0)}
-                        </span>
-                      </div>
-                      <dl className="watches-standing">
-                        <div><dt>Dokument</dt><dd>{documents.length}</dd></div>
-                      </dl>
-                    </div>
-                  </div>
+                  <Instrument
+                    label="Sökbara sidor"
+                    value={documents.reduce((sum, d) => sum + (d.pages || 0), 0)}
+                    readings={[{ label: 'Dokument', value: documents.length }]}
+                  />
                 </header>
 
                 <div className="chat-container">

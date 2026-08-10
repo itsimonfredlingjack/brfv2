@@ -20,6 +20,7 @@ import {
   X,
 } from 'lucide-react';
 import AiPartner from './AiPartner';
+import Instrument from '../Instrument';
 
 // The workspace as the board sees it: the AI partner on the left, the website
 // itself filling everything else.
@@ -405,20 +406,14 @@ export default function WorkspaceShell({
             and how much AI-written text nobody has confirmed yet. The last one
             is the number that decides whether the site may be published at
             all, so it belongs on the faceplate and not in a chip. */}
-        <div className="page-header-instrument">
-          <div className="invoices-ledger">
-            <div className="invoices-ledger-figure">
-              <span className="ledger-label">Sidor</span>
-              <span className="ledger-amount">{pages.length}</span>
-            </div>
-            <dl className="watches-standing">
-              <div><dt>Publicerade</dt><dd>{publishedCount}</dd></div>
-              <div className={reviewCount > 0 ? 'flagged' : ''}>
-                <dt>Att bekräfta</dt><dd>{reviewCount}</dd>
-              </div>
-            </dl>
-          </div>
-        </div>
+        <Instrument
+          label="Sidor"
+          value={pages.length}
+          readings={[
+            { label: 'Publicerade', value: publishedCount },
+            { label: 'Att bekräfta', value: reviewCount, flagged: reviewCount > 0 },
+          ]}
+        />
       </header>
 
       <div className={`site-ws ${aiCollapsed ? 'ai-collapsed' : ''}`}>

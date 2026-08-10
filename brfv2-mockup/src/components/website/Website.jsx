@@ -21,6 +21,7 @@ import { Loader2, RotateCcw, X } from 'lucide-react';
 import { api, websiteApi } from '../../api';
 import { createWebsiteConfig } from './websiteConfig';
 import WorkspaceShell from './WorkspaceShell';
+import Instrument from '../Instrument';
 import {
   actionToCommands,
   coalesce,
@@ -393,17 +394,11 @@ export default function Website({ brfId, isAdmin, onOpenCitation }) {
               </button>
             )}
           </div>
-          <div className="page-header-instrument">
-            <div className="invoices-ledger">
-              <div className="invoices-ledger-figure">
-                <span className="ledger-label">Sidor</span>
-                <span className="ledger-amount">0</span>
-              </div>
-              <dl className="watches-standing">
-                <div><dt>Publicerade</dt><dd>0</dd></div>
-              </dl>
-            </div>
-          </div>
+          <Instrument
+            label="Sidor"
+            value={0}
+            readings={[{ label: 'Publicerade', value: 0 }]}
+          />
         </header>
 
         <div className="site-start__body">

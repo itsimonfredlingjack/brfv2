@@ -10,6 +10,7 @@ import {
 import { tasksApi } from '../api';
 import CreateTask from './CreateTask';
 import EmptyState from './EmptyState';
+import Instrument from './Instrument';
 import './Tasks.css';
 
 /**
@@ -556,22 +557,13 @@ export default function Tasks({ brfId, isAdmin = false, onOpenCitation }) {
             work is owned and how much of it has slipped. Three numerals in mono
             on ink — the screen's own composition, and the same three whether
             they read 0 or 40. */}
-        <div className="page-header-instrument">
-          <dl className="tasks-standing">
-            <div>
-              <dt>Pågående</dt>
-              <dd>{counts.active}</dd>
-            </div>
-            <div className={counts.overdue > 0 ? 'flagged' : ''}>
-              <dt>Försenade</dt>
-              <dd>{counts.overdue}</dd>
-            </div>
-            <div className={counts.unassigned > 0 ? 'flagged' : ''}>
-              <dt>Utan ansvarig</dt>
-              <dd>{counts.unassigned}</dd>
-            </div>
-          </dl>
-        </div>
+        <Instrument
+          readings={[
+            { label: 'Pågående', value: counts.active },
+            { label: 'Försenade', value: counts.overdue, flagged: counts.overdue > 0 },
+            { label: 'Utan ansvarig', value: counts.unassigned, flagged: counts.unassigned > 0 },
+          ]}
+        />
       </header>
 
       <Banner tone="error" onDismiss={() => setError('')}>{error}</Banner>

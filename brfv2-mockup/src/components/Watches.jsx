@@ -14,6 +14,7 @@ import {
 import { watchesApi } from '../api';
 import CreateTask from './CreateTask';
 import EmptyState from './EmptyState';
+import Instrument from './Instrument';
 import './Watches.css';
 
 /**
@@ -624,8 +625,8 @@ export default function Watches({ brfId, isAdmin = false, onOpenCitation }) {
             Fakturor's sat inside it — the same widget with two different homes,
             one tab apart. They belong on the faceplate, to the right of the
             chart, exactly where Fakturor puts its own. */}
-        <div className="page-header-instrument watches-instrument">
-          {board && (
+        <Instrument
+          lead={board ? (
             <Horizon
               today={board.today}
               overdue={board.buckets?.overdue || []}
@@ -635,16 +636,18 @@ export default function Watches({ brfId, isAdmin = false, onOpenCitation }) {
                 ...(board.buckets?.recurring || []),
               ]}
             />
-          )}
-          <dl className="watches-standing">
-            <div><dt>Bevakas</dt><dd>{watchedCount}</dd></div>
-            <div><dt>Förslag</dt><dd>{proposed.length}</dd></div>
-            <div className={(board?.buckets?.overdue?.length || 0) > 0 ? 'flagged' : ''}>
-              <dt>Försenat</dt><dd>{board?.buckets?.overdue?.length || 0}</dd>
-            </div>
-            <div><dt>Odaterat</dt><dd>{unresolved.length}</dd></div>
-          </dl>
-        </div>
+          ) : null}
+          readings={[
+            { label: 'Bevakas', value: watchedCount },
+            { label: 'Förslag', value: proposed.length },
+            {
+              label: 'Försenat',
+              value: board?.buckets?.overdue?.length || 0,
+              flagged: (board?.buckets?.overdue?.length || 0) > 0,
+            },
+            { label: 'Odaterat', value: unresolved.length },
+          ]}
+        />
       </header>
 
       <Banner tone="error" onDismiss={() => setError('')}>{error}</Banner>
