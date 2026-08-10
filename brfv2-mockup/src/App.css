@@ -373,10 +373,10 @@
   left: 0;
   right: 0;
   padding: var(--s1);
-  border: 1px solid var(--border);
+  border: 1px solid var(--kant);
   border-radius: var(--radius-3xl);
   background: var(--popover);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--lyft-2);
   display: flex;
   flex-direction: column;
   gap: var(--s0h);
@@ -736,7 +736,8 @@
 .page-header-count { color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
 
 .glass-panel {
-  border: 1px solid var(--border);
+  border: 1px solid var(--kant);
+  box-shadow: var(--lyft-1);
   border-radius: var(--radius-3xl);
   background: var(--card);
 }
@@ -774,7 +775,8 @@
   display: block;
   width: 100%;
   padding: var(--s5);
-  border: 1px solid var(--border);
+  border: 1px solid var(--kant);
+  box-shadow: var(--lyft-1);
   border-radius: var(--radius-3xl);
   background: var(--card);
   color: inherit;
@@ -1135,7 +1137,8 @@
   gap: var(--s2h);
   margin-bottom: var(--s3h);
   padding: var(--s2h) var(--s3h);
-  border: 1px solid var(--border);
+  border: 1px solid var(--kant);
+  box-shadow: var(--lyft-1);
   border-radius: var(--radius-2xl);
   background: var(--card);
   color: var(--muted-foreground);
@@ -1214,7 +1217,8 @@
 
 .search-snippet-card {
   padding: var(--s5);
-  border: 1px solid var(--border);
+  border: 1px solid var(--kant);
+  box-shadow: var(--lyft-1);
   border-radius: var(--radius-3xl);
   background: var(--card);
   transition: background-color 0.14s ease, border-color 0.14s ease;
@@ -1393,7 +1397,8 @@ mark.search-highlight {
 
 .chat-content {
   padding: var(--s3h) var(--s4);
-  border: 1px solid var(--border);
+  border: 1px solid var(--kant);
+  box-shadow: var(--lyft-1);
   border-radius: var(--radius-block);
   background: var(--card);
   font-size: var(--text-md);
@@ -1928,7 +1933,8 @@ mark.search-highlight {
 .bevakning-list { display: flex; flex-direction: column; gap: var(--s2h); }
 .bevakning-card {
   padding: var(--s3h);
-  border: 1px solid var(--border);
+  border: 1px solid var(--kant);
+  box-shadow: var(--lyft-1);
   border-left: 2px solid var(--warn);
   border-radius: var(--radius-2xl);
   background: var(--card);
@@ -1945,7 +1951,8 @@ mark.search-highlight {
 .extraction-content { flex: 1; overflow-y: auto; padding: var(--s6); }
 .extracted-text-box {
   padding: var(--s5);
-  border: 1px solid var(--border);
+  border: 1px solid var(--kant);
+  box-shadow: var(--lyft-1);
   border-radius: var(--radius-block);
   background: var(--card);
   font-size: var(--text-md);
@@ -1973,10 +1980,10 @@ mark.search-highlight {
   display: flex;
   flex-direction: column;
   padding: var(--s1);
-  border: 1px solid var(--border);
+  border: 1px solid var(--kant);
   border-radius: var(--radius-3xl);
   background: var(--popover);
-  box-shadow: var(--shadow-lg);
+  box-shadow: var(--lyft-2);
 }
 .report-menu button {
   padding: var(--s2) var(--s2h);
@@ -2042,7 +2049,8 @@ mark.search-highlight {
 .settings-placeholder {
   margin-top: var(--s5);
   padding: var(--s6);
-  border: 1px solid var(--border);
+  border: 1px solid var(--kant);
+  box-shadow: var(--lyft-1);
   border-radius: var(--radius-3xl);
   background: var(--card);
 }

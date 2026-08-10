@@ -380,7 +380,8 @@
   height: 100%;
   display: flex;
   flex-direction: column;
-  border: 1px solid var(--border);
+  border: 1px solid var(--kant);
+  box-shadow: var(--lyft-1);
   border-radius: var(--radius-3xl);
   background: var(--card);
   overflow: hidden;
@@ -500,7 +501,8 @@
 .message-body {
   margin: 0 0 var(--s3);
   padding: var(--s4) var(--s5);
-  border: 1px solid var(--border);
+  border: 1px solid var(--kant);
+  box-shadow: var(--lyft-1);
   border-radius: var(--radius-block);
   background: var(--field);
   font-family: inherit;

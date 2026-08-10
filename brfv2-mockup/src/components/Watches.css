@@ -164,18 +164,30 @@
 
 .watch-buckets { display: flex; flex-direction: column; gap: var(--s6); }
 
-.watch-bucket { min-width: 0; }
+/* A bucket is a surface, not a heading with a line under it.
+ *
+ * Four full-width rules stacked down an empty screen is the clearest picture of
+ * what made this product read as a drawing: nothing was resting on anything,
+ * the screen was ruled. A group that holds its own contents holds them on a
+ * plate — same edge and same lift as every other surface (see --kant/--lyft-1),
+ * so the shape is the product's, not this screen's. */
+.watch-bucket {
+  min-width: 0;
+  padding: var(--s5);
+  border: 1px solid var(--kant);
+  border-radius: var(--r-lg);
+  background: var(--card);
+  box-shadow: var(--lyft-1);
+}
 
-/* A bucket header names a measured range, so it is set in the mono, standing
-   on its own rule like a register heading. Direct child only — the cards
-   inside carry their own h4 titles in the explaining cut. */
+/* A bucket header names a measured range. Direct child only — the cards inside
+   carry their own h4 titles. It stood on a rule until the bucket became a
+   plate; the plate is the boundary now, so the line was saying it twice. */
 .watch-bucket > h4 {
   display: flex;
   align-items: center;
   gap: var(--s2h);
-  margin: 0 0 var(--s2h);
-  padding-bottom: var(--s2);
-  border-bottom: 1px solid var(--border);
+  margin: 0 0 var(--s3);
   font-family: var(--etikett-family);
   font-size: var(--etikett-size);
   font-weight: var(--etikett-weight);
@@ -184,7 +196,7 @@
   color: var(--muted-foreground);
 }
 
-.watch-bucket.overdue > h4 { color: var(--foreground); border-bottom-color: var(--border-strong); }
+.watch-bucket.overdue > h4 { color: var(--foreground); }
 
 .bucket-count {
   min-width: 20px;

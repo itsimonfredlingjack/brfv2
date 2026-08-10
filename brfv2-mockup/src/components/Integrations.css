@@ -135,7 +135,8 @@
 .pane-intro {
   margin-bottom: var(--s4);
   padding: var(--s3h) var(--s4);
-  border: 1px solid var(--border);
+  border: 1px solid var(--kant);
+  box-shadow: var(--lyft-1);
   border-radius: var(--radius-3xl);
   background: var(--card);
 }
@@ -271,7 +272,8 @@
   gap: var(--s1h);
   width: 100%;
   padding: var(--s2h) var(--s3h);
-  border: 1px solid var(--border);
+  border: 1px solid var(--kant);
+  box-shadow: var(--lyft-1);
   border-radius: var(--radius-block);
   background: var(--card);
   color: var(--foreground);

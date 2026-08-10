@@ -11,8 +11,8 @@
      this replaced was a near-black left over from the dark shell, so the one
      dialog in the product arrived from a different design. */
   background: var(--popover);
-  border: 1px solid var(--border);
-  box-shadow: var(--shadow-lg);
+  border: 1px solid var(--kant);
+  box-shadow: var(--lyft-2);
 }
 
 .ds-header {

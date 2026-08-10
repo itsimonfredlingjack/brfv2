@@ -177,7 +177,10 @@
    * The values are xs_mobilapp's dark mode verbatim, which is the identity's
    * §06 already implemented and measured, so the two halves cannot drift. */
   --skal: #07080B;          /* the ground */
-  --skal-raised: #14161B;   /* plates that lift off it: the band, cards, fields */
+  --skal-raised: #181B22;   /* plates that lift off it: the band, cards, fields.
+                               Raised from #14161B when the outline came off:
+                               a surface that has to be seen without a line
+                               around it has to actually be separable. */
   --skal-sunken: #0D0F13;   /* wells */
   --skal-pressed: #23262D;  /* pressed, hovered, or genuinely inert */
 
@@ -242,6 +245,34 @@
   --input: #363A43;
   --ring: var(--handling);
   --muted-hover: #2B2F37;
+
+  /* The edge and the lift: how a block stops being a drawing of a block.
+   *
+   * The product had 278 hairlines against 47 shadows — it divided the screen
+   * with lines, the way a drawing does, and that is most of what read as
+   * industrial. A card sat at #14161B on a #07080B ground, a lift of thirteen
+   * levels nobody can see, inside a #23262D border — an outline *brighter than
+   * the surface it enclosed*. The box was its line. Nothing was resting on
+   * anything.
+   *
+   * So the surface is made to carry it instead. --kant is not a rule drawn
+   * around a block; it is the block's own edge, one value of white catching the
+   * light every screen is lit from above by. The inset highlight in --lyft is
+   * the same light landing on the top face. Together they are what tells an eye
+   * "this is a thing lying on the shell" without drawing a single line — and
+   * they are why the result reads as soft rather than as engineered.
+   *
+   * Two heights only: --lyft-1 rests (cards, panels, fields), --lyft-2 floats
+   * (menus, popovers, anything over content). A third height would be a
+   * distinction nobody can see and every screen could get wrong. */
+  --kant: rgb(255 255 255 / 0.07);
+  --lyft-1:
+    0 1px 2px rgb(0 0 0 / 0.45),
+    inset 0 1px 0 rgb(255 255 255 / 0.045);
+  --lyft-2:
+    0 2px 4px rgb(0 0 0 / 0.4),
+    0 14px 32px rgb(0 0 0 / 0.38),
+    inset 0 1px 0 rgb(255 255 255 / 0.06);
 
   /* The primary action is the ink, as it is on paper. Handling stays what the
      identity reserves it for — links and text actions — rather than becoming
@@ -1042,7 +1073,8 @@ select,
 
 /* ---- surfaces ---- */
 .ui-card {
-  border: 1px solid var(--border);
+  border: 1px solid var(--kant);
+  box-shadow: var(--lyft-1);
   border-radius: var(--radius-3xl);
   background: var(--card);
 }
@@ -1126,7 +1158,8 @@ select,
   justify-content: space-between;
   gap: var(--s3);
   padding: var(--s3) var(--s4);
-  border: 1px solid var(--border);
+  border: 1px solid var(--kant);
+  box-shadow: var(--lyft-1);
   border-radius: var(--radius-xl);
   background: var(--card);
   font-size: var(--text-base);

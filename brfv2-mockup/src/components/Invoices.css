@@ -60,7 +60,8 @@
   gap: var(--s2);
   height: var(--h-md);
   padding: 0 var(--s3);
-  border: 1px solid var(--border);
+  border: 1px solid var(--kant);
+  box-shadow: var(--lyft-1);
   border-radius: var(--r-sm);
   background: var(--card);
   color: var(--foreground);
@@ -342,7 +343,8 @@
 .invoices-read-in {
   margin: 0;
   padding: var(--s2) var(--s3);
-  border: 1px solid var(--border);
+  border: 1px solid var(--kant);
+  box-shadow: var(--lyft-1);
   border-radius: var(--r-control);
   background: var(--surface-1);
 }
@@ -884,7 +886,8 @@
 
 .case-status-card {
   padding: var(--s3h) var(--s4);
-  border: 1px solid var(--border);
+  border: 1px solid var(--kant);
+  box-shadow: var(--lyft-1);
   border-radius: var(--radius-xl);
   background: var(--card);
 }
@@ -938,7 +941,8 @@
   gap: var(--s0h);
   flex: 1 1 260px;
   padding: var(--s2h) var(--s3h);
-  border: 1px solid var(--border);
+  border: 1px solid var(--kant);
+  box-shadow: var(--lyft-1);
   border-radius: var(--radius-2xl);
   background: var(--card);
   font-size: var(--text-base);
@@ -983,7 +987,8 @@
    24px blob: one card radius across the workspace surfaces. */
 .case-panel {
   padding: var(--s3h) var(--s4);
-  border: 1px solid var(--border);
+  border: 1px solid var(--kant);
+  box-shadow: var(--lyft-1);
   border-radius: var(--r-card);
   background: var(--card);
 }
@@ -1053,7 +1058,8 @@
 
 .case-original {
   padding: var(--s3h) var(--s4);
-  border: 1px solid var(--border);
+  border: 1px solid var(--kant);
+  box-shadow: var(--lyft-1);
   border-radius: var(--r-card);
   background: var(--card);
 }
