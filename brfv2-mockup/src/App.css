@@ -107,7 +107,7 @@
   display: none;
   position: fixed;
   inset: 0;
-  background: rgb(55 50 47 / 0.32);
+  background: rgb(var(--ink-rgb) / 0.32);
   z-index: 35;
 }
 
@@ -546,13 +546,13 @@
    brochure instead of an instrument. Anything that needs a paragraph belongs
    below the band, or nowhere. */
 .page-header .page-header-sub {
-  color: rgb(247 245 243 / 0.68);
+  color: var(--ljus-muted);
   font-size: var(--text-base);
   max-width: 76ch;
   margin-top: var(--s0h);
 }
 
-.page-header .page-header-count { color: rgb(247 245 243 / 0.5); }
+.page-header .page-header-count { color: var(--ljus-subtle); }
 
 /* Dokument used to carry its measure as an inline `maxWidth: 1200`, which
    boxed its band in while every other workspace's ran edge to edge. Same
@@ -583,9 +583,9 @@
   height: var(--h-md);
   padding: 0 var(--s3);
   background: transparent;
-  border: 1px solid rgb(247 245 243 / 0.2);
+  border: 1px solid var(--kant-kontroll);
   border-radius: var(--r-sm);
-  color: rgb(247 245 243 / 0.82);
+  color: var(--ljus);
   font-family: inherit;
   font-size: var(--text-sm);
   font-weight: 500;
@@ -595,14 +595,28 @@
 }
 
 .page-header button:hover:not(:disabled) {
-  background: rgb(247 245 243 / 0.08);
-  border-color: rgb(247 245 243 / 0.42);
+  background: var(--skal-pressed);
+  border-color: var(--ljus-subtle);
   color: var(--papper);
 }
 
-/* The one action the screen exists to offer. */
+/* The one action the screen exists to offer.
+ *
+ * `.invoices-read-in-btn` used to be in this list, and that put the same verb
+ * on screen twice in two different clothes: "Läs in" as a solid paper button
+ * up here, "Läs in fakturor" as a solid blue one in the empty state 500px
+ * below. Reading in is not what Fakturor is for — granska is — so up here it
+ * is one of two equal tools and looks like the other one. The invitation to
+ * read in belongs to the empty state, which is the screen that has nothing
+ * else to offer, and it is the only primary on the screen now.
+ *
+ * (The deeper split is still open: this band paints a primary in --ljus while
+ * --primary is blue, so "the primary action" has two appearances in the
+ * product. theme.css:378 says it should be neither — that the primary is the
+ * ink, and Handling stays links-only per §07 — which is a token change with
+ * about twenty consumers, including Puck's editor chrome. Not folded into an
+ * accessibility pass.) */
 .page-header .ui-btn--primary,
-.page-header .invoices-read-in-btn,
 .page-header .watches-scan {
   background: var(--ljus);
   border-color: var(--ljus);
@@ -611,7 +625,6 @@
 }
 
 .page-header .ui-btn--primary:hover:not(:disabled),
-.page-header .invoices-read-in-btn:hover:not(:disabled),
 .page-header .watches-scan:hover:not(:disabled) {
   background: var(--field);
   border-color: var(--field);
@@ -628,7 +641,7 @@
 /* Uppgifter writes its subcopy as `.muted`, not `.page-header-sub` — same
    sentence, older class. It needs the paper-on-ink treatment too or it drops
    to unreadable grey inside the band. */
-.page-header .muted { color: rgb(247 245 243 / 0.72); }
+.page-header .muted { color: var(--ljus-muted); }
 
 /* Inkommande is the one screen whose masthead is a tablist rather than a
    title, so its two tabs ARE the name of the screen and have to carry the
@@ -649,7 +662,7 @@
   font-weight: 400;
   letter-spacing: -0.02em;
   line-height: 1.1;
-  color: rgb(247 245 243 / 0.38);
+  color: var(--ljus-faint);
 }
 
 .page-header .integrations-tabs button svg { display: none; }
@@ -659,7 +672,7 @@
 .page-header .integrations-tabs button:hover:not(:disabled) {
   background: transparent;
   border: none;
-  color: rgb(247 245 243 / 0.7);
+  color: var(--ljus);
 }
 
 .page-header .integrations-tabs button.active:hover { color: var(--papper); }
@@ -671,7 +684,7 @@
    band therefore holds that screen's own measure at display scale, and each
    one is drawn from a value that exists at zero. */
 
-.invoices-tagline { color: rgb(247 245 243 / 0.72); font-size: var(--text-base); line-height: 1.6; }
+.invoices-tagline { color: var(--ljus-muted); font-size: var(--text-base); line-height: 1.6; }
 
 /* An empty Uppgifter offered the same action twice — a loose "Ny uppgift"
    button and, 40px below it, the empty state's "Skapa första uppgiften". The
@@ -680,19 +693,19 @@
    state's action clicks it) or the moment there is a list to sit above. */
 .tasks.has-no-active .tasks-new:has(.task-create:not(.open)) { display: none; }
 
-.page-header .horizon-strip { border-bottom-color: rgb(247 245 243 / 0.22); }
+.page-header .horizon-strip { border-bottom-color: var(--horisont-axel); }
 
-.page-header .horizon-now { border-right-color: rgb(247 245 243 / 0.22); }
+.page-header .horizon-now { border-right-color: var(--horisont-axel); }
 
-.page-header .horizon-bar { background: rgb(247 245 243 / 0.16); }
+.page-header .horizon-bar { background: var(--horisont-tom); }
 
-.page-header .horizon-cell.loaded .horizon-bar { background: rgb(247 245 243 / 0.55); }
+.page-header .horizon-cell.loaded .horizon-bar { background: var(--horisont-fylld); }
 
 .page-header .horizon-now.loaded .horizon-bar { background: var(--papper); }
 
 .page-header .horizon-count { color: var(--papper); }
 
-.page-header .horizon-label { color: rgb(247 245 243 / 0.5); }
+.page-header .horizon-label { color: var(--ljus-subtle); }
 
 .page-header .horizon-now .horizon-label { color: var(--papper); }
 
@@ -704,7 +717,7 @@
   font-weight: 400;
   vertical-align: super;
   margin-left: var(--s1h);
-  color: rgb(247 245 243 / 0.5);
+  color: var(--ljus-subtle);
 }
 
 /* Chrome on paper: when the header sits outside the sheet it belongs to the
@@ -1194,7 +1207,7 @@
   align-items: center;
   justify-content: center;
   padding: var(--s5);
-  background: rgb(55 50 47 / 0.38);
+  background: rgb(var(--ink-rgb) / 0.38);
   z-index: 500;
 }
 
@@ -1239,7 +1252,7 @@
 mark.search-highlight {
   padding: var(--s0h) var(--s1);
   border-radius: var(--r-sm);
-  background: rgb(255 214 0 / 0.42);
+  background: rgb(var(--remsgul-rgb) / 0.42);
   color: var(--foreground);
   font-style: normal;
 }
@@ -1889,7 +1902,7 @@ mark.search-highlight {
    product keeps its promise, so it is the identity's exact yellow. */
 .pdf-highlight {
   position: absolute;
-  background: rgb(255 214 0 / 0.42);
+  background: rgb(var(--remsgul-rgb) / 0.42);
   outline: 1.5px solid rgb(214 176 0 / 0.9);
   border-radius: var(--r-sm);
   pointer-events: none;

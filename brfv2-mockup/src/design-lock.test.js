@@ -259,3 +259,109 @@ describe('design lock: the assertion face keeps its one weight', () => {
     expect(offenders).toEqual([]);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Beslut 9: the shell's contrast is computed, not judged by eye.
+//
+// A reviewer told us the dark mode "violates basic WCAG 2.1 AA" and named the
+// subtext as the offender. The subtext measured 8.81:1. What actually failed
+// was the thing nobody mentioned: the boundary of every input and select, at
+// 1.75:1 against a 3:1 requirement — Fakturor's four filters and its search
+// field were, accessibly speaking, not drawn at all.
+//
+// Eyes are bad at this in both directions, and screenshots are worse: they are
+// re-encoded, and they are looked at on someone else's display at someone
+// else's brightness. So the ratios are arithmetic now. If a token is re-mixed
+// and drops below its floor, this fails before anyone has to notice.
+const THEME = readFileSync(join(SRC, 'theme.css'), 'utf8');
+
+function tokenHex(name) {
+  const m = THEME.match(new RegExp(`^\\s*${name}:\\s*(#[0-9A-Fa-f]{6})\\s*;`, 'm'));
+  if (!m) throw new Error(`design lock: token ${name} is not defined as a hex in theme.css`);
+  return m[1];
+}
+const channels = (hex) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16));
+const toLinear = (c) => (c / 255 <= 0.03928 ? c / 255 / 12.92 : (((c / 255) + 0.055) / 1.055) ** 2.4);
+const luminance = (hex) => {
+  const [r, g, b] = channels(hex).map(toLinear);
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+};
+const contrast = (a, b) => {
+  const [hi, lo] = [luminance(a), luminance(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+};
+
+// The grounds a shell colour can land on. Not --matta: nothing interactive and
+// no interface text lies on the reading mat, only a document does.
+const GROUNDS = ['--skal', '--skal-raised', '--skal-pressed'];
+
+// floor, and why it is that number
+const FLOORS = [
+  ['--ljus', 4.5],          // body text
+  ['--ljus-muted', 4.5],    // secondary prose
+  ['--ljus-subtle', 4.5],   // captions and labels — still prose, still 4.5
+  ['--ljus-faint', 3.0],    // large display text only (1.4.3 large-text)
+  ['--kant-kontroll', 3.0], // the boundary of a control (1.4.11)
+  ['--horisont-fylld', 3.0], // a data mark you must see to read the chart
+];
+
+describe('design lock: the shell meets AA by arithmetic', () => {
+  it.each(FLOORS)('%s clears %f:1 on every ground it can sit on', (token, floor) => {
+    const hex = tokenHex(token);
+    const failures = GROUNDS
+      .map((ground) => [ground, contrast(hex, tokenHex(ground))])
+      .filter(([, ratio]) => ratio < floor)
+      .map(([ground, ratio]) => `${token} (${hex}) on ${ground}: ${ratio.toFixed(2)}:1 < ${floor}`);
+    expect(failures).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Beslut 10: a colour literal may not spell out a token's value.
+//
+// CSS cannot take an alpha of a hex token, so "paper at 15%" got written as
+// rgb(232 229 222 / 0.15) — a copy of --papper that does not follow it. Högen's
+// beam was four such copies of --ljus; --ljus was re-mixed from cold to warm
+// and the beam silently stayed cold, and nothing failed, because a literal
+// renders perfectly while meaning nothing. Same disease as the ~1000 spacing
+// literals, in the colour column.
+//
+// The cure is --ljus-rgb / --papper-rgb / --ink-rgb, used as
+// rgb(var(--papper-rgb) / 0.15). This test fails if a value comes back inline.
+//
+// White and black are exempt: rgb(255 255 255 / 0.045) in --lyft is not a copy
+// of --dokument, it is the light every screen is lit from above by.
+const NEUTRAL = new Set(['255 255 255', '0 0 0']);
+
+describe('design lock: no literal spells out a token', () => {
+  it('every inline rgb() is a neutral or a channel token', () => {
+    const named = new Map();
+    for (const [, name, hex] of THEME.matchAll(/^\s*(--[\w-]+):\s*(#[0-9A-Fa-f]{6})\s*;/gm)) {
+      named.set(channels(hex).join(' '), name);
+    }
+    const offenders = [];
+    for (const file of walk(SRC)) {
+      if (!file.endsWith('.css')) continue;
+      for (const [, triple] of readFileSync(file, 'utf8')
+        .matchAll(/rgba?\(\s*(\d{1,3}[\s,]+\d{1,3}[\s,]+\d{1,3})\s*[/,)]/g)) {
+        const key = triple.replace(/[\s,]+/g, ' ');
+        if (NEUTRAL.has(key)) continue;
+        if (named.has(key)) {
+          offenders.push(
+            `${relative(SRC, file)}: rgb(${key}) is ${named.get(key)} — use rgb(var(${named.get(key)}-rgb) / …)`,
+          );
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+});
+
+// Beslut 10b: and the channel tokens must agree with their hex.
+describe('design lock: channels agree with their colour', () => {
+  it.each(['--ljus', '--papper', '--ink', '--remsgul', '--sokljus'])('%s-rgb equals its hex', (token) => {
+    const triple = THEME.match(new RegExp(`^\\s*${token}-rgb:\\s*([\\d\\s]+);`, 'm'));
+    expect(triple, `${token}-rgb is not defined`).toBeTruthy();
+    expect(triple[1].trim().split(/\s+/).map(Number)).toEqual(channels(tokenHex(token)));
+  });
+});

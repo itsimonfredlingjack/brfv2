@@ -9,7 +9,7 @@
   align-self: end;
   min-width: 0;
   width: 100%;
-  border-top: 1px solid rgb(247 245 243 / 0.13);
+  border-top: 1px solid var(--kant);
   padding-top: var(--s6);
   display: flex;
   align-items: flex-end;
@@ -51,7 +51,7 @@
   font-weight: var(--etikett-weight);
   letter-spacing: var(--etikett-tracking);
   text-transform: var(--etikett-case);
-  color: rgb(247 245 243 / 0.5);
+  color: var(--ljus-subtle);
 }
 
 /* The one number the board came for, at a scale nothing else competes with. */
@@ -65,6 +65,18 @@
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
   color: var(--papper);
+}
+
+/* Vila — the instrument with nothing to measure.
+   Out of the mono, because nothing is being measured; out of display scale,
+   because a screen's largest object should be the thing the board came for and
+   this is the news that there isn't one. It keeps --papper: this is a real
+   answer, calmly given, not a disabled state. */
+.instrument-figure.vilande .instrument-amount {
+  font-family: var(--font-sans);
+  font-size: var(--text-subhead);
+  font-weight: 500;
+  letter-spacing: 0;
 }
 
 .instrument-readings {

@@ -36,10 +36,10 @@
   border-radius: 1px;
   background: linear-gradient(
     to right,
-    rgb(236 237 239 / 0.04),
-    rgb(236 237 239 / 0.15) 22%,
-    rgb(236 237 239 / 0.15) 78%,
-    rgb(236 237 239 / 0.04)
+    rgb(var(--ljus-rgb) / 0.04),
+    rgb(var(--ljus-rgb) / 0.15) 22%,
+    rgb(var(--ljus-rgb) / 0.15) 78%,
+    rgb(var(--ljus-rgb) / 0.04)
   );
   box-shadow: 0 1px 2px rgb(0 0 0 / 0.5);
 }
@@ -51,9 +51,9 @@
   height: 5px;
   background: var(--papper);
   box-shadow:
-    0 0 0 1px rgb(232 229 222 / 0.5),
-    0 0 12px rgb(232 229 222 / 0.45),
-    0 0 34px rgb(232 229 222 / 0.22);
+    0 0 0 1px rgb(var(--papper-rgb) / 0.5),
+    0 0 12px rgb(var(--papper-rgb) / 0.45),
+    0 0 34px rgb(var(--papper-rgb) / 0.22);
   animation: hogen-tanda 900ms var(--ease) 1150ms both;
 }
 
@@ -72,8 +72,8 @@
   border-radius: 50%;
   background: radial-gradient(
     ellipse at center,
-    rgb(207 224 255 / 0.5),
-    rgb(207 224 255 / 0.12) 45%,
+    rgb(var(--sokljus-rgb) / 0.5),
+    rgb(var(--sokljus-rgb) / 0.12) 45%,
     transparent 72%
   );
   filter: blur(6px);

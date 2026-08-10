@@ -26,7 +26,8 @@ export default function EmptyState({ tone, title, children, actions }) {
         <TraffMark size={40} variant="status" state={tone === 'ok' ? 'belagt' : 'vila'} decorative />
       </div>
       <p className="ui-empty-text">
-        <strong>{title}</strong> {children}
+        <strong className="ui-empty-title">{title}</strong>
+        {children ? <span className="ui-empty-body">{children}</span> : null}
       </p>
       {actions ? <div className="ui-empty-actions">{actions}</div> : null}
     </div>

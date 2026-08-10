@@ -23,22 +23,46 @@ import './Instrument.css';
  *   value     the big figure itself.
  *   readings  [{ label, value, flagged }] — `flagged` is lateness, which
  *             refuses red everywhere in this product and underlines instead.
+ *   raw       the figure's underlying number, when it has one. Only used to
+ *             tell nothing from something — see below. Money arrives from the
+ *             backend as a decimal *string* ("0"), so this is compared by
+ *             value, not identity; `raw={0}` and `raw="0.00"` mean the same
+ *             thing. Absent, null or empty means "not known yet", which is not
+ *             the same as zero and must keep the figure.
+ *   vila      what to say when `raw` is 0. Defaults to "Inget att visa".
  *
  * A screen with neither lead nor figure (Uppgifter) has its readings promoted
  * to the figure's size — see Instrument.css. That rule is derived from the
  * markup rather than declared per screen, so a screen cannot get it wrong.
+ *
+ * Zero is not a measurement.
+ *
+ * Fakturor at rest set "0,00 SEK" in mono at display scale: the largest thing
+ * on the screen, in the face this product reserves for measurement, reporting
+ * the absence of anything to measure. §07 is what settles it — "serif för det
+ * som påstås, sans för det som förklaras, mono för det som mäts." There is no
+ * sum here to measure; there is a state to explain. So at zero the figure
+ * leaves the mono and says the state in the sans instead, at a size that hands
+ * the screen back to whatever the board should look at next.
+ *
+ * The typeface carries the meaning, which is why this is a derived rule and
+ * not a per-screen variant class: a screen passes the number it already has
+ * and cannot choose to render its own zero loudly.
  */
-export default function Instrument({ lead, label, value, readings = [], className = '' }) {
+export default function Instrument({
+  lead, label, value, raw, vila, readings = [], className = '',
+}) {
   const hasLead = lead !== undefined;
   const hasFigure = label !== undefined || value !== undefined;
+  const vilande = raw !== undefined && raw !== null && raw !== '' && Number(raw) === 0;
 
   return (
     <div className={['instrument', className].filter(Boolean).join(' ')}>
       {hasLead && <div className="instrument-lead">{lead}</div>}
       {hasFigure && (
-        <div className="instrument-figure">
+        <div className={`instrument-figure${vilande ? ' vilande' : ''}`}>
           <span className="instrument-label">{label}</span>
-          <span className="instrument-amount">{value}</span>
+          <span className="instrument-amount">{vilande ? (vila || 'Inget att visa') : value}</span>
         </div>
       )}
       {readings.length > 0 && (

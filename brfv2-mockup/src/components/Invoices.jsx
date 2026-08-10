@@ -434,9 +434,11 @@ export default function Invoices({ brfId, isAdmin = false, onOpenDocument, onOpe
         {/* Fakturor's instrument is money. The open amount is the one number a
             board actually asks this screen for, so it is set as a ledger figure
             inside the band at a scale nothing else on the screen competes with,
-            with the four review counts as its footing. Rendered at zero too —
-            "0,00 SEK" is a real answer, and an association with no invoices yet
-            still gets a screen that looks built. */}
+            with the four review counts as its footing. It is still drawn at
+            zero — an association with no invoices yet gets a screen that looks
+            built — but `raw` lets the instrument see that there is nothing to
+            measure, and it says so in words instead of setting a 52px mono
+            zero. The wording is this screen's; the treatment is not. */}
         <header className="invoices-topline page-header">
           <div className="page-header-text">
             <h2 className="page-title">Fakturor</h2>
@@ -458,7 +460,9 @@ export default function Invoices({ brfId, isAdmin = false, onOpenDocument, onOpe
           {pane === 'queue' && (
             <Instrument
               label="Öppet belopp"
-              value={formatAmount(counts.amountOpen, 'SEK')}
+              value={formatAmount(counts.amountOpen ?? 0, 'SEK')}
+              raw={counts.amountOpen ?? 0}
+              vila="Inget öppet att granska"
               readings={[
                 { label: 'Att granska', value: counts.open ?? 0 },
                 { label: 'Med signal', value: counts.withSignal ?? 0 },

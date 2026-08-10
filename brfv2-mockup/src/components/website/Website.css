@@ -952,7 +952,7 @@
 .site-modal__backdrop {
   position: absolute;
   inset: 0;
-  background: rgb(55 50 47 / 0.32);
+  background: rgb(var(--ink-rgb) / 0.32);
 }
 
 .site-modal__card {
