@@ -39,7 +39,7 @@
   gap: var(--s2);
   padding: var(--s2h) var(--s3h);
   border-radius: var(--r-sm);
-  border: 1px solid var(--accent, #6384ff);
+  border: 1px solid var(--accent-fg);
   background: transparent;
   color: var(--text-primary);
   font-size: var(--text-dense);

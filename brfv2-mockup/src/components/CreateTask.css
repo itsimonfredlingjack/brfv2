@@ -37,7 +37,7 @@
 
 .task-create-open:hover,
 .task-create-open:focus-visible {
-  border-color: var(--accent, #6384ff);
+  border-color: var(--accent-fg);
 }
 
 .task-create-known {

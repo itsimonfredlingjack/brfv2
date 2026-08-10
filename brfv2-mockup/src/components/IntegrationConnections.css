@@ -245,7 +245,7 @@
 }
 
 .ic-device a {
-  color: var(--accent, #6384ff);
+  color: var(--accent-fg);
   overflow-wrap: anywhere;
 }
 

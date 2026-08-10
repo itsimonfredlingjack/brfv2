@@ -173,6 +173,37 @@ describe('design lock: the instrument is one component', () => {
   });
 });
 
+// Beslut 8 (variablerna): a var() that names nothing renders its fallback in
+// silence, and a fallback is a literal — the exact thing this codebase keeps
+// getting undesignable from. Three call sites carried `var(--accent, #6384ff)`
+// for long enough to be written down in CLAUDE.md as a known bug; the token was
+// defined again at some point and nobody noticed, so the note stayed wrong and
+// the literal stayed dead. Neither can happen quietly now.
+//
+// The allowlist is variables a component sets inline on the element — they are
+// genuinely absent from the stylesheets and genuinely defined at runtime.
+const INLINE_SET_VARS = new Set(['--mark-ring', '--leaves', '--i', '--skew', '--pitch']);
+
+describe('design lock: every variable names something', () => {
+  it('no var() refers to a custom property that is never defined', () => {
+    const defined = new Set();
+    const used = [];
+    for (const file of walk(SRC)) {
+      if (!file.endsWith('.css')) continue;
+      const text = readFileSync(file, 'utf8');
+      for (const m of text.matchAll(/(--[\w-]+)\s*:/g)) defined.add(m[1]);
+      for (const m of text.matchAll(/var\(\s*(--[\w-]+)\s*(,)?/g)) {
+        used.push({ name: m[1], fallback: Boolean(m[2]), file });
+      }
+    }
+    const offenders = used
+      .filter((u) => !defined.has(u.name) && !INLINE_SET_VARS.has(u.name))
+      .map((u) => `${relative(SRC, u.file)}: var(${u.name}) is never defined`
+        + (u.fallback ? ' — and its fallback is a literal that renders instead' : ''));
+    expect([...new Set(offenders)]).toEqual([]);
+  });
+});
+
 // Beslut 7 (etiketten): §07 gives the mono a closed list — "sidnummer,
 // paragrafer, poäng, tillstånd" — and everything else that explains belongs to
 // the sans. Uppercase mono had spread to seventeen captions, table heads and
