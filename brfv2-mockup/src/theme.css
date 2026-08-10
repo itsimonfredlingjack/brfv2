@@ -16,19 +16,27 @@
  * 2. **Three cuts, three jobs, never mixed.** Serif states, sans explains, mono
  *    measures. That separation is how a reader tells the product's words from
  *    the document's.
- * 3. **On paper, with the documents still the only white thing.** The identity
- *    states this rule as "mörkt skal, lysande papper", and that form is the
- *    right one on a phone: `xs_mobilapp` and `kalla-native` both run the dark
- *    shell. This file is the desktop, and it runs the identity's *other*
- *    specified ground — `--papper`, warm and never pure white — because a board
- *    reads an invoice case, a queue of post and a full-size PDF here for an hour
- *    at a time, and an A4 sheet glowing out of near-black is the thing that was
- *    hard to read. The relationship the rule protects is intact and inverted:
- *    the workspace is warm paper, and a document is the one surface that is
- *    `#FFFFFF`. There is no `--skal` token in this file, and adding one would be
- *    a change of product, not a change of theme. The full reasoning, including
- *    why the state colours are the identity's paper values rather than
- *    lightened mid-tones, is in the `:root` block below.
+ * 3. **Mörkt skal, lysande papper.** The identity's §06, in its own form.
+ *    `--skal` is the ground; paper is not a background but a material, and it
+ *    appears where a document appears.
+ *
+ *    This reverses a decision made here on 2026-08-08, and the reversal was
+ *    Simon's: "det är darkmode som är grejen, jag har ändrat mig." The earlier
+ *    argument is kept because it is a good one and it is not answered yet —
+ *    a board reads an invoice case, a queue of post and a full-size PDF here
+ *    for an hour at a time, and an A4 sheet glowing out of near-black is
+ *    genuinely harder to read than one lying on warm paper. That is real, it
+ *    is about eyes rather than taste, and the fix is a paper-coloured mat
+ *    around a document rather than the document sitting straight on the shell.
+ *    **Until that mat exists, full-size document reading is the weak point of
+ *    this theme.** Do not treat the dark shell as finished before it is built.
+ *
+ *    What the shell buys, and why Simon is right that the light app read as
+ *    dull: on paper every accent had to be dark enough to survive there —
+ *    belagt was a bottle green `#137855` — so the identity's own rule that
+ *    "accenterna är små, och därför trovärdiga" could never be seen. On the
+ *    shell they take their specified mid-tones and the product gets its colour
+ *    back without spending any more of it.
  *
  * The typefaces are vendored beside this file rather than fetched. The desktop
  * shell serves the application under `font-src 'self'`, so a Google Fonts link
@@ -150,14 +158,45 @@
    * carrying its meaning.
    */
 
-  /* Papper — the ground. Warm, never pure white. */
-  --papper: #F7F5F3;
-  --surface-1: #FBFAF9;   /* a hair off the ground: a quiet section */
-  --surface-2: #F7F5F3;   /* the ground itself, used as an inset */
-  --surface-3: #EFECE8;   /* pressed, hovered, or genuinely inert */
-  --field: #FFFFFF;       /* inputs and cards lift *off* the paper */
+  /* ---- Skal, and what paper became -----------------------------------------
+   *
+   * 2026-08-10: the app goes to the identity's own §06 form — "mörkt skal,
+   * lysande papper: dokumenten är det enda i gränssnittet som är vitt."
+   *
+   * This is not a dark variant of the light app. Paper stops being the ground
+   * and becomes a *material*: it appears where a document appears, and nowhere
+   * else. That is the whole idea, and it is what makes the one white rectangle
+   * on screen legible as evidence rather than as another panel.
+   *
+   * It also answers why the light app read as dull. Every accent had to be
+   * dark enough to survive on paper — belagt was #137855, a bottle green — so
+   * the identity's rule that "accenterna är små, och därför trovärdiga" could
+   * never actually be seen. On the shell they take their own mid-tones and the
+   * product gets its colour back without spending any more of it.
+   *
+   * The values are xs_mobilapp's dark mode verbatim, which is the identity's
+   * §06 already implemented and measured, so the two halves cannot drift. */
+  --skal: #07080B;          /* the ground */
+  --skal-raised: #14161B;   /* plates that lift off it: the band, cards, fields */
+  --skal-sunken: #0D0F13;   /* wells */
+  --skal-pressed: #23262D;  /* pressed, hovered, or genuinely inert */
 
-  /* Bläck — warm near-black, never #000. */
+  /* Ljus — the shell's text. */
+  --ljus: #ECEDEF;
+  --ljus-muted: #B3B8C0;
+  --ljus-subtle: #949AA4;
+
+  /* Papper — now a material, not a ground. A document, and the things drawn on
+     one. Warm, never pure white; Remsgul still lives only inside it. */
+  --papper: #E8E5DE;
+  --surface-1: var(--skal-raised);
+  --surface-2: var(--skal-sunken);
+  --surface-3: var(--skal-pressed);
+  --field: var(--skal-raised);   /* inputs and cards lift *off* the shell */
+
+  /* Bläck — warm near-black. It is what you write on paper with, so it stays
+     for text *inside* a document and for the light-on-dark inversions that
+     mark a selection. It is no longer the interface's text colour. */
   --black: #37322F;
   --ink: #37322F;
   --ink-muted: #605A57;
@@ -167,51 +206,51 @@
      ring, never set as text: on paper it measures 4.34:1, which clears the 3:1
      a graphic needs and misses the 4.5:1 a word needs. If it ever has to carry
      a word, use --sokljus-text. */
-  --sokljus: #3A6FD8;
-  --sokljus-text: #2C5CBE;
+  --sokljus: #CFE0FF;
+  --sokljus-text: #CFE0FF;
   /* Belagt — verified against source text. Never a general success colour. */
-  --belagt: #137855;
+  --belagt: #4FC79C;
   /* Vägran — one meaning: no proof exists. */
-  --vagran: #8A5D06;
+  --vagran: #E5B45C;
   /* Handling — links and text actions. Never a state. */
-  --handling: #1A4FD0;
-  --handling-hover: #123CA8;
+  --handling: #7EA2FF;
+  --handling-hover: #9DB8FF;
   /* The keyboard mark: a soft Handling tint behind the row focus has moved
      to, so the position reads in peripheral vision without becoming a state
      color. */
-  --handling-soft: #E9EEFB;
+  --handling-soft: #16203A;
   /* The marked passage inside a document. Lives only within the paper. */
   --remsgul: #FFD600;
 
   /* ---- surfaces & text ---- */
-  --background: var(--papper);
-  --foreground: var(--ink);
-  --card: var(--field);
-  --card-foreground: var(--ink);
-  --card-hover: var(--surface-1);
-  --popover: #FFFFFF;
-  --popover-foreground: var(--ink);
-  --muted: var(--surface-3);
-  --muted-foreground: var(--ink-muted);
-  --subtle-foreground: var(--ink-subtle);
-  --secondary: var(--surface-3);
-  --secondary-foreground: var(--ink);
-  --surface-accent: var(--surface-3);
-  --surface-accent-foreground: var(--ink);
-  --border: #E4E0DC;
-  --border-strong: #CDC7C1;
-  --input: #DAD5D0;
+  --background: var(--skal);
+  --foreground: var(--ljus);
+  --card: var(--skal-raised);
+  --card-foreground: var(--ljus);
+  --card-hover: var(--skal-pressed);
+  --popover: var(--skal-raised);
+  --popover-foreground: var(--ljus);
+  --muted: var(--skal-pressed);
+  --muted-foreground: var(--ljus-muted);
+  --subtle-foreground: var(--ljus-subtle);
+  --secondary: var(--skal-pressed);
+  --secondary-foreground: var(--ljus);
+  --surface-accent: var(--skal-pressed);
+  --surface-accent-foreground: var(--ljus);
+  --border: #23262D;
+  --border-strong: #363A43;
+  --input: #363A43;
   --ring: var(--handling);
-  --muted-hover: #E6E2DD;
+  --muted-hover: #2B2F37;
 
   /* The primary action is the ink, as it is on paper. Handling stays what the
      identity reserves it for — links and text actions — rather than becoming
      the generic blue button every product already has.
      Its hover is therefore a darker ink, not a change of hue: a control does
      not become a different kind of thing under the pointer. */
-  --primary: var(--ink);
-  --primary-hover: #262220;
-  --primary-foreground: #FFFFFF;
+  --primary: var(--handling);
+  --primary-hover: var(--handling-hover);
+  --primary-foreground: var(--skal);
 
   /* The frame is paper, not white. The workspace ran three grounds at once —
      an ink masthead, a warm paper canvas and a pure-white sidebar down the
@@ -219,21 +258,21 @@
      identity reserves #FFFFFF for one thing: a document. A navigation column
      is not a document, so it joins the paper and the app reads as two
      materials instead of three. */
-  --sidebar: var(--papper);
-  --sidebar-foreground: var(--ink);
-  --sidebar-accent: var(--surface-3);
-  --sidebar-accent-foreground: var(--ink);
-  --sidebar-border: #E4E0DC;
+  --sidebar: var(--skal);
+  --sidebar-foreground: var(--ljus);
+  --sidebar-accent: var(--skal-pressed);
+  --sidebar-accent-foreground: var(--ljus);
+  --sidebar-border: #23262D;
   --sidebar-ring: var(--ring);
 
   /* ---- the state colours, as states ---- */
   --ok: var(--belagt);
-  --ok-soft: #E7F3ED;
-  --ok-border: #A9D6C3;
+  --ok-soft: #10241D;
+  --ok-border: #1E4638;
 
   --warn: var(--vagran);
-  --warn-soft: #FAF1DF;
-  --warn-border: #E0C793;
+  --warn-soft: #241C10;
+  --warn-border: #5A4620;
 
   /* ---- the seventh colour: Avbrott ----
    *
@@ -648,7 +687,7 @@ code, pre, kbd, samp { font-family: var(--font-mono); }
   font-size: var(--text-2xs);
   font-weight: 600;
   padding: var(--s0h) var(--s2);
-  background: #FFFFFF;
+  background: var(--skal-raised);
   border: 1px solid var(--border-strong);
   border-bottom-width: 2px;
   border-radius: var(--r-sm);
@@ -857,7 +896,7 @@ code, pre, kbd, samp { font-family: var(--font-mono); }
    renders empty, and without explicit option colours the drop-down it opens
    does the same. Both are needed, on every select in the product. */
 select, input, textarea { color-scheme: light; }
-select option { background: #FFFFFF; color: var(--ink); }
+select option { background: var(--skal-raised); color: var(--ljus); }
 
 /* The chevron and the suppressed platform widget belong to `select`, not to a
    class a screen has to remember. Fakturor's four filters were bare `<select>`

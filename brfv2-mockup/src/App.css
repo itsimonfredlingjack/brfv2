@@ -237,11 +237,11 @@
    locks to highlights inside document paper. */
 .nav-item.active,
 .nav-item.active:hover {
-  background: var(--ink);
-  color: var(--papper);
+  background: var(--ljus);
+  color: var(--skal);
   font-weight: 500;
 }
-.nav-item.active > svg { color: var(--papper); opacity: 1; }
+.nav-item.active > svg { color: var(--skal); opacity: 1; }
 .nav-item:focus-visible { outline: 2px solid var(--sidebar-ring); outline-offset: -2px; }
 
 /* ---- sidebar footer -------------------------------------------------------
@@ -281,8 +281,8 @@
   flex-shrink: 0;
   border: none;
   border-radius: 0;
-  background: var(--ink);
-  color: var(--primary-foreground);
+  background: var(--ljus);
+  color: var(--skal);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
   font-weight: 700;
@@ -515,7 +515,7 @@
   height: var(--band-h);
   margin: -24px -28px var(--s6);
   padding: var(--s8) var(--gutter) var(--s6);
-  background: var(--ink);
+  background: var(--skal-raised);
   color: var(--papper);
 }
 
@@ -605,9 +605,9 @@
 .page-header .ui-btn--primary,
 .page-header .invoices-read-in-btn,
 .page-header .watches-scan {
-  background: var(--papper);
-  border-color: var(--papper);
-  color: var(--ink);
+  background: var(--ljus);
+  border-color: var(--ljus);
+  color: var(--skal);
   font-weight: 600;
 }
 
@@ -1341,8 +1341,8 @@ mark.search-highlight {
 
 .example-prompt-btn:hover,
 .example-prompt-btn:focus-visible {
-  background: var(--ink);
-  color: var(--papper);
+  background: var(--ljus);
+  color: var(--skal);
   outline: none;
 }
 
