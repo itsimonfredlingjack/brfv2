@@ -182,6 +182,21 @@ function App() {
     [],
   );
 
+  // Dev-only convenience: while the product is still being built, the login
+  // screen is pure friction on the design loop — it stands between every CSS
+  // edit and seeing it. In `vite dev` we therefore sign in as the demo account
+  // automatically, through the real /api/auth/login, so the session downstream
+  // is a genuine one and nothing else has to be faked.
+  //
+  // `import.meta.env.DEV` is false in `npm run build`, so the shipped bundle —
+  // the one the desktop app serves — keeps the real login untouched.
+  const autoLoginForDev = () => {
+    if (!import.meta.env.DEV) return Promise.reject(new Error('not dev'));
+    const email = import.meta.env.VITE_DEV_EMAIL || 'anna@gjutformen12.se';
+    const password = import.meta.env.VITE_DEV_PASSWORD || 'gjutformen-demo-2026';
+    return api.login(email, password);
+  };
+
   // Session bootstrap: probe the delivery, then restore an existing session
   // cookie, else show login (or first-run setup on an unprovisioned desktop).
   React.useEffect(() => {
@@ -196,9 +211,20 @@ function App() {
           setAuthState('loggedOut');
           return null;
         }
-        return api.me().then(handleLoggedIn).catch(() => setAuthState('loggedOut'));
+        return api.me()
+          .catch(() => autoLoginForDev())
+          .then((session) => { if (!cancelled) handleLoggedIn(session); })
+          .catch(() => { if (!cancelled) setAuthState('loggedOut'); });
       })
-      .catch(() => { if (!cancelled) { setDesktopReady(true); setAuthState('loggedOut'); } });
+      .catch(() => {
+        if (cancelled) return;
+        setDesktopReady(true);
+        // No /api/desktop/state at all (plain web delivery, or the backend is
+        // down) — still worth one auto-login attempt before falling back.
+        autoLoginForDev()
+          .then((session) => { if (!cancelled) handleLoggedIn(session); })
+          .catch(() => { if (!cancelled) setAuthState('loggedOut'); });
+      });
     return () => { cancelled = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refreshDesktopState]);
