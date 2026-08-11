@@ -134,79 +134,58 @@
 .watches-proposals,
 .watches-unresolved { margin-bottom: var(--s8); }
 
-.watches h3 {
-  display: flex;
-  align-items: center;
-  gap: var(--s2);
-  margin: 0 0 var(--s1);
-  font-size: var(--text-lg);
-  font-weight: 600;
-  color: var(--foreground);
-}
-
-.watches h3 + p { margin: 0 0 var(--s4); }
-
-/* The proposals section gets its own dashed cap — same "not committed" idiom
-   as the row's own dashed edge and the proposed badge, now said a second
-   time at the section level. */
-.watches-proposals > h3 {
-  padding-bottom: var(--s2);
-  border-bottom: 1px dashed var(--border-strong);
-}
-
-/* Solid: unlike a proposal, nothing here is provisional — just undated. */
-/* The heading names the group; the space above it already says where the
-   group starts. The rule was saying it a second time, in the one idiom that
-   made this product read as a drawing. */
-.watches-unresolved > h3 { padding-bottom: var(--s1); }
+/* The three section heads are Avsnitt now — 01 Bevakas, 02 Förslag, 03
+   Odaterat — so the page states its own order the way Fakturor states hers.
+   The dashed rule that used to cap the proposals section is gone with them:
+   every proposal card already carries the dashed outline that says the same
+   thing, and saying it twice at two scales is the drawing-the-product habit
+   this language exists to break. */
 
 /* --- the four groups, stacked on the time axis --- */
 
-.watch-buckets { display: flex; flex-direction: column; gap: var(--s6); }
+/* The buckets stand off the section's lead, and off each other, by the same
+   air. Without the top margin "Försenat" sat directly on the sentence above it
+   and the two read as one run-on heading. */
+.watch-buckets { display: flex; flex-direction: column; gap: var(--s8); margin-top: var(--s7); }
 
-/* A bucket is a surface, not a heading with a line under it.
- *
- * Four full-width rules stacked down an empty screen is the clearest picture of
- * what made this product read as a drawing: nothing was resting on anything,
- * the screen was ruled. A group that holds its own contents holds them on a
- * plate — same edge and same lift as every other surface (see --kant/--lyft-1),
- * so the shape is the product's, not this screen's. */
 /* A bucket is a section of the page, not a plate on it. The box came off when
-   the language changed: air and a numbered eyebrow separate one range of dates
-   from the next, and the cards inside are the only things that carry a line. */
+   the language changed: air separates one range of dates from the next, and
+   the cards inside are the only things that carry a line. */
 .watch-bucket {
   min-width: 0;
 }
 
-/* A bucket header names a measured range. Direct child only — the cards inside
-   carry their own h4 titles. It stood on a rule until the bucket became a
-   plate; the plate is the boundary now, so the line was saying it twice. */
-.watch-bucket > h4 {
-  display: flex;
-  align-items: center;
-  gap: var(--s2h);
-  margin: 0 0 var(--s3);
-  font-family: var(--etikett-family);
-  font-size: var(--etikett-size);
-  font-weight: var(--etikett-weight);
-  letter-spacing: var(--etikett-tracking);
-  text-transform: var(--etikett-case);
-  color: var(--muted-foreground);
+/* A bucket names a range of dates. It sits one level under the section head,
+   so it takes the cut this language gives to "the one thing a card is about" —
+   sans, subhead, 600 — rather than competing with the Avsnitt above it or
+   borrowing the uppercase mono, which §07 reserves for what is measured. It
+   was set in that mono, which is how "Försenat" ended up looking like a page
+   number. */
+.watch-bucket-namn {
+  margin: 0;
+  font-family: var(--font-sans);
+  font-size: var(--text-subhead);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--black-900);
 }
 
-.watch-bucket.overdue > h4 { color: var(--foreground); }
-
-.bucket-count {
-  min-width: 20px;
-  padding: var(--s0h) var(--s2);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--r-sm);
-  font-size: var(--text-xs);
-  font-variant-numeric: tabular-nums;
-  text-align: center;
+/* What is in the bucket, or the fact that nothing is. Same cut as a card's
+   reasoning line, because it does the same job. */
+.watch-bucket-lead {
+  margin: var(--s1) 0 0;
+  max-width: 64ch;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  color: var(--black-500);
 }
 
-.watch-bucket .empty { padding: var(--s0h) 0 0; }
+/* Standing directly under a section head it is that section's whole content —
+   "Inga förslag väntar på beslut." — so it takes the air a card would have. */
+.avsnitt + .watch-bucket-lead { margin-top: var(--s5); }
+
+.watch-bucket .arendekort { margin-top: var(--s4); }
 
 /* --- one row: the register sits on the plane, one hairline between rows --- */
 
@@ -453,6 +432,19 @@
 
 /* --- decisions --- */
 
+/* The proposal's decisions sit in the card's own action area, which is a wrap
+   row built for a handful of buttons. This one holds a form, so it claims the
+   full width and stacks. */
+.watch-decide { flex: 1 1 100%; min-width: 0; }
+
+.watch-decide > .watch-approve { margin-top: 0; padding-top: 0; border-top: none; }
+
+/* Cards in a section stand apart by air, the way .arendelista's do. These two
+   sections list them directly rather than through the grid, because each one
+   is its own <section> with its own head. */
+.watches-proposals > .arendekort,
+.watches-unresolved > .arendekort { margin-top: var(--s4); }
+
 .watch-approve,
 .watch-dismiss,
 .watch-remove,
@@ -548,16 +540,35 @@
 
 .watch-dismiss-wrap { align-self: center; }
 
+/* The disclosure sits in a row of buttons, so it has to read as one. It was
+   bare text between "Markera som avklarad" and "Skapa uppgift" — no boundary,
+   no fill, nothing saying it could be operated — which in a row of controls
+   reads as a stray label rather than the third choice. It takes the same
+   geometry as .watch-action and stays the quietest of the three, because
+   dismissing is the exception. */
 .watch-dismiss-wrap summary {
+  display: inline-flex;
+  align-items: center;
+  height: 32px;
+  padding: 0 var(--s3h);
+  border: 1px solid var(--kant-kontroll);
+  border-radius: var(--radius-2xl);
   cursor: pointer;
   list-style: none;
-  color: var(--muted-foreground);
+  color: var(--black-700);
   font-size: var(--text-base);
+  font-weight: 500;
+  transition: background-color 0.14s ease, color 0.14s ease;
+}
+
+.watch-dismiss-wrap summary:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
 }
 
 .watch-dismiss-wrap summary::-webkit-details-marker { display: none; }
-.watch-dismiss-wrap summary:hover { color: var(--foreground); }
-.watch-dismiss-wrap[open] summary { margin-bottom: var(--s2); }
+.watch-dismiss-wrap summary:hover { background: var(--skal-pressed); color: var(--black-900); }
+.watch-dismiss-wrap[open] summary { margin-bottom: var(--s3); }
 
 .watch-dismiss-wrap .watch-dismiss { border-top: none; margin-top: 0; padding-top: 0; }
 
@@ -574,7 +585,11 @@
    Bevakningar's whole job is "what's coming and when" — this is that fact,
    drawn once, before a single card is read. Bar height is the only variable;
    colour stays reserved (see file header) so a taller column reads as "more
-   due," never as a warning. */
+   due," never as a warning.
+
+   Its colours used to be set from App.css under `.page-header .horizon-*`,
+   from the days when the chart was drawn inside the band. They are the chart's
+   own, so they are stated here, once. */
 
 .watches-horizon { margin: 0 0 var(--s9); }
 
@@ -585,7 +600,7 @@
   gap: var(--s1);
   margin: 0;
   padding: 0 0 var(--s3);
-  border-bottom: 1px solid var(--border-strong);
+  border-bottom: 1px solid var(--horisont-axel);
 }
 
 .horizon-cell {
@@ -600,21 +615,21 @@
   flex: 0 0 auto;
   padding-right: var(--s4);
   margin-right: var(--s3);
-  border-right: 1px solid var(--border-strong);
+  border-right: 1px solid var(--horisont-axel);
 }
 
 .horizon-bar {
   width: 100%;
   max-width: 34px;
-  background: var(--surface-3);
+  background: var(--horisont-tom);
   border-radius: 3px 3px 0 0;
 }
 
-.horizon-cell.loaded .horizon-bar { background: var(--border-strong); }
+.horizon-cell.loaded .horizon-bar { background: var(--horisont-fylld); }
 
 /* The one place lateness is allowed to say more than weight: still no red,
    but ink-filled rather than the neutral grey every future month gets. */
-.horizon-now.loaded .horizon-bar { background: var(--ink); }
+.horizon-now.loaded .horizon-bar { background: var(--black-900); }
 
 .horizon-count {
   min-height: 1.2em;
@@ -622,7 +637,7 @@
   font-size: var(--text-sm);
   font-weight: 700;
   font-variant-numeric: tabular-nums;
-  color: var(--foreground);
+  color: var(--black-900);
 }
 
 .horizon-label {
@@ -631,11 +646,11 @@
   font-weight: var(--etikett-weight);
   letter-spacing: var(--etikett-tracking);
   text-transform: var(--etikett-case);
-  color: var(--muted-foreground);
+  color: var(--black-500);
 }
 
-.horizon-now .horizon-label { color: var(--foreground); font-weight: 700; }
-.horizon-now.overdue .horizon-count { box-shadow: inset 0 -2px 0 var(--ink); }
+.horizon-now .horizon-label { color: var(--black-900); font-weight: 700; }
+.horizon-now.overdue .horizon-count { box-shadow: inset 0 -2px 0 var(--black-900); }
 
 /* --- settled --- */
 

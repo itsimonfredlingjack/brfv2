@@ -592,7 +592,11 @@ export default function Tasks({ brfId, isAdmin = false, onOpenCitation }) {
           )}
 
           <section className="tasks-active" aria-label="Pågående">
-            <h3>Pågående</h3>
+            {/* The section head only earns its own line when there is something
+                under it. With an empty list the empty state's own statement was
+                the second heading in a row — "Pågående" and then "Inga
+                uppgifter på gång." — one of which was redundant. */}
+            {active.length > 0 && <h3>Pågående</h3>}
             {active.length === 0 ? (
               <EmptyState
                 title="Inga uppgifter på gång."

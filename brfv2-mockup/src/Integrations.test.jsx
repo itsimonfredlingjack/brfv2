@@ -167,25 +167,32 @@ beforeEach(() => {
 });
 
 describe('the incoming shell', () => {
-  it('offers the queue and the connections, and nothing else', async () => {
+  /* The two panes used to be tabs standing where the title goes, which made
+     the masthead read "Inkommande Anslutningar" — a headline missing a word.
+     The band names the screen you are on and the way across is a control in
+     the actions row, so what is asserted here is that: the title is the
+     screen's own name, and exactly one way out of it is offered. */
+  it('names the screen you are on, and offers the way to the other', async () => {
     mountWith();
-    expect(await screen.findByRole('tab', { name: /Inkommande/ })).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: /Anslutningar/ })).toBeInTheDocument();
-    expect(screen.getAllByRole('tab')).toHaveLength(2);
+    expect(await screen.findByRole('heading', { name: 'Inkommande' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Anslutningar/ })).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Anslutningar' })).toBeNull();
   });
 
   it('counts what is still waiting for a decision', async () => {
     mountWith({ events: [EVENT, { ...EVENT, id: 'ev2', review_status: 'approved' }] });
-    const tab = await screen.findByRole('tab', { name: /Inkommande/ });
-    expect(tab.textContent).toContain('1');
+    fireEvent.click(await screen.findByRole('button', { name: /Anslutningar/ }));
+    // Back on the connections desk, the way home carries what is waiting there.
+    const back = await screen.findByRole('button', { name: /Inkommande/ });
+    expect(back.textContent).toContain('1');
   });
 
   it('shows the open count as quiet navigation chrome, not a loud badge', async () => {
     mountWith({ events: [EVENT, { ...EVENT, id: 'ev2' }] });
-    await waitFor(() => expect(screen.getByRole('tab', { name: /Inkommande/ })).toBeInTheDocument());
-    const tab = screen.getByRole('tab', { name: /Inkommande/ });
-    expect(tab.querySelector('.tab-count')).toHaveTextContent('2');
-    expect(tab.querySelector('.pill')).toBeNull();
+    fireEvent.click(await screen.findByRole('button', { name: /Anslutningar/ }));
+    const back = await screen.findByRole('button', { name: /Inkommande/ });
+    expect(back.querySelector('.tab-count')).toHaveTextContent('2');
+    expect(back.querySelector('.pill')).toBeNull();
   });
 
   /* The invoice review moved out. Asserting its absence here is what keeps the
@@ -193,9 +200,9 @@ describe('the incoming shell', () => {
      the first. */
   it('no longer reviews invoices', async () => {
     mountWith();
-    await screen.findByRole('tab', { name: /Inkommande/ });
-    expect(screen.queryByRole('tab', { name: /Fakturagranskning/ })).toBeNull();
-    expect(screen.queryByRole('tab', { name: /Fältkontroll/ })).toBeNull();
+    await screen.findByRole('heading', { name: 'Inkommande' });
+    expect(screen.queryByRole('button', { name: /Fakturagranskning/ })).toBeNull();
+    expect(screen.queryByRole('button', { name: /Fältkontroll/ })).toBeNull();
     expect(integrationsApi.listInvoices).not.toHaveBeenCalled();
     expect(integrationsApi.listFindings).not.toHaveBeenCalled();
     expect(integrationsApi.availableInvoices).not.toHaveBeenCalled();
@@ -203,7 +210,8 @@ describe('the incoming shell', () => {
 
   it('shows the connections pane on request', async () => {
     mountWith();
-    fireEvent.click(await screen.findByRole('tab', { name: /Anslutningar/ }));
+    fireEvent.click(await screen.findByRole('button', { name: /Anslutningar/ }));
+    expect(await screen.findByRole('heading', { name: 'Anslutningar' })).toBeInTheDocument();
     expect(await screen.findByText(/Microsoft 365/i)).toBeInTheDocument();
   });
 });

@@ -768,14 +768,6 @@
   font-size: var(--text-base);
 }
 
-.invoices .ui-empty {
-  margin: 0;
-  border: none;
-  border-radius: 0;
-  box-shadow: none;
-  background: transparent;
-}
-
 /* ========================================================================= */
 /* The case                                                                  */
 /* ========================================================================= */

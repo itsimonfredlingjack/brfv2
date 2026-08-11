@@ -25,11 +25,21 @@ import './Arendekort.css';
  *   fakta       [{ etikett, varde, matt }] — the mono row. `matt: true` sets
  *               the value as arithmetic (tabular, ink) rather than as a label's
  *               value: lateness and counts, the things that are computed.
- *   kalla       { text, onOpen } — the citation. It gets its own line and is
- *               never folded into `fakta`, because it is the product's whole
- *               promise: an answer says which document it came out of. A
+ *   kalla       { text, citat, onOpen } — the citation. It gets its own line
+ *               and is never folded into `fakta`, because it is the product's
+ *               whole promise: an answer says which document it came out of. A
  *               screen with no citation data passes nothing and the line does
  *               not appear — better a missing line than a fabricated one.
+ *
+ *               `citat` is the passage itself, and it is set in the serif —
+ *               the one face this product gives to the document's own words,
+ *               as opposed to the app's claims (display) and the app's
+ *               explanations (sans). Pass it where a reader is being asked to
+ *               judge the machine's reading, which is Bevakningar's proposals
+ *               and its undatable conditions: deciding whether to accept a
+ *               derived date without seeing the sentence it came from is
+ *               deciding blind. Omit it where the reader is not judging a
+ *               reading, and the link alone carries the promise.
  *   onOpen      opens the case. The whole card becomes the target, so it is
  *               mutually exclusive with `atgarder` — a button cannot contain
  *               buttons.
@@ -74,6 +84,7 @@ export default function Arendekort({
             <button
               type="button"
               className="arendekort-kalla-lank"
+              title={kalla.title}
               onClick={(e) => { e.stopPropagation(); kalla.onOpen(); }}
             >
               {kalla.text}
@@ -81,6 +92,7 @@ export default function Arendekort({
           ) : (
             <span className="arendekort-varde">{kalla.text}</span>
           )}
+          {kalla.citat && <q className="arendekort-citat">{kalla.citat}</q>}
         </div>
       )}
 

@@ -260,8 +260,8 @@ describe('the queue, before anything is decided', () => {
     });
     await waitForQueue();
     expect(screen.queryByText(/ser ut att vänta svar/)).not.toBeInTheDocument();
-    const group = screen.getByRole('group', { name: 'Filtrera kön' });
-    expect(group.querySelector('button[data-filter="awaiting"]')).toHaveTextContent('1');
+    const filter = screen.getByLabelText('Filtrera kön');
+    expect(filter.querySelector('option[value="awaiting"]')).toHaveTextContent('Väntar svar (1)');
   });
 
   it('does not restate list metadata in the detail head', async () => {
@@ -284,19 +284,20 @@ describe('the queue, before anything is decided', () => {
     await waitForQueue();
     expect(screen.queryByText('Avklarad tråd')).not.toBeInTheDocument();
 
-    fireEvent.click(document.querySelector('button[data-filter="all"]'));
+    fireEvent.change(screen.getByLabelText('Filtrera kön'), { target: { value: 'all' } });
     expect(await screen.findByText('Avklarad tråd')).toBeInTheDocument();
   });
 
-  it('exposes compact filter labels that still name the three modes', async () => {
+  // The filter is a named select, the way Fakturor writes its four. What the
+  // control must not lose is that all three modes are named and countable
+  // without operating it.
+  it('names all three modes, with their counts, without being opened', async () => {
     mountWith();
     await waitForQueue();
-    const group = screen.getByRole('group', { name: 'Filtrera kön' });
-    expect(group.querySelector('button[data-filter="open"]')).toHaveTextContent(/Att avgöra/);
-    expect(group.querySelector('button[data-filter="open"] .sr-only')).toHaveTextContent(/att ta ställning till/);
-    expect(group.querySelector('button[data-filter="awaiting"]')).toHaveTextContent(/Väntar svar/);
-    expect(group.querySelector('button[data-filter="all"]')).toHaveTextContent(/^Alla/);
-    expect(group.querySelector('button[data-filter="all"] .sr-only')).toHaveTextContent(/trådar/);
+    const filter = screen.getByLabelText('Filtrera kön');
+    expect(filter.querySelector('option[value="open"]')).toHaveTextContent(/^Att avgöra \(\d+\)$/);
+    expect(filter.querySelector('option[value="awaiting"]')).toHaveTextContent(/^Väntar svar \(\d+\)$/);
+    expect(filter.querySelector('option[value="all"]')).toHaveTextContent(/^Alla trådar \(\d+\)$/);
   });
 
   it('keeps the filter toolbar as its own row above the list', async () => {
@@ -811,7 +812,7 @@ describe('a resolved item', () => {
 
   /** Resolved threads live behind the all-threads filter, collapsed. */
   async function showResolved() {
-    fireEvent.click(document.querySelector('button[data-filter="all"]'));
+    fireEvent.change(screen.getByLabelText('Filtrera kön'), { target: { value: 'all' } });
     const list = await waitForQueue();
     fireEvent.click(within(list).getByText('Offert takomläggning'));
   }
@@ -873,15 +874,16 @@ describe('the keyboard flow', () => {
   ];
   const TWO_COUNTS = { threads: 2, openThreads: 2, openMessages: 4, awaitingReply: 0, unclear: 0 };
 
-  it('"/" lands on the filter tabs, unless the user is typing', async () => {
+  it('"/" lands on the filter, unless the user is typing', async () => {
     mountWith();
     await waitForQueue();
+    const filter = screen.getByLabelText('Filtrera kön');
     fireEvent.keyDown(window, { key: '/' });
-    expect(document.activeElement).toBe(document.querySelector('button[data-filter="open"]'));
+    expect(document.activeElement).toBe(filter);
 
     document.activeElement.blur();
     fireEvent.keyDown(document.querySelector('#intake-eml-import'), { key: '/' });
-    expect(document.activeElement).not.toBe(document.querySelector('button[data-filter="open"]'));
+    expect(document.activeElement).not.toBe(filter);
   });
 
   it('moves the mark with the arrow keys', async () => {

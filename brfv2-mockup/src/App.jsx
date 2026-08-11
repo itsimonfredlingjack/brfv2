@@ -14,7 +14,6 @@ import { PRODUCT_WORKSPACES } from './appWorkspaces';
 import Instrument from './components/Instrument';
 import './App.css';
 import { datum } from './components/datum';
-import Hogen from './components/Hogen';
 
 // Refusal reasons where the LLM was never invoked (gated on retrieval, not
 // generation) — no model actually produced these responses, so provenance
@@ -55,6 +54,96 @@ const answerState = (msg) => {
   if (msg.refusal) return 'ejbelagt';
   return msg.citations?.length ? 'belagt' : null;
 };
+
+/**
+ * The condition that stops Fråga dokumenten from doing the one thing it
+ * promises, in whole sentences.
+ *
+ * "Ingen modell konfigurerad" used to sit under the composer as a 13px grey
+ * line beside a 6px ring, while above it a heading invited a question and two
+ * example questions stood ready to be clicked. Every one of them would have
+ * come back refused. The refusal is correct — the product does not answer
+ * without something to answer with — but announcing the block in the smallest
+ * type on the screen, under the field, is the screen keeping its own failure
+ * to itself.
+ *
+ * Returns null only when the runtime is ready, which is the one case where the
+ * screen may go ahead and invite a question. While the check is still running
+ * it says so rather than offering questions it cannot yet promise to answer —
+ * a slow health check used to leave two clickable examples standing over a
+ * runtime nobody had heard back from.
+ */
+const MODELL_STOPP = {
+  none: {
+    rubrik: 'Ingen modell är konfigurerad.',
+    text: 'Arkivet är inläst och sökbart, men det finns ingenting som kan formulera ett '
+      + 'svar ur det. Frågor som ställs nu blir obesvarade.',
+  },
+  fake: {
+    rubrik: 'Testleverantören är inte en modell.',
+    text: 'Den svarar med förberedd text och citerar ingenting ur föreningens dokument. '
+      + 'Ingenting den skriver är belagt.',
+  },
+};
+
+function modellStopp(status) {
+  if (status.kind === 'ready') return null;
+  if (status.kind === 'loading') {
+    return {
+      rubrik: 'Kontrollerar modell…',
+      text: 'Träff frågar tjänsten som ska svara om den är igång.',
+    };
+  }
+  if (status.kind === 'unknown') {
+    return {
+      rubrik: 'Modellstatus ej tillgänglig.',
+      text: 'Träff når inte tjänsten som ska svara. Frågor kan misslyckas tills den svarar igen.',
+    };
+  }
+  return MODELL_STOPP[status.provider] || {
+    rubrik: 'Modellen är inte redo.',
+    text: 'Tjänsten som ska svara har inte startat. Frågor kan misslyckas tills den gör det.',
+  };
+}
+
+/**
+ * What the question will actually be put to: the association's archive, named.
+ *
+ * This stands where Högen used to. Högen drew the identity's pile motif — one
+ * leaf per searchable page, a sweep of light, a caption reading "Sida 19 av
+ * 49" — and on a paper-white ground it rendered as a grey striped block with a
+ * black band across it. It read as a broken image. But the drawing was the
+ * smaller problem: the page number was computed from the leaf that happened to
+ * be lit, so the one figure §04 insists on always showing was invented, and
+ * the two real counts it captioned were already stated in the band above.
+ *
+ * The honest figure for "how much material is there" is the material. Six real
+ * names with their real depths tell a board the thing the pile never could —
+ * whether the question they are about to ask can be answered at all. If
+ * snöröjningsavtalet is not in this list, no answer about snow clearing can
+ * exist, and that is checkable in a glance.
+ *
+ * It is deliberately inert: no sorting, no opening, no delete. Dokument is the
+ * register where the archive is managed. This is the same archive stated as
+ * scope, and a control here would turn a sentence back into a table.
+ */
+function Fragescope({ documents }) {
+  return (
+    <div className="chat-scope">
+      <p className="chat-scope-head">Frågan ställs till</p>
+      <ul className="chat-scope-list">
+        {documents.map((doc) => (
+          <li key={doc.id} className="chat-scope-row">
+            <span className="chat-scope-name">{doc.name}</span>
+            <span className="chat-scope-pages">
+              {doc.pages != null ? `${doc.pages} ${doc.pages === 1 ? 'sida' : 'sidor'}` : 'okänt djup'}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
 
 function ModelStatusBadge({ status }) {
   const primary =
@@ -1422,26 +1511,47 @@ function App() {
                   <div className="chat-messages-area">
                     {chatMessages.length === 0 ? (
                       <div className="chat-empty-state">
-                         {/* The split panel that used to stand here said the
-                             thesis a second time — the band above now carries
-                             it, in ink, at masthead scale. What is left is the
-                             only thing the empty screen still owes a reader:
-                             two questions they could actually ask. The split
-                             composition returns to being login's alone. */}
+                         {/* Three states, in the order they block each other.
+                             An empty archive stops the screen harder than a
+                             missing model does — there would be nothing to
+                             answer *from* even with one — so it is asked
+                             first. Only when neither blocks does the screen
+                             offer questions, because offering a question that
+                             comes back refused is the screen lying about what
+                             it can do. Each of the three is the app's one
+                             empty composition; the archive itself follows,
+                             because it stays true and useful in all three. */}
                          <div className="chat-empty-body">
-                           <h3 className="chat-empty-title">Ställ en fråga om föreningens dokument</h3>
-                           <div className="chat-empty-examples">
-                             <button className="example-prompt-btn" onClick={() => executeGeneralChat('Vad säger stadgarna om andrahandsuthyrning?')} disabled={chatBusy}>
-                               Vad säger stadgarna om andrahandsuthyrning?
-                             </button>
-                             <button className="example-prompt-btn" onClick={() => executeGeneralChat('Vilka datum gäller för snöröjningsjouren?')} disabled={chatBusy}>
-                               Vilka datum gäller för snöröjningsjouren?
-                             </button>
-                           </div>
-                           <Hogen
-                             pages={documents.reduce((sum, d) => sum + (d.pages || 0), 0)}
-                             documents={documents.length}
-                           />
+                           {documents.length === 0 ? (
+                             <EmptyState
+                               title="Arkivet är tomt."
+                               actions={(
+                                 <button type="button" className="ui-btn ui-btn--primary" onClick={() => setCurrentTab('docs')}>
+                                   Gå till Dokument
+                                 </button>
+                               )}
+                             >
+                               Träff svarar bara ur föreningens egna handlingar. Ladda upp stadgar,
+                               protokoll och avtal, så blir varje sida sökbar och citerbar.
+                             </EmptyState>
+                           ) : modellStopp(llmStatus) ? (
+                             <EmptyState title={modellStopp(llmStatus).rubrik}>
+                               {modellStopp(llmStatus).text}
+                             </EmptyState>
+                           ) : (
+                             <>
+                               <h3 className="chat-empty-title">Ställ en fråga om föreningens dokument</h3>
+                               <div className="chat-empty-examples">
+                                 <button className="example-prompt-btn" onClick={() => executeGeneralChat('Vad säger stadgarna om andrahandsuthyrning?')} disabled={chatBusy}>
+                                   Vad säger stadgarna om andrahandsuthyrning?
+                                 </button>
+                                 <button className="example-prompt-btn" onClick={() => executeGeneralChat('Vilka datum gäller för snöröjningsjouren?')} disabled={chatBusy}>
+                                   Vilka datum gäller för snöröjningsjouren?
+                                 </button>
+                               </div>
+                             </>
+                           )}
+                           {documents.length > 0 && <Fragescope documents={documents} />}
                          </div>
                       </div>
                     ) : (
@@ -1526,13 +1636,16 @@ function App() {
                         {chatBusy ? <Loader2 size={18} className="spin"/> : <ArrowRight size={18} />}
                       </button>
                     </div>
-                    {/* Provenance where the question is asked: what will be
-                        searched, and what will do the generating. */}
-                    <div className="chat-composer-meta">
-                      {/* The band states the corpus at instrument scale; this
-                          line said the same count a second time. */}
-                      <ModelStatusBadge status={llmStatus} />
-                    </div>
+                    {/* Provenance where the question is asked: which model will
+                        do the generating. Only when there *is* one — a block is
+                        stated once, in the work area at the weight it has, and
+                        repeating it here in 13px grey is how it came to be a
+                        whisper in the first place. */}
+                    {llmStatus.kind === 'ready' && (
+                      <div className="chat-composer-meta">
+                        <ModelStatusBadge status={llmStatus} />
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

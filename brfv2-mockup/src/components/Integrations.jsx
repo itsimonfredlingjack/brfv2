@@ -76,33 +76,18 @@ export default function Integrations({ brfId, isAdmin = false, onOpenDocument, o
   return (
     <div className="integrations">
       <div className="integrations-header page-header">
+        {/* The two panes used to be tabs sitting where the title goes, both at
+            masthead scale, one grey and one ink. Read left to right at 44px
+            that is "Inkommande Anslutningar" — a headline with a word missing
+            from it, and the only workspace in the product whose title was not
+            its name. They are also not peers: Inkommande is the work, and
+            Anslutningar is the setup behind it.
+
+            So the band states which screen you are on, in its own name, and
+            the way across is a control in the actions row — the same shape and
+            the same place as every other band's secondary control. */}
         <div className="integrations-header-text">
-          <div className="integrations-tabs" role="tablist">
-            <button
-              type="button"
-              role="tab"
-              aria-selected={pane === 'inbox'}
-              className={pane === 'inbox' ? 'active' : ''}
-              onClick={() => setPane('inbox')}
-            >
-              <Inbox size={16} /> Inkommande
-              {openEvents > 0 && <span className="tab-count">{openEvents}</span>}
-            </button>
-            <button
-              type="button"
-              role="tab"
-              aria-selected={pane === 'connections'}
-              className={pane === 'connections' ? 'active' : ''}
-              onClick={() => setPane('connections')}
-            >
-              <Plug size={16} /> Anslutningar
-            </button>
-          </div>
-          {/* Every other workspace opens with a sentence naming what the screen
-              is for, under its title, before any content. The tab switcher had
-              taken the title's place but never the sentence — this was the one
-              workspace that jumped straight into "Ingen brevlåda är ansluten."
-              with no framing at all. */}
+          <h2 className="page-title">{pane === 'inbox' ? 'Inkommande' : 'Anslutningar'}</h2>
           <p className="page-header-sub">
             {pane === 'inbox'
               ? 'Post som kommit in, innan någon tagit ställning.'
@@ -113,9 +98,19 @@ export default function Integrations({ brfId, isAdmin = false, onOpenDocument, o
             with the same word on the same screen is a reader's problem, not a
             convenience — so this one only exists where nothing else offers it. */}
         <div className="page-header-actions">
-          {pane === 'connections' && (
-            <button type="button" className="refresh" onClick={refresh} disabled={loading}>
-              <RefreshCw size={15} /> Uppdatera
+          {pane === 'connections' ? (
+            <>
+              <button type="button" className="refresh" onClick={refresh} disabled={loading}>
+                <RefreshCw size={15} /> Uppdatera
+              </button>
+              <button type="button" onClick={() => setPane('inbox')}>
+                <Inbox size={15} /> Inkommande
+                {openEvents > 0 && <span className="tab-count">{openEvents}</span>}
+              </button>
+            </>
+          ) : (
+            <button type="button" onClick={() => setPane('connections')}>
+              <Plug size={15} /> Anslutningar
             </button>
           )}
         </div>

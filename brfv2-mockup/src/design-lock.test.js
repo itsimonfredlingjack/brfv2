@@ -327,6 +327,47 @@ describe('design lock: the shell meets AA by arithmetic', () => {
 });
 
 // ---------------------------------------------------------------------------
+// Beslut 9b: the one inverted surface is measured too.
+//
+// Every ground above is paper. The product has exactly one that is not: login's
+// brand panel, the single "look here" surface the system allows per view. When
+// §06 turned over from a dark shell to a paper-white one, that panel kept its
+// ink ground while its type was re-pointed at the new ink scale — so the mark,
+// the name and the tagline were all drawn in --black-900 on --black-900, and
+// the column rendered as an empty black rectangle. Nothing failed, because
+// nothing was measuring it: GROUNDS is a list of white surfaces, and a colour
+// that never lands on white is invisible to that list in both senses.
+//
+// The paper scale genuinely cannot be reused here — --black-500 is 5.10:1 on
+// white and 3.88:1 on ink — which is why the panel's quiet text is an alpha of
+// --papper. So the floors are stated for what is actually allowed on ink.
+const INK_FLOORS = [
+  ['--papper', 4.5],      // the mark, the name, the tagline
+  ['--skal', 4.5],        // the same white under its shell name
+];
+
+describe('design lock: the inverted surface meets AA too', () => {
+  it.each(INK_FLOORS)('%s clears %f:1 on --ink', (token, floor) => {
+    const ratio = contrast(tokenHex(token), tokenHex('--ink'));
+    expect(
+      ratio,
+      `${token} (${tokenHex(token)}) on --ink: ${ratio.toFixed(2)}:1 < ${floor}`,
+    ).toBeGreaterThanOrEqual(floor);
+  });
+
+  // And no rule that paints on the ink panel may reach for the paper scale.
+  // That substitution is the exact mistake above, and it reads as deliberate
+  // every time: --black-500 is the product's quiet grey everywhere else.
+  it('the ink panel never takes a colour from the paper scale', () => {
+    const css = readFileSync(join(SRC, 'components', 'Login.css'), 'utf8');
+    const panel = css.slice(css.indexOf('.login-brand'), css.indexOf('.login-form-col'));
+    const offenders = [...panel.matchAll(/color:\s*var\((--black-\d00)\)/g)]
+      .map((m) => `Login.css .login-brand…: color: var(${m[1]}) — paper scale on the ink panel`);
+    expect(offenders).toEqual([]);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Beslut 10: a colour literal may not spell out a token's value.
 //
 // CSS cannot take an alpha of a hex token, so "paper at 15%" got written as

@@ -297,7 +297,7 @@ describe('model status indicator', () => {
     render(<App />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'Fråga dokumenten' }));
-    expect(await screen.findByText('Modellstatus ej tillgänglig')).toBeInTheDocument();
+    expect(await screen.findByText('Modellstatus ej tillgänglig.')).toBeInTheDocument();
   });
 
   it('shows a warning, not a false ready claim, when the configured provider has no active model', async () => {
@@ -308,8 +308,8 @@ describe('model status indicator', () => {
     render(<App />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'Fråga dokumenten' }));
-    expect(await screen.findByText('Testleverantör – inte redo')).toBeInTheDocument();
-    expect(screen.queryByText('Modellstatus ej tillgänglig')).not.toBeInTheDocument();
+    expect(await screen.findByText('Testleverantören är inte en modell.')).toBeInTheDocument();
+    expect(screen.queryByText('Modellstatus ej tillgänglig.')).not.toBeInTheDocument();
   });
 
   it('never fabricates a Gemma/agenntserver claim for a different provider or model', async () => {

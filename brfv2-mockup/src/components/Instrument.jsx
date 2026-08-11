@@ -12,13 +12,16 @@ import './Instrument.css';
  * one of them was a scoped override, each of which made the next change
  * harder. Naming the thing once is what makes per-screen design possible again.
  *
- * An instrument is a lead — the one figure the screen came for, or a chart that
- * plays that part — followed by the readings that qualify it.
+ * An instrument is the one figure the screen came for, followed by the readings
+ * that qualify it.
  *
- *   lead      a chart standing where the figure would (Bevakningar's horizon).
- *             Pass `null` rather than omitting it while the data is still
- *             loading: the shape then holds its size instead of jumping when
- *             the chart lands.
+ * It used to take a `lead` as well — a chart standing where the figure would,
+ * for Bevakningar's horizon. That slot is gone. The band is one fixed height on
+ * every workspace and the row this leaves for the instrument comes to 108px; a
+ * twelve-month chart measures 192px and simply overflowed, drawing itself
+ * through the section below. A figure with an axis is not a reading, and the
+ * band is not where it goes.
+ *
  *   label     caption for the big figure.
  *   value     the big figure itself.
  *   readings  [{ label, value, flagged }] — `flagged` is lateness, which
@@ -31,9 +34,9 @@ import './Instrument.css';
  *             the same as zero and must keep the figure.
  *   vila      what to say when `raw` is 0. Defaults to "Inget att visa".
  *
- * A screen with neither lead nor figure (Uppgifter) has its readings promoted
- * to the figure's size — see Instrument.css. That rule is derived from the
- * markup rather than declared per screen, so a screen cannot get it wrong.
+ * A screen with no figure (Uppgifter, Bevakningar) has its readings promoted to
+ * the figure's size — see Instrument.css. That rule is derived from the markup
+ * rather than declared per screen, so a screen cannot get it wrong.
  *
  * Zero is not a measurement.
  *
@@ -50,15 +53,13 @@ import './Instrument.css';
  * and cannot choose to render its own zero loudly.
  */
 export default function Instrument({
-  lead, label, value, raw, vila, readings = [], className = '',
+  label, value, raw, vila, readings = [], className = '',
 }) {
-  const hasLead = lead !== undefined;
   const hasFigure = label !== undefined || value !== undefined;
   const vilande = raw !== undefined && raw !== null && raw !== '' && Number(raw) === 0;
 
   return (
     <div className={['instrument', className].filter(Boolean).join(' ')}>
-      {hasLead && <div className="instrument-lead">{lead}</div>}
       {hasFigure && (
         <div className={`instrument-figure${vilande ? ' vilande' : ''}`}>
           <span className="instrument-label">{label}</span>

@@ -920,19 +920,8 @@
 
 .site-start__body { max-width: var(--measure); }
 
-.site-start__lead {
-  max-width: 62ch;
-  margin: 0;
-  font-size: var(--text-base);
-  line-height: 1.65;
-  color: var(--muted-foreground);
-}
-
-.site-start__note {
-  margin-top: var(--s4);
-  font-size: var(--text-sm);
-  color: var(--subtle-foreground);
-}
+/* The loose lead and the not-an-admin note are the shared empty state's lead
+   now (see Website.jsx), so their two rules went with them. */
 
 .site-start__error {
   margin: var(--s4) 0 0;

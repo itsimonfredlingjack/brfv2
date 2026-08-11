@@ -23,21 +23,13 @@
   .instrument { display: none; }
 }
 
-/* A chart standing where the figure would: it takes the room the figure never
-   needed, and the readings still land against the far edge. */
-.instrument-lead { flex: 1; min-width: 0; }
-
-.instrument:has(.instrument-lead) { gap: var(--s10); }
-
-.instrument .watches-horizon { margin: 0; }
-
 /* Three or more readings are a scale, so they earn the width and spread to the
    far edge. One or two are a footnote to the big figure and stay beside it —
    pinning a single count to the opposite side of a 1200px plate reads as a
    layout accident, which is exactly what Dokument's lone "5" looked like.
-   Only when something leads them, though: readings that *are* the figure start
+   Only when a figure leads them, though: readings that *are* the figure start
    at the left margin like every other title on the plate. */
-.instrument:has(.instrument-lead, .instrument-figure)
+.instrument:has(.instrument-figure)
   > .instrument-readings:has(> :nth-child(3)) { margin-left: auto; }
 
 /* One caption style for every reading on the plate. This rule was written out
@@ -117,15 +109,15 @@
    between screens was never a per-screen decision; it follows from whether
    something else on the row is already carrying the weight, so it is derived
    here rather than written out again on each screen that needs it. */
-.instrument:not(:has(.instrument-lead, .instrument-figure)) .instrument-readings {
+.instrument:not(:has(.instrument-figure)) .instrument-readings {
   gap: var(--s14);
   padding-bottom: 0;
 }
 
-.instrument:not(:has(.instrument-lead, .instrument-figure)) .instrument-readings dd {
+.instrument:not(:has(.instrument-figure)) .instrument-readings dd {
   font-size: var(--text-2xl);
 }
 
-.instrument:not(:has(.instrument-lead, .instrument-figure)) .instrument-readings > div.flagged dd {
+.instrument:not(:has(.instrument-figure)) .instrument-readings > div.flagged dd {
   box-shadow: inset 0 -3px 0 var(--black-900);
 }

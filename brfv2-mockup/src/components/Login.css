@@ -10,9 +10,24 @@
   grid-template-columns: minmax(380px, 40%) 1fr;
 }
 
+/* The ink panel, written for ink text on paper.
+ *
+ * When §06 turned over — dark shell to paper-white ground — the panel kept its
+ * ink ground and every colour on it was re-pointed at the new ink scale. So the
+ * mark, the name, the qualifier and the tagline were all drawn in --black-900
+ * on a --black-900 field: the brand column rendered as a black rectangle with
+ * nothing in it, and had done since the flip.
+ *
+ * This is the product's one inverted surface, used once per view, and login is
+ * where it belongs — it is the only screen that opens on nothing and has to
+ * introduce the product before it asks for anything. What it needs is paper
+ * colours, computed against the ink rather than picked from the paper scale:
+ * --black-500 is 5.10:1 on white and 3.88:1 here, which is why the qualifier
+ * takes an alpha of paper instead. See design-lock.test.js — the ink ground is
+ * measured with everything else now. */
 .login-brand {
   background: var(--ink);
-  color: var(--black-900);
+  color: var(--papper);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -22,8 +37,8 @@
 .login-brand-inner { max-width: 340px; }
 
 .login-brand .traff-mark--brand {
-  border-color: var(--black-900);
-  color: var(--black-900);
+  border-color: var(--papper);
+  color: var(--papper);
   margin-bottom: var(--s6);
 }
 
@@ -32,43 +47,48 @@
   font-size: var(--text-2xs);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--black-500);
+  color: rgb(var(--papper-rgb) / 0.72);   /* 10.2:1 on --ink */
   margin-bottom: var(--s7);
 }
 
 .login-brand-title {
   font-family: var(--font-display);
   font-size: var(--text-title-lg);   /* 44px — the name gets real scale exactly once */
-  font-weight: 400;
+  font-weight: 400;   /* the same cut every workspace title takes (.page-title) */
   letter-spacing: -0.02em;
   line-height: 1.05;
-  color: var(--black-900);
+  color: var(--papper);
   margin: 0 0 var(--s5);
 }
 
 .login-brand-tagline {
   font-size: var(--text-lg);
   line-height: 1.6;
-  color: var(--black-700);
+  color: rgb(var(--papper-rgb) / 0.82);   /* 13.4:1 on --ink */
   max-width: 30ch;
 }
 
+/* Paper, not a sunken well. The well existed to make the card read as raised;
+   with no card there is nothing to raise, and the product's own ground is the
+   right thing for the half of the screen you actually work in. */
 .login-form-col {
   display: flex;
   align-items: center;
   justify-content: center;
   padding: var(--s6);
-  background: var(--skal-sunken);
+  background: var(--skal);
 }
 
+/* Left-aligned, like every other block of type in this product. Centring a
+   label over its own field is the one arrangement that makes a form look like
+   a dialog box. */
 .login-panel {
   width: 100%;
-  max-width: 380px;
-  padding: var(--s10) var(--s9) var(--s9);
+  max-width: 340px;
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
+  align-items: stretch;
+  text-align: left;
 }
 
 .login-lockup-compact {
@@ -181,13 +201,24 @@
   color: inherit;
 }
 
+/* Two credentials, so they are set in the cut this product gives to anything
+   you read character by character. The dashed box around them had to go: this
+   language now spends dashed on exactly one meaning — nothing establishes this
+   yet — and a working demo password is not that. */
 .login-demo-hint {
   margin-top: var(--s6);
-  padding: var(--s2) var(--s3h);
-  border: 1px dashed var(--border-strong);
-  border-radius: var(--radius-2xl);
-  color: var(--subtle-foreground);
-  font-size: var(--text-sm);
+  color: var(--black-500);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: 1.6;
 }
 
-.login-panel { border-radius: var(--radius-3xl); }
+/* Whether this installation can answer anything is worth knowing before you
+   sign in, not after. It lines up with the fields rather than centring over
+   them — it is a statement about the install, not a title. */
+.login-model-status {
+  width: 100%;
+  display: flex;
+  justify-content: flex-start;
+  margin: 0 0 var(--s6);
+}

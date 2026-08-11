@@ -196,17 +196,9 @@
 
 /* ---------- toolbar ---------- */
 
-/* The band above this row now states the queue's standing — att avgöra, väntar
-   svar, inkommet — at instrument scale. Repeating the same three numbers on the
-   filter chips 180px below said everything twice and made neither the
-   authoritative reading. The chips keep their job, which is switching the view;
-   the numbers keep theirs, which is being read. The `.sr-only` copy stays, so a
-   screen reader still hears the count where it is the only way to get it. */
-.intake-counts .ui-count { display: none; }
-
 .intake-toolbar {
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: space-between;
   width: 100%;
   gap: var(--s4);
@@ -218,21 +210,17 @@
   .intake-toolbar { flex-wrap: nowrap; }
 }
 
-/* A segmented filter that stretches the full content width turns three short
-   labels into three halls of empty paper; it only ever governs the list, so
-   it keeps roughly the list's own measure. */
-.intake-counts {
-  flex: 0 1 auto;
-  width: min(460px, 100%);
-  min-width: 0;
-}
+/* The queue's one filter, written the way Fakturor writes its four: a named
+   field over a select. It replaced a grey segmented pill group — the only
+   control of its kind in the product, on the screen next to the four selects
+   it should have matched.
 
-.intake-counts button {
-  flex: 1 1 0;
-  min-width: 0;
-  gap: var(--s2);
-  padding: 0 var(--s2h);
-}
+   The shape comes from the shared primitives (.ui-field / .ui-select in
+   theme.css); all this screen says is how wide its own column is. Bare
+   `<select>` gets the chevron from theme.css but not the field's height,
+   border or ground — those are the primitive's, and a screen that restated
+   them would be the fifth copy of one control. */
+.intake-filter { flex: 0 1 220px; }
 
 .intake-loading {
   color: var(--muted-foreground);

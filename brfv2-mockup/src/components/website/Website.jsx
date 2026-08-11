@@ -22,6 +22,7 @@ import { api, websiteApi } from '../../api';
 import { createWebsiteConfig } from './websiteConfig';
 import WorkspaceShell from './WorkspaceShell';
 import Instrument from '../Instrument';
+import EmptyState from '../EmptyState';
 import {
   actionToCommands,
   coalesce,
@@ -387,13 +388,11 @@ export default function Website({ brfId, isAdmin, onOpenCitation }) {
               Sidan medlemmarna läser, byggd ur föreningens egna handlingar.
             </p>
           </div>
-          <div className="page-header-actions">
-            {isAdmin && (
-              <button type="button" className="ui-btn ui-btn--primary" onClick={startSite} disabled={busy}>
-                {busy ? 'Skapar…' : 'Skapa startsidan'}
-              </button>
-            )}
-          </div>
+          {/* "Skapa startsidan" stood here too, so the screen offered the same
+              action twice — once as loose band chrome and once beside the
+              sentence that says what it does. The empty state is the better
+              invitation of the two, so it keeps it and the band lets it go. */}
+          <div className="page-header-actions" />
           <Instrument
             label="Sidor"
             value={0}
@@ -402,13 +401,23 @@ export default function Website({ brfId, isAdmin, onOpenCitation }) {
         </header>
 
         <div className="site-start__body">
-          <p className="site-start__lead">
-            Sakuppgifter hämtas ur föreningens egna handlingar, med källhänvisning.
-            Det som inte går att belägga skrivs inte.
-          </p>
-          {!isAdmin && (
-            <p className="site-start__note">En administratör behöver komma igång med webbplatsen först.</p>
-          )}
+          {/* Hemsidan at rest used to be two zeros and then two loose lines of
+              prose — the one workspace with no empty state at all, which read
+              as a screen that had finished loading and found nothing to draw.
+              It is the same empty composition every other screen uses now, and
+              the prose that was floating became its lead. */}
+          <EmptyState
+            title="Ingen startsida är skapad."
+            actions={isAdmin ? (
+              <button type="button" className="ui-btn ui-btn--primary" onClick={startSite} disabled={busy}>
+                {busy ? 'Skapar…' : 'Skapa startsidan'}
+              </button>
+            ) : null}
+          >
+            Träff bygger sidan ur föreningens egna handlingar och sätter källhänvisning
+            under varje sakuppgift. Det som inte går att belägga skrivs inte.
+            {!isAdmin && ' En administratör behöver komma igång med webbplatsen först.'}
+          </EmptyState>
           {error && <p className="site-start__error">{error}</p>}
         </div>
       </div>

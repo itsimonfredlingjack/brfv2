@@ -124,6 +124,27 @@
   border-radius: var(--r-sm);
 }
 
+/* The passage itself, in the one face reserved for the document's own words.
+   §07 splits the three voices — display asserts, sans explains, mono measures —
+   and the serif is what the archive speaks in. It is the only place on a card
+   where the product is not talking.
+
+   It is set below the link rather than beside it because it is a sentence, not
+   a value: the link says where, the quote says what, and the two do not share
+   a line any more than a footnote shares one with its text. */
+.arendekort-citat {
+  display: block;
+  margin-top: var(--s2);
+  max-width: 72ch;
+  font-family: var(--font-serif);
+  font-size: var(--text-md);
+  font-style: italic;
+  line-height: 1.5;
+  letter-spacing: 0;
+  color: var(--black-700);
+  quotes: '»' '«';
+}
+
 /* A list of cases is separated by air, never by rules: the air is what says
    these are separate documents rather than rows of one table. */
 .arendelista {

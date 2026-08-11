@@ -213,7 +213,9 @@ describe('a proposal', () => {
     await screen.findByText(PROPOSAL.title);
     const card = cardFor(PROPOSAL.title);
 
-    expect(within(card).getByText('2026-12-31 minus 3 månader')).toBeInTheDocument();
+    // The arithmetic reads as a sentence on the card rather than as a row in a
+    // definition list, so it is asserted where a reader actually meets it.
+    expect(within(card).getByText(/ur 2026-12-31 minus 3 månader/)).toBeInTheDocument();
     expect(within(card).getByText('2026-09-30')).toBeInTheDocument();
     expect(within(card).getByText(/Snöröjningsavtal 2026\.pdf · s\. 3/)).toBeInTheDocument();
     expect(within(card).getByText(CITATION.quote)).toBeInTheDocument();
@@ -231,7 +233,11 @@ describe('a proposal', () => {
     await screen.findByText(PROPOSAL.title);
 
     const card = cardFor(PROPOSAL.title);
-    expect(card.className).toContain('proposal');
+    // A proposal is not a watch, and the card has to say so before anything
+    // else: the unproven state, which this language draws as a dashed outline
+    // against the filled one an approved watch carries.
+    expect(within(card).getByText('förslag — ingen bevakning ännu').className)
+      .toContain('tillstand--oprovad');
     expect(card.closest('.watch-bucket')).toBeNull();
     expect(card.closest('.watches-proposals')).not.toBeNull();
 

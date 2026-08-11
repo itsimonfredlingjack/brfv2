@@ -2,11 +2,8 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   AlertTriangle,
   CheckCircle2,
-  FileText,
-  HelpCircle,
   Loader2,
   RefreshCw,
-  Repeat,
   ScanLine,
   Trash2,
   X,
@@ -87,66 +84,31 @@ function Banner({ tone, children, onDismiss }) {
   );
 }
 
-/**
- * The passage the date was read from.
- *
- * Routed through the app's own citation navigation, so a watch opens the
- * contract at the same page, with the same highlight, as an answer's citation
- * does. A deadline whose source cannot be opened is a claim, not a watch.
- */
-function Citation({ citation, onOpen }) {
-  return (
-    <button
-      type="button"
-      className="watch-citation"
-      onClick={() => onOpen(citation)}
-      title={`Öppna ${citation.document_name} sida ${citation.page}`}
-    >
-      <FileText size={14} />
-      <span className="watch-citation-source">
-        {citation.document_name} · s. {citation.page}
-        {citation.approximate && <em className="watch-citation-approx"> (markering ungefärlig)</em>}
-      </span>
-      <q className="watch-citation-quote">{citation.quote}</q>
-    </button>
-  );
-}
-
-function Citations({ citations, onOpen }) {
-  if (!citations || citations.length === 0) return null;
-  return (
-    <div className="watch-citations">
-      {citations.map((citation, i) => (
-        <Citation key={i} citation={citation} onOpen={onOpen} />
-      ))}
-    </div>
-  );
-}
-
-/** The derived date and the arithmetic behind it, readable without trusting it. */
-function Derivation({ watch }) {
-  return (
-    <dl className="watch-derivation">
-      <div>
-        <dt>Uträkning</dt>
-        <dd>{watch.derivation}</dd>
-      </div>
-      <div>
-        <dt>Ger datumet</dt>
-        <dd>{watch.derived_due_date}</dd>
-      </div>
-      <div>
-        <dt>Läst ur</dt>
-        <dd>{watch.source_document_name || '—'}</dd>
-      </div>
-    </dl>
-  );
-}
+/* The passage a date was read from used to be rendered here, as a bordered
+   button carrying the quote inline. Every card on this screen now states its
+   source the way every card in the product does — Arendekort's `källa` line,
+   which opens the contract at the same page with the same highlight. One
+   citation, one shape, three screens. */
 
 /**
  * One proposal: what the engine read, and the three things a person may do
  * with it. Nothing here is an obligation yet, and the card says so before it
  * says anything else.
+ *
+ * It is the same specimen card the approved watches use, on purpose. This was
+ * the last piece of old markup on a screen that had already changed language,
+ * so the seam ran down the middle of one page: a bordered block with its own
+ * head, its own badge, its own definition list and its own three field groups,
+ * directly under cards that state a case and then caption it. A board reads
+ * the two kinds of thing one after the other, and the difference between them
+ * has to be *what they say*, not which year they were built.
+ *
+ * The state carries that difference and needs no new form: `oprovad` is the
+ * dashed outline this language already gives to "nothing establishes this
+ * yet," which is precisely a proposal's standing. The approved watch above it
+ * is `belagd`, filled. Dashed against solid, readable across a room, no colour
+ * spent — the fifth state (checked but deviating) is Fakturor's and stays
+ * there, because nothing here is checked.
  */
 function Proposal({ watch, busy, canDecide, onApprove, onDismiss, onDelete, onOpenCitation }) {
   const [due, setDue] = useState(watch.due_date);
@@ -159,107 +121,133 @@ function Proposal({ watch, busy, canDecide, onApprove, onDismiss, onDelete, onOp
     && leadNumber >= 0 && leadNumber <= MAX_LEAD_DAYS;
   const dueValid = ISO_DATE.test(due);
   const blocked = busy || !canDecide;
+  const citation = watch.citations?.[0];
 
   return (
-    <article className="watch proposal">
-      <header className="watch-head">
-        <span className="watch-kind">{watch.kind_label}</span>
-        <span className="watch-badge proposed">förslag — ingen bevakning ännu</span>
-      </header>
+    <Arendekort
+      tillstand={{ form: 'oprovad', text: 'förslag — ingen bevakning ännu' }}
+      namn={watch.title}
+      figur={watch.derived_due_date}
+      fakta={[
+        { etikett: 'slag', varde: watch.kind_label },
+        { etikett: 'påminner', varde: `${watch.remind_lead_days} d före`, matt: true },
+        ...(citation ? [] : [
+          { etikett: 'läst ur', varde: watch.source_document_name || 'okänd handling' },
+        ]),
+      ]}
+      kalla={citation ? {
+        text: `${citation.document_name} · s. ${citation.page}`,
+        title: `Öppna ${citation.document_name} sida ${citation.page}`,
+        citat: citation.quote,
+        onOpen: () => onOpenCitation(citation),
+      } : undefined}
+      atgarder={(
+        <div className="watch-decide">
+          {/* The three fields are the proposal's own values, offered for
+              changing. They stand open rather than behind a disclosure
+              because approving *is* the decision this card exists for. */}
+          <div className="watch-approve">
+            <h5>Godkänn som bevakning</h5>
+            <div className="watch-fields">
+              <label>
+                <span>Datum</span>
+                <input
+                  type="date"
+                  value={due}
+                  disabled={blocked}
+                  onChange={(e) => setDue(e.target.value)}
+                />
+              </label>
+              <label>
+                <span>Ansvarig</span>
+                <input
+                  type="text"
+                  value={responsible}
+                  disabled={blocked}
+                  placeholder="ej utsedd"
+                  onChange={(e) => setResponsible(e.target.value)}
+                />
+              </label>
+              <label>
+                <span>Påminn dagar före</span>
+                <input
+                  type="number"
+                  min="0"
+                  max={MAX_LEAD_DAYS}
+                  value={lead}
+                  disabled={blocked}
+                  onChange={(e) => setLead(e.target.value)}
+                />
+              </label>
+            </div>
+            {!dueValid && <p className="watch-invalid">Datum ska skrivas ÅÅÅÅ-MM-DD.</p>}
+            {!leadValid && (
+              <p className="watch-invalid">Påminnelsen ska ligga 0–{MAX_LEAD_DAYS} dagar före.</p>
+            )}
+            <button
+              type="button"
+              className="watch-action approve"
+              disabled={blocked || !dueValid || !leadValid}
+              onClick={() => onApprove(watch, {
+                due_date: due,
+                responsible: responsible.trim(),
+                remind_lead_days: leadNumber,
+              })}
+            >
+              <CheckCircle2 size={14} /> Godkänn
+            </button>
+          </div>
 
-      <h4 className="watch-title">{watch.title}</h4>
-
-      <Derivation watch={watch} />
-      <Citations citations={watch.citations} onOpen={onOpenCitation} />
-
-      <div className="watch-approve">
-        <h5>Godkänn som bevakning</h5>
-        <div className="watch-fields">
-          <label>
-            <span>Datum</span>
-            <input
-              type="date"
-              value={due}
-              disabled={blocked}
-              onChange={(e) => setDue(e.target.value)}
-            />
-          </label>
-          <label>
-            <span>Ansvarig</span>
-            <input
-              type="text"
-              value={responsible}
-              disabled={blocked}
-              placeholder="ej utsedd"
-              onChange={(e) => setResponsible(e.target.value)}
-            />
-          </label>
-          <label>
-            <span>Påminn dagar före</span>
-            <input
-              type="number"
-              min="0"
-              max={MAX_LEAD_DAYS}
-              value={lead}
-              disabled={blocked}
-              onChange={(e) => setLead(e.target.value)}
-            />
-          </label>
+          {/* Rejecting and deleting are the exceptions, so they wait behind a
+              disclosure — the same one an approved watch uses for the same
+              kind of decision. Two open reason fields on every proposal was
+              the old card asking a board to defend itself before it had
+              agreed to anything. */}
+          <details className="watch-dismiss-wrap">
+            <summary>Avfärda eller ta bort …</summary>
+            <div className="watch-dismiss">
+              <label>
+                <span>Varför avfärdas den? (krävs)</span>
+                <input
+                  type="text"
+                  value={note}
+                  disabled={blocked}
+                  onChange={(e) => setNote(e.target.value)}
+                />
+              </label>
+              <button
+                type="button"
+                className="watch-action dismiss"
+                disabled={blocked || !note.trim()}
+                title={note.trim() ? undefined : 'Skriv först varför bevakningen inte gäller.'}
+                onClick={() => onDismiss(watch, note.trim())}
+              >
+                Avfärda
+              </button>
+            </div>
+            <div className="watch-remove">
+              <button
+                type="button"
+                className="watch-action remove"
+                disabled={blocked}
+                onClick={() => onDelete(watch)}
+              >
+                <Trash2 size={14} /> Ta bort
+              </button>
+              <span className="muted">
+                Tar bort förslaget utan att spara något beslut. Nästa genomläsning kan
+                föreslå det igen.
+              </span>
+            </div>
+          </details>
         </div>
-        {!dueValid && <p className="watch-invalid">Datum ska skrivas ÅÅÅÅ-MM-DD.</p>}
-        {!leadValid && (
-          <p className="watch-invalid">Påminnelsen ska ligga 0–{MAX_LEAD_DAYS} dagar före.</p>
-        )}
-        <button
-          type="button"
-          className="watch-action approve"
-          disabled={blocked || !dueValid || !leadValid}
-          onClick={() => onApprove(watch, {
-            due_date: due,
-            responsible: responsible.trim(),
-            remind_lead_days: leadNumber,
-          })}
-        >
-          <CheckCircle2 size={14} /> Godkänn
-        </button>
-      </div>
-
-      <div className="watch-dismiss">
-        <label>
-          <span>Varför avfärdas den? (krävs)</span>
-          <input
-            type="text"
-            value={note}
-            disabled={blocked}
-            onChange={(e) => setNote(e.target.value)}
-          />
-        </label>
-        <button
-          type="button"
-          className="watch-action dismiss"
-          disabled={blocked || !note.trim()}
-          title={note.trim() ? undefined : 'Skriv först varför bevakningen inte gäller.'}
-          onClick={() => onDismiss(watch, note.trim())}
-        >
-          Avfärda
-        </button>
-      </div>
-
-      <div className="watch-remove">
-        <button
-          type="button"
-          className="watch-action remove"
-          disabled={blocked}
-          onClick={() => onDelete(watch)}
-        >
-          <Trash2 size={14} /> Ta bort
-        </button>
-        <span className="muted">
-          Tar bort förslaget utan att spara något beslut. Nästa genomläsning kan
-          föreslå det igen.
-        </span>
-      </div>
-    </article>
+      )}
+    >
+      {/* The figure above already states the date, so the sentence names the
+          arithmetic instead of repeating it — the two together are "here is
+          what it is, and here is where it came from." */}
+      Motorn räknade fram datumet ur {watch.derivation}. Ingen har tagit ställning till det.
+    </Arendekort>
   );
 }
 
@@ -573,29 +561,22 @@ export default function Watches({ brfId, isAdmin = false, onOpenCitation }) {
           </button>
         </div>
 
-        {/* Bevakningar's instrument is time, so the horizon belongs *in* the
-            band rather than under it: twelve months drawn in paper on ink is
-            the screen's own composition, not a chart parked on the page. It
-            needs `board` for the server's own date, so the band renders a
-            static twelve-month scale until that lands — the shape never
-            appears or disappears, only its bars do.
+        {/* The horizon used to stand here, in the instrument's lead. It could
+            not: the band is one fixed height on every workspace (--band-h,
+            268px, and that shared height is what makes the app read as one
+            surface), the chart measures 192px, and the row it was given comes
+            to 108. So it overflowed its own grid area by 59px and was drawn
+            straight through "Bevakas" and the sentence under it. It read as
+            two components stacked by accident, which is exactly what it was.
 
-            The four state counts used to sit on paper below the band while
-            Fakturor's sat inside it — the same widget with two different homes,
-            one tab apart. They belong on the faceplate, to the right of the
-            chart, exactly where Fakturor puts its own. */}
+            A twelve-column chart is not an instrument reading; it is a figure
+            with an axis, and it needs the page. It now stands below the band
+            where it has room, and the band keeps what every other screen's
+            band has — the counts alone. Which makes this instrument identical
+            in kind to Uppgifter's, so the derived rule in Instrument.css
+            promotes the four numerals to figure size without either screen
+            asking for it. */}
         <Instrument
-          lead={board ? (
-            <Horizon
-              today={board.today}
-              overdue={board.buckets?.overdue || []}
-              upcoming={[
-                ...(board.buckets?.soon || []),
-                ...(board.buckets?.later || []),
-                ...(board.buckets?.recurring || []),
-              ]}
-            />
-          ) : null}
           readings={[
             { label: 'Bevakas', value: watchedCount },
             { label: 'Förslag', value: proposed.length },
@@ -618,6 +599,20 @@ export default function Watches({ brfId, isAdmin = false, onOpenCitation }) {
 
       {!loading && board && (
         <>
+          {/* The screen's opening statement: what is coming, and when. It is
+              read before a single card, which is why it is here rather than
+              inside a bucket — and why it is not in the band, which has no
+              room for it. */}
+          <Horizon
+            today={board.today}
+            overdue={board.buckets?.overdue || []}
+            upcoming={[
+              ...(board.buckets?.soon || []),
+              ...(board.buckets?.later || []),
+              ...(board.buckets?.recurring || []),
+            ]}
+          />
+
           {/* The horizon's own "Nu" column already anchors today, so restating
               the server's date above it was a second clock on the same wall. */}
           {!isAdmin && (
@@ -641,25 +636,28 @@ export default function Watches({ brfId, isAdmin = false, onOpenCitation }) {
 
           {!nothingYet && (
           <>
+          {/* The numbering sits here, at the page's two halves, because that is
+              where an order the reader needs actually exists: what the
+              association has committed to, and only then what a machine has
+              proposed. It used to number the four buckets instead — but
+              Försenat / Snart / Senare / Återkommande are named by time, and
+              nobody needs to know that Snart is the second one. A number that
+              carries nothing is the decoration Avsnitt.jsx warns about. */}
           <section className="watches-board" aria-label="Bevakas">
-            <h3>Bevakas</h3>
-            <p className="muted">
-              Det här har föreningen tagit på sig. Varje datum är godkänt av en
-              människa.
-            </p>
+            <Avsnitt nummer="01 — Bevakas" namn="Det här har föreningen tagit på sig">
+              Varje datum nedan är godkänt av en människa.
+            </Avsnitt>
             <div className="watch-buckets">
-              {BUCKET_ORDER.map((key, i) => {
+              {BUCKET_ORDER.map((key) => {
                 const rows = board.buckets?.[key] || [];
                 return (
                   <section key={key} className={`watch-bucket ${key}`} aria-label={board.bucketLabels[key]}>
-                    <Avsnitt
-                      nummer={String(i + 1).padStart(2, '0')}
-                      namn={board.bucketLabels[key]}
-                    >
+                    <h4 className="watch-bucket-namn">{board.bucketLabels[key]}</h4>
+                    <p className="watch-bucket-lead">
                       {rows.length === 0
                         ? EMPTY_BUCKET[key]
                         : `${rows.length} ${rows.length === 1 ? 'bevakning' : 'bevakningar'}.`}
-                    </Avsnitt>
+                    </p>
                     {rows.length > 0 && rows.map((watch) => (
                       <BoardWatch
                         key={watch.id}
@@ -680,14 +678,12 @@ export default function Watches({ brfId, isAdmin = false, onOpenCitation }) {
           </section>
 
           <section className="watches-proposals" aria-label="Förslag">
-            <h3>Förslag från genomläsningen</h3>
-            <p className="muted">
-              Det här har motorn läst ur avtalen. Ingenting nedan bevakas: varje
-              rad visar datumet den räknat fram, uträkningen bakom det och
-              passagen den lästes ur, och väntar på att någon tar ställning.
-            </p>
+            <Avsnitt nummer="02 — Förslag" namn="Det här har motorn läst ur avtalen">
+              Ingenting nedan bevakas. Varje kort visar datumet motorn räknat fram och
+              passagen det lästes ur, och väntar på att någon tar ställning.
+            </Avsnitt>
             {proposed.length === 0 ? (
-              <p className="empty">Inga förslag väntar på beslut.</p>
+              <p className="watch-bucket-lead">Inga förslag väntar på beslut.</p>
             ) : proposed.map((watch) => (
               <Proposal
                 key={watch.id}
@@ -702,23 +698,40 @@ export default function Watches({ brfId, isAdmin = false, onOpenCitation }) {
             ))}
           </section>
 
+          {/* Also a specimen card, and also `oprovad` — for the same reason the
+              proposals are. A condition that could not be dated has nothing
+              establishing a date, which is what the dashed outline says. The
+              section's own lead is what separates it from a proposal: this one
+              is not waiting for a decision, it is waiting for a fact. */}
           <section className="watches-unresolved" aria-label="Tidsvillkor utan datum">
-            <h3><HelpCircle size={17} /> Tidsvillkor som inte kunde dateras</h3>
-            <p className="muted">
-              Lästa villkor utan ett datum att räkna från. Det är ett svar, inte
-              ett fel: <em>varför</em> säger vilken uppgift som gör villkoret
-              daterbart — ett undertecknandedatum, en slutbesiktning. Ingen
+            <Avsnitt nummer="03 — Odaterat" namn="Villkor som inte gick att datera">
+              Lästa villkor utan ett datum att räkna från. Det är ett svar, inte ett fel —
+              raden säger vilken uppgift som skulle göra villkoret daterbart. Ingen
               gissning görs, för en påhittad kalender är sämre än en tom.
-            </p>
+            </Avsnitt>
             {unresolved.length === 0 ? (
-              <p className="empty">Inga sådana villkor i arkivet.</p>
+              <p className="watch-bucket-lead">Inga sådana villkor i arkivet.</p>
             ) : unresolved.map((row) => (
-              <article key={row.id} className="watch unresolved">
-                <h4 className="watch-title">{row.what}</h4>
-                <p className="watch-why">{row.why}</p>
-                <Citations citations={row.citations} onOpen={openCitation} />
-                <p className="muted">Läst ur {row.source_document_name || '—'}</p>
-              </article>
+              <Arendekort
+                key={row.id}
+                tillstand={{ form: 'oprovad', text: 'inget datum att räkna från' }}
+                namn={row.what}
+                /* "Läst ur <fil>" directly above "källa <fil> · s. 2" was the
+                   same document named twice, one line apart. The citation is
+                   the better of the two — it opens — so the fact row only
+                   states the source when there is no citation to state it. */
+                fakta={row.citations?.[0] ? [] : [
+                  { etikett: 'läst ur', varde: row.source_document_name || 'okänd handling' },
+                ]}
+                kalla={row.citations?.[0] ? {
+                  text: `${row.citations[0].document_name} · s. ${row.citations[0].page}`,
+                  title: `Öppna ${row.citations[0].document_name} sida ${row.citations[0].page}`,
+                  citat: row.citations[0].quote,
+                  onOpen: () => openCitation(row.citations[0]),
+                } : undefined}
+              >
+                {row.why}
+              </Arendekort>
             ))}
           </section>
 

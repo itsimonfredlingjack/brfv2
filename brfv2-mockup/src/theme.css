@@ -1285,52 +1285,46 @@ select,
 .ui-table tbody tr:hover { background: var(--surface-2); }
 
 /* ---- empty state ---- */
-/* One empty state, everywhere: dashed card, icon tile, one sentence saying
-   what is missing, and at most one action. A strong lead names the state;
-   the rest of the sentence says what would fill it. Tone "ok" marks the
-   emptiness as a finished state (all handled), not a missing one. */
+/* One empty composition for every screen. See EmptyState.jsx for why it lost
+   its glyph and its centring — briefly: in a pilot the empty state is the
+   first thing a board sees, and it was the only thing on these pages that did
+   not begin at the gutter. */
 .ui-empty {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: var(--s1h);
-  padding: var(--s14) var(--s8);
-  text-align: center;
-  /* No box drawn around emptiness. The dashed card was a rectangle whose only
-     content was the statement that there is no content — the whitespace and
-     the register's own top hairline already say where the list would be. */
-  background: transparent;
-  border: none;
-  border-radius: 0;
+  align-items: flex-start;
+  gap: var(--s2);
+  /* The rule stands where the first row would. Without it an empty register
+     reads as a region that failed to render; with it the list is visibly
+     present and visibly empty. A rule, not a box — nothing is drawn *around*
+     emptiness, which is what the dashed card used to do. */
+  border-top: 1px solid var(--kant);
+  padding: var(--s8) 0 var(--s10);
+  text-align: left;
 }
 
-.ui-empty-media {
-  display: grid;
-  place-items: center;
-  width: 40px;
-  height: 40px;
-  margin-bottom: var(--s3h);
+/* The state, at the size the section heading it stands in for would have had.
+   It was 14px semibold under a 40px glyph, which is how a screen ends up
+   announcing its condition in the smallest type on the page. */
+.ui-empty-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  line-height: 1.33;
+  color: var(--black-900);
 }
 
-/* The statement and the sentence are two things, so they are two lines.
-   They used to run together in one centred paragraph, which is how a five-word
-   verdict and the sentence explaining it ended up sharing a ragged line break
-   in the middle. Centring is right here — it is a wide empty area, not a
-   column of prose — but centring only reads well when the lines are even and
-   few, so the measure is tight and `balance` evens them out. */
-.ui-empty-text {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s1);
-  max-width: 42ch;
+.ui-empty-body {
+  margin: 0;
+  max-width: 64ch;
+  font-family: var(--font-sans);
   font-size: var(--text-base);
-  line-height: 1.6;
-  color: var(--muted-foreground);
-  text-wrap: balance;
+  line-height: 1.5;
+  color: var(--black-500);
 }
-.ui-empty-title { color: var(--foreground); font-weight: 600; }
-.ui-empty-actions { display: flex; gap: var(--s2h); justify-content: center; margin-top: var(--s2h); }
+
+.ui-empty-actions { display: flex; gap: var(--s2h); margin-top: var(--s3); }
 
 /* ---- loading ---- */
 .ui-loading {

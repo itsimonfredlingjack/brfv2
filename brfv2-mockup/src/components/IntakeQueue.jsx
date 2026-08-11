@@ -935,39 +935,27 @@ export default function IntakeQueue({
       )}
 
       <div className="intake-toolbar">
-        <div className="ui-tabs intake-counts" role="group" aria-label="Filtrera kön">
-          <button
-            type="button"
+        {/* One narrowing choice over one queue, which is exactly what Fakturor's
+            filters are — so it is written the way Fakturor writes them: a named
+            field with a select in it. It used to be a grey segmented pill
+            group, a control vocabulary that existed on this screen and nowhere
+            else in the product, one tab away from the four selects it should
+            have matched. The counts ride along in the options, so nothing is
+            lost by giving up the three-across row. */}
+        <label className="ui-field intake-filter">
+          <span>Visa</span>
+          <select
             ref={firstTabRef}
-            className={filter === 'open' ? 'active' : ''}
-            aria-pressed={filter === 'open'}
-            data-filter="open"
-            onClick={() => setFilter('open')}
+            className="ui-select"
+            value={filter}
+            aria-label="Filtrera kön"
+            onChange={(e) => setFilter(e.target.value)}
           >
-            Att avgöra<span className="sr-only"> — att ta ställning till</span>{' '}
-            <span className="ui-count">{counts.openThreads || 0}</span>
-          </button>
-          <button
-            type="button"
-            className={filter === 'awaiting' ? 'active' : ''}
-            aria-pressed={filter === 'awaiting'}
-            data-filter="awaiting"
-            onClick={() => setFilter('awaiting')}
-          >
-            Väntar svar <span className="ui-count">{counts.awaitingReply || 0}</span>
-          </button>
-          <button
-            type="button"
-            className={filter === 'all' ? 'active' : ''}
-            aria-pressed={filter === 'all'}
-            data-filter="all"
-            onClick={() => setFilter('all')}
-          >
-            Alla{' '}
-            <span className="sr-only">trådar</span>{' '}
-            <span className="ui-count">{counts.threads || 0}</span>
-          </button>
-        </div>
+            <option value="open">Att avgöra ({counts.openThreads || 0})</option>
+            <option value="awaiting">Väntar svar ({counts.awaitingReply || 0})</option>
+            <option value="all">Alla trådar ({counts.threads || 0})</option>
+          </select>
+        </label>
         <button type="button" className="ui-btn ui-btn--ghost ui-btn--sm refresh" onClick={refresh} disabled={loading || busy}>
           <RefreshCw size={14} /> Uppdatera
         </button>
@@ -992,15 +980,15 @@ export default function IntakeQueue({
           </EmptyState>
         ) : (
           <EmptyState
-            tone="ok"
-            title="Inkorgen är tom."
+            title="Allt är hanterat."
             actions={isAdmin && mailboxConnected ? (
               <button type="button" className="ui-btn ui-btn--primary" onClick={handleFetch} disabled={busy}>
                 {busy ? <Loader2 size={15} className="spin" /> : <Download size={15} />} Hämta post
               </button>
             ) : null}
           >
-            Allt är hanterat — eller hämta ny post från mejlen.
+            Ingen tråd väntar på ett beslut. Ny post hämtas från föreningens brevlåda när
+            du vill se om något kommit in sedan sist.
           </EmptyState>
         )
       )}

@@ -46,7 +46,13 @@ function Login({ onLoggedIn, modelStatus = null }) {
       </div>
 
       <div className="login-form-col">
-        <div className="login-panel glass-panel">
+        {/* Not a card. It was `.glass-panel` — a hairline-bordered white box on
+            a #FAFAFA field, which is a 1.03:1 difference in ground doing
+            nothing while the border did all the work. A box drawn around a
+            form the reader is not choosing between. The paper is the surface;
+            the form stands on it, the way every other block in this product
+            stands on its own page. */}
+        <div className="login-panel">
           <div className="login-lockup-compact">
             <TraffMark size={26} decorative />
             <h1 className="login-title">Träff</h1>

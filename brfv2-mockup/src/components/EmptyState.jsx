@@ -1,34 +1,36 @@
-import React from 'react';
-import TraffMark from './TraffMark';
-
 /**
- * The one empty state, shared by every section — and now the one glyph too.
- * A different Lucide icon per section (inbox, clipboard, receipt…) said
- * "generic empty widget" six different ways; the ring says the one thing
- * that's actually true here in the app's own language: nothing has been
- * established yet (vila), or everything that needed proving has been
- * (tone="ok" → belagt). Same mark as the rest of the identity, not a
- * decoration invented for this one spot.
+ * The empty state, composed once for every screen that has one.
  *
- * An empty screen is information, not a loading failure: the sentence says
- * what is missing and what would fill it, and the action — when there is
- * one — is the thing a person can do about it. Primary when the action
- * creates the missing content, outline when it only navigates. Tone "ok" is
- * for emptiness that means "all handled" rather than "nothing here yet".
+ * Each screen used to draw its own emptiness, and in a pilot every screen is
+ * empty — so this composition is the first thing a board sees, three or four
+ * times, before it has seen a single row of real work. It was drawn three
+ * different ways: a grey ring that read as a spinner stuck mid-load
+ * (Uppgifter), the brand mark pressed into service as an illustration
+ * (Inkommande), and on Hemsidan two zeros and then nothing at all.
  *
- * No engine fills this in: the action always does what a human could have
- * done from the section's own toolbar.
+ * The composition is the one this product uses everywhere else — a statement
+ * in the assertion cut, a lead under it in plain Swedish, at most one action —
+ * set at the left gutter like every other statement on the page. It is not
+ * centred and it carries no glyph: an empty screen is a sentence the document
+ * is making, not a widget reporting its own condition. Centring was what made
+ * it read as a widget; it was the only thing on these screens that did not
+ * start where everything else starts.
+ *
+ * What separates "nothing has arrived yet" from "everything is handled" is the
+ * sentence, not a mark. The ring had two states and told nobody which was
+ * which; a heading that says "Allt är hanterat." cannot be misread. That is
+ * why `tone` is gone rather than restyled.
+ *
+ *   title     the state, as a whole sentence. The largest thing here.
+ *   children  what would fill the screen. One or two sentences.
+ *   actions   what a person can do about it. Primary when the action creates
+ *             the missing content, outline when it only navigates.
  */
-export default function EmptyState({ tone, title, children, actions }) {
+export default function EmptyState({ title, children, actions }) {
   return (
-    <div className={`ui-empty${tone === 'ok' ? ' ui-empty--ok' : ''}`}>
-      <div className="ui-empty-media">
-        <TraffMark size={40} variant="status" state={tone === 'ok' ? 'belagt' : 'vila'} decorative />
-      </div>
-      <p className="ui-empty-text">
-        <strong className="ui-empty-title">{title}</strong>
-        {children ? <span className="ui-empty-body">{children}</span> : null}
-      </p>
+    <div className="ui-empty">
+      <p className="ui-empty-title">{title}</p>
+      {children ? <p className="ui-empty-body">{children}</p> : null}
       {actions ? <div className="ui-empty-actions">{actions}</div> : null}
     </div>
   );
