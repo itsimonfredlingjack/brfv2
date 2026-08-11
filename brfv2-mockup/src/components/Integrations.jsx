@@ -45,6 +45,8 @@ export default function Integrations({ brfId, isAdmin = false, onOpenDocument, o
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
+  // Bumped by the band's Uppdatera; the queue watches it and reloads itself.
+  const [reload, setReload] = useState(0);
 
   const refresh = useCallback(async () => {
     if (!brfId) return;
@@ -94,9 +96,16 @@ export default function Integrations({ brfId, isAdmin = false, onOpenDocument, o
               : 'Brevlådor och system Träff läser ifrån.'}
           </p>
         </div>
-        {/* The queue refreshes itself, from its own toolbar. A second control
-            with the same word on the same screen is a reader's problem, not a
-            convenience — so this one only exists where nothing else offers it. */}
+        {/* Uppdatera belongs here, where it is on every other screen.
+            It used to sit inside the queue's own filter row — the same word,
+            the same glyph, the same job, in the one place on the screen a
+            reader would not look for it, because Uppgifter and Bevakningar
+            both put it top right. A verb that moves between screens has to be
+            relearned on each of them.
+            So the band asks for the reload and the queue answers: `reload` is
+            a counter the queue watches. The alternative was hoisting the
+            queue's fetches up here, which would have moved five state hooks
+            out of the component that uses them to satisfy a layout. */}
         <div className="page-header-actions">
           {pane === 'connections' ? (
             <>
@@ -109,9 +118,19 @@ export default function Integrations({ brfId, isAdmin = false, onOpenDocument, o
               </button>
             </>
           ) : (
-            <button type="button" onClick={() => setPane('connections')}>
-              <Plug size={15} /> Anslutningar
-            </button>
+            <>
+              <button
+                type="button"
+                className="refresh"
+                onClick={() => { refresh(); setReload((n) => n + 1); }}
+                disabled={loading}
+              >
+                <RefreshCw size={15} /> Uppdatera
+              </button>
+              <button type="button" onClick={() => setPane('connections')}>
+                <Plug size={15} /> Anslutningar
+              </button>
+            </>
           )}
         </div>
 
@@ -149,6 +168,7 @@ export default function Integrations({ brfId, isAdmin = false, onOpenDocument, o
             isAdmin={isAdmin}
             mailboxConnected={mailboxReady}
             format={format}
+            reload={reload}
             onOpenDocument={onOpenDocument}
             onChanged={() => { refresh(); onDocumentsChanged?.(); }}
           />

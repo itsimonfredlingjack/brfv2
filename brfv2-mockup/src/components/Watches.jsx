@@ -384,6 +384,16 @@ function Horizon({ today, overdue, upcoming }) {
 
   const max = Math.max(1, overdue.length, ...cells.map((c) => c.items.length));
 
+  // A chart earns its 190px by showing a distribution. With one occupied
+  // column it has none: it draws eleven empty months around a single bar whose
+  // number — the same number — is already standing in the band above it, in
+  // larger type, with a word attached. One point is a reading, and readings
+  // belong to the instrument. This is the same rule Instrument.jsx applies to
+  // its own numerals, said about a shape instead of a number, and it means the
+  // horizon comes back on its own the moment there is a spread to see.
+  const occupied = (overdue.length > 0 ? 1 : 0) + cells.filter((c) => c.items.length > 0).length;
+  if (occupied < 2) return null;
+
   return (
     <div className="watches-horizon" aria-label="Bevakningar över tid">
       <ol className="horizon-strip">
@@ -643,21 +653,31 @@ export default function Watches({ brfId, isAdmin = false, onOpenCitation }) {
               Försenat / Snart / Senare / Återkommande are named by time, and
               nobody needs to know that Snart is the second one. A number that
               carries nothing is the decoration Avsnitt.jsx warns about. */}
+          {/* Five heading levels stood over one card here: the section number,
+              the section name, its lead, the bucket name, and a line counting
+              the bucket. Fakturor does the same work with three, and the two
+              that went were the two that told the reader nothing they were not
+              about to be told again.
+
+              The lead — "Varje datum nedan är godkänt av en människa" — is the
+              band's own subtitle in other words ("Motorn föreslår, en människa
+              beslutar"), thirty pixels below it. And "1 bevakning." stood over
+              exactly one visible card, under a bucket whose count is already a
+              numeral in the instrument. A count belongs where a reader cannot
+              see the thing counted; here they can. It stays for an empty
+              bucket, because that is the case where there is nothing to look
+              at and a sentence has to do the work. */}
           <section className="watches-board" aria-label="Bevakas">
-            <Avsnitt nummer="01 — Bevakas" namn="Det här har föreningen tagit på sig">
-              Varje datum nedan är godkänt av en människa.
-            </Avsnitt>
+            <Avsnitt nummer="01 — Bevakas" namn="Det här har föreningen tagit på sig" />
             <div className="watch-buckets">
               {BUCKET_ORDER.map((key) => {
                 const rows = board.buckets?.[key] || [];
                 return (
                   <section key={key} className={`watch-bucket ${key}`} aria-label={board.bucketLabels[key]}>
                     <h4 className="watch-bucket-namn">{board.bucketLabels[key]}</h4>
-                    <p className="watch-bucket-lead">
-                      {rows.length === 0
-                        ? EMPTY_BUCKET[key]
-                        : `${rows.length} ${rows.length === 1 ? 'bevakning' : 'bevakningar'}.`}
-                    </p>
+                    {rows.length === 0 && (
+                      <p className="watch-bucket-lead">{EMPTY_BUCKET[key]}</p>
+                    )}
                     {rows.length > 0 && rows.map((watch) => (
                       <BoardWatch
                         key={watch.id}
@@ -678,9 +698,13 @@ export default function Watches({ brfId, isAdmin = false, onOpenCitation }) {
           </section>
 
           <section className="watches-proposals" aria-label="Förslag">
+            {/* This lead stays where 01's went, and the difference is the
+                point: the cards below are not watches, and nothing about a
+                card says so on its own. Each one now shows the date and the
+                passage it was read from, so the lead no longer has to
+                describe them. */}
             <Avsnitt nummer="02 — Förslag" namn="Det här har motorn läst ur avtalen">
-              Ingenting nedan bevakas. Varje kort visar datumet motorn räknat fram och
-              passagen det lästes ur, och väntar på att någon tar ställning.
+              Ingenting nedan bevakas ännu.
             </Avsnitt>
             {proposed.length === 0 ? (
               <p className="watch-bucket-lead">Inga förslag väntar på beslut.</p>

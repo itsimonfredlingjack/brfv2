@@ -229,7 +229,7 @@ describe('tenant switching', () => {
     render(<App />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'Fråga dokumenten' }));
-    const input = await screen.findByPlaceholderText('Fråga rakt in i högen…');
+    const input = await screen.findByPlaceholderText('Fråga föreningens dokument…');
     fireEvent.change(input, { target: { value: 'Hej?' } });
     fireEvent.click(screen.getByRole('button', { name: 'Skicka fråga' }));
 
@@ -338,7 +338,7 @@ describe('answer-level provenance', () => {
     const { container } = render(<App />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'Fråga dokumenten' }));
-    const input = await screen.findByPlaceholderText('Fråga rakt in i högen…');
+    const input = await screen.findByPlaceholderText('Fråga föreningens dokument…');
     fireEvent.change(input, { target: { value: 'Vilket regelverk gäller?' } });
     fireEvent.click(screen.getByRole('button', { name: 'Skicka fråga' }));
 
@@ -372,7 +372,7 @@ describe('answer-level provenance', () => {
     render(<App />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'Fråga dokumenten' }));
-    const input = await screen.findByPlaceholderText('Fråga rakt in i högen…');
+    const input = await screen.findByPlaceholderText('Fråga föreningens dokument…');
     fireEvent.change(input, { target: { value: 'Finns det dokument?' } });
     fireEvent.click(screen.getByRole('button', { name: 'Skicka fråga' }));
 
@@ -393,7 +393,7 @@ describe('answer-level provenance', () => {
     render(<App />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'Fråga dokumenten' }));
-    const input = await screen.findByPlaceholderText('Fråga rakt in i högen…');
+    const input = await screen.findByPlaceholderText('Fråga föreningens dokument…');
     fireEvent.change(input, { target: { value: 'Något komplext?' } });
     fireEvent.click(screen.getByRole('button', { name: 'Skicka fråga' }));
 
@@ -586,7 +586,7 @@ describe('the keyboard flow', () => {
     render(<App />);
 
     fireEvent.click(await screen.findByRole('button', { name: 'Fråga dokumenten' }));
-    await screen.findByPlaceholderText('Fråga rakt in i högen…');
+    await screen.findByPlaceholderText('Fråga föreningens dokument…');
     fireEvent.keyDown(window, { key: '/' });
     expect(document.activeElement).toBe(document.body);
   });

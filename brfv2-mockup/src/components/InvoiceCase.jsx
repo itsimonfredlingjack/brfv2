@@ -23,6 +23,7 @@ import TraffMark from './TraffMark';
 import CreateTask from './CreateTask';
 import { formatAmount } from './money';
 import PdfPane from './PdfPane';
+import Instrument from './Instrument';
 // The epistemic presentation — verified facts as data, the proposal as tinted
 // prose, uncertainty in a warmer block that cannot be skimmed past — is one
 // design and lives in one stylesheet. Findings look identical here and in
@@ -779,43 +780,68 @@ export default function InvoiceCase({
 
   return (
     <div className="invoice-case">
-      <div className="case-topbar">
-        <button type="button" className="case-back" onClick={onBack}>
-          <ArrowLeft size={15} /> Till fakturakön
-        </button>
-        {isAdmin && (
-          <button
-            type="button"
-            className="case-refresh"
-            disabled={busy}
-            onClick={() => run(
-              () => invoicesApi.refresh(brfId, kase.id),
-              (result) => setNotice(`${result.source} Ingenting ändrades i ekonomisystemet.`),
-            )}
-          >
-            {busy ? <Loader2 size={14} className="spin" /> : <RefreshCw size={14} />} Läs om och granska
-          </button>
-        )}
-      </div>
-
-      {error && <div className="case-banner error" role="alert">{error}</div>}
-      {notice && <div className="case-banner ok" role="status">{notice}</div>}
-
-      <header className="case-header">
-        <div>
-          <h2>{kase.supplier_name || 'Okänd leverantör'}</h2>
-          <p className="case-identity">
+      {/* The case opens on the app's band, like every other page.
+       *
+       * It used to open on its own furniture: a bare back link, then a
+       * hand-built masthead with the supplier at --text-2xl and the sum set
+       * across from it. Nothing about that was wrong on its own; what was
+       * wrong is that this is one of two screens with real content in the
+       * pilot, and it was the one that did not look like the product. A
+       * reader who arrives here from the queue crosses into a different
+       * layout system to read the same invoice.
+       *
+       * The sum becomes the instrument, because that is what an instrument is
+       * — the one figure the screen came for — and it was already set in the
+       * measuring cut for the same reason. The way back joins the actions row,
+       * which is where this product has put "the way out of a pane" since
+       * Inkommande and Anslutningar started swapping there. */}
+      <header className="page-header">
+        <div className="page-header-text">
+          <h2 className="page-title">{kase.supplier_name || 'Okänd leverantör'}</h2>
+          <p className="page-header-sub">
             Faktura {kase.invoice_number || '—'}
             {' · '}{kase.invoice_date || 'utan datum'}
             {kase.due_date && ` · förfaller ${kase.due_date}`}
             {kase.period_start && ` · period ${kase.period_start} – ${kase.period_end}`}
           </p>
-          <p className="case-identity-basis" title="Varför de här källorna är samma faktura">
-            <Link2 size={12} /> {kase.identity_basis}
-          </p>
         </div>
-        <div className="case-amount">{formatAmount(kase.total_amount, kase.currency)}</div>
+
+        <div className="page-header-actions">
+          <button type="button" className="case-back" onClick={onBack}>
+            <ArrowLeft size={15} /> Till fakturakön
+          </button>
+          {isAdmin && (
+            <button
+              type="button"
+              className="case-refresh"
+              disabled={busy}
+              onClick={() => run(
+                () => invoicesApi.refresh(brfId, kase.id),
+                (result) => setNotice(`${result.source} Ingenting ändrades i ekonomisystemet.`),
+              )}
+            >
+              {busy ? <Loader2 size={14} className="spin" /> : <RefreshCw size={14} />} Läs om och granska
+            </button>
+          )}
+        </div>
+
+        <Instrument
+          label="Fakturans belopp"
+          value={formatAmount(kase.total_amount, kase.currency)}
+          raw={kase.total_amount}
+          vila="Inget belopp läst"
+        />
       </header>
+
+      {error && <div className="case-banner error" role="alert">{error}</div>}
+      {notice && <div className="case-banner ok" role="status">{notice}</div>}
+
+      {/* Why these sources are one invoice — the sentence the whole case rests
+          on. It sat inside the masthead, in the smallest type there; it is the
+          page's first claim, so it stands on the page. */}
+      <p className="case-identity-basis" title="Varför de här källorna är samma faktura">
+        <Link2 size={12} /> {kase.identity_basis}
+      </p>
 
       <div className="case-statuses">
         <div className="case-status-card source">

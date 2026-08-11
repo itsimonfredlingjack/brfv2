@@ -108,7 +108,7 @@ function Banner({ tone, children, onDismiss }) {
  * message rather than dropping one attachment, and a queue that stayed silent
  * about those would let an operator believe the queue is the mailbox.
  */
-function FetchBar({ mailbox, connected, busy, onFetch, onImportFile, format, lastResult }) {
+function FetchBar({ mailbox, connected, busy, onFetch, format, lastResult }) {
   return (
     <div className="intake-source">
       <div className="intake-source-row">
@@ -129,13 +129,9 @@ function FetchBar({ mailbox, connected, busy, onFetch, onImportFile, format, las
         </span>
 
         <span className="intake-source-actions">
-          <input
-            type="file"
-            accept=".eml,message/rfc822"
-            onChange={onImportFile}
-            className="hidden-file-input"
-            id="intake-eml-import"
-          />
+          {/* The import trigger stands at the root of the screen now — the
+              queue's empty statement offers the same import, and one file
+              input with two triggers beats two inputs sharing an id. */}
           <label
             htmlFor="intake-eml-import"
             className={`import-button ${busy ? 'busy' : ''}`}
@@ -159,7 +155,11 @@ function FetchBar({ mailbox, connected, busy, onFetch, onImportFile, format, las
         </span>
       </div>
 
-      {format?.mail && (
+      {/* Only where fetching is possible. This disclosure explained the rules
+          of a mailbox pull on an installation that has no mailbox — a third
+          band of chrome above an empty queue, about a thing that cannot
+          happen. */}
+      {connected && format?.mail && (
         <details className="intake-format-disclosure">
           <summary>Om hämtning</summary>
           <p className="muted intake-format-note">
@@ -786,7 +786,8 @@ function ThreadDetail({
 }
 
 export default function IntakeQueue({
-  brfId, isAdmin = false, mailboxConnected = false, format, onOpenDocument, onChanged,
+  brfId, isAdmin = false, mailboxConnected = false, format, reload = 0,
+  onOpenDocument, onChanged,
 }) {
   const [queue, setQueue] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -811,6 +812,10 @@ export default function IntakeQueue({
   }, [brfId]);
 
   useEffect(() => { refresh(); }, [refresh]);
+
+  // Uppdatera lives in the band, which belongs to Integrations. It bumps a
+  // counter; this is the queue hearing it. See Integrations.jsx.
+  useEffect(() => { if (reload) refresh(); }, [reload, refresh]);
 
   const run = useCallback(async (work, onDone) => {
     setBusy(true);
@@ -884,6 +889,9 @@ export default function IntakeQueue({
   const selected = threads.find((t) => t.key === selectedKey) || threads[0] || null;
 
   const counts = queue?.counts || {};
+  // Has anything ever arrived? Not "is the current filter empty" — the source
+  // line and the filter belong to a queue that exists, not to the view of it.
+  const hasQueue = (counts.threads || 0) > 0;
 
   // Keyboard flow: "/" lands on the filter tabs, arrows move the mark in the
   // list, Enter steps into the detail, Escape steps back to the marked row.
@@ -922,44 +930,64 @@ export default function IntakeQueue({
       <Banner tone="error" onDismiss={() => setError('')}>{error}</Banner>
       <Banner tone="ok" onDismiss={() => setNotice('')}>{notice}</Banner>
 
+      {/* One file input for the whole screen: the source line offers the
+          import when there is a queue to add to, the empty statement offers it
+          when there is not, and they are never both on screen. */}
       {isAdmin && (
+        <input
+          type="file"
+          accept=".eml,message/rfc822"
+          onChange={handleImportFile}
+          className="hidden-file-input"
+          id="intake-eml-import"
+        />
+      )}
+
+      {/* Where the post comes from, above the post. On an empty queue it was
+          the second of three bands stacked before the only sentence on the
+          page, and it said in a whisper — grey, 13px, under a row of zeros —
+          the same thing the empty statement now says at the weight it has. */}
+      {isAdmin && hasQueue && (
         <FetchBar
           mailbox={queue?.mailbox}
           connected={mailboxConnected}
           busy={busy}
           onFetch={handleFetch}
-          onImportFile={handleImportFile}
           format={format}
           lastResult={lastFetch}
         />
       )}
 
-      <div className="intake-toolbar">
-        {/* One narrowing choice over one queue, which is exactly what Fakturor's
-            filters are — so it is written the way Fakturor writes them: a named
-            field with a select in it. It used to be a grey segmented pill
-            group, a control vocabulary that existed on this screen and nowhere
-            else in the product, one tab away from the four selects it should
-            have matched. The counts ride along in the options, so nothing is
-            lost by giving up the three-across row. */}
-        <label className="ui-field intake-filter">
-          <span>Visa</span>
-          <select
-            ref={firstTabRef}
-            className="ui-select"
-            value={filter}
-            aria-label="Filtrera kön"
-            onChange={(e) => setFilter(e.target.value)}
-          >
-            <option value="open">Att avgöra ({counts.openThreads || 0})</option>
-            <option value="awaiting">Väntar svar ({counts.awaitingReply || 0})</option>
-            <option value="all">Alla trådar ({counts.threads || 0})</option>
-          </select>
-        </label>
-        <button type="button" className="ui-btn ui-btn--ghost ui-btn--sm refresh" onClick={refresh} disabled={loading || busy}>
-          <RefreshCw size={14} /> Uppdatera
-        </button>
-      </div>
+      {/* A filter over an empty queue narrows nothing: three options that all
+          lead back to the same empty page, drawn above it. Same rule as the
+          instrument's — a control that cannot change the answer is not shown.
+          Uppdatera used to sit on this row too; it is in the band now, where
+          Uppgifter and Bevakningar have always kept it. */}
+      {hasQueue && (
+        <div className="intake-toolbar">
+          {/* One narrowing choice over one queue, which is exactly what
+              Fakturor's filters are — so it is written the way Fakturor writes
+              them: a named field with a select in it. It used to be a grey
+              segmented pill group, a control vocabulary that existed on this
+              screen and nowhere else in the product, one tab away from the
+              four selects it should have matched. The counts ride along in the
+              options, so nothing is lost by giving up the three-across row. */}
+          <label className="ui-field intake-filter">
+            <span>Visa</span>
+            <select
+              ref={firstTabRef}
+              className="ui-select"
+              value={filter}
+              aria-label="Filtrera kön"
+              onChange={(e) => setFilter(e.target.value)}
+            >
+              <option value="open">Att avgöra ({counts.openThreads || 0})</option>
+              <option value="awaiting">Väntar svar ({counts.awaitingReply || 0})</option>
+              <option value="all">Alla trådar ({counts.threads || 0})</option>
+            </select>
+          </label>
+        </div>
+      )}
 
       {loading && <p className="ui-loading intake-loading"><Loader2 size={16} className="spin" /> Hämtar…</p>}
 
@@ -979,16 +1007,32 @@ export default function IntakeQueue({
             Inga trådar väntar på svar just nu.
           </EmptyState>
         ) : (
+          /* Where the post comes from is the second half of "nothing is
+             waiting" — without it the screen says the queue is clear and
+             leaves the reader to find out from a grey line elsewhere that no
+             mailbox is attached to it. So the statement carries the mailbox's
+             own state, and the action is whichever way post can actually get
+             in on this installation. */
           <EmptyState
             title="Allt är hanterat."
-            actions={isAdmin && mailboxConnected ? (
-              <button type="button" className="ui-btn ui-btn--primary" onClick={handleFetch} disabled={busy}>
-                {busy ? <Loader2 size={15} className="spin" /> : <Download size={15} />} Hämta post
-              </button>
+            actions={isAdmin ? (
+              mailboxConnected ? (
+                <button type="button" className="ui-btn ui-btn--primary" onClick={handleFetch} disabled={busy}>
+                  {busy ? <Loader2 size={15} className="spin" /> : <Download size={15} />} Hämta post
+                </button>
+              ) : (
+                <label htmlFor="intake-eml-import" className="ui-btn ui-btn--primary">
+                  {busy ? <Loader2 size={15} className="spin" /> : <Upload size={15} />} Importera .eml
+                </label>
+              )
             ) : null}
           >
-            Ingen tråd väntar på ett beslut. Ny post hämtas från föreningens brevlåda när
-            du vill se om något kommit in sedan sist.
+            {mailboxConnected
+              ? 'Ingen tråd väntar på ett beslut. Ny post hämtas från föreningens brevlåda '
+                + 'när du vill se om något kommit in sedan sist.'
+              : 'Ingen tråd väntar på ett beslut. Föreningen har ingen brevlåda ansluten, '
+                + 'så post kommer in genom att en .eml-fil importeras — eller genom att '
+                + 'en brevlåda kopplas på under Anslutningar.'}
           </EmptyState>
         )
       )}

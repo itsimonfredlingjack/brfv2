@@ -91,13 +91,17 @@
   font-size: var(--text-base);
 }
 
+/* The page's lead, not a callout.
+ *
+ * Two paragraphs of plain explanation sat in a bordered, lifted, filled card
+ * — the first thing on the screen, boxed. A card is for a thing you choose
+ * between; this is the sentence that tells you what the screen is for, and
+ * boxing it makes the page open on a notice about itself. "Let the surface
+ * carry the block, not the line" was the rule, and it was applied to the one
+ * kind of content that is neither: prose. It stands on the paper now, the way
+ * every other lead in the product does. */
 .pane-intro {
-  margin-bottom: var(--s4);
-  padding: var(--s3h) var(--s4);
-  border: 1px solid var(--kant);
-  box-shadow: var(--lyft-1);
-  border-radius: var(--radius-3xl);
-  background: var(--card);
+  margin-bottom: var(--s6);
 }
 
 .pane-intro p {

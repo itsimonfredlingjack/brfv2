@@ -1303,6 +1303,32 @@ select,
   text-align: left;
 }
 
+/* Where the empty statement IS the page, it gets the page's field.
+ *
+ * Everything on the empty workspaces sat in the top third and then the surface
+ * ran out as content but not as page. Air is this system's main layout tool,
+ * but air only reads as air when it surrounds something; below the last line
+ * it reads as a screen that stopped loading. Which is the same misreading the
+ * grey ring and the brand-mark-as-illustration were put there to prevent, and
+ * the reason those went was that they were furniture. The fix is placement,
+ * not another element.
+ *
+ * So: the statement takes a little over half the window and sits at the
+ * optical centre of it — bottom padding heavier than top, so it lands above
+ * true middle where the eye expects a title to be. The rule stays at the top
+ * of that field, marking where the first row would have been. Air above the
+ * sentence and air below it, both bounded, both deliberate.
+ *
+ * `:last-child` is the whole condition, and it is derived rather than declared
+ * per screen: an empty statement with something after it — the archive under
+ * "Frågan ställs till", say — is the page's opening line and not the page, so
+ * it stays the size of what it says. No screen has to know which it is. */
+.ui-empty:last-child {
+  min-height: 56vh;
+  justify-content: center;
+  padding-bottom: var(--s14);
+}
+
 /* The state, at the size the section heading it stands in for would have had.
    It was 14px semibold under a 40px glyph, which is how a screen ends up
    announcing its condition in the smallest type on the page. */

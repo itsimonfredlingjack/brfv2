@@ -810,9 +810,15 @@ describe('a resolved item', () => {
     },
   };
 
-  /** Resolved threads live behind the all-threads filter, collapsed. */
+  /** Resolved threads live behind the all-threads filter, collapsed.
+   *
+   * The filter is reached after the queue has loaded, not before it. It used
+   * to be drawn while the fetch was still out — a control offering to narrow
+   * something nobody had seen yet — and now it only exists once there is a
+   * queue with something in it. Same three options, one await earlier. */
   async function showResolved() {
-    fireEvent.change(screen.getByLabelText('Filtrera kön'), { target: { value: 'all' } });
+    const filter = await screen.findByLabelText('Filtrera kön');
+    fireEvent.change(filter, { target: { value: 'all' } });
     const list = await waitForQueue();
     fireEvent.click(within(list).getByText('Offert takomläggning'));
   }

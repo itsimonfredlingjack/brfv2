@@ -748,7 +748,7 @@ function App() {
     setIsMobileMenuOpen(false);
     setChatError(null);
 
-    setChatMessages(prev => [...prev, { role: 'user', content: question }, { role: 'ai', pending: true, content: 'Söker i högen…' }]);
+    setChatMessages(prev => [...prev, { role: 'user', content: question }, { role: 'ai', pending: true, content: 'Söker i arkivet…' }]);
     setChatBusy(true);
 
     api.ask(brfId, question)
@@ -977,10 +977,14 @@ function App() {
                       </div>
                     </div>
 
-                    <div className="panel-section pilot-unavailable-note">
-                      <h3>Utanför pilotens omfattning</h3>
-                      <p>Kvalitetskontroll ingår inte i den verifierade pilotvyn. Bevakningar finns i den installerade applikationen, under Bevakningar i menyn.</p>
-                    </div>
+                    {/* "Utanför pilotens omfattning" stood here and said what
+                        the two disabled tabs above already say, in the words
+                        they already use — "(ej i piloten)", on the controls
+                        themselves, where a reader meets the limit at the
+                        moment they try to cross it. A panel restating it is a
+                        second answer to a question nobody asked twice. Its
+                        last sentence pointed the reader to the installed
+                        application from inside the installed application. */}
                   </div>
                 </div>
               )}
@@ -1098,7 +1102,7 @@ function App() {
 
                                 {msg.citations && (
                                   <div className="chat-citations">
-                                    <p className="chat-citations-head">Hämtat ur högen</p>
+                                    <p className="chat-citations-head">Hämtat ur arkivet</p>
                                     {msg.citations.map((c, i) => (
                                       <div key={i} className="citation-pill interactive" onClick={() => setPdfPage(c.page)} title={`Gå till sida ${c.page}`} tabIndex={0} role="button" onKeyDown={e => e.key === 'Enter' && setPdfPage(c.page)}>
                                         <span className="citation-number">[{i + 1}]</span>
@@ -1455,7 +1459,7 @@ function App() {
                 {searchIsLoading ? (
                   <div style={{ textAlign: 'center', marginTop: '60px', color: 'var(--text-secondary)' }}>
                     <Loader2 size={32} className="spin" style={{ margin: '0 auto', color: 'var(--primary-action)' }} />
-                    <h3 style={{ marginTop: '16px' }}>Söker i högen…</h3>
+                    <h3 style={{ marginTop: '16px' }}>Söker i arkivet…</h3>
                   </div>
                 ) : searchResults && (
                   <div className="search-results-list">
@@ -1574,7 +1578,7 @@ function App() {
 
                                 {msg.citations && msg.citations.length > 0 && (
                                   <div className="chat-citations">
-                                    <p className="chat-citations-head">Hämtat ur högen</p>
+                                    <p className="chat-citations-head">Hämtat ur arkivet</p>
                                     {msg.citations.map((c, i) => (
                                       <div
                                         key={i}
@@ -1629,7 +1633,12 @@ function App() {
                         value={chatInput}
                         onChange={(e) => setChatInput(e.target.value)}
                         onKeyDown={(e) => e.key === 'Enter' && executeGeneralChat(chatInput)}
-                        placeholder="Fråga rakt in i högen…"
+                        /* "Fråga rakt in i högen…" named a drawing that was
+                           deleted a commit ago — the word pointed at nothing
+                           on the screen and nothing in the product. What the
+                           question actually goes into is listed by name six
+                           rows above this field. */
+                        placeholder="Fråga föreningens dokument…"
                         disabled={chatBusy}
                       />
                       <button className="chat-send-btn" onClick={() => executeGeneralChat(chatInput)} disabled={chatBusy || !chatInput.trim()} aria-label="Skicka fråga">

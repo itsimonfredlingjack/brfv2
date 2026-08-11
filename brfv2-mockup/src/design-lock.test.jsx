@@ -5,6 +5,11 @@ import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, dirname, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
+// Most locks here read the source; Beslut 11a has to render, because the rule
+// it holds is about what reaches the screen rather than what is written down.
+import React from 'react';
+import { render } from '@testing-library/react';
+import Instrument from './components/Instrument';
 
 const SRC = dirname(fileURLToPath(import.meta.url));
 const SELF = fileURLToPath(import.meta.url);
@@ -160,11 +165,19 @@ describe('design lock: the instrument is one component', () => {
   // The lock that actually prevents the failure mode. A screen that wants a
   // different instrument has to change the instrument — it cannot bolt a
   // scoped override onto someone else's, which is how eight copies happened.
+  //
+  // Asking whether an instrument is there is not styling one. The band's
+  // height depends on that answer — an instrument that measures nothing does
+  // not draw, and the band must not go on reserving 268px for it — so App.css
+  // writes `.page-header:not(:has(.instrument))`. That declares nothing about
+  // the instrument and cannot drift from it; what this lock is for is
+  // `.docs-overview .instrument-amount { … }`, which still trips it, including
+  // when it is written as `.instrument:has(.x) { … }`.
   it('every .instrument rule lives in Instrument.css', () => {
     const offenders = [];
     for (const file of walk(SRC)) {
       if (!file.endsWith('.css') || file.endsWith('Instrument.css')) continue;
-      const text = readFileSync(file, 'utf8');
+      const text = readFileSync(file, 'utf8').replace(/:has\([^)]*\)/g, ':has()');
       for (const m of text.matchAll(/\.instrument[\w-]*/g)) {
         offenders.push(`${relative(SRC, file)} styles ${m[0]} — put it in Instrument.css`);
       }
@@ -414,5 +427,81 @@ describe('design lock: channels agree with their colour', () => {
     const triple = THEME.match(new RegExp(`^\\s*${token}-rgb:\\s*([\\d\\s]+);`, 'm'));
     expect(triple, `${token}-rgb is not defined`).toBeTruthy();
     expect(triple[1].trim().split(/\s+/).map(Number)).toEqual(channels(tokenHex(token)));
+  });
+});
+
+// ── Beslut 11 (sidgrammatiken): the two rules a page follows before it has
+// anything to say. Both were written for the pilot, where four of seven
+// workspaces are empty and empty is the first thing a board ever sees.
+
+// Beslut 11a: zero is not a measurement — for the whole instrument.
+//
+// The figure already knew this: Fakturor at rest says "Inget öppet att
+// granska" instead of setting a 52px mono zero. The readings did not, so
+// Uppgifter opened on 0 / 0 / 0, Hemsidan on 0 / 0 and Inkommande on 0 / 0 / 0
+// — the least informative row on the page, in the largest numerals on the
+// page, above the one sentence that said something. Seven screens pass an
+// instrument and none of them should have to decide this.
+//
+// A rendered lock rather than a read one: the rule is about what reaches the
+// screen, and grepping the seven call sites would only prove they still call
+// it. See Instrument.jsx for why a single "1" among zeros keeps its siblings.
+describe('design lock: an instrument with nothing to measure does not draw', () => {
+  const readings = (...values) => values.map((v, i) => ({ label: `r${i}`, value: v }));
+
+  it('renders nothing when every number it holds is zero', () => {
+    const { container } = render(<Instrument readings={readings(0, 0, 0)} />);
+    expect(container.querySelector('.instrument')).toBeNull();
+  });
+
+  it('renders nothing when a zero figure heads zero readings', () => {
+    const { container } = render(
+      <Instrument label="Sidor" value={0} readings={readings(0, 0)} />,
+    );
+    expect(container.querySelector('.instrument')).toBeNull();
+  });
+
+  // A formatted figure is not its own number, which is what `raw` is for.
+  it('reads a formatted zero through raw', () => {
+    const { container } = render(
+      <Instrument label="Öppet belopp" value="0,00 SEK" raw="0.00" readings={readings(0)} />,
+    );
+    expect(container.querySelector('.instrument')).toBeNull();
+  });
+
+  it('draws for one number among zeros — that is a distribution', () => {
+    const { container } = render(<Instrument readings={readings(1, 0, 0)} />);
+    expect(container.querySelector('.instrument')).not.toBeNull();
+    expect(container.textContent).toContain('1');
+  });
+
+  // A reading is not always a count. "Aldrig hämtat" is a state, and a state
+  // is never zero — the rule is about numbers, and this is not one.
+  it('draws for a reading that is not a number at all', () => {
+    const { container } = render(<Instrument readings={readings('Aldrig hämtat', 0)} />);
+    expect(container.querySelector('.instrument')).not.toBeNull();
+    expect(container.textContent).toContain('Aldrig hämtat');
+  });
+});
+
+// Beslut 11b: one measure per page, and the band is on the page.
+//
+// The band ran to the window's edge while the register under it stopped at
+// --measure: the widest rule on the page ruling the narrowest content on the
+// page, with the band's own controls out at an edge no row ever reached. Since
+// --skal-raised and the page ground are the same white, that hairline is the
+// only thing a reader ever sees of the band, and a rule belongs to the text it
+// rules. Pages whose measure is not the default scope --measure to their own
+// (.chat-workspace narrows it, .integrations and .invoices widen it) and the
+// band follows, which is the whole point: the measure is the page's.
+describe('design lock: the band takes the page measure', () => {
+  it('.page-header caps its width through var(--measure)', () => {
+    const css = readFileSync(join(SRC, 'App.css'), 'utf8');
+    const start = css.indexOf('\n.page-header {');
+    expect(start, '.page-header rule not found in App.css').toBeGreaterThan(-1);
+    const block = css.slice(start, css.indexOf('}', start));
+    const cap = block.match(/max-width:\s*([^;]+);/);
+    expect(cap, '.page-header sets no max-width — the band is back on the window').toBeTruthy();
+    expect(cap[1]).toContain('var(--measure)');
   });
 });

@@ -3,6 +3,7 @@ import {
   AlertCircle, CheckCircle2, Copy, ExternalLink, Loader2, Mail, Plug, Receipt, Unplug,
 } from 'lucide-react';
 import { integrationsApi } from '../api';
+import Tillstand from './Tillstand';
 import './IntegrationConnections.css';
 
 /**
@@ -37,12 +38,24 @@ const STATUS_LABEL = {
   error: 'Senaste anropet misslyckades',
 };
 
-const STATUS_TONE = {
-  connected: 'ok',
-  configured: 'warn',
-  expired: 'warn',
-  revoked: 'muted',
-  error: 'bad',
+// A connection's standing, in the product's one vocabulary for standing.
+//
+// These were coloured pills — a green one, an amber one, a red one — which is
+// the two attempts Tillstand.jsx records as already failed, still running on
+// the one screen the consolidation missed. Shape carries it everywhere else,
+// so it carries it here: filled means it works, a solid outline means it was
+// set up and does not, a dashed outline means nothing establishes it yet, and
+// the one colour stays for the one thing this product paints red.
+//
+// `avviker` is the fifth form and it is not a new variant: a mailbox that is
+// configured but has nobody signed into it is precisely "checked, and it does
+// not hold" — the same reading as an invoice that disagrees with its contract.
+const STATUS_FORM = {
+  connected: 'belagd',
+  configured: 'avviker',
+  expired: 'avviker',
+  revoked: 'oprovad',
+  error: 'fel',
 };
 
 const NAMED_AUTHORITIES = ['consumers', 'organizations', 'common'];
@@ -468,9 +481,9 @@ export default function IntegrationConnections({ brfId, connections, mailFolders
           <article key={provider} className="ic-provider">
             <header className="ic-head">
               <h4><Icon size={16} /> {PROVIDER_LABEL[provider] || provider}</h4>
-              <span className={`ic-status ${STATUS_TONE[status] || 'muted'}`}>
+              <Tillstand form={status ? STATUS_FORM[status] : 'oprovad'}>
                 {status ? STATUS_LABEL[status] || status : 'Inte konfigurerad'}
-              </span>
+              </Tillstand>
             </header>
 
             <div className="ic-step">

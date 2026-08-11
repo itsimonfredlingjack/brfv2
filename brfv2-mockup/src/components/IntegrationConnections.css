@@ -57,35 +57,12 @@
   color: var(--text-primary);
 }
 
-.ic-status {
-  font-size: var(--text-xs);
-  font-weight: 600;
-  padding: var(--s1) var(--s2h);
-  border-radius: var(--r-sm);
-  border: 1px solid var(--panel-border);
-  color: var(--text-secondary);
-  white-space: nowrap;
-}
-
-/* A connection's state: connected (filled, ink), needs attention (Vägran —
-   something the association has to supply is missing), unreachable (Avbrott). */
-.ic-status.ok {
-  background: var(--surface-3);
-  border-color: var(--border-strong);
-  color: var(--foreground);
-}
-
-.ic-status.warn {
-  background: var(--warn-soft);
-  border-color: var(--warn-border);
-  color: var(--warn);
-}
-
-.ic-status.bad {
-  background: var(--avbrott-soft);
-  border-color: var(--avbrott-border);
-  color: var(--avbrott);
-}
+/* `.ic-status` stood here as three coloured pills — ok green, warn amber, bad
+   red. Tillstand.jsx records both of those hues as attempts that already
+   failed, for the reason it gives: on a light ground an accent has to be dark
+   enough to survive, and then every accent converges on the same muddy weight.
+   This screen kept them because the consolidation never reached it. The state
+   is drawn as shape now, by the component that owns the five forms. */
 
 .ic-step {
   margin-top: var(--s4);
@@ -93,13 +70,17 @@
   border-top: 1px solid var(--panel-border);
 }
 
+/* A step's name. It was uppercase at 12px/700 with its own tracking — the
+   etikett, spelled out again in four declarations instead of named once.
+   Same appearance, one source. */
 .ic-step > h5,
 .ic-limits h5 {
   margin: 0 0 var(--s2h);
-  font-size: var(--text-xs);
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-family: var(--etikett-family);
+  font-size: var(--etikett-size);
+  font-weight: var(--etikett-weight);
+  letter-spacing: var(--etikett-tracking);
+  text-transform: var(--etikett-case);
   color: var(--text-secondary);
 }
 

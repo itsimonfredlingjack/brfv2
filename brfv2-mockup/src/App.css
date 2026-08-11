@@ -502,6 +502,23 @@
    before this pass the band was 149/277/290/292/149px across five screens, so
    changing tab resized the biggest element on screen and shifted every row
    below it. Now the frame holds still and only what is inside it changes. */
+/* One measure per page, and the band is on the page.
+ *
+ * The band ran to the window's edge while the register under it stopped at
+ * --measure — 1380px against 1200px on a 1680px window. That put the widest
+ * rule on the page above the narrowest content on the page, and the band's own
+ * controls out at an edge no row ever reached. The plate is not what makes the
+ * band; --skal-raised and the page ground are the same white, so the only
+ * thing the reader ever sees of it is that hairline over the instrument. A
+ * hairline is a rule, and a rule belongs to the text it rules.
+ *
+ * So the band takes the page's measure. The bleed stays because the padding
+ * that follows it puts the title back on the gutter, which is why this is
+ * `--measure` plus two gutters rather than `--measure`.
+ *
+ * A page that reads rather than registers scopes --measure to its own reading
+ * width (see .chat-workspace) and the band follows it down. That is the point:
+ * the measure is the page's, not the shell's. */
 .page-header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
@@ -512,10 +529,30 @@
   column-gap: var(--s6);
   row-gap: var(--s6);
   height: var(--band-h);
+  max-width: calc(var(--measure) + var(--gutter) * 2);
   margin: -24px -28px var(--s6);
   padding: var(--s8) var(--gutter) var(--s6);
   background: var(--skal-raised);
   color: var(--black-900);
+}
+
+/* No measurement, no room reserved for one.
+ *
+ * --band-h holds 268px so the instrument's row is the same on every screen
+ * that has one. A screen with nothing to measure was still paying it: about
+ * 120px of empty plate between the subtitle and the first thing worth reading,
+ * on exactly the four screens that are empty in the pilot and could least
+ * afford it.
+ *
+ * This does not give the height back to the screens. There are two band
+ * heights in the product and which one you get is decided by one fact — does
+ * this screen measure anything — so the reader still never meets a band that
+ * is a bespoke size. That is what the fixed height was defending against; it
+ * was never the number itself. */
+.page-header:not(:has(.instrument)) {
+  height: auto;
+  grid-template-rows: auto;
+  row-gap: 0;
 }
 
 /* On a short window the plate would eat the register it heads. It gives up its
@@ -562,6 +599,19 @@
   max-width: var(--measure);
   margin-inline: 0;
   width: 100%;
+}
+
+/* The two pages whose measure is the window.
+ *
+ * Inkommande and Fakturor are master–detail: a queue on the left and the
+ * decision on the right, and both want every pixel. They are the reason
+ * --measure is scoped rather than global — the rule is "the band takes the
+ * page's measure", and these two pages measure the whole window. Without this
+ * they would be the mirror of the defect this pass came to fix: a hairline
+ * stopping 180px short of the table it heads. */
+.integrations,
+.invoices {
+  --measure: 100%;
 }
 
 /* Chrome sitting on ink, with a hierarchy the previous pass didn't have:
@@ -1231,12 +1281,23 @@ mark.search-highlight {
    own heading. */
 .chat-workspace > .page-header { margin-bottom: var(--s6); }
 
+/* The one page whose measure is narrower than the shell's.
+ *
+ * A conversation is read, so its column is set to be read — 820px, about 90
+ * characters of the answer face. The band used to ignore that and run to the
+ * window: a full-width hairline over the subtitle, then two hairlines at 820
+ * under it, the widest rule on the page ruling the narrowest content on the
+ * page. The measure is a property of the page, not of the shell, so this page
+ * declares its own and the band, the empty statement, the archive and the
+ * composer all sit on it. Four elements, one edge. */
+.chat-workspace { --measure: 820px; }
+
 .chat-container {
   display: flex;
   flex-direction: column;
   flex: 1;
   min-height: 0;
-  max-width: 820px;
+  max-width: var(--measure);
   margin: 0;
   width: 100%;
 }
@@ -1339,7 +1400,18 @@ mark.search-highlight {
    Names in the sans — they are what the reader scans — and depths in the mono,
    the cut this product gives to anything measured. Rows are separated by air
    rather than rules: a ruled row is a register, and Dokument is the register.
-   This is one sentence with six items in it. */
+   This is one sentence with six items in it.
+
+   The same six rows, set twice.
+   The archive appeared here as a loose list and on Dokument as a ruled table,
+   and the two disagreed about everything a row is made of: 15px against 15px
+   at a different weight, near-black against mid-grey, and page depths one step
+   apart in the mono. Same six documents, same two facts about each, two
+   answers to how the product writes a filename. Dokument's is the one that
+   wins — it is the register, it is where the archive is worked, and it settled
+   these questions first. What stays different is only what is actually
+   different: no rules, no column heads, no dates, because this is a scope and
+   not a register. */
 .chat-scope { width: 100%; max-width: var(--measure); }
 
 .chat-scope-head {
@@ -1366,9 +1438,10 @@ mark.search-highlight {
 
 .chat-scope-name {
   font-family: var(--font-sans);
-  font-size: var(--text-base);
+  font-size: var(--text-md);   /* the register's row — see .docs-table */
+  font-weight: 500;
   line-height: 1.5;
-  color: var(--black-700);
+  color: var(--foreground);
   min-width: 0;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -1378,9 +1451,10 @@ mark.search-highlight {
 .chat-scope-pages {
   flex-shrink: 0;
   font-family: var(--font-mono);
-  font-size: var(--text-xs);
+  font-size: var(--text-dense);   /* the register's num-col */
+  letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
-  color: var(--black-500);
+  color: var(--muted-foreground);
 }
 
 /* The conversation is a record, not a messenger: the person's question is a
@@ -1965,7 +2039,11 @@ mark.search-highlight {
 .info-label { font-size: var(--text-base); color: var(--muted-foreground); }
 .info-value { font-size: var(--text-base); color: var(--foreground); text-align: right; }
 
-.pilot-unavailable-note p { margin-top: var(--s1h); color: var(--muted-foreground); font-size: var(--text-base); line-height: 1.55; }
+/* `.pilot-unavailable-note` stood here. Its panel said what the two disabled
+   tabs say on themselves; both are gone. Recorded because the grey it was set
+   in read as blue in a screenshot and was reported as --handling on a dead
+   link — it measured #4A4A4A, plain --muted-foreground. The duplication was
+   real, the colour was not. */
 
 .bevakning-list { display: flex; flex-direction: column; gap: var(--s2h); }
 .bevakning-card {

@@ -782,37 +782,14 @@
   gap: var(--s3h);
 }
 
-.case-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--s3);
-  margin: 0;
-}
-
-/* Ghost controls: the back arrow and the re-read are window chrome, not
-   actions on the record — so no field boxes on the paper. */
-.case-back,
-.case-refresh {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s2);
-  height: 32px;
-  padding: 0 var(--s2h);
-  border: 1px solid transparent;
-  border-radius: var(--r-control);
-  background: transparent;
-  color: var(--muted-foreground);
-  font-size: var(--text-base);
-  font-weight: 500;
-  cursor: pointer;
-  transition: background-color 0.14s ease, color 0.14s ease;
-}
-
-.case-back { margin-left: -10px; }
-.case-back:hover:not(:disabled),
-.case-refresh:hover:not(:disabled) { background: var(--surface-3); color: var(--foreground); }
-.case-refresh:disabled { opacity: 0.5; cursor: not-allowed; }
+/* `.case-topbar` and its two ghost controls stood here — a 32px height, a
+   --r-control radius, a transparent border and a hover fill, which is the
+   band's own control written out a second time in a second stylesheet at a
+   different size. Both buttons live in the band's actions row now and take
+   its geometry; the classes are names for what the buttons do, nothing more.
+   (See App.css: the band states the control once, and that is what stopped
+   .watches-scan, .tasks-refresh and .invoices-read-in-btn from drifting to
+   three different heights.) */
 
 .case-banner {
   margin: 0 0 var(--s3);
@@ -829,19 +806,12 @@
 .case-loading,
 .case-error { padding: var(--s6); color: var(--muted-foreground); }
 
-.case-header {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: var(--s6);
-  margin: 0;
-  padding-bottom: var(--s3h);
-  border-bottom: 1px solid var(--border);
-}
-
-.case-header h2 { margin-bottom: var(--s1); font-size: var(--text-2xl); }
-
-.case-identity { color: var(--muted-foreground); font-size: var(--text-base); }
+/* `.case-header`, `.case-header h2`, `.case-identity` and `.case-amount` stood
+   here: a masthead, a title at --text-2xl and a sum in the measuring cut,
+   assembled by hand for this one screen. All four are the band's — .page-title,
+   .page-header-sub and the instrument — and the sum was already set the way
+   the instrument sets it, which is what made this a copy rather than a
+   different design. */
 
 .case-identity-basis {
   display: flex;
@@ -855,17 +825,6 @@
 }
 
 .case-identity-basis > svg { flex-shrink: 0; position: relative; top: 2px; }
-
-/* The sum is the case's central measurement, so it is set in the cut that
-   measures — not in a display face pretending the number is a headline. */
-.case-amount {
-  font-family: var(--font-mono);
-  font-size: var(--text-xl);
-  font-weight: 600;
-  letter-spacing: 0.01em;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap;
-}
 
 /* The two statuses. Side by side, same size, never one badge. Chrome, on the
    paper under the masthead they explain. */
@@ -1547,5 +1506,4 @@
 
 @media (max-width: 1024px) {
   .invoices-counts > div { border-right: none; padding: 0 var(--s3h) 0 var(--s1); }
-  .case-header { flex-direction: column; gap: var(--s2h); }
 }
