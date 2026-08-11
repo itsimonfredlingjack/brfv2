@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fakturor — dokumentationsformspråket</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&family=Source+Sans+3:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --canvas:#FFFFFF;
+  --soft:#FAFAFA;
+  --ink:#0A0A0A;
+  --charcoal:#525252;
+  --body:#737373;
+  --mute:#A3A3A3;
+  --hairline:#E5E5E5;
+  --hairline-strong:#D4D4D4;
+  --dark:#171717;
+
+  /* Kontrollkant: 1.4.11 kräver 3:1. #D4D4D4 mäter 1.55 mot vitt. */
+  --control:#8A8A8A;
+
+  --font-display:'Nunito',system-ui,sans-serif;
+  --font-sans:'Source Sans 3',ui-sans-serif,system-ui,sans-serif;
+  --font-mono:'JetBrains Mono',ui-monospace,monospace;
+
+  --s-xxs:2px; --s-xs:4px; --s-sm:8px; --s-md:12px;
+  --s-lg:16px; --s-xl:24px; --s-xxl:32px; --s-section:88px;
+
+  --r-sm:6px; --r-lg:12px; --r-full:9999px;
+}
+*{box-sizing:border-box;box-shadow:none}
+body{margin:0;background:var(--canvas);color:var(--body);
+  font:400 16px/1.5 var(--font-sans);-webkit-font-smoothing:antialiased}
+
+.app{display:grid;grid-template-columns:232px 1fr}
+.sidebar{border-right:1px solid var(--hairline);padding:var(--s-xl) var(--s-lg);min-height:100vh}
+.brand{display:flex;align-items:center;gap:var(--s-sm);margin-bottom:var(--s-xxl)}
+.brand-mark{width:24px;height:24px;border:2px solid var(--ink);border-radius:50%;display:grid;place-items:center}
+.brand-mark i{width:7px;height:7px;background:var(--ink);border-radius:50%}
+.brand-name{font:700 17px/1 var(--font-display);color:var(--ink)}
+.nav-eyebrow{font:400 11px/1.3 var(--font-mono);letter-spacing:0.08em;text-transform:uppercase;
+  color:var(--mute);padding:0 var(--s-md) var(--s-sm)}
+.nav-group{margin-bottom:var(--s-xl)}
+.nav-item{display:block;width:100%;text-align:left;padding:7px var(--s-md);margin-bottom:var(--s-xxs);
+  border:none;background:none;border-radius:var(--r-full);
+  font:400 14px/1.4 var(--font-sans);color:var(--charcoal);cursor:pointer}
+.nav-item.active{background:var(--ink);color:var(--canvas);font-weight:600}
+
+.main{padding:var(--s-xxl) var(--s-section) var(--s-section);max-width:1020px}
+
+/* ---- masthead ---- */
+h1{font:700 36px/1.11 var(--font-display);color:var(--ink);margin:0}
+.lead{font:400 16px/1.5 var(--font-sans);color:var(--body);margin:var(--s-md) 0 0;max-width:62ch}
+.actions{display:flex;gap:var(--s-md);flex-shrink:0}
+.topline{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s-xl)}
+
+.btn{display:inline-flex;align-items:center;gap:var(--s-sm);height:36px;padding:0 20px;
+  border-radius:var(--r-full);font:500 14px/1 var(--font-sans);cursor:pointer;
+  background:var(--canvas);color:var(--ink);border:1px solid var(--control)}
+.btn--primary{background:var(--ink);color:var(--canvas);border-color:var(--ink)}
+.btn:focus-visible{outline:2px solid rgb(59 130 246 / .55);outline-offset:2px}
+
+/* ---- the section device: a numbered eyebrow over a rule ---- */
+.section{padding-top:var(--s-section)}
+.eyebrow{font:400 12px/1.33 var(--font-mono);letter-spacing:0.06em;text-transform:uppercase;
+  color:var(--mute);margin-bottom:var(--s-sm)}
+h2{font:700 24px/1.33 var(--font-display);color:var(--ink);margin:0}
+.section-lead{font:400 16px/1.5 var(--font-sans);color:var(--body);margin:var(--s-md) 0 0;max-width:64ch}
+.rule{height:1px;background:var(--hairline);margin-top:var(--s-section)}
+
+/* ---- the summary, as a scale specimen ---- */
+.summary{display:flex;align-items:baseline;gap:var(--s-section);margin-top:var(--s-xl);flex-wrap:wrap}
+.sum-figure{font:700 30px/1.2 var(--font-display);color:var(--ink);font-variant-numeric:tabular-nums}
+.sum-cap{font:400 12px/1.33 var(--font-mono);letter-spacing:0.06em;text-transform:uppercase;color:var(--mute);margin-top:var(--s-xs)}
+.counts{display:flex;gap:var(--s-xxl);margin-left:auto}
+.count-n{font:700 20px/1.2 var(--font-display);color:var(--ink);font-variant-numeric:tabular-nums}
+
+/* ---- the toolbar ---- */
+.toolbar{display:flex;gap:var(--s-md);align-items:center;flex-wrap:wrap;margin-top:var(--s-xl)}
+.field{height:40px;padding:0 var(--s-lg);border:1px solid var(--control);border-radius:var(--r-full);
+  background:var(--canvas);font:400 14px/1 var(--font-sans);color:var(--ink)}
+.field::placeholder{color:var(--mute)}
+.chip{height:36px;padding:0 var(--s-lg);border:none;border-radius:var(--r-full);
+  background:var(--soft);font:400 14px/1 var(--font-sans);color:var(--charcoal);cursor:pointer;
+  display:inline-flex;align-items:center;gap:var(--s-sm)}
+
+/* ---- THE SPECIMEN CARD: the thing, then its facts in mono ---- */
+.cases{display:grid;gap:var(--s-lg);margin-top:var(--s-xl)}
+.case{border:1px solid var(--hairline);border-radius:var(--r-lg);padding:var(--s-xl);background:var(--canvas)}
+.case-head{display:flex;align-items:flex-start;justify-content:space-between;gap:var(--s-lg)}
+.case-name{font:600 20px/1.4 var(--font-sans);color:var(--ink)}
+.case-amount{font:700 22px/1.25 var(--font-display);color:var(--ink);font-variant-numeric:tabular-nums;white-space:nowrap}
+.case-why{font:400 15px/1.5 var(--font-sans);color:var(--body);margin-top:var(--s-sm);max-width:64ch}
+
+/* the spec caption — the pattern this whole language is built on */
+.spec{font:400 12.5px/1.6 var(--font-mono);color:var(--mute);margin-top:var(--s-lg);
+  display:flex;flex-wrap:wrap;gap:0 var(--s-sm)}
+.spec b{font-weight:500;color:var(--charcoal)}
+.spec .sep{color:var(--hairline-strong)}
+
+/* the state, in the card's top-left as a status line */
+.state{display:inline-flex;align-items:center;gap:6px;height:26px;padding:0 12px;
+  border-radius:var(--r-full);font:500 12.5px/1 var(--font-sans);margin-bottom:var(--s-md)}
+.s-belagd{background:var(--ink);color:var(--canvas)}
+.s-ingen{border:1px dashed var(--control);color:var(--charcoal)}
+.s-fel{background:rgb(152 49 39 / .10);border:1px solid rgb(152 49 39 / .55);color:#8E2E24}
+.s-laser{border:1px solid var(--hairline-strong);color:var(--body)}
+.dot{width:6px;height:6px;border-radius:50%;background:var(--body);animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* lateness: arithmetic, no colour, no container */
+.late{font:500 12.5px/1 var(--font-mono);color:var(--ink);font-variant-numeric:tabular-nums}
+
+.tag{font:400 11px/1.3 var(--font-mono);letter-spacing:0.08em;text-transform:uppercase;color:var(--mute);display:block;margin-bottom:var(--s-lg)}
+</style>
+</head>
+<body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="brand"><div class="brand-mark"><i></i></div><div class="brand-name">Träff</div></div>
+    <div class="nav-group">
+      <div class="nav-eyebrow">01 — Fråga &amp; arkiv</div>
+      <button class="nav-item">Fråga dokumenten</button>
+      <button class="nav-item">Dokument</button>
+    </div>
+    <div class="nav-group">
+      <div class="nav-eyebrow">02 — Arbete</div>
+      <button class="nav-item">Bevakningar</button>
+      <button class="nav-item">Uppgifter</button>
+      <button class="nav-item">Hemsidan</button>
+    </div>
+    <div class="nav-group">
+      <div class="nav-eyebrow">03 — Post &amp; ekonomi</div>
+      <button class="nav-item">Inkommande</button>
+      <button class="nav-item active">Fakturor</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <span class="tag">dokumentationsformspråket</span>
+
+    <div class="topline">
+      <div>
+        <h1>Fakturor</h1>
+        <p class="lead">Varje faktura jämförs mot föreningens avtal. Motorn föreslår,
+          en människa beslutar — inget här skrivs till ekonomisystemet.</p>
+      </div>
+      <div class="actions">
+        <button class="btn">Uppdatera</button>
+        <button class="btn btn--primary">Läs in</button>
+      </div>
+    </div>
+
+    <div class="summary">
+      <div>
+        <div class="sum-figure">104 320,50 kr</div>
+        <div class="sum-cap">öppet belopp</div>
+      </div>
+      <div class="counts">
+        <div><div class="count-n">6</div><div class="sum-cap">att granska</div></div>
+        <div><div class="count-n">2</div><div class="sum-cap">med signal</div></div>
+        <div><div class="count-n">1</div><div class="sum-cap">förfallna</div></div>
+        <div><div class="count-n">3</div><div class="sum-cap">utan ansvarig</div></div>
+      </div>
+    </div>
+
+    <div class="rule"></div>
+
+    <section class="section" style="padding-top:var(--s-xxl)">
+      <div class="eyebrow">01 — Att granska</div>
+      <h2>Sex ärenden väntar</h2>
+      <p class="section-lead">Två har jämförts mot ett avtal och stämmer. Två saknar avtal
+        att jämföra mot. Ett gick inte att läsa. Ett läses just nu.</p>
+
+      <div class="toolbar">
+        <input class="field" style="flex:1 1 260px;max-width:320px" placeholder="Sök leverantör, nummer, ansvarig…">
+        <button class="chip">Att granska</button>
+        <button class="chip">Alla signaler</button>
+        <button class="chip">Alla ansvariga</button>
+        <button class="chip">Senaste aktivitet</button>
+      </div>
+
+      <div class="cases">
+
+        <article class="case">
+          <span class="state s-ingen">? Inget avtal hittat</span>
+          <div class="case-head">
+            <div class="case-name">Snöröjning Nord AB</div>
+            <div class="case-amount">18 750,00 kr</div>
+          </div>
+          <p class="case-why">Ingen träff i arkivet på den här leverantören. Ladda upp avtalet
+            om det finns, annars är beloppet oprövat.</p>
+          <div class="spec">
+            <span>faktura <b>2026-0412</b></span><span class="sep">·</span>
+            <span>förföll <b>3 aug.</b></span><span class="sep">·</span>
+            <span class="late">12 dagar sen</span><span class="sep">·</span>
+            <span>ansvarig <b>ingen</b></span>
+          </div>
+        </article>
+
+        <article class="case">
+          <span class="state s-belagd">✓ Belagd mot avtal</span>
+          <div class="case-head">
+            <div class="case-name">Göteborg Energi</div>
+            <div class="case-amount">18 230,50 kr</div>
+          </div>
+          <p class="case-why">Beloppet och villkoren stämmer ordagrant mot elavtalet,
+            § 4 Prissättning, sidan 2.</p>
+          <div class="spec">
+            <span>faktura <b>310442199</b></span><span class="sep">·</span>
+            <span>förfaller <b>18 aug.</b></span><span class="sep">·</span>
+            <span>ansvarig <b>Anna A.</b></span><span class="sep">·</span>
+            <span>källa <b>Elavtal 2024.pdf § 4 · s. 2</b></span>
+          </div>
+        </article>
+
+        <article class="case">
+          <span class="state s-fel">! Läsfel</span>
+          <div class="case-head">
+            <div class="case-name">Fastighetsskötsel Väst AB</div>
+            <div class="case-amount">24 500,00 kr</div>
+          </div>
+          <p class="case-why">PDF:en gick inte att läsa maskinellt — den är inskannad utan
+            textlager. Beloppet är avläst för hand och inte jämfört.</p>
+          <div class="spec">
+            <span>faktura <b>F-88213</b></span><span class="sep">·</span>
+            <span>förfaller <b>15 aug.</b></span><span class="sep">·</span>
+            <span>ansvarig <b>Anna A.</b></span>
+          </div>
+        </article>
+
+        <article class="case">
+          <span class="state s-laser"><i class="dot"></i> Läser…</span>
+          <div class="case-head">
+            <div class="case-name">Trädgårdstjänst i Väst</div>
+            <div class="case-amount">20 600,00 kr</div>
+          </div>
+          <p class="case-why">Jämförs mot arkivet just nu. Tre av fem dokument genomlysta.</p>
+          <div class="spec">
+            <span>faktura <b>TV-2261</b></span><span class="sep">·</span>
+            <span>förfaller <b>2 sep.</b></span><span class="sep">·</span>
+            <span>ansvarig <b>ingen</b></span>
+          </div>
+        </article>
+
+      </div>
+    </section>
+  </main>
+</div>
+</body>
+</html>

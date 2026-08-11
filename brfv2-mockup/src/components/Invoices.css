@@ -156,7 +156,7 @@
 .composition-segment button {
   flex: 1;
   border: none;
-  border-right: 1px solid var(--papper);
+  border-right: 1px solid var(--black-900);
   cursor: pointer;
   transition: filter 0.14s ease;
 }
@@ -714,7 +714,7 @@
   cursor: pointer;
   text-decoration: underline;
   text-underline-offset: 3px;
-  text-decoration-color: rgb(26 79 208 / 45%);
+  text-decoration-color: rgb(var(--handling-rgb) / 45%);
 }
 
 .invoices button.link:hover { text-decoration-color: currentColor; }

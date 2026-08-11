@@ -20,6 +20,8 @@ import InvoiceCase from './InvoiceCase';
 import { formatAmount } from './money';
 import MappingPreview from './MappingPreview';
 import Instrument from './Instrument';
+import Arendekort from './Arendekort';
+import Avsnitt from './Avsnitt';
 import './Invoices.css';
 import { datum } from './datum';
 
@@ -77,6 +79,90 @@ const SORTS = {
   supplier: { label: 'Leverantör', compare: (a, b) => (a.supplier_name || '').localeCompare(b.supplier_name || '', 'sv') },
 };
 
+/**
+ * Which shape a case's state gets, derived from the signal the engine raised.
+ *
+ * The shapes are Tillstand's and the mapping is the only place that decides
+ * which finding counts as "we had a basis and it matched" versus "we had
+ * nothing to check against" — a distinction the old queue collapsed into one
+ * grey chip in a Signal column.
+ *
+ * overdue and due_soon are deliberately absent: a date that has passed is
+ * arithmetic, not a finding, and it is reported on the fact row instead.
+ */
+const TILLSTAND_FORM = {
+  no_deviation_found: 'belagd',
+  missing_contract: 'oprovad',
+  unresolved_supplier: 'oprovad',
+  possible_duplicate: 'avviker',
+  price_change: 'avviker',
+  new_line: 'avviker',
+  open_question: 'avviker',
+  credit_relation: 'avviker',
+};
+
+function tillstandFor(row) {
+  const signal = row.top_signal;
+  const form = signal && TILLSTAND_FORM[signal.kind];
+  if (form) return { form, text: signal.label };
+  return { form: 'neutral', text: row.review_status_label };
+}
+
+function dagarSen(dueDate) {
+  if (!dueDate) return null;
+  const due = new Date(dueDate);
+  if (Number.isNaN(due.getTime())) return null;
+  const days = Math.floor((Date.now() - due.getTime()) / 86400000);
+  return days > 0 ? days : null;
+}
+
+/**
+ * What the queue amounts to, in a sentence.
+ *
+ * This replaces a stacked bar that said the same thing in segments nobody
+ * read. The section's lead is the right place for it: a reader arriving at a
+ * list wants to know what is in it before working through it, and the counts
+ * that matter are not the review statuses but what the engine could and could
+ * not establish.
+ */
+function sammanfattning(rows) {
+  const n = { belagd: 0, avviker: 0, oprovad: 0, neutral: 0 };
+  rows.forEach((row) => { n[tillstandFor(row).form] += 1; });
+  const delar = [];
+  if (n.belagd) delar.push(`${n.belagd} stämmer mot avtal`);
+  if (n.avviker) delar.push(`${n.avviker} avviker`);
+  if (n.oprovad) delar.push(`${n.oprovad} saknar avtal att jämföra mot`);
+  if (n.neutral) delar.push(`${n.neutral} är inte lästa än`);
+  if (delar.length === 0) return null;
+  if (delar.length === 1) return `${delar[0].charAt(0).toUpperCase()}${delar[0].slice(1)}.`;
+  const sista = delar.pop();
+  return `${delar.join(', ')} och ${sista}.`;
+}
+
+function faktaFor(row) {
+  const sena = row.overdue ? dagarSen(row.due_date) : null;
+  return [
+    { etikett: 'faktura', varde: row.invoice_number || row.case_key },
+    { etikett: row.overdue ? 'förföll' : 'förfaller', varde: row.due_date ? datum(row.due_date) : '—' },
+    ...(row.overdue
+      ? [{ etikett: 'förfallen', varde: sena ? `${sena} dagar sen` : 'ja', matt: true }]
+      : []),
+    { etikett: 'ansvarig', varde: row.responsible || 'ingen' },
+    // Two statuses, never merged — the file header's own rule. The pill shows
+    // the engine's finding, so the board's own review status has to be stated
+    // here or a case with a signal would silently lose it.
+    { etikett: 'i ekonomisystemet', varde: row.source_status_label || 'ingen status' },
+    { etikett: 'vår granskning', varde: row.review_status_label },
+    // Each place the case has been seen is its own fact, not a comma list:
+    // "seen in the accounting system" and "seen in the mail" are two separate
+    // things a board may want to follow up, and the fact row already separates.
+    ...(row.observation_kinds || []).map((kind, i) => ({
+      etikett: i === 0 ? 'sedd i' : '',
+      varde: OBSERVATION_SHORT[kind] || kind,
+    })),
+  ];
+}
+
 function Banner({ tone, children, onDismiss }) {
   if (!children) return null;
   return (
@@ -104,68 +190,6 @@ function SignalChip({ signal }) {
     <span className={`signal-chip ${tone}`} title={`${signal.label} — ${signal.detail || ''}`}>
       <Icon size={12} /> <span className="signal-chip-label">{signal.label}</span>
     </span>
-  );
-}
-
-/**
- * Granskningsläge, drawn once for the whole queue.
- *
- * The file header's own rule is "two statuses, never merged" — what the
- * accounting system says about a record, and what this board decided about
- * it, in separate columns on every row. That rule is invisible from the
- * queue's opening view: eight table columns look like any other admin grid
- * until you read one. This is the same fact — how far the board's own
- * granskning has gotten — said once, as the page's own weight, in the one
- * dimension this screen actually tracks: not time (Bevakningar's axis), not
- * money, but *how reviewed*. Darker means further along, because a case
- * still "Ny" carries less resolved weight than one marked "Klar" — the same
- * "overdue is weight, not colour" rule the rest of the identity already
- * uses, applied to progress instead of lateness. Every segment is also the
- * filter — this is the instrument row's own "Läge" dropdown, said as a bar
- * instead of hidden in a `<select>`.
- */
-function ReviewComposition({ cases, labels, activeStatus, onSelect }) {
-  const segments = useMemo(() => {
-    if (!labels?.reviewStatus) return [];
-    return Object.entries(labels.reviewStatus)
-      .map(([key, label]) => ({ key, label, count: cases.filter((c) => c.review_status === key).length }))
-      .filter((s) => s.count > 0);
-  }, [cases, labels]);
-
-  const total = segments.reduce((sum, s) => sum + s.count, 0);
-  if (total === 0) return null;
-
-  return (
-    <div className="invoices-composition" aria-label="Granskningsläge, hela kön">
-      <ol className="composition-bar">
-        {segments.map((s) => (
-          <li key={s.key} className="composition-segment" style={{ flexGrow: s.count }}>
-            <button
-              type="button"
-              data-status={s.key}
-              aria-pressed={activeStatus === s.key}
-              className={activeStatus === s.key ? 'active' : ''}
-              title={`${s.label}: ${s.count} av ${total}`}
-              onClick={() => onSelect(activeStatus === s.key ? 'open' : s.key)}
-            />
-          </li>
-        ))}
-      </ol>
-      <ol className="composition-legend">
-        {segments.map((s) => (
-          <li key={s.key}>
-            <button
-              type="button"
-              className={activeStatus === s.key ? 'active' : ''}
-              onClick={() => onSelect(activeStatus === s.key ? 'open' : s.key)}
-            >
-              <span className="legend-swatch" data-status={s.key} />
-              {s.label} <strong>{s.count}</strong>
-            </button>
-          </li>
-        ))}
-      </ol>
-    </div>
   );
 }
 
@@ -316,10 +340,10 @@ export default function Invoices({ brfId, isAdmin = false, onOpenDocument, onOpe
   // rows, Enter opens the marked one — the same act as clicking it.
   const onQueueKeyDown = (event) => {
     if (event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
-    const row = event.target.closest('tr');
-    if (!row) return;
+    const card = event.target.closest('.arendekort');
+    if (!card) return;
     event.preventDefault();
-    const sibling = event.key === 'ArrowDown' ? row.nextElementSibling : row.previousElementSibling;
+    const sibling = event.key === 'ArrowDown' ? card.nextElementSibling : card.previousElementSibling;
     sibling?.focus();
   };
 
@@ -476,17 +500,6 @@ export default function Invoices({ brfId, isAdmin = false, onOpenDocument, onOpe
         <Banner tone="error" onDismiss={() => setError('')}>{error}</Banner>
         <Banner tone="ok" onDismiss={() => setNotice('')}>{notice}</Banner>
 
-        {pane === 'queue' && (
-          <>
-          <ReviewComposition
-            cases={cases}
-            labels={labels}
-            activeStatus={statusFilter}
-            onSelect={(key) => setStatusFilter(key)}
-          />
-          </>
-        )}
-
         {isAdmin && (
           <ReadInPanel
             brfId={brfId}
@@ -537,6 +550,13 @@ export default function Invoices({ brfId, isAdmin = false, onOpenDocument, onOpe
 
         {pane === 'queue' && (
           <>
+            <Avsnitt
+              nummer="01 — Att granska"
+              namn={visible.length === 1 ? 'Ett ärende väntar' : `${visible.length} ärenden väntar`}
+            >
+              {sammanfattning(visible)}
+            </Avsnitt>
+
             <div className="invoices-filters">
             <label className="invoices-search">
               <Search size={14} aria-hidden="true" />
@@ -622,63 +642,22 @@ export default function Invoices({ brfId, isAdmin = false, onOpenDocument, onOpe
           )}
 
           {!loading && visible.length > 0 && (
-            <div className="invoices-queue-wrap">
-              <table className="invoices-queue">
-                <thead>
-                  <tr>
-                    <th>Faktura</th>
-                    <th className="numeric col-amount">Belopp</th>
-                    <th>Förfaller</th>
-                    <th>I ekonomisystemet</th>
-                    <th>Vår granskning</th>
-                    <th>Signal</th>
-                    <th>Ansvarig</th>
-                    <th>Aktivitet</th>
-                  </tr>
-                </thead>
-                <tbody onKeyDown={onQueueKeyDown}>
-                  {visible.map((row) => (
-                    <tr
-                      key={row.id}
-                      className={row.overdue ? 'overdue' : ''}
-                      tabIndex={0}
-                      onClick={() => setSelected(row.id)}
-                      onKeyDown={(e) => { if (e.key === 'Enter') setSelected(row.id); }}
-                    >
-                      <td>
-                        <button type="button" className="case-link" onClick={() => setSelected(row.id)}>
-                          <strong>{row.supplier_name || 'Okänd leverantör'}</strong>
-                          <span className="case-link-sub">
-                            <span className="muted">{row.invoice_number || row.case_key}</span>
-                            {/* Where the case has been seen belongs to its
-                                identity, not to a column of its own — it is
-                                read alongside the number it identifies. */}
-                            {row.observation_kinds.map((kind) => (
-                              <span key={kind} className="source-badge">{OBSERVATION_SHORT[kind] || kind}</span>
-                            ))}
-                          </span>
-                        </button>
-                      </td>
-                      <td className="numeric col-amount">{formatAmount(row.total_amount, row.currency)}</td>
-                      <td className="col-due">
-                        {row.due_date || '—'}
-                        {row.overdue && <span className="overdue-flag">förfallen</span>}
-                      </td>
-                      <td className="muted col-source-status">{row.source_status_label || 'ingen status'}</td>
-                      <td><span className="review-badge">{row.review_status_label}</span></td>
-                      <td><SignalChip signal={row.top_signal} /></td>
-                      <td>
-                        {row.responsible
-                          ? <span className="responsible" title={row.responsible}><User size={12} /> <span className="truncate">{row.responsible}</span></span>
-                          : <span className="muted">ej utsedd</span>}
-                      </td>
-                      <td className="muted numeric">{datum(row.last_activity_at)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+            <div className="arendelista" onKeyDown={onQueueKeyDown}>
+              {visible.map((row) => (
+                <Arendekort
+                  key={row.id}
+                  tillstand={tillstandFor(row)}
+                  namn={row.supplier_name || 'Okänd leverantör'}
+                  figur={formatAmount(row.total_amount, row.currency)}
+                  fakta={faktaFor(row)}
+                  onOpen={() => setSelected(row.id)}
+                >
+                  {row.top_signal?.detail}
+                </Arendekort>
+              ))}
             </div>
           )}
+
           </>
         )}
       </div>

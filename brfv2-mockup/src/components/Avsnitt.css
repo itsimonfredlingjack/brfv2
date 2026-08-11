@@ -1,0 +1,48 @@
+/* See Avsnitt.jsx for why the number is content rather than decoration. */
+
+.avsnitt-huvud {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--s4);
+}
+
+.avsnitt-nummer {
+  font-family: var(--etikett-family);
+  font-size: var(--etikett-size);
+  font-weight: var(--etikett-weight);
+  letter-spacing: var(--etikett-tracking);
+  text-transform: var(--etikett-case);
+  color: var(--black-500);
+  margin-bottom: var(--s2);
+}
+
+.avsnitt-namn {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  line-height: 1.33;
+  color: var(--black-900);
+}
+
+.avsnitt-ingress {
+  margin: var(--s3) 0 0;
+  max-width: 64ch;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  color: var(--black-500);
+}
+
+.avsnitt-atgard { flex-shrink: 0; display: flex; gap: var(--s3); }
+
+/* The rule between sections. Air does most of the separating; the line is
+   there for the one case air cannot handle, which is a section ending and
+   another beginning with no change of rhythm to mark it. */
+.avsnitt-streck {
+  height: 1px;
+  border: 0;
+  background: var(--kant);
+  margin: var(--s10) 0 0;
+}

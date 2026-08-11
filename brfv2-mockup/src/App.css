@@ -237,7 +237,7 @@
    locks to highlights inside document paper. */
 .nav-item.active,
 .nav-item.active:hover {
-  background: var(--ljus);
+  background: var(--black-900);
   color: var(--skal);
   font-weight: 500;
 }
@@ -280,7 +280,7 @@
   flex-shrink: 0;
   border: none;
   border-radius: var(--r-sm);
-  background: var(--ljus);
+  background: var(--black-900);
   color: var(--skal);
   font-family: var(--font-mono);
   font-size: var(--text-xs);
@@ -515,7 +515,7 @@
   margin: -24px -28px var(--s6);
   padding: var(--s8) var(--gutter) var(--s6);
   background: var(--skal-raised);
-  color: var(--papper);
+  color: var(--black-900);
 }
 
 /* On a short window the plate would eat the register it heads. It gives up its
@@ -539,20 +539,20 @@
   padding-top: var(--s1h);
 }
 
-.page-header .page-title { color: var(--papper); font-size: var(--text-title-lg); }
+.page-header .page-title { color: var(--black-900); font-size: var(--text-title-lg); }
 
 /* One sentence, one line, held well short of the band's width. The bands were
    carrying four-line explanations, which is what made every screen read as a
    brochure instead of an instrument. Anything that needs a paragraph belongs
    below the band, or nowhere. */
 .page-header .page-header-sub {
-  color: var(--ljus-muted);
+  color: var(--black-700);
   font-size: var(--text-base);
   max-width: 76ch;
   margin-top: var(--s0h);
 }
 
-.page-header .page-header-count { color: var(--ljus-subtle); }
+.page-header .page-header-count { color: var(--black-500); }
 
 /* Dokument used to carry its measure as an inline `maxWidth: 1200`, which
    boxed its band in while every other workspace's ran edge to edge. Same
@@ -585,7 +585,7 @@
   background: transparent;
   border: 1px solid var(--kant-kontroll);
   border-radius: var(--r-sm);
-  color: var(--ljus);
+  color: var(--black-900);
   font-family: inherit;
   font-size: var(--text-sm);
   font-weight: 500;
@@ -596,8 +596,8 @@
 
 .page-header button:hover:not(:disabled) {
   background: var(--skal-pressed);
-  border-color: var(--ljus-subtle);
-  color: var(--papper);
+  border-color: var(--black-500);
+  color: var(--black-900);
 }
 
 /* The one action the screen exists to offer.
@@ -618,8 +618,8 @@
  * accessibility pass.) */
 .page-header .ui-btn--primary,
 .page-header .watches-scan {
-  background: var(--ljus);
-  border-color: var(--ljus);
+  background: var(--black-900);
+  border-color: var(--black-900);
   color: var(--skal);
   font-weight: 600;
 }
@@ -634,14 +634,14 @@
 .page-header button:disabled { opacity: 0.4; }
 
 .page-header button:focus-visible {
-  outline: 2px solid var(--papper);
+  outline: 2px solid var(--black-900);
   outline-offset: 2px;
 }
 
 /* Uppgifter writes its subcopy as `.muted`, not `.page-header-sub` — same
    sentence, older class. It needs the paper-on-ink treatment too or it drops
    to unreadable grey inside the band. */
-.page-header .muted { color: var(--ljus-muted); }
+.page-header .muted { color: var(--black-700); }
 
 /* Inkommande is the one screen whose masthead is a tablist rather than a
    title, so its two tabs ARE the name of the screen and have to carry the
@@ -662,20 +662,20 @@
   font-weight: 400;
   letter-spacing: -0.02em;
   line-height: 1.1;
-  color: var(--ljus-faint);
+  color: var(--black-500);
 }
 
 .page-header .integrations-tabs button svg { display: none; }
 
-.page-header .integrations-tabs button.active { color: var(--papper); }
+.page-header .integrations-tabs button.active { color: var(--black-900); }
 
 .page-header .integrations-tabs button:hover:not(:disabled) {
   background: transparent;
   border: none;
-  color: var(--ljus);
+  color: var(--black-900);
 }
 
-.page-header .integrations-tabs button.active:hover { color: var(--papper); }
+.page-header .integrations-tabs button.active:hover { color: var(--black-900); }
 
 /* ---- Per-screen instruments inside the band -----------------------------
    The band is shared so the workspaces read as one product; what it *carries*
@@ -684,7 +684,7 @@
    band therefore holds that screen's own measure at display scale, and each
    one is drawn from a value that exists at zero. */
 
-.invoices-tagline { color: var(--ljus-muted); font-size: var(--text-base); line-height: 1.6; }
+.invoices-tagline { color: var(--black-700); font-size: var(--text-base); line-height: 1.6; }
 
 /* An empty Uppgifter offered the same action twice — a loose "Ny uppgift"
    button and, 40px below it, the empty state's "Skapa första uppgiften". The
@@ -701,15 +701,15 @@
 
 .page-header .horizon-cell.loaded .horizon-bar { background: var(--horisont-fylld); }
 
-.page-header .horizon-now.loaded .horizon-bar { background: var(--papper); }
+.page-header .horizon-now.loaded .horizon-bar { background: var(--black-900); }
 
-.page-header .horizon-count { color: var(--papper); }
+.page-header .horizon-count { color: var(--black-900); }
 
-.page-header .horizon-label { color: var(--ljus-subtle); }
+.page-header .horizon-label { color: var(--black-500); }
 
-.page-header .horizon-now .horizon-label { color: var(--papper); }
+.page-header .horizon-now .horizon-label { color: var(--black-900); }
 
-.page-header .horizon-now.overdue .horizon-count { box-shadow: inset 0 -2px 0 var(--papper); }
+.page-header .horizon-now.overdue .horizon-count { box-shadow: inset 0 -2px 0 var(--black-900); }
 
 .page-header .tab-count {
   font-family: var(--font-mono);
@@ -717,7 +717,7 @@
   font-weight: 400;
   vertical-align: super;
   margin-left: var(--s1h);
-  color: var(--ljus-subtle);
+  color: var(--black-500);
 }
 
 /* Chrome on paper: when the header sits outside the sheet it belongs to the
@@ -1370,13 +1370,13 @@ mark.search-highlight {
 
 .example-prompt-btn:hover,
 .example-prompt-btn:focus-visible {
-  background: var(--ljus);
+  background: var(--black-900);
   color: var(--skal);
   outline: none;
 }
 
 .example-prompt-btn:hover::before,
-.example-prompt-btn:focus-visible::before { color: var(--papper); }
+.example-prompt-btn:focus-visible::before { color: var(--black-900); }
 
 /* The conversation is a record, not a messenger: the person's question is a
    labelled line in it, and the answer is a sheet under that line. Nothing
@@ -1883,13 +1883,15 @@ mark.search-highlight {
   background: var(--matta);
 }
 
-/* The page itself: the only white in the product (§06). It sits on the mat
-   with a real shadow, because a sheet lying on something casts one. */
+/* The page itself. On a white app the sheet cannot be told apart by being
+   whiter, so it is told apart by lying on the mat inside a hairline — the same
+   two devices the rest of the language uses, and no shadow, because nothing in
+   this language lifts. */
 .pdf-page-shell {
   position: relative;
   border-radius: var(--r-sm);
   background: var(--dokument);
-  box-shadow: var(--lyft-2);
+  border: 1px solid var(--kant-kontroll);
   transform-origin: top center;
   transition: transform 0.18s ease;
   line-height: 0;

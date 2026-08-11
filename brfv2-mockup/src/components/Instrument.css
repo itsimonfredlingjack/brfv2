@@ -51,20 +51,23 @@
   font-weight: var(--etikett-weight);
   letter-spacing: var(--etikett-tracking);
   text-transform: var(--etikett-case);
-  color: var(--ljus-subtle);
+  color: var(--black-500);
 }
 
 /* The one number the board came for, at a scale nothing else competes with. */
 .instrument-figure { display: flex; flex-direction: column; gap: var(--s2); }
 
+/* The figure is set in the assertion cut, not the mono, and the distinction is
+   real rather than a break with §07: mono carries the *fact row* — small,
+   dense, many values read as data — while a headline quantity is read once, as
+   a statement about the screen. At 52px mono it was a digital clock. */
 .instrument-amount {
-  font-family: var(--font-mono);
-  font-size: var(--text-title-xl);
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
   font-weight: 700;
-  line-height: 1;
-  letter-spacing: -0.02em;
+  line-height: 1.2;
   font-variant-numeric: tabular-nums;
-  color: var(--papper);
+  color: var(--black-900);
 }
 
 /* Vila — the instrument with nothing to measure.
@@ -93,19 +96,19 @@
    right one and the identity already says so: mono measures. */
 .instrument-readings dd {
   margin: 0;
-  font-family: var(--font-mono);
-  font-size: var(--text-xl);
+  font-family: var(--font-display);
+  font-size: var(--text-subhead);
   font-weight: 700;
-  line-height: 1;
+  line-height: 1.2;
   font-variant-numeric: tabular-nums;
-  color: var(--papper);
+  color: var(--black-900);
 }
 
 /* Lateness refuses red on ink, on every screen that reports it: it underlines
    in paper instead. */
 .instrument-readings > div.flagged dd {
   width: fit-content;
-  box-shadow: inset 0 -2px 0 var(--papper);
+  box-shadow: inset 0 -2px 0 var(--black-900);
 }
 
 /* An instrument with nothing leading it — Uppgifter has no single figure to
@@ -120,10 +123,9 @@
 }
 
 .instrument:not(:has(.instrument-lead, .instrument-figure)) .instrument-readings dd {
-  font-size: var(--text-title-xl);
-  letter-spacing: -0.02em;
+  font-size: var(--text-2xl);
 }
 
 .instrument:not(:has(.instrument-lead, .instrument-figure)) .instrument-readings > div.flagged dd {
-  box-shadow: inset 0 -3px 0 var(--papper);
+  box-shadow: inset 0 -3px 0 var(--black-900);
 }

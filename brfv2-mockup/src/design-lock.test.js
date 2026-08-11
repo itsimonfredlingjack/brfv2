@@ -240,8 +240,14 @@ describe('design lock: the measuring cut keeps its closed list', () => {
 // product's words from the document's. Instrument Serif ships exactly one
 // weight. Asking it for 600 makes the browser smear a synthetic bold across a
 // high-contrast face, which is how the serif quietly stops looking like itself.
-describe('design lock: the assertion face keeps its one weight', () => {
-  it('no font-weight above 400 in a rule that sets --font-display', () => {
+// The rule is not "one weight" any more — Nunito ships three and all three are
+// vendored. What it still stops is the thing it was written for: asking for a
+// weight that was never shipped, so the browser smears a synthetic bold across
+// the face. Add a weight here only after adding the woff2 beside theme.css.
+const VENDORED_DISPLAY_WEIGHTS = new Set(['400', '600', '700']);
+
+describe('design lock: the assertion face is only asked for weights it ships', () => {
+  it('no unvendored font-weight in a rule that sets --font-display', () => {
     const offenders = [];
     for (const file of walk(SRC)) {
       if (!file.endsWith('.css')) continue;
@@ -251,7 +257,7 @@ describe('design lock: the assertion face keeps its one weight', () => {
         const body = rule[1];
         if (!body.includes('var(--font-display)')) continue;
         const weight = body.match(/font-weight:\s*(\d+)/);
-        if (weight && Number(weight[1]) > 400) {
+        if (weight && !VENDORED_DISPLAY_WEIGHTS.has(weight[1])) {
           offenders.push(`${relative(SRC, file)}: --font-display with font-weight ${weight[1]}`);
         }
       }
@@ -293,16 +299,20 @@ const contrast = (a, b) => {
 
 // The grounds a shell colour can land on. Not --matta: nothing interactive and
 // no interface text lies on the reading mat, only a document does.
-const GROUNDS = ['--skal', '--skal-raised', '--skal-pressed'];
+const GROUNDS = ['--skal', '--skal-sunken', '--skal-pressed', '--matta'];
 
 // floor, and why it is that number
 const FLOORS = [
-  ['--ljus', 4.5],          // body text
-  ['--ljus-muted', 4.5],    // secondary prose
-  ['--ljus-subtle', 4.5],   // captions and labels — still prose, still 4.5
-  ['--ljus-faint', 3.0],    // large display text only (1.4.3 large-text)
-  ['--kant-kontroll', 3.0], // the boundary of a control (1.4.11)
+  ['--black-900', 4.5],      // headings, primary text, the filled state
+  ['--black-700', 4.5],      // secondary prose, fact values
+  ['--black-500', 4.5],      // body prose, fact labels, the mono eyebrows
+  ['--kant-kontroll', 3.0],  // the boundary of a control (1.4.11)
   ['--horisont-fylld', 3.0], // a data mark you must see to read the chart
+  ['--belagt', 4.5],         // the six meanings, as text
+  ['--vagran', 4.5],
+  ['--avbrott', 4.5],
+  ['--handling', 4.5],
+  ['--sokljus-text', 4.5],
 ];
 
 describe('design lock: the shell meets AA by arithmetic', () => {
@@ -359,7 +369,7 @@ describe('design lock: no literal spells out a token', () => {
 
 // Beslut 10b: and the channel tokens must agree with their hex.
 describe('design lock: channels agree with their colour', () => {
-  it.each(['--ljus', '--papper', '--ink', '--remsgul', '--sokljus'])('%s-rgb equals its hex', (token) => {
+  it.each(['--black-900', '--papper', '--ink', '--remsgul', '--sokljus', '--avbrott', '--handling'])('%s-rgb equals its hex', (token) => {
     const triple = THEME.match(new RegExp(`^\\s*${token}-rgb:\\s*([\\d\\s]+);`, 'm'));
     expect(triple, `${token}-rgb is not defined`).toBeTruthy();
     expect(triple[1].trim().split(/\s+/).map(Number)).toEqual(channels(tokenHex(token)));

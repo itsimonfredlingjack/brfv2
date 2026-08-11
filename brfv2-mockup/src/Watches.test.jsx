@@ -344,11 +344,11 @@ describe('the board', () => {
     const card = cardFor(UNASSIGNED.title);
 
     expect(within(card).getByText('ej utsedd')).toBeInTheDocument();
-    expect(within(card).getByText('Ansvarig')).toBeInTheDocument();
+    expect(within(card).getByText('ansvarig')).toBeInTheDocument();
     // The rest of what a board has to know to act on it.
     expect(within(card).getByText('2026-08-20')).toBeInTheDocument();
     expect(within(card).getByText(/om 19 dagar/)).toBeInTheDocument();
-    expect(within(card).getByText(/2026-07-21 \(30 dagar före\)/)).toBeInTheDocument();
+    expect(within(card).getByText(/2026-07-21, 30 d före/)).toBeInTheDocument();
     expect(within(card).getAllByText(/Snöröjningsavtal 2026\.pdf/).length).toBeGreaterThan(0);
     expect(within(card).getByText('Avtalet upphör')).toBeInTheDocument();
   });

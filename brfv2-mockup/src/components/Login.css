@@ -12,7 +12,7 @@
 
 .login-brand {
   background: var(--ink);
-  color: var(--papper);
+  color: var(--black-900);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -22,8 +22,8 @@
 .login-brand-inner { max-width: 340px; }
 
 .login-brand .traff-mark--brand {
-  border-color: var(--papper);
-  color: var(--papper);
+  border-color: var(--black-900);
+  color: var(--black-900);
   margin-bottom: var(--s6);
 }
 
@@ -32,7 +32,7 @@
   font-size: var(--text-2xs);
   letter-spacing: 0.08em;
   text-transform: uppercase;
-  color: var(--ljus-subtle);
+  color: var(--black-500);
   margin-bottom: var(--s7);
 }
 
@@ -42,14 +42,14 @@
   font-weight: 400;
   letter-spacing: -0.02em;
   line-height: 1.05;
-  color: var(--papper);
+  color: var(--black-900);
   margin: 0 0 var(--s5);
 }
 
 .login-brand-tagline {
   font-size: var(--text-lg);
   line-height: 1.6;
-  color: var(--ljus-muted);
+  color: var(--black-700);
   max-width: 30ch;
 }
 
@@ -58,7 +58,7 @@
   align-items: center;
   justify-content: center;
   padding: var(--s6);
-  background: var(--papper);
+  background: var(--skal-sunken);
 }
 
 .login-panel {

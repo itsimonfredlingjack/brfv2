@@ -1,0 +1,145 @@
+/* See Arendekort.jsx for what this is and why it replaced a table. */
+
+.arendekort {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: var(--s5);
+  background: var(--skal);
+  border: 1px solid var(--kant);
+  border-radius: var(--r-md);
+  /* No shadow. A card is white on white, marked by its line and separated by
+     air — the moment it lifts, a page of cards becomes a dashboard of tiles. */
+  box-shadow: var(--lyft-1);
+  font-family: inherit;
+}
+
+.arendekort--oppnbar { cursor: pointer; }
+
+.arendekort--oppnbar:hover { border-color: var(--border-strong); }
+
+.arendekort--oppnbar:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+/* The name and the figure share a baseline and push apart. The figure is
+   display-cut because it is the one thing on the card set as a quantity you
+   read at a glance rather than a word you read in order. */
+.arendekort-huvud {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s4);
+  margin-top: var(--s3);
+}
+
+.arendekort-namn {
+  font-family: var(--font-sans);
+  font-size: var(--text-subhead);
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--black-900);
+}
+
+.arendekort-figur {
+  flex-shrink: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 700;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+  color: var(--black-900);
+  white-space: nowrap;
+}
+
+/* Why the product decided what it decided. A table had nowhere to put this,
+   which is most of what made the queue feel like a database view. */
+.arendekort-motiv {
+  margin: var(--s2) 0 0;
+  max-width: 64ch;
+  font-family: var(--font-sans);
+  font-size: var(--text-base);
+  line-height: 1.5;
+  color: var(--black-500);
+}
+
+/* The fact row: the case's measured facts, in the cut this product gives to
+   measurement. Quiet by size, not by fading — every value here clears 4.5:1,
+   because a fact nobody can read is not a fact. */
+.arendekort-fakta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0 var(--s2);
+  margin-top: var(--s4);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: 1.6;
+}
+
+.arendekort-fakta-post { display: inline-flex; align-items: baseline; gap: var(--s1h); }
+
+.arendekort-fakta-etikett { color: var(--black-500); }
+
+.arendekort-varde { color: var(--black-700); font-weight: 500; }
+
+/* Arithmetic — lateness, counts, elapsed days. It is set in ink rather than
+   given a colour, because a passed date is not a machine fault and not an
+   unproven claim; it is a subtraction, and §07 gives arithmetic to the mono. */
+.arendekort-matt {
+  color: var(--black-900);
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.arendekort-avdelare { color: var(--border-strong); margin-right: var(--s1h); }
+
+/* The citation gets its own line rather than a place in the fact row. It is
+   what the product promises — every claim opens the page it came from — and a
+   promise does not share a line with an invoice number. */
+.arendekort-kalla {
+  margin-top: var(--s2);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  line-height: 1.6;
+}
+
+.arendekort-kalla-lank {
+  padding: 0;
+  border: none;
+  background: none;
+  font: inherit;
+  color: var(--handling);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.arendekort-kalla-lank:hover { color: var(--handling-hover); }
+
+.arendekort-kalla-lank:focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+  border-radius: var(--r-sm);
+}
+
+/* A list of cases is separated by air, never by rules: the air is what says
+   these are separate documents rather than rows of one table. */
+.arendelista {
+  display: grid;
+  gap: var(--s4);
+  margin-top: var(--s5);
+}
+
+/* Decisions taken on the card rather than behind it. Separated by a rule,
+   because an action is a different kind of thing from a fact. */
+.arendekort-atgarder {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s3);
+  margin-top: var(--s4);
+  padding-top: var(--s4);
+  border-top: 1px solid var(--kant);
+}

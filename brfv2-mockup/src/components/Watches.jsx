@@ -15,6 +15,8 @@ import { watchesApi } from '../api';
 import CreateTask from './CreateTask';
 import EmptyState from './EmptyState';
 import Instrument from './Instrument';
+import Arendekort from './Arendekort';
+import Avsnitt from './Avsnitt';
 import './Watches.css';
 import { datum, datumTid } from './datum';
 
@@ -267,124 +269,91 @@ function BoardWatch({
 }) {
   const [note, setNote] = useState('');
   const moved = watch.due_date !== watch.derived_due_date;
-  const late = typeof watch.days_left === 'number' && watch.days_left < 0;
+  const citation = watch.citations?.[0];
 
   return (
-    <article className={`watch board${late ? ' late' : ''}`}>
-      {/* Time is this workspace's axis, so the date stands on its own rail
-          before anything else on the card. A passed date reads as weight, not
-          as a hue — the boxed measurement theme.css prescribes. */}
-      <div className="watch-when">
-        <span className="watch-date">{watch.due_date}</span>
-        {late
-          ? <span className="matt--overdue">{daysLeftText(watch.days_left)}</span>
-          : <span className="watch-days">{daysLeftText(watch.days_left)}</span>}
-      </div>
-
-      <div className="watch-body">
-      <header className="watch-head">
-        <span className="watch-kind">{watch.kind_label}</span>
-        <span className="watch-badge approved">{watch.status_label}</span>
-      </header>
-
-      <h4 className="watch-title">{watch.title}</h4>
-
-      <dl className="watch-facts">
-        <div>
-          <dt>Ansvarig</dt>
-          <dd>
-            {watch.responsible
-              ? watch.responsible
-              : <span className="watch-unassigned">ej utsedd</span>}
-          </dd>
-        </div>
-        <div>
-          <dt>Påminnelse</dt>
-          <dd>{watch.remind_at} ({watch.remind_lead_days} dagar före)</dd>
-        </div>
-        {watch.recurrence !== 'none' && (
-          <div>
-            <dt>Återkommer</dt>
-            <dd>
-              <Repeat size={13} /> {RECURRENCE_LABEL[watch.recurrence] || watch.recurrence}
-              {watch.next_due_after && ` · sedan ${watch.next_due_after}`}
-            </dd>
-          </div>
-        )}
-        <div>
-          <dt>Läst ur</dt>
-          <dd>{watch.source_document_name || '—'}</dd>
-        </div>
-      </dl>
-
-      {moved ? (
-        <p className="watch-moved">
-          Motorn räknade fram <strong>{watch.derived_due_date}</strong> ur {watch.derivation}.
-          En människa har flyttat datumet till <strong>{watch.due_date}</strong>.
-        </p>
-      ) : (
-        <p className="watch-kept">
-          Datumet är motorns eget: {watch.derivation}. En människa har godkänt det.
-        </p>
-      )}
-
-      <Citations citations={watch.citations} onOpen={onOpenCitation} />
-
-      {watch.decision_note && <p className="watch-note">Anteckning: {watch.decision_note}</p>}
-
-      {canDecide && (
-        <div className="watch-decision">
-          <button
-            type="button"
-            className="watch-action complete"
-            disabled={busy}
-            onClick={() => onComplete(watch)}
-          >
-            <CheckCircle2 size={14} /> Markera som avklarad
-          </button>
-          {/* Dismissing is the exception, so its reason field waits behind a
-              disclosure instead of standing open on every card on the board. */}
-          <details className="watch-dismiss-wrap">
-            <summary>Avfärda …</summary>
-            <div className="watch-dismiss">
-              <label>
-                <span>Varför avfärdas den? (krävs)</span>
-                <input
-                  type="text"
-                  value={note}
-                  disabled={busy}
-                  onChange={(e) => setNote(e.target.value)}
-                />
-              </label>
+    <Arendekort
+      tillstand={{ form: 'belagd', text: watch.status_label }}
+      namn={watch.title}
+      figur={watch.due_date}
+      fakta={[
+        { etikett: 'slag', varde: watch.kind_label },
+        { etikett: '', varde: daysLeftText(watch.days_left), matt: true },
+        { etikett: 'ansvarig', varde: watch.responsible || 'ej utsedd' },
+        { etikett: 'påminns', varde: `${watch.remind_at}, ${watch.remind_lead_days} d före` },
+        ...(watch.recurrence !== 'none'
+          ? [{ etikett: 'återkommer', varde: RECURRENCE_LABEL[watch.recurrence] || watch.recurrence }]
+          : []),
+      ]}
+      kalla={citation ? {
+        text: `${citation.document_name} · s. ${citation.page}`,
+        onOpen: () => onOpenCitation(citation),
+      } : undefined}
+      atgarder={(
+        <>
+          {canDecide && (
+            <>
               <button
                 type="button"
-                className="watch-action dismiss"
-                disabled={busy || !note.trim()}
-                title={note.trim() ? undefined : 'Skriv först varför bevakningen inte gäller.'}
-                onClick={() => onDismiss(watch, note.trim())}
+                className="watch-action complete"
+                disabled={busy}
+                onClick={() => onComplete(watch)}
               >
-                Avfärda
+                <CheckCircle2 size={14} /> Markera som avklarad
               </button>
-            </div>
-          </details>
-        </div>
+              {/* Dismissing is the exception, so its reason field waits behind a
+                  disclosure instead of standing open on every card on the board. */}
+              <details className="watch-dismiss-wrap">
+                <summary>Avfärda …</summary>
+                <div className="watch-dismiss">
+                  <label>
+                    <span>Varför avfärdas den? (krävs)</span>
+                    <input
+                      type="text"
+                      value={note}
+                      disabled={busy}
+                      onChange={(e) => setNote(e.target.value)}
+                    />
+                  </label>
+                  <button
+                    type="button"
+                    className="watch-action dismiss"
+                    disabled={busy || !note.trim()}
+                    title={note.trim() ? undefined : 'Skriv först varför bevakningen inte gäller.'}
+                    onClick={() => onDismiss(watch, note.trim())}
+                  >
+                    Avfärda
+                  </button>
+                </div>
+              </details>
+            </>
+          )}
+          {/* A date is not work. Turning this obligation into somebody's job is a
+              separate decision, taken here and recorded as one — the watch itself
+              is unchanged by it. */}
+          <CreateTask
+            brfId={brfId}
+            canCreate={canDecide}
+            originKind="watch"
+            originRef={watch.id}
+            suggestedTitle={watch.title}
+            suggestedResponsible={watch.responsible || ''}
+            suggestedDue={watch.due_date || ''}
+            onCreated={onTaskCreated}
+          />
+        </>
       )}
-
-      {/* A date is not work. Turning this obligation into somebody's job is a
-          separate decision, taken here and recorded as one — the watch itself
-          is unchanged by it. */}
-      <CreateTask
-        brfId={brfId}
-        canCreate={canDecide}
-        originKind="watch"
-        originRef={watch.id}
-        suggestedTitle={watch.title}
-        suggestedResponsible={watch.responsible || ''}
-        suggestedDue={watch.due_date || ''}
-        onCreated={onTaskCreated}
-      />
-      </div>
-    </article>
+    >
+      {moved ? (
+        <>
+          Motorn räknade fram <strong>{watch.derived_due_date}</strong> ur {watch.derivation}.
+          {' '}En människa har flyttat datumet till <strong>{watch.due_date}</strong>.
+        </>
+      ) : (
+        <>Datumet är motorns eget: {watch.derivation}. En människa har godkänt det.</>
+      )}
+      {watch.decision_note ? ` Anteckning: ${watch.decision_note}` : ''}
+    </Arendekort>
   );
 }
 
@@ -679,17 +648,19 @@ export default function Watches({ brfId, isAdmin = false, onOpenCitation }) {
               människa.
             </p>
             <div className="watch-buckets">
-              {BUCKET_ORDER.map((key) => {
+              {BUCKET_ORDER.map((key, i) => {
                 const rows = board.buckets?.[key] || [];
                 return (
                   <section key={key} className={`watch-bucket ${key}`} aria-label={board.bucketLabels[key]}>
-                    <h4>
-                      {board.bucketLabels[key]}
-                      <span className="bucket-count">{rows.length}</span>
-                    </h4>
-                    {rows.length === 0 ? (
-                      <p className="empty">{EMPTY_BUCKET[key]}</p>
-                    ) : rows.map((watch) => (
+                    <Avsnitt
+                      nummer={String(i + 1).padStart(2, '0')}
+                      namn={board.bucketLabels[key]}
+                    >
+                      {rows.length === 0
+                        ? EMPTY_BUCKET[key]
+                        : `${rows.length} ${rows.length === 1 ? 'bevakning' : 'bevakningar'}.`}
+                    </Avsnitt>
+                    {rows.length > 0 && rows.map((watch) => (
                       <BoardWatch
                         key={watch.id}
                         watch={watch}

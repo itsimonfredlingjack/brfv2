@@ -171,13 +171,11 @@
  * the screen was ruled. A group that holds its own contents holds them on a
  * plate — same edge and same lift as every other surface (see --kant/--lyft-1),
  * so the shape is the product's, not this screen's. */
+/* A bucket is a section of the page, not a plate on it. The box came off when
+   the language changed: air and a numbered eyebrow separate one range of dates
+   from the next, and the cards inside are the only things that carry a line. */
 .watch-bucket {
   min-width: 0;
-  padding: var(--s5);
-  border: 1px solid var(--kant);
-  border-radius: var(--r-lg);
-  background: var(--card);
-  box-shadow: var(--lyft-1);
 }
 
 /* A bucket header names a measured range. Direct child only — the cards inside

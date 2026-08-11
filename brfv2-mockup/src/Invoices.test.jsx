@@ -605,12 +605,13 @@ beforeEach(() => {
 describe('the queue', () => {
   it('separates the accounting system’s status from our own review', async () => {
     mount();
-    const row = (await screen.findByText('2026-131')).closest('tr');
+    const row = (await screen.findByText('2026-131')).closest('.arendekort');
     expect(within(row).getByText('Bokförd i ekonomisystemet')).toBeInTheDocument();
     expect(within(row).getByText('Ej granskad')).toBeInTheDocument();
-    // Two columns with two headings, never one badge.
-    expect(screen.getByRole('columnheader', { name: 'I ekonomisystemet' })).toBeInTheDocument();
-    expect(screen.getByRole('columnheader', { name: 'Vår granskning' })).toBeInTheDocument();
+    // Two labelled facts, never one badge. The columns are gone with the table;
+    // what has to survive is that both statuses are named on every case.
+    expect(within(row).getByText('i ekonomisystemet')).toBeInTheDocument();
+    expect(within(row).getByText('vår granskning')).toBeInTheDocument();
   });
 
   it('offers no control that could be mistaken for approving an invoice', async () => {
@@ -624,14 +625,14 @@ describe('the queue', () => {
 
   it('says where each case has been seen', async () => {
     mount();
-    const row = (await screen.findByText('2026-131')).closest('tr');
+    const row = (await screen.findByText('2026-131')).closest('.arendekort');
     expect(within(row).getByText('Ekonomisystem')).toBeInTheDocument();
     expect(within(row).getByText('E-post')).toBeInTheDocument();
   });
 
   it('shows the most important signal and marks an overdue case', async () => {
     mount();
-    const row = (await screen.findByText('2026-131')).closest('tr');
+    const row = (await screen.findByText('2026-131')).closest('.arendekort');
     expect(within(row).getByText(/Prisförändring/)).toBeInTheDocument();
     expect(within(row).getByText('förfallen')).toBeInTheDocument();
   });
@@ -1071,14 +1072,17 @@ describe('the keyboard flow', () => {
     mount();
     await screen.findByText('2026-131');
     fireEvent.change(screen.getByLabelText('Filtrera på granskningsläge'), { target: { value: 'all' } });
-    const rows = document.querySelectorAll('.invoices-queue tbody tr');
+    const rows = document.querySelectorAll('.arendelista .arendekort');
     expect(rows.length).toBe(2);
 
     rows[0].focus();
     fireEvent.keyDown(rows[0], { key: 'ArrowDown' });
     expect(document.activeElement).toBe(rows[1]);
 
-    fireEvent.keyDown(rows[1], { key: 'Enter' });
+    // A card is a <button>, so Enter on the focused one is the browser's own
+    // activation — which jsdom does not synthesise from keyDown. The click is
+    // what Enter produces, so that is what is asserted.
+    fireEvent.click(rows[1]);
     expect(await screen.findByText(/Källor och härkomst/)).toBeInTheDocument();
   });
 
