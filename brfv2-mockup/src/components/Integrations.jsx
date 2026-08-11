@@ -74,6 +74,11 @@ export default function Integrations({ brfId, isAdmin = false, onOpenDocument, o
   const mailboxReady = graph?.connection?.status === 'connected';
   const openEvents = events.filter((e) => e.review_status === 'open').length;
   const awaitingEvents = events.filter((e) => e.awaiting_reply).length;
+  // Three counts taken from an array the fetch has not filled are three
+  // fabrications. While it is loading the band is told so and keeps its row.
+  const matt = loading ? {} : {
+    avgora: openEvents, vantar: awaitingEvents, inkommet: events.length,
+  };
 
   return (
     <div className="integrations">
@@ -140,10 +145,10 @@ export default function Integrations({ brfId, isAdmin = false, onOpenDocument, o
         {pane === 'inbox' && (
           <Instrument
             label="Att avgöra"
-            value={openEvents}
+            value={matt.avgora}
             readings={[
-              { label: 'Väntar svar', value: awaitingEvents },
-              { label: 'Inkommet', value: events.length },
+              { label: 'Väntar svar', value: matt.vantar },
+              { label: 'Inkommet', value: matt.inkommet },
             ]}
           />
         )}

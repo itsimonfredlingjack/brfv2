@@ -17,6 +17,12 @@
   gap: var(--s14);
 }
 
+/* Not measured yet — the row held open, nothing drawn in it. Its own rule
+   comes off too: a lone hairline under a title, with white beneath, is
+   furniture waiting for content, which is precisely the reading this is here
+   to avoid. Derived from the element being empty, so no screen decides it. */
+.instrument:empty { border-top-color: transparent; }
+
 /* On a short window the plate would eat the register it heads. It gives up its
    fixed height before the work does, and the instrument is the part that goes. */
 @media (max-height: 780px) {

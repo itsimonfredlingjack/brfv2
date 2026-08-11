@@ -3,7 +3,7 @@
 // consolidation commit — this test fails if the strings ever reappear under src/.
 import { describe, it, expect } from 'vitest';
 import { readdirSync, readFileSync } from 'node:fs';
-import { join, dirname, relative } from 'node:path';
+import { join, dirname, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 // Most locks here read the source; Beslut 11a has to render, because the rule
 // it holds is about what reaches the screen rather than what is written down.
@@ -503,5 +503,131 @@ describe('design lock: the band takes the page measure', () => {
     const cap = block.match(/max-width:\s*([^;]+);/);
     expect(cap, '.page-header sets no max-width — the band is back on the window').toBeTruthy();
     expect(cap[1]).toContain('var(--measure)');
+  });
+});
+
+// Beslut 11c: not measured yet is not zero either.
+//
+// The half of Beslut 11a the callers threw away. Seven screens computed their
+// readings out of an object the fetch had not filled — `counts.open ?? 0`,
+// `board?.counts || { active: 0 }`, `documents.length` on an empty array — so
+// an unloaded screen reported zeros it had no basis for, 11a believed them,
+// and the band opened short and grew when the data landed. Measured on
+// Fakturor before the fix: 138px at first paint, 268px 38ms later.
+//
+// So the third state is real and has to stay distinguishable from the other
+// two: nothing stated holds the instrument's row and draws nothing in it.
+describe('design lock: an instrument that has not been told anything holds its row', () => {
+  it('draws the row, empty, when nothing is stated', () => {
+    const { container } = render(
+      <Instrument readings={[{ label: 'Pågående', value: undefined }]} />,
+    );
+    const row = container.querySelector('.instrument');
+    expect(row, 'nothing stated collapsed the band instead of holding it').not.toBeNull();
+    expect(row.children.length, 'the held row drew something in itself').toBe(0);
+    expect(row.textContent).toBe('');
+  });
+
+  it('holds the row for a figure whose number has not arrived', () => {
+    const { container } = render(
+      <Instrument label="Öppet belopp" value={undefined} raw={undefined} />,
+    );
+    expect(container.querySelector('.instrument')).not.toBeNull();
+    expect(container.textContent).toBe('');
+  });
+
+  // The distinction is the whole point: a stated zero still means "measured,
+  // and there is nothing", and that still removes the instrument.
+  it('still removes the instrument once the zeros are actually stated', () => {
+    const { container } = render(
+      <Instrument readings={[{ label: 'Pågående', value: 0 }]} />,
+    );
+    expect(container.querySelector('.instrument')).toBeNull();
+  });
+});
+
+// Beslut 12: the case is one plane.
+//
+// theme.css states the white language in one sentence — a hairline and an
+// inverted surface are the whole elevation system, nothing lifts, nothing
+// layers — and Fakturor's case view was the one screen that did not obey it.
+// `.case-columns` was a lifted sheet (the only --shadow-sheet in src/) and
+// inside it thirteen blocks each drew their own hairline, radius and card
+// background: the sheet's edge and the panel's edge saying "a block ends here"
+// a pixel apart, on a screen whose --lyft-1 is `none`, so none of it lifted.
+// The split that carries the argument is carried by the columns; the air
+// between them is the structure.
+describe('design lock: the case view draws no box around its own structure', () => {
+  const CASE_CONTAINERS = ['.case-columns', '.case-panel', '.case-original'];
+  const BOXES = /(?:^|[;{\s])(border(?!-collapse)[a-z-]*|box-shadow|background[a-z-]*)\s*:/i;
+
+  it.each(CASE_CONTAINERS)('%s states nothing but layout', (selector) => {
+    const css = readFileSync(join(SRC, 'components/Invoices.css'), 'utf8')
+      .replace(/\/\*[\s\S]*?\*\//g, '');
+    const start = css.indexOf(`\n${selector} {`);
+    expect(start, `${selector} not found in Invoices.css`).toBeGreaterThan(-1);
+    const block = css.slice(start, css.indexOf('}', start));
+    const drawn = block.match(BOXES);
+    expect(drawn, `${selector} draws ${drawn && drawn[1]} — the case is back to cards in cards`)
+      .toBeNull();
+  });
+});
+
+// Beslut 13: no second button vocabulary.
+//
+// The lock above this file's first describe names the two classes the
+// consolidation deleted, which is a lock against a *return*. It said nothing
+// about a new set growing quietly beside the primitive, and one had: 1261
+// lines of case view with no .ui-btn in them at all — `.case-primary` at 32px
+// where the primitive is 36, a 28px picker pill, a 26px ghost in the alias
+// list, `.invoices button.link` copied from `.ui-link` with one digit changed.
+//
+// A private vocabulary grows fastest through the bare `button` tag selector,
+// because nothing in the markup names it: the JSX looks like plain HTML and
+// the geometry arrives from a stylesheet nobody is reading. So this is a
+// census. Every one that exists is listed; a new one fails. The list may only
+// shrink, and the case view is why it just did.
+const BARE_BUTTON_RULES = new Set([
+  // The band states its control once, on purpose — that is what stopped
+  // .watches-scan, .tasks-refresh and .invoices-read-in-btn drifting to three
+  // different heights. See App.css.
+  'App.css :: .page-header button',
+  'App.css :: .page-header-actions button',
+  'App.css :: .extraction-actions button',
+  'App.css :: .mobile-qa-segmented-control button',
+  'App.css :: .report-menu button',
+  'components/DesktopSettings.css :: .ds-backup-actions button',
+  'components/IntegrationConnections.css :: .ic-usercode button',
+  'components/Invoices.css :: .composition-legend button',
+  'components/Invoices.css :: .composition-segment button',
+  'components/Invoices.css :: .invoices-available button',
+  'components/MappingPreview.css :: .mp-lookup button',
+  'components/website/Website.css :: .ai-input button',
+  'components/website/Website.css :: .site-drawer__head button',
+  'components/website/Website.css :: .site-error button',
+  'components/website/Website.css :: .site-inspector__actions button',
+  'components/website/Website.css :: .site-modal__card header button',
+]);
+
+describe('design lock: no new button vocabulary beside the primitive', () => {
+  it('every bare `button` selector outside theme.css is one already counted', () => {
+    const found = new Set();
+    for (const file of walk(SRC)) {
+      if (!file.endsWith('.css') || file.endsWith('theme.css')) continue;
+      const css = readFileSync(file, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
+      for (const rule of css.matchAll(/([^{}();]+)\{/g)) {
+        const selector = rule[1].trim();
+        if (!selector || selector.startsWith('@')) continue;
+        for (const part of selector.split(',')) {
+          // Pseudo-classes do not change what element is being styled.
+          const bare = part.trim().replace(/::?[a-z-]+(\([^)]*\))?/g, '').trim();
+          if (/(^|[\s>+~])button$/.test(bare)) {
+            found.add(`${relative(SRC, file).split(sep).join('/')} :: ${bare}`);
+          }
+        }
+      }
+    }
+    const nya = [...found].filter((s) => !BARE_BUTTON_RULES.has(s)).sort();
+    expect(nya, 'a button is being dressed by tag — give it .ui-btn instead').toEqual([]);
   });
 });

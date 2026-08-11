@@ -796,6 +796,16 @@ function App() {
     docsSearchQuery === '' || doc.name.toLowerCase().includes(docsSearchQuery.toLowerCase())
   );
 
+  // The archive's standing, for the two bands that report it. An empty list
+  // that is still being fetched is not an archive of nought pages — it is an
+  // archive nobody has counted, and the band is told the difference rather
+  // than being handed a zero. (A refresh over documents we already have keeps
+  // reporting them; only the first fetch has nothing to say.)
+  const arkiv = documentsLoading && documents.length === 0 ? {} : {
+    sidor: documents.reduce((sum, d) => sum + (d.pages || 0), 0),
+    dokument: documents.length,
+  };
+
   if (authState === 'loading' || !desktopReady) {
     return (
       <div className="auth-loading-screen">
@@ -1254,8 +1264,8 @@ function App() {
                       other band on the product. */}
                   <Instrument
                     label="Sökbara sidor"
-                    value={documents.reduce((sum, d) => sum + (d.pages || 0), 0)}
-                    readings={[{ label: 'Dokument', value: documents.length }]}
+                    value={arkiv.sidor}
+                    readings={[{ label: 'Dokument', value: arkiv.dokument }]}
                   />
                 </header>
 
@@ -1506,8 +1516,8 @@ function App() {
                   <div className="page-header-actions" />
                   <Instrument
                     label="Sökbara sidor"
-                    value={documents.reduce((sum, d) => sum + (d.pages || 0), 0)}
-                    readings={[{ label: 'Dokument', value: documents.length }]}
+                    value={arkiv.sidor}
+                    readings={[{ label: 'Dokument', value: arkiv.dokument }]}
                   />
                 </header>
 

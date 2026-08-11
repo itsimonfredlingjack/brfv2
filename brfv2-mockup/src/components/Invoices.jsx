@@ -484,14 +484,18 @@ export default function Invoices({ brfId, isAdmin = false, onOpenDocument, onOpe
           {pane === 'queue' && (
             <Instrument
               label="Öppet belopp"
-              value={formatAmount(counts.amountOpen ?? 0, 'SEK')}
-              raw={counts.amountOpen ?? 0}
+              /* A sum the fetch has not delivered is not 0 and not "—"; it is
+                 nothing, and the instrument holds its row for it. */
+              value={counts.amountOpen === undefined
+                ? undefined
+                : formatAmount(counts.amountOpen, 'SEK')}
+              raw={counts.amountOpen}
               vila="Inget öppet att granska"
               readings={[
-                { label: 'Att granska', value: counts.open ?? 0 },
-                { label: 'Med signal', value: counts.withSignal ?? 0 },
-                { label: 'Förfallna', value: counts.overdue ?? 0, flagged: counts.overdue > 0 },
-                { label: 'Utan ansvarig', value: counts.unassigned ?? 0 },
+                { label: 'Att granska', value: counts.open },
+                { label: 'Med signal', value: counts.withSignal },
+                { label: 'Förfallna', value: counts.overdue, flagged: counts.overdue > 0 },
+                { label: 'Utan ansvarig', value: counts.unassigned },
               ]}
             />
           )}

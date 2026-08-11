@@ -584,10 +584,15 @@
   --shadow-sm: 0 1px 3px 0 rgb(var(--ink-rgb) / 0.07), 0 1px 2px -1px rgb(var(--ink-rgb) / 0.06);
   --shadow-md: 0 4px 12px -2px rgb(var(--ink-rgb) / 0.09);
   --shadow-lg: 0 16px 40px -12px rgb(var(--ink-rgb) / 0.18);
-  /* The workspace sheet at rest: lifted one plane off the paper. WebKitGTK
-     eats subtle shadows — the work surface needs a readable edge in Tauri. */
-  --shadow-sheet: 0 1px 2px 0 rgb(var(--ink-rgb) / 0.06), 0 2px 6px -1px rgb(var(--ink-rgb) / 0.08),
-    0 16px 40px -12px rgb(var(--ink-rgb) / 0.16);
+  /* `--shadow-sheet` stood here: "the workspace sheet at rest, lifted one plane
+     off the paper". There is no such plane. Twenty lines above, this file says
+     that on white nothing lifts, nothing floats and nothing layers — a
+     hairline and an inverted surface are the entire system — and --lyft-1 is
+     `none` for exactly that reason. The token had one caller, Fakturor's case
+     view, where it drew a lifted sheet with thirteen bordered cards on it.
+     Deleted rather than left unused: an unused elevation token is an invitation
+     to elevate something, and "every var() names something that exists" is
+     already a lock, so the name cannot come back without the plane. */
 
   /* ---- type: three cuts, three jobs, never mixed (§07) ----
    *
@@ -1059,6 +1064,19 @@ code, pre, kbd, samp { font-family: var(--font-mono); }
    destructive act (those are --destructive). */
 .ui-btn--warning { background: var(--warn); color: #FFFFFF; }
 .ui-btn--warning:hover { background: #6F4A04; }
+
+/* Chosen — the one state the primitive did not have, and the reason Fakturor's
+   case view grew its own picker instead of using it. A button that selects
+   between things (a tablist of the handlings attached to a case, a toggle) has
+   to say which one is showing, and the alternative to stating it here is every
+   screen inventing an `.active` class of its own. Read off ARIA rather than a
+   class, so the visual state cannot disagree with the one screen readers get. */
+.ui-btn[aria-selected='true'],
+.ui-btn[aria-pressed='true'] {
+  background: var(--secondary);
+  border-color: var(--border-strong);
+  color: var(--foreground);
+}
 
 .ui-btn--sm { height: 30px; padding: 0 var(--s2h); font-size: var(--text-sm); }
 .ui-btn--sm > svg { width: 14px; height: 14px; }

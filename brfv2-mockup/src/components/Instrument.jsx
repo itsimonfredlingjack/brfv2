@@ -71,12 +71,29 @@ import './Instrument.css';
  * seven screens deciding this separately is seven chances to decide it wrong,
  * and the last five passes all left at least one screen behind.
  *
- * The known cost: a screen whose board has not arrived computes zeros from an
- * empty object, so its band opens short and grows by the instrument's row when
- * the fetch lands. That is a shift on first entry to a tab, and it is the
- * cheaper of the two — the alternative is a strip of reserved white above
- * every empty workspace for as long as the association stays empty, which in
- * a pilot is the whole of it.
+ * Not measured yet is not zero either.
+ *
+ * That distinction was written down here and then thrown away by the callers.
+ * Seven screens computed their readings out of an object the fetch had not
+ * filled yet — `counts.open ?? 0`, `board?.counts || { active: 0 }`,
+ * `documents.length` on an empty array — so an unloaded screen reported zeros
+ * it had no basis for, this rule believed them, and the band opened short and
+ * grew by 130px when the data landed. Measured on Fakturor: 138px at first
+ * paint, 268px 38ms later.
+ *
+ * So the callers say what they actually have, which before a fetch is nothing,
+ * and nothing gets its own answer: the instrument holds its row and draws
+ * nothing in it. No label, no numeral, not even its own rule (Instrument.css
+ * takes the border off an empty one) — the row is the band's white, reserved
+ * for the measurement that is on its way.
+ *
+ * That is not the "strip of reserved white above every empty workspace" this
+ * comment used to weigh against the jump, because it lasts one fetch and not
+ * the pilot: a workspace that turns out to be empty states its zeros, and the
+ * band settles to its short height. The remaining cost is that settling —
+ * roughly two frames on first entry to a tab that has nothing to measure. It
+ * replaces the same two frames on every tab that *does*, which in an
+ * association with data is all of them.
  */
 export default function Instrument({
   label, value, raw, vila, readings = [], className = '',
@@ -85,20 +102,27 @@ export default function Instrument({
   const vilande = raw !== undefined && raw !== null && raw !== '' && Number(raw) === 0;
 
   // `value` may already be formatted for reading ("0,00 SEK"), which is why
-  // `raw` exists; a value that is still a number is its own raw. Anything
-  // unstated (undefined, null, "") is not zero — it is not known yet — and
-  // anything non-numeric is a state rather than a count, so both keep the
-  // instrument on screen.
+  // `raw` exists; a value that is still a number is its own raw.
+  const varden = [
+    raw !== undefined ? raw : (hasFigure ? value : undefined),
+    ...readings.map((r) => r.value),
+  ];
+
+  const angivet = (v) => v !== undefined && v !== null && v !== '';
+  // Anything non-numeric is a state rather than a count ("Aldrig hämtat"), so
+  // it counts as a measurement.
   const nagot = (v) => {
-    if (v === undefined || v === null || v === '') return false;
+    if (!angivet(v)) return false;
     const n = Number(v);
     return Number.isNaN(n) ? true : n !== 0;
   };
-  const matning = [
-    raw !== undefined ? raw : (hasFigure ? value : undefined),
-    ...readings.map((r) => r.value),
-  ].some(nagot);
-  if (!matning) return null;
+
+  // Nothing stated: the row, empty. Everything stated and all of it zero:
+  // no instrument. The order matters — the two answers are not the same, and
+  // the whole point of the callers telling the truth is that this can tell
+  // them apart.
+  if (!varden.some(angivet)) return <div className="instrument" />;
+  if (!varden.some(nagot)) return null;
 
   return (
     <div className={['instrument', className].filter(Boolean).join(' ')}>

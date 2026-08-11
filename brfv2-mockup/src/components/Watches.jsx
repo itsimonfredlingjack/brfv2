@@ -545,6 +545,16 @@ export default function Watches({ brfId, isAdmin = false, onOpenCitation }) {
     () => BUCKET_ORDER.reduce((sum, key) => sum + (board?.buckets?.[key]?.length || 0), 0),
     [board],
   );
+  // What the band may report. Four empty arrays derived from a board that has
+  // not arrived are not four zeros — they are four numbers nobody has counted
+  // yet, and the instrument is entitled to be told the difference.
+  const matt = board ? {
+    bevakas: watchedCount,
+    forslag: proposed.length,
+    forsenat: board.buckets?.overdue?.length || 0,
+    odaterat: unresolved.length,
+  } : {};
+
   // A board that has never held anything is one state, not four empty
   // sections stacked on each other. Once anything exists — even only settled
   // history — the sections render and say their own emptiness in words.
@@ -588,14 +598,10 @@ export default function Watches({ brfId, isAdmin = false, onOpenCitation }) {
             asking for it. */}
         <Instrument
           readings={[
-            { label: 'Bevakas', value: watchedCount },
-            { label: 'Förslag', value: proposed.length },
-            {
-              label: 'Försenat',
-              value: board?.buckets?.overdue?.length || 0,
-              flagged: (board?.buckets?.overdue?.length || 0) > 0,
-            },
-            { label: 'Odaterat', value: unresolved.length },
+            { label: 'Bevakas', value: matt.bevakas },
+            { label: 'Förslag', value: matt.forslag },
+            { label: 'Försenat', value: matt.forsenat, flagged: matt.forsenat > 0 },
+            { label: 'Odaterat', value: matt.odaterat },
           ]}
         />
       </header>

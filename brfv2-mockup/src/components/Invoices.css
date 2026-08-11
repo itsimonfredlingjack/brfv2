@@ -700,25 +700,11 @@
 
 .responsible { display: inline-flex; align-items: center; gap: var(--s1h); }
 
-/* `button.link` is used throughout the case for "open the thing I am naming".
-   Without this it inherits the platform button and a citation to a document
-   arrives looking like a grey key on a keyboard. */
-.invoices button.link {
-  display: inline;
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--accent-fg);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-  text-decoration-color: rgb(var(--handling-rgb) / 45%);
-}
-
-.invoices button.link:hover { text-decoration-color: currentColor; }
-.invoices button.link:disabled { color: var(--muted-foreground); text-decoration: none; cursor: not-allowed; }
+/* `.invoices button.link` stood here — eleven declarations that were
+   `.ui-link` in theme.css with one digit changed (45% underline instead of
+   40%). The case's text actions use the primitive now. The lock named the two
+   classes the consolidation deleted, which is why it never noticed a third
+   vocabulary growing quietly beside it; it counts controls now. */
 
 .signal-chip {
   display: inline-flex;
@@ -813,18 +799,17 @@
    the instrument sets it, which is what made this a copy rather than a
    different design. */
 
+/* The page's first claim — a sentence, and now only a sentence. It carried a
+   chain-link glyph, which in this product is what a text action looks like;
+   the one line on the case that nothing can be done to was wearing the mark of
+   something you click. */
 .case-identity-basis {
-  display: flex;
-  align-items: baseline;
-  gap: var(--s1h);
   max-width: 92ch;
   margin-top: var(--s1h);
   color: var(--subtle-foreground);
   font-size: var(--text-sm);
   line-height: 1.55;
 }
-
-.case-identity-basis > svg { flex-shrink: 0; position: relative; top: 2px; }
 
 /* The two statuses. Side by side, same size, never one badge. Chrome, on the
    paper under the masthead they explain. */
@@ -874,28 +859,30 @@
 .case-status-card.source h5::before { background: var(--subtle-foreground); }
 .case-status-card.local h5::before { background: var(--foreground); }
 
+/* Without the cards the separation has to come from the gap, so it grows to
+   the one the columns use. */
 .case-signals {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--s2);
-  margin: 0 0 var(--s3h);
+  gap: var(--s3) var(--s10);
+  margin: var(--s5) 0 var(--s6);
   padding: 0;
   list-style: none;
 }
 
 /* A signal is a reason to open the case, not a verdict on it. It gets a tone
-   on one edge and nothing else: two filled red blocks under the header made the
-   whole case read as an alarm before the reader had seen a single figure. */
+   on its mark and nothing else: two filled red blocks under the header made the
+   whole case read as an alarm before the reader had seen a single figure.
+   The card came off for the same reason the panels' did, plus one specific to
+   this row — drawn as a bordered card at the same width as the two status
+   cards above it, a reason and a standing became a 2×2 grid of identical
+   rectangles, and they are not the same kind of thing. Two cards say where the
+   case stands; the reasons are a line of notes underneath them. */
 .case-signals .signal {
   display: flex;
   flex-direction: column;
   gap: var(--s0h);
   flex: 1 1 260px;
-  padding: var(--s2h) var(--s3h);
-  border: 1px solid var(--kant);
-  box-shadow: var(--lyft-1);
-  border-radius: var(--radius-2xl);
-  background: var(--card);
   font-size: var(--text-base);
   line-height: 1.5;
 }
@@ -916,50 +903,57 @@
 /* The calendar, measured: full-strength ink among muted dots. */
 .case-signals .signal.measured strong::before { background: var(--ink); }
 
+/* Two columns and the air between them. That is the whole structure.
+ *
+ * This used to be a lifted sheet — the only --shadow-sheet in src/ — with
+ * thirteen bordered cards laid out on it, each with its own hairline, radius
+ * and card background. Two problems, and they compound. The sheet's edge and
+ * the panel's edge say the same thing ("a block ends here") one pixel apart,
+ * so the screen reads as an instrument panel rather than as an invoice. And
+ * --lyft-1 is `none`, so none of it lifted anyway: fourteen rings around
+ * white, drawn on white, doing the work a column gap already does.
+ *
+ * theme.css states the language: on white, a hairline and an inverted surface
+ * are the entire elevation system, nothing layers. A case is one document, so
+ * it gets one plane, and the split that carries the argument — what arrived,
+ * what the product thinks, what people did — is carried by the columns
+ * themselves. The column gap is deliberately wider than the row gap; that
+ * difference is what makes two columns read as two columns without a rule
+ * between them.
+ */
 .case-columns {
   display: grid;
   grid-template-columns: minmax(0, 1.55fr) minmax(0, 1fr);
-  gap: var(--s4);
+  column-gap: var(--s14);
+  row-gap: var(--s10);
   align-items: start;
-  padding: var(--s4);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--r-card);
-  background: var(--card);
-  box-shadow: var(--shadow-sheet);
 }
 
 @media (max-width: 1200px) {
   .case-columns { grid-template-columns: minmax(0, 1fr); }
 }
 
-.case-column { display: flex; flex-direction: column; gap: var(--s3h); min-width: 0; }
+.case-column { display: flex; flex-direction: column; gap: var(--s10); min-width: 0; }
 
-/* Panels on the case's sheet keep the register's corner, not the old
-   24px blob: one card radius across the workspace surfaces. */
-.case-panel {
-  padding: var(--s3h) var(--s4);
-  border: 1px solid var(--kant);
-  box-shadow: var(--lyft-1);
-  border-radius: var(--r-card);
-  background: var(--card);
-}
+/* A panel is now a section of one document: a heading, its content, and the
+   air the column gives it. No box. */
+.case-panel { min-width: 0; }
 
+/* Which makes the heading the only thing marking where a section starts, so it
+   gets the room a heading needs — and nothing else. The icons that sat in
+   front of these (a paperclip before "Originalhandling", an envelope before
+   "Mejlet fakturan kom med") named what the words already named; in a system
+   where an icon means a control, ten decorative ones in a column teach the
+   reader to stop looking at icons. */
 .case-panel h4,
 .case-original h4,
 .case-review-status h4,
 .case-timeline h4 {
-  display: flex;
-  align-items: center;
-  gap: var(--s2);
-  margin-bottom: var(--s2h);
+  margin-bottom: var(--s3);
   font-size: var(--text-md);
   font-weight: 600;
   color: var(--foreground);
 }
-
-.case-panel h4 > svg,
-.case-original h4 > svg,
-.case-timeline h4 > svg { color: var(--muted-foreground); }
 
 .case-panel h5 {
   margin: var(--s3h) 0 var(--s1h);
@@ -1007,30 +1001,20 @@
 
 /* ---- the original ---- */
 
-.case-original {
-  padding: var(--s3h) var(--s4);
-  border: 1px solid var(--kant);
-  box-shadow: var(--lyft-1);
-  border-radius: var(--r-card);
-  background: var(--card);
-}
+/* The original had a card around a card: the panel's hairline, and inside it
+   the document's own surface. One of them is information — a document has an
+   edge, and that edge is where the association's paper stops and the product
+   starts. It is the one the case keeps, moved onto `.original-canvas` below. */
+.case-original { min-width: 0; }
 
 .case-original.empty p { max-width: 78ch; font-size: var(--text-base); line-height: 1.6; color: var(--muted-foreground); }
 
+/* Which handling is showing. The buttons were a 28px pill with their own
+   border and their own `.active` — a fourth button size in a product that has
+   three. They are `.ui-btn--sm` now and the chosen one is read off
+   `aria-selected`, which the primitive learned for this (theme.css). The
+   picker keeps only the layout, because that is the container's job. */
 .original-picker { display: flex; flex-wrap: wrap; gap: var(--s1h); margin-bottom: var(--s2); }
-
-.original-picker button {
-  height: 28px;
-  padding: 0 var(--s2h);
-  border: 1px solid var(--input);
-  border-radius: var(--radius-2xl);
-  background: transparent;
-  color: var(--muted-foreground);
-  font-size: var(--text-sm);
-  cursor: pointer;
-}
-
-.original-picker button.active { background: var(--secondary); border-color: var(--border-strong); color: var(--foreground); }
 
 .original-role { margin-bottom: var(--s2h); color: var(--subtle-foreground); font-size: var(--text-sm); }
 
@@ -1043,25 +1027,21 @@
   font-size: var(--text-sm);
 }
 
-.original-toolbar button {
-  height: 28px;
-  padding: 0 var(--s2h);
-  border: 1px solid var(--input);
-  border-radius: var(--radius-2xl);
-  background: transparent;
-  color: var(--foreground);
-  font-size: var(--text-sm);
-  cursor: pointer;
-}
+/* Page back, page forward, and the way out to the document viewer. All three
+   were bare `<button>` elements the stylesheet dressed by tag — the surest way
+   to grow a private button set, because nothing in the markup says which
+   vocabulary it belongs to. The toolbar states one thing now: that the text
+   action sits at the far end, away from the pair that pages. */
+.original-toolbar > .ui-link { margin-left: auto; }
 
-.original-toolbar button:hover:not(:disabled) { background: var(--surface-accent); }
-.original-toolbar button:disabled { opacity: 0.45; cursor: not-allowed; }
-.original-toolbar button.link { height: auto; margin-left: auto; padding: 0; border: none; color: var(--accent-fg); text-decoration: underline; text-underline-offset: 3px; }
-
-/* The document is the one white thing in the interface (§06). */
+/* The document is the one white thing in the interface (§06) — and now that
+   the panels have stopped ringing themselves, the one edge left in the left
+   column. It earns it: this is the sheet the board is being asked to read, and
+   where it stops is a fact about the document, not decoration around a block. */
 .original-canvas {
   max-height: 720px;
   overflow: auto;
+  border: 1px solid var(--kant);
   border-radius: var(--radius-block);
   background: var(--field);
 }
@@ -1241,30 +1221,17 @@
   line-height: 1.55;
 }
 
-.case-primary,
-.case-responsible-form button,
-.case-comment-form button {
+/* The three submits in the work column — save the review status, save who is
+   looking at it, post a comment — were `.case-primary` plus two tag selectors:
+   a 32px filled pill at weight 600 where the product's primary is 36px at 500.
+   They are `.ui-btn--primary` now. What stays here is the only part that was
+   never the button's: where it sits in the form it submits. */
+.case-review-status > .ui-btn,
+.case-responsible-form .ui-btn,
+.case-comment-form .ui-btn {
   align-self: flex-start;
-  height: 32px;
   margin-top: var(--s3);
-  padding: 0 var(--s4);
-  border: 1px solid transparent;
-  border-radius: var(--radius-2xl);
-  background: var(--primary);
-  color: var(--primary-foreground);
-  font-size: var(--text-base);
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.14s ease;
 }
-
-.case-primary:hover:not(:disabled),
-.case-responsible-form button:hover:not(:disabled),
-.case-comment-form button:hover:not(:disabled) { background: var(--primary-action-hover); }
-
-.case-primary:disabled,
-.case-responsible-form button:disabled,
-.case-comment-form button:disabled { opacity: 0.45; cursor: not-allowed; }
 
 .case-responsible-current { font-size: var(--text-md); }
 
@@ -1298,19 +1265,12 @@
 
 .case-tasks li { flex-direction: column; gap: var(--s0h); }
 
-.case-aliases button {
-  height: 26px;
-  margin-left: auto;
-  padding: 0 var(--s2h);
-  border: 1px solid var(--input);
-  border-radius: var(--radius-2xl);
-  background: transparent;
-  color: var(--muted-foreground);
-  font-size: var(--text-sm);
-  cursor: pointer;
-}
-
-.case-aliases button:hover:not(:disabled) { background: var(--surface-accent); color: var(--foreground); }
+/* Removing a confirmed supplier name deletes a decision a person made, with no
+   confirmation step in front of it, so it takes Avbrott — the primitive's
+   destructive variant, at its smallest size. It was a 26px ghost pill: a fifth
+   button height, and the quietest control on the screen for the one action
+   here that destroys something. */
+.case-aliases .ui-btn { margin-left: auto; }
 
 /* ---- timeline ---- */
 

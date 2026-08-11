@@ -525,7 +525,9 @@ export default function Tasks({ brfId, isAdmin = false, onOpenCitation }) {
   const active = board?.active || [];
   const done = board?.done || [];
   const cancelled = board?.cancelled || [];
-  const counts = board?.counts || { active: 0, overdue: 0, unassigned: 0 };
+  // No board yet means no counts yet — not three zeros. The instrument reads
+  // this literally and holds its row open until the fetch says something.
+  const counts = board?.counts || {};
 
   return (
     <div className={`tasks${!loading && board && active.length === 0 ? ' has-no-active' : ''}`}>

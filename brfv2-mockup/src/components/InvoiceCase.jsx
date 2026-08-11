@@ -7,7 +7,6 @@ import {
   ClipboardList,
   FileText,
   HelpCircle,
-  History,
   Link2,
   Loader2,
   Mail,
@@ -401,7 +400,7 @@ function OriginalPane({ brfId, documents, onOpenDocument }) {
   if (!chosen) {
     return (
       <div className="case-original empty">
-        <h4><Paperclip size={15} /> Originalhandling</h4>
+        <h4>Originalhandling</h4>
         <p className="muted">
           Ingen originalfil är kopplad till ärendet. Fakturan är läst ur ekonomisystemet
           som strukturerade fält — fälten nedan är den läsningen, inte ett original.
@@ -414,7 +413,7 @@ function OriginalPane({ brfId, documents, onOpenDocument }) {
 
   return (
     <div className="case-original">
-      <h4><Paperclip size={15} /> Originalhandling</h4>
+      <h4>Originalhandling</h4>
       {documents.length > 1 && (
         <div className="original-picker" role="tablist" aria-label="Handlingar">
           {documents.map((doc, i) => (
@@ -423,7 +422,7 @@ function OriginalPane({ brfId, documents, onOpenDocument }) {
               type="button"
               role="tab"
               aria-selected={i === active}
-              className={i === active ? 'active' : ''}
+              className="ui-btn ui-btn--sm ui-btn--outline"
               onClick={() => setActive(i)}
             >
               {doc.name}
@@ -436,18 +435,24 @@ function OriginalPane({ brfId, documents, onOpenDocument }) {
         {chosen.basis ? ` — ${chosen.basis}` : ''}
       </p>
       <div className="original-toolbar">
-        <button type="button" disabled={page <= 1} onClick={() => setPage((p) => Math.max(1, p - 1))}>
+        <button
+          type="button"
+          className="ui-btn ui-btn--sm ui-btn--outline"
+          disabled={page <= 1}
+          onClick={() => setPage((p) => Math.max(1, p - 1))}
+        >
           Föregående
         </button>
         <span>Sida {page} av {numPages ?? chosen.pages ?? '…'}</span>
         <button
           type="button"
+          className="ui-btn ui-btn--sm ui-btn--outline"
           disabled={(numPages ?? chosen.pages) != null && page >= (numPages ?? chosen.pages)}
           onClick={() => setPage((p) => p + 1)}
         >
           Nästa
         </button>
-        <button type="button" className="link" onClick={() => onOpenDocument?.(chosen.id, page)}>
+        <button type="button" className="ui-link" onClick={() => onOpenDocument?.(chosen.id, page)}>
           Öppna i dokumentvyn
         </button>
       </div>
@@ -523,7 +528,7 @@ function ReviewStatusForm({ caseData, labels, busy, canDecide, onSave }) {
           </label>
           <button
             type="button"
-            className="case-primary"
+            className="ui-btn ui-btn--primary"
             disabled={busy || unchanged || (needsNote && !note.trim())}
             onClick={() => onSave({ review_status: status, note: note.trim() })}
           >
@@ -644,7 +649,7 @@ function AnalysisRun({ run, current, busy, replaced, onOpen }) {
         <>
           <button
             type="button"
-            className="link run-open"
+            className="ui-link run-open"
             disabled={busy}
             onClick={() => {
               setOpen((was) => !was);
@@ -673,7 +678,7 @@ function AnalysisRun({ run, current, busy, replaced, onOpen }) {
 function Timeline({ events }) {
   return (
     <div className="case-timeline">
-      <h4><History size={15} /> Allt som hänt</h4>
+      <h4>Allt som hänt</h4>
       <ol>
         {events.map((event) => {
           const Icon = EVENT_ICON[event.kind] || SearchCheck;
@@ -840,7 +845,7 @@ export default function InvoiceCase({
           on. It sat inside the masthead, in the smallest type there; it is the
           page's first claim, so it stands on the page. */}
       <p className="case-identity-basis" title="Varför de här källorna är samma faktura">
-        <Link2 size={12} /> {kase.identity_basis}
+        {kase.identity_basis}
       </p>
 
       <div className="case-statuses">
@@ -887,7 +892,7 @@ export default function InvoiceCase({
           {/* The normalised fields are a *reading* of the document above, so
               they open on demand rather than competing with it. */}
           <details className="case-panel case-disclosure" open>
-            <summary><h4><FileText size={15} /> Fakturans fält</h4></summary>
+            <summary><h4>Fakturans fält</h4></summary>
             <dl className="case-fields">
               <div><dt>Leverantör</dt><dd>{kase.supplier_name || '—'}</dd></div>
               <div><dt>Leverantörsreferens</dt><dd>{kase.supplier_ref || '—'}</dd></div>
@@ -919,7 +924,7 @@ export default function InvoiceCase({
           {/* Provenance is what makes the case auditable, and it is not what a
               reviewer reads first. Present, one press away. */}
           <details className="case-panel case-disclosure">
-            <summary><h4><Link2 size={15} /> Källor och härkomst</h4></summary>
+            <summary><h4>Källor och härkomst</h4></summary>
             <ul className="case-observations">
               {kase.observations.map((observation) => {
                 const Icon = OBSERVATION_ICON[observation.kind] || FileText;
@@ -935,7 +940,7 @@ export default function InvoiceCase({
                       {observation.content_sha256 && ` · ${observation.content_sha256.slice(0, 16)}…`}
                     </span>
                     {observation.document_id && (
-                      <button type="button" className="link" onClick={() => onOpenDocument?.(observation.document_id, 1)}>
+                      <button type="button" className="ui-link" onClick={() => onOpenDocument?.(observation.document_id, 1)}>
                         Öppna filen
                       </button>
                     )}
@@ -954,7 +959,7 @@ export default function InvoiceCase({
 
           {sourceEvent && (
             <details className="case-panel case-disclosure">
-              <summary><h4><Mail size={15} /> Mejlet fakturan kom med</h4></summary>
+              <summary><h4>Mejlet fakturan kom med</h4></summary>
               <p className="case-mail-meta">
                 {sourceEvent.origin_display
                   ? `${sourceEvent.origin_display} <${sourceEvent.origin}>`
@@ -976,7 +981,7 @@ export default function InvoiceCase({
 
           <div className="case-panel">
             <div className="case-panel-head">
-              <h4><SearchCheck size={15} /> Granskning mot föreningens dokument</h4>
+              <h4>Granskning mot föreningens dokument</h4>
             </div>
             {documentFindings.length === 0 ? (
               <p className="muted">
@@ -1023,7 +1028,7 @@ export default function InvoiceCase({
 
           <div className="case-panel">
             <div className="case-panel-head">
-              <h4><History size={15} /> Jämfört med föreningens tidigare fakturor</h4>
+              <h4>Jämfört med föreningens tidigare fakturor</h4>
             </div>
             <p className="muted case-history-note">
               De här fynden bygger på fakturor föreningen redan läst in — inte på ett
@@ -1061,7 +1066,7 @@ export default function InvoiceCase({
               that replaced one has to leave a record — not a silent overwrite. */}
           <div className="case-panel case-analyses case-disclosure-wrap">
             <details>
-              <summary><h4><History size={15} /> Analyshistorik</h4></summary>
+              <summary><h4>Analyshistorik</h4></summary>
             <p className="muted case-history-note">
               Varje granskning som ändrade något ligger kvar här: vad den läste, vilka
               regler som körde, vad som skilde mot förra gången, och de fynd den ersatte.
@@ -1104,7 +1109,7 @@ export default function InvoiceCase({
           </div>
 
           <div className="case-panel">
-            <h4><User size={15} /> Ansvarig</h4>
+            <h4>Ansvarig</h4>
             <p className="case-responsible-current">{kase.responsible || 'ej utsedd'}</p>
             {isAdmin && (
               <div className="case-responsible-form">
@@ -1118,6 +1123,7 @@ export default function InvoiceCase({
                 />
                 <button
                   type="button"
+                  className="ui-btn ui-btn--primary"
                   disabled={busy || responsible.trim() === (kase.responsible || '')}
                   onClick={() => run(
                     () => invoicesApi.update(brfId, kase.id, { responsible: responsible.trim() }),
@@ -1131,7 +1137,7 @@ export default function InvoiceCase({
           </div>
 
           <div className="case-panel">
-            <h4><MessageSquare size={15} /> Kommentarer och frågor</h4>
+            <h4>Kommentarer och frågor</h4>
             {kase.comments.length === 0 && <p className="muted">Ingen har skrivit något ännu.</p>}
             <ul className="case-comments">
               {kase.comments.map((entry) => (
@@ -1153,6 +1159,7 @@ export default function InvoiceCase({
                 />
                 <button
                   type="button"
+                  className="ui-btn ui-btn--primary"
                   disabled={busy || !comment.trim()}
                   onClick={() => run(
                     () => invoicesApi.comment(brfId, kase.id, comment.trim()),
@@ -1166,7 +1173,7 @@ export default function InvoiceCase({
           </div>
 
           <div className="case-panel">
-            <h4><ClipboardList size={15} /> Uppgifter om den här fakturan</h4>
+            <h4>Uppgifter om den här fakturan</h4>
             {tasks.length === 0 ? (
               <p className="muted">Ingen uppgift är skapad ur ärendet.</p>
             ) : (
@@ -1198,7 +1205,7 @@ export default function InvoiceCase({
           </div>
 
           <div className="case-panel">
-            <h4><Building2 size={15} /> Om {supplier.supplier_name || 'leverantören'}</h4>
+            <h4>Om {supplier.supplier_name || 'leverantören'}</h4>
             <dl className="case-fields">
               <div><dt>Inlästa fakturor</dt><dd>{supplier.invoice_count}</dd></div>
               <div>
@@ -1220,7 +1227,7 @@ export default function InvoiceCase({
                 <ul className="case-previous">
                   {supplier.previous.map((row) => (
                     <li key={row.id}>
-                      <button type="button" className="link" onClick={() => onOpenCase?.(row.id)}>
+                      <button type="button" className="ui-link" onClick={() => onOpenCase?.(row.id)}>
                         {row.invoice_number || 'utan nummer'} · {row.invoice_date || 'utan datum'}
                       </button>
                       <span>{formatAmount(row.total_amount, row.currency)}</span>
@@ -1237,7 +1244,7 @@ export default function InvoiceCase({
                 <ul className="case-supplier-docs">
                   {supplier.documents.map((doc) => (
                     <li key={doc.id}>
-                      <button type="button" className="link" onClick={() => onOpenDocument?.(doc.id, 1)}>
+                      <button type="button" className="ui-link" onClick={() => onOpenDocument?.(doc.id, 1)}>
                         {doc.name}
                       </button>
                     </li>
@@ -1260,6 +1267,7 @@ export default function InvoiceCase({
                       {isAdmin && (
                         <button
                           type="button"
+                          className="ui-btn ui-btn--xs ui-btn--destructive"
                           disabled={busy}
                           aria-label={`Ta bort ${alias.invoice_name} = ${alias.document_name}`}
                           onClick={() => run(
