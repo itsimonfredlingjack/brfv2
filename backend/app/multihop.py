@@ -19,6 +19,7 @@ is a straight line with no feedback edge back into planning.
 from __future__ import annotations
 
 import logging
+import os
 from collections.abc import Iterable
 
 from .answer import ask
@@ -37,6 +38,17 @@ logger = logging.getLogger("brf.multihop")
 PER_QUERY_TOP_K = 4
 # Ceiling on excerpts reaching the prompt after dedup and expansion.
 MAX_EVIDENCE_CHUNKS = 10
+
+
+def planned_ask_enabled() -> bool:
+    """Server-side kill switch for the planned path (BRF_PLANNED_ASK).
+
+    Read per call, not at import, so a deployment can flip it without a
+    rebuild and so tests can set it per case. Off unless explicitly on: the
+    request field alone must never be able to route a tenant onto a path a
+    deployment has not enabled.
+    """
+    return os.environ.get("BRF_PLANNED_ASK", "").strip().lower() in ("1", "true", "yes", "on")
 
 
 class PlannedAnswer:
@@ -64,6 +76,7 @@ def _clarify_response(plan: QueryPlan, provider_name: str, model: str) -> AskRes
         answer=plan.clarification,
         refusal=True,
         refusal_reason="insufficient_data",
+        clarification=plan.clarification,
         retrieval=[],
         provider=provider_name,
         model=model,

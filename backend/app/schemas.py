@@ -139,6 +139,11 @@ RefusalReason = Literal[
 
 class AskRequest(BaseModel):
     question: str
+    # Opt in to the planned cross-document path (BRF-1, app/multihop.py).
+    # Default False = the single-search path, byte-for-byte as before. The
+    # field alone is not enough: the server must also have BRF_PLANNED_ASK
+    # set, so a client cannot switch on an unreleased path by itself.
+    planned: bool = False
 
 
 class AskResponse(BaseModel):
@@ -151,6 +156,14 @@ class AskResponse(BaseModel):
     retrieval: list[RetrievalHit] = Field(default_factory=list)
     provider: str = ""
     model: str = ""
+    # Set ONLY when the planner asked for a clarification instead of guessing
+    # (BRF-1 `clarify`). A clarification is not an answer: `refusal` is True
+    # and `citations` is empty, so every existing consumer already handles it
+    # safely as a refusal. This field lets a client that wants to tell the two
+    # apart do so — a counter-question, not "det står inte i era dokument" —
+    # without any consumer having to learn a new refusal_reason. None on every
+    # other response, including every response from the unchanged path.
+    clarification: str | None = None
 
 
 class Settings(BaseModel):
