@@ -168,7 +168,7 @@ function DeviceLogin({ brfId, provider, pending, onConnected, onFailed, onExpire
       </p>
       <p className="ic-usercode">
         <code>{pending.userCode}</code>
-        <button type="button" onClick={copy}>
+        <button type="button" className="ui-btn ui-btn--outline ui-btn--sm" onClick={copy}>
           <Copy size={14} /> {copied ? 'Kopierad' : 'Kopiera'}
         </button>
       </p>
@@ -196,6 +196,7 @@ function CodeLogin({ pending, busy, onComplete }) {
       <label className="ic-field">
         <span>Klistra in koden, eller hela adressen du hamnade på</span>
         <input
+          className="ui-input"
           value={pasted}
           onChange={(e) => setPasted(e.target.value)}
           placeholder="https://…/callback?code=…&state=…"
@@ -204,7 +205,7 @@ function CodeLogin({ pending, busy, onComplete }) {
       <div className="ic-actions">
         <button
           type="button"
-          className="ic-primary"
+          className="ui-btn ui-btn--primary"
           disabled={busy || !pasted.trim()}
           onClick={() => onComplete(pasted.trim())}
         >
@@ -236,6 +237,7 @@ function GraphForm({ connection, mailFolders, busy, onSave }) {
         <label className="ic-field ic-span">
           <span>App-id (klient-id) för appregistreringen</span>
           <input
+            className="ui-input"
             value={clientId}
             onChange={(e) => setClientId(e.target.value)}
             placeholder="00000000-0000-0000-0000-000000000000"
@@ -249,6 +251,7 @@ function GraphForm({ connection, mailFolders, busy, onSave }) {
         <label className="ic-field">
           <span>Vilka konton som får logga in</span>
           <select
+            className="ui-select"
             value={authorityKind}
             onChange={(e) => setAuthorityKind(e.target.value)}
             disabled={busy}
@@ -263,6 +266,7 @@ function GraphForm({ connection, mailFolders, busy, onSave }) {
           <label className="ic-field">
             <span>Katalogens id</span>
             <input
+              className="ui-input"
               value={tenantId}
               onChange={(e) => setTenantId(e.target.value)}
               placeholder="00000000-0000-0000-0000-000000000000"
@@ -273,6 +277,7 @@ function GraphForm({ connection, mailFolders, busy, onSave }) {
         <label className="ic-field">
           <span>Brevlåda</span>
           <input
+            className="ui-input"
             value={mailbox}
             onChange={(e) => setMailbox(e.target.value)}
             placeholder="styrelsen@forening.se"
@@ -280,13 +285,13 @@ function GraphForm({ connection, mailFolders, busy, onSave }) {
           />
           <small>
             Lämnas fältet tomt läses det inloggade kontots egen brevlåda. Anges
-            en adress läses den delade brevlådan, och behörigheten
+            en adress läses den delade brevlådan, och behörigheten{' '}
             <code>Mail.Read.Shared</code> begärs — fortfarande bara läsning.
           </small>
         </label>
         <label className="ic-field">
           <span>Mapp</span>
-          <select value={folder} onChange={(e) => setFolder(e.target.value)} disabled={busy}>
+          <select className="ui-select" value={folder} onChange={(e) => setFolder(e.target.value)} disabled={busy}>
             {folders.map((name) => <option key={name} value={name}>{name}</option>)}
           </select>
         </label>
@@ -294,7 +299,7 @@ function GraphForm({ connection, mailFolders, busy, onSave }) {
       <div className="ic-actions">
         <button
           type="button"
-          className="ic-primary"
+          className="ui-btn ui-btn--primary"
           disabled={busy || !clientId.trim() || !authority}
           onClick={() => onSave({
             client_id: clientId.trim(),
@@ -321,11 +326,12 @@ function FortnoxForm({ connection, busy, onSave }) {
       <div className="ic-grid">
         <label className="ic-field">
           <span>Klient-id</span>
-          <input value={clientId} onChange={(e) => setClientId(e.target.value)} disabled={busy} />
+          <input className="ui-input" value={clientId} onChange={(e) => setClientId(e.target.value)} disabled={busy} />
         </label>
         <label className="ic-field">
           <span>Klienthemlighet</span>
           <input
+            className="ui-input"
             type="password"
             value={clientSecret}
             onChange={(e) => setClientSecret(e.target.value)}
@@ -337,6 +343,7 @@ function FortnoxForm({ connection, busy, onSave }) {
         <label className="ic-field ic-span">
           <span>Återanropsadress (redirect URI)</span>
           <input
+            className="ui-input"
             value={redirectUri}
             onChange={(e) => setRedirectUri(e.target.value)}
             placeholder="https://localhost/fortnox/callback"
@@ -368,7 +375,7 @@ function FortnoxForm({ connection, busy, onSave }) {
       <div className="ic-actions">
         <button
           type="button"
-          className="ic-primary"
+          className="ui-btn ui-btn--primary"
           disabled={busy || !clientId.trim() || !redirectUri.trim()}
           onClick={() => onSave({
             client_id: clientId.trim(),
@@ -570,7 +577,7 @@ export default function IntegrationConnections({ brfId, connections, mailFolders
                 <div className="ic-actions">
                   <button
                     type="button"
-                    className="ic-primary"
+                    className="ui-btn ui-btn--primary"
                     disabled={busy === `login:${provider}`}
                     onClick={() => beginLogin(provider)}
                   >
@@ -581,7 +588,7 @@ export default function IntegrationConnections({ brfId, connections, mailFolders
                   {status === 'connected' && (
                     <button
                       type="button"
-                      className="ic-secondary danger"
+                      className="ui-btn ui-btn--destructive"
                       onClick={() => setConfirming(provider)}
                     >
                       <Unplug size={15} /> Koppla bort
@@ -601,12 +608,12 @@ export default function IntegrationConnections({ brfId, connections, mailFolders
                     </strong>
                   </p>
                   <div className="ic-actions">
-                    <button type="button" className="ic-secondary" onClick={() => setConfirming('')}>
+                    <button type="button" className="ui-btn ui-btn--outline" onClick={() => setConfirming('')}>
                       Avbryt
                     </button>
                     <button
                       type="button"
-                      className="ic-primary danger"
+                      className="ui-btn ui-btn--destructive"
                       disabled={busy === `disconnect:${provider}`}
                       onClick={() => disconnect(provider)}
                     >

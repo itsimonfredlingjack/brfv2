@@ -36,7 +36,7 @@
   border-radius: var(--r-sm);
   padding: var(--s5) var(--s5);
   margin-bottom: var(--s4);
-  background: var(--panel-bg, var(--surface-2));
+  background: var(--panel-bg);
 }
 
 .ic-head {
@@ -113,17 +113,11 @@
   color: var(--text-primary);
 }
 
-.ic-field input,
-.ic-field select {
-  height: var(--h-md);
-  padding: 0 var(--s3);
-  border-radius: var(--r-sm);
-  border: 1px solid var(--panel-border);
-  background-color: var(--surface-2);
-  color: var(--text-primary);
-  font-size: var(--text-dense);
-  font-family: inherit;
-}
+/* The controls themselves are .ui-input/.ui-select from theme.css. The rule
+   that stood here restated their shape with --panel-border as the boundary —
+   --kant, mixed to be decoration at 1.26:1, on the one element whose boundary
+   is information. Things you operate take --kant-kontroll, and they get it by
+   taking the primitive. */
 
 .ic-field small,
 .ic-check small {
@@ -165,50 +159,12 @@
   margin-top: var(--s3h);
 }
 
-.ic-primary,
-.ic-secondary {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s2);
-  padding: var(--s2h) var(--s3h);
-  border-radius: var(--r-sm);
-  font-size: var(--text-dense);
-  font-weight: 600;
-  cursor: pointer;
-}
-
-/* The primary action is the ink, as it is everywhere else in the product.
-   Handling stays what the identity reserves it for — links and text actions. */
-.ic-primary {
-  border: 1px solid transparent;
-  background: var(--primary);
-  color: var(--primary-foreground);
-}
-.ic-primary:hover:not(:disabled) { background: var(--primary-action-hover); }
-
-.ic-secondary {
-  border: 1px solid var(--panel-border);
-  background: transparent;
-  color: var(--text-primary);
-}
-
-/* Disconnecting deletes stored credentials, which is a destruction. */
-.ic-primary.danger {
-  background: var(--avbrott-soft);
-  border-color: var(--avbrott-border);
-  color: var(--avbrott);
-}
-
-.ic-secondary.danger {
-  border-color: var(--avbrott-border);
-  color: var(--avbrott);
-}
-
-.ic-primary:disabled,
-.ic-secondary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+/* The buttons are the one primitive — .ui-btn in the markup. `.ic-primary` and
+   `.ic-secondary` restated it here at 13px/600 with their own disabled dimming,
+   which is how "Spara konfigurationen" met the reader as a solid grey slab:
+   half-opacity on a filled ink pill. The primitive's quiet disabled primary
+   (theme.css) is the product's answer to that, and it only applies to buttons
+   that actually take the class. */
 
 .ic-device {
   margin-top: var(--s3);
@@ -245,19 +201,6 @@
   letter-spacing: 0.14em;
   user-select: all;
   color: var(--text-primary);
-}
-
-.ic-usercode button {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s1h);
-  padding: var(--s1h) var(--s3);
-  border-radius: var(--r-sm);
-  border: 1px solid var(--panel-border);
-  background: transparent;
-  color: var(--text-secondary);
-  font-size: var(--text-dense);
-  cursor: pointer;
 }
 
 .ic-facts {
