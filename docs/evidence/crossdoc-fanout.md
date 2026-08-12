@@ -14,10 +14,11 @@ saknade det fall som visade skillnaden.
 - På frågor som *har flera delar* men bär orden som ska sökas: fan-out är
   neutral eller **sämre** än en sökning vid samma budget.
 - På en fråga ställd med **andra ord än dokumenten använder**: fan-out är det
-  enda som fungerar vid trång budget (1.00 mot 0.50), och med färre utdrag.
+  enda som fungerar, och med färre utdrag. På det verkliga fallet r01 går den
+  från **0.00 till 1.00** — enkelsökningen hittar ingenting alls.
 
-`PER_QUERY_TOP_K` och `MAX_EVIDENCE_CHUNKS` får fortfarande inte trimmas på det
-här underlaget — ett syntetiskt fall är för tunt för att kalibrera rattar på.
+`PER_QUERY_TOP_K` och `MAX_EVIDENCE_CHUNKS` får fortfarande inte trimmas här —
+rekonstruerad dokumenttext är för tunt underlag för att kalibrera rattar på.
 
 ## Vad som mäts
 
@@ -68,6 +69,38 @@ Per fall vid budget 4:
 x06 är det **enda** fallet där fan-out vinner — och den vinner med färre utdrag
 (2.8 mot 4.0 i snitt). Enkelsökningen fastnar på 0.50 där ända upp till budget 6.
 
+### Omgång 3 — verkliga fall
+
+Tre fall härledda ur en verklig styrelses loggade händelser (BRF Eken, aug
+2026). **Frågorna och ordförrådet är äkta; dokumentens exakta formuleringar är
+rekonstruerade** — vi har inte originalhandlingarna. Det fallen står och faller
+med är glappet mellan styrelsens ord och handlingens ord, och det är äkta.
+
+Per fall vid budget 4, korpus 48 chunkar:
+
+| Fall | Ursprung | Enkel | Planerad |
+|---|---|---:|---:|
+| r00 snöröjning på aprilfaktura | verklig | 1.00 | 1.00 |
+| **r01 tyst prisändring** | **verklig** | **0.00** | **1.00** |
+| r02 muntligt vs skriftligt | verklig | 1.00 | 1.00 |
+
+**r01 är det starkaste resultatet i hela mätningen.** Enkelsökningen hittar
+*ingendera* av de chunkar som krävs — inte 0.50, utan noll. Frågan lyder
+"Betalar vi fortfarande fast pris för sophämtningen?"; handlingen säger
+"schablonbelopp" och "Sophantering och gårdsskötsel". Inget ord matchar. Värre:
+korpusen innehåller en distraktor, `Sophamtning.pdf` ("Hämtning av
+hushållsavfall sker på tisdagar"), som matchar frågans ord perfekt utan att
+svara på den. Sökningen dras dit.
+
+Det är den realistiska felmoden: **ett dokument som matchar frågans ord men
+inte besvarar den.** Och r01 är just det fall styrelsen i verkligheten missade.
+
+En förutsägelse som slog fel, värd att notera: jag trodde snöröjningsfakturan
+(r00) skulle vara det svåra fallet, eftersom förklaringen står i en klausul som
+varken nämner snö eller april. Enkelsökningen klarar den ändå — ordet
+"snöröjning" står på fakturan, och avtalsklausulen ligger nära nog i samma
+dokument. Det svåra var i stället den tysta prisändringen.
+
 ## Vad det betyder för planeraren
 
 Fan-outens värde ligger i **ordförrådsglappet, inte i flerdokumentsheten**. Det
@@ -91,9 +124,9 @@ Två fällor jag gick i och som är värda att minnas:
 
 ## Vad som borde göras härnäst
 
-- **Fler ordförrådsglappsfall, och riktiga.** Ett syntetiskt fall visar att
-  mekanismen finns; det säger inte hur ofta den utlöses i verkligheten. Hämta
-  formuleringar ur riktiga styrelsefrågor.
+- **Riktiga handlingar, inte rekonstruerade.** Fallens ordförråd är äkta men
+  dokumenttexten är min. Med originalfakturan och originalavtalet blir samma
+  mätning ett faktiskt driftbevis i stället för en indikation.
 - **Mät på riktig korpus**, inte fixturer med en chunk per dokument. Verkliga
   årsredovisningar och stadgar har många chunkar per dokument, vilket är där
   budgettrycket faktiskt uppstår.

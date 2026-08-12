@@ -32,6 +32,41 @@
         "Justeringen följer entreprenadindex E84 enligt avtalets paragraf 9.",
         "Övriga villkor i snöröjningsavtalet lämnas oförändrade."
       ]
+    },
+    {
+      "_provenance": "REKONSTRUERAD. Frågorna och ordförrådet kommer från en verklig styrelses loggade händelser (BRF Eken, aug 2026). Dokumentens exakta formuleringar är däremot MINA — vi har inte originalhandlingarna. Det som är äkta och som fallen står och faller med är glappet mellan styrelsens ord och handlingens ord; den exakta meningsbyggnaden är det inte.",
+      "name": "Faktura Stena Q2 2026.pdf",
+      "lines": [
+        "Fakturanummer 2026-04-0182 avser perioden april till juni 2026.",
+        "Post: Snöröjning och halkbekämpning, 8750 kr.",
+        "Post: Sophantering och gårdsskötsel, 21400 kr."
+      ]
+    },
+    {
+      "name": "Avtal Sophantering och gardsskotsel 2022.pdf",
+      "lines": [
+        "Avtalet omfattar sophantering, gårdsskötsel samt vinterväghållning.",
+        "Fakturering sker kvartalsvis i förskott.",
+        "Kostnaderna fördelas jämnt över avtalsåret oberoende av när arbetet utförs.",
+        "Schablonbeloppet gäller till och med 31 mars 2024.",
+        "Från och med 1 april 2024 faktureras verklig kostnad i stället för schablonbelopp."
+      ]
+    },
+    {
+      "name": "Bredbandsavtal iTUX.pdf",
+      "lines": [
+        "Uppsägning ska ske skriftligen senast sex månader före avtalets utgång.",
+        "Avtalet förlängs automatiskt med tolv månader om uppsägning uteblir.",
+        "Muntliga besked är inte bindande för parterna."
+      ]
+    },
+    {
+      "name": "Styrelseprotokoll 2026-05.pdf",
+      "lines": [
+        "Leverantören uppgav muntligen att uppsägningstiden är tre månader.",
+        "Sekreteraren fick i uppdrag att begära skriftlig bekräftelse.",
+        "Punkten bordlades till nästa sammanträde."
+      ]
     }
   ],
   "cases": [
@@ -145,6 +180,64 @@
       "citations": [
         {"contains": "1250 kr", "quote": "Ersättning utgår med 1250 kr per påbörjad timme"},
         {"contains": "godkänna snöröjningsavtalet", "quote": "Styrelsen beslutade att godkänna snöröjningsavtalet"}
+      ]
+    },
+    {
+      "id": "r00",
+      "kind": "vocabulary_gap",
+      "source": "reality",
+      "_comment": "Verkligt fall. Styrelsen såg snöröjning på en kvartalsfaktura för april-juni och trodde att något var fel. Ordet 'snöröjning' står på FAKTURAN, men förklaringen står i en klausul som varken nämner snö eller april. En sökning på frågans egna ord hittar alltså problemet men inte svaret — och avtalet säger dessutom 'vinterväghållning', inte 'snöröjning'.",
+      "question": "Varför står snöröjning på fakturan för april till juni när det inte snöar då?",
+      "expect_mode": "multi",
+      "expect_documents": ["Faktura Stena Q2 2026.pdf", "Avtal Sophantering och gardsskotsel 2022.pdf"],
+      "expect_min_citations": 2,
+      "subqueries": [
+        "kostnadsfördelning över avtalsåret kvartalsvis fakturering",
+        "vinterväghållning ingår i avtal sophantering gårdsskötsel"
+      ],
+      "answer": "Posten Snöröjning och halkbekämpning, 8750 kr står på fakturan trots perioden april till juni eftersom kostnaderna fördelas jämnt över avtalsåret oberoende av när arbetet utförs.",
+      "citations": [
+        {"contains": "Snöröjning och halkbekämpning", "quote": "Post: Snöröjning och halkbekämpning, 8750 kr"},
+        {"contains": "fördelas jämnt", "quote": "Kostnaderna fördelas jämnt över avtalsåret oberoende av när arbetet utförs"}
+      ]
+    },
+    {
+      "id": "r01",
+      "kind": "vocabulary_gap",
+      "source": "reality",
+      "_comment": "Verkligt fall, och det styrelsen faktiskt MISSADE: schablonbeloppet upphörde 2024-03-31 och priset blev rörligt utan att någon behövde göra något. Dubbelt ordförrådsglapp — styrelsen säger 'fast pris' och 'sophämtning', handlingen säger 'schablonbelopp' och 'Sophantering och gårdsskötsel'.",
+      "question": "Betalar vi fortfarande fast pris för sophämtningen?",
+      "expect_mode": "multi",
+      "expect_documents": ["Avtal Sophantering och gardsskotsel 2022.pdf", "Faktura Stena Q2 2026.pdf"],
+      "expect_min_citations": 2,
+      "subqueries": [
+        "schablonbelopp upphör verklig kostnad faktureras",
+        "post sophantering och gårdsskötsel belopp faktura"
+      ],
+      "answer": "Nej. Från och med 1 april 2024 faktureras verklig kostnad i stället för schablonbelopp, och senaste fakturan tar upp Sophantering och gårdsskötsel, 21400 kr.",
+      "citations": [
+        {"contains": "verklig kostnad", "quote": "Från och med 1 april 2024 faktureras verklig kostnad i stället för schablonbelopp"},
+        {"contains": "21400", "quote": "Post: Sophantering och gårdsskötsel, 21400 kr"}
+      ]
+    },
+    {
+      "id": "r02",
+      "kind": "conflicting_documents",
+      "source": "reality",
+      "_comment": "Verkligt fall: leverantören sa en sak muntligt och en annan skriftligt, och en missad deadline hade förlängt avtalet ett helt år. Svaret måste visa BÅDA och låta den skriftliga handlingen väga — att tyst välja det muntliga beskedet är felet fallet finns för att fånga.",
+      "question": "Hur lång uppsägningstid har vi på bredbandsavtalet?",
+      "expect_mode": "multi",
+      "expect_documents": ["Bredbandsavtal iTUX.pdf", "Styrelseprotokoll 2026-05.pdf"],
+      "expect_min_citations": 2,
+      "expect_answer_contains": ["sex månader", "muntlig"],
+      "subqueries": [
+        "uppsägning skriftligen månader före avtalets utgång bredband",
+        "leverantören uppgav muntligen uppsägningstid protokoll"
+      ],
+      "answer": "Enligt avtalet ska uppsägning ske skriftligen senast sex månader före avtalets utgång. Leverantören uppgav muntligen att uppsägningstiden är tre månader, men muntliga besked är inte bindande för parterna.",
+      "citations": [
+        {"contains": "sex månader", "quote": "Uppsägning ska ske skriftligen senast sex månader före avtalets utgång"},
+        {"contains": "muntligen att uppsägningstiden", "quote": "Leverantören uppgav muntligen att uppsägningstiden är tre månader"}
       ]
     }
   ]

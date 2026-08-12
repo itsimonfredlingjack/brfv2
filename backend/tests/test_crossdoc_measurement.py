@@ -53,14 +53,13 @@ def test_required_evidence_is_reachable_at_default_settings(golden):
 
 
 def test_distractors_actually_make_retrieval_choose(golden):
-    """Guards the guard. Without padding, topK >= the whole corpus and every
-    strategy scores a perfect 1.00 while discriminating nothing — the first
-    run of this harness did exactly that and looked like a success."""
-    with tempfile.TemporaryDirectory() as tmp:
-        bare = build_store(golden, Path(tmp))
-        assert len(bare.chunks) <= bare.settings.topK, (
-            "golden-korpusen är inte längre trivialt liten — uppdatera kommentaren"
-        )
+    """Guards the guard. Without padding, topK can reach the whole corpus and
+    every strategy scores a perfect 1.00 while discriminating nothing — the
+    first run of this harness did exactly that and looked like a success.
+
+    (The bare corpus has since grown past topK on its own, so that specific
+    assertion was dropped rather than kept as a stale tautology. The padding
+    is still what makes the ratio large enough to measure under.)"""
     with tempfile.TemporaryDirectory() as tmp:
         padded = build_store(golden, Path(tmp), distractors=20)
         assert len(padded.chunks) > 3 * padded.settings.topK, (
