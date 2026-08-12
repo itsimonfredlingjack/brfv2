@@ -320,12 +320,12 @@
 
 /* Strong and weak must not be two shades of the same block. A weak anchor is
  * the one thing that turns a verified number into a possibly irrelevant one,
- * so it is the coloured one; a sound anchor is simply stated. */
+ * so it is the boxed and coloured one; a sound anchor is simply stated — it
+ * used to carry a border of its own, which put a frame around the one line on
+ * the card that says nothing is wrong, and stacked a third ring inside the
+ * finding's own. */
 .finding-anchor {
   margin: var(--s2h) 0 var(--s1);
-  padding: var(--s2h) var(--s3);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-2xl);
 }
 
 .finding-anchor h5 {
@@ -337,8 +337,12 @@
 
 .finding-anchor p { margin: 0; max-width: 82ch; font-size: var(--text-base); line-height: 1.6; color: var(--foreground); }
 
-.finding-anchor.strong { background: var(--surface-1); }
-.finding-anchor.weak { background: var(--warn-soft); border-color: var(--warn-border); }
+.finding-anchor.weak {
+  padding: var(--s2h) var(--s3);
+  border: 1px solid var(--warn-border);
+  border-radius: var(--radius-2xl);
+  background: var(--warn-soft);
+}
 
 .anchor-basis { font-weight: 400; color: var(--subtle-foreground); }
 .anchor-warning { margin-top: var(--s1h) !important; font-weight: 500; color: var(--warn) !important; }

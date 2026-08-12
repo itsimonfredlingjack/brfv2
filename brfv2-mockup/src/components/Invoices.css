@@ -758,14 +758,22 @@
 /* The case                                                                  */
 /* ========================================================================= */
 
-/* The case uses the same paper + work rhythm as the queue. */
+/* The case uses the same paper + work rhythm as the queue.
+   No flex gap — the seams below state the page's one rhythm themselves.
+   Measured before this, the head read 44/14/48/38 from top to bottom, four
+   different distances for four seams of the same rank. Now the band's own
+   bottom margin (--s6) is the seam, repeated, with one wider break (--s10)
+   before the columns. */
 .invoice-case {
   display: flex;
   flex-direction: column;
   flex: 1;
   min-width: 0;
-  min-height: 0;
-  gap: var(--s3h);
+  /* The whole pane chain is viewport-height boxes whose content spills out
+     with visible overflow. Fine for painting — fatal for the recap strip,
+     whose sticky range is this element's own height. max-content makes the
+     case as tall as the case, so the strip can ride the full read. */
+  min-height: max-content;
 }
 
 /* `.case-topbar` and its two ghost controls stood here — a 32px height, a
@@ -776,6 +784,44 @@
    (See App.css: the band states the control once, and that is what stopped
    .watches-scan, .tasks-refresh and .invoices-read-in-btn from drifting to
    three different heights.) */
+
+/* Zero height in the flow: the strip pins to the scrollport's top edge and
+   paints over what slides under it, so it costs the resting page nothing.
+   See InvoiceCase.jsx for when it shows. */
+.case-recap {
+  position: sticky;
+  /* Minus the scroll pane's own top padding (.main-content pads --s6), so the
+     strip pins at the visible top edge instead of one padding-step below it,
+     with content scrolling past in the gap. */
+  top: calc(-1 * var(--s6));
+  z-index: 20;
+  height: 0;
+}
+
+.case-recap-bar {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s3h);
+  padding: var(--s2h) 0;
+  background: var(--background);
+  border-bottom: 1px solid var(--kant);
+  font-size: var(--text-base);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.14s ease;
+}
+
+.case-recap.visible .case-recap-bar { opacity: 1; }
+
+.case-recap-bar strong { font-weight: 600; }
+.case-recap-bar > span { color: var(--muted-foreground); }
+
+.case-recap-bar .case-recap-amount {
+  margin-left: auto;
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--foreground);
+}
 
 .case-banner {
   margin: 0 0 var(--s3);
@@ -805,7 +851,7 @@
    something you click. */
 .case-identity-basis {
   max-width: 92ch;
-  margin-top: var(--s1h);
+  margin: 0;
   color: var(--subtle-foreground);
   font-size: var(--text-sm);
   line-height: 1.55;
@@ -817,7 +863,7 @@
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: var(--s3);
-  margin: 0 0 var(--s3h);
+  margin: var(--s6) 0 0;
 }
 
 .case-status-card {
@@ -865,7 +911,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: var(--s3) var(--s10);
-  margin: var(--s5) 0 var(--s6);
+  margin: var(--s3) 0 0;
   padding: 0;
   list-style: none;
 }
@@ -927,6 +973,7 @@
   column-gap: var(--s14);
   row-gap: var(--s10);
   align-items: start;
+  margin-top: var(--s10);
 }
 
 @media (max-width: 1200px) {
@@ -946,7 +993,6 @@
    where an icon means a control, ten decorative ones in a column teach the
    reader to stop looking at icons. */
 .case-panel h4,
-.case-original h4,
 .case-review-status h4,
 .case-timeline h4 {
   margin-bottom: var(--s3);
@@ -954,6 +1000,12 @@
   font-weight: 600;
   color: var(--foreground);
 }
+
+/* The main sections — the original, and the two rounds of review — take the
+   product's section head (Avsnitt), because a case four windows deep with
+   thirteen headings in one weight has no main thing. The work column keeps its
+   working labels above; the imbalance is the hierarchy. */
+.case-column .avsnitt { margin-bottom: var(--s3); }
 
 .case-panel h5 {
   margin: var(--s3h) 0 var(--s1h);
@@ -1147,8 +1199,6 @@
 }
 
 /* ---- analysis ---- */
-
-.case-panel-head { display: flex; align-items: center; justify-content: space-between; gap: var(--s2h); }
 
 .case-history-note { margin-bottom: var(--s3); max-width: 88ch; font-size: var(--text-base); line-height: 1.6; }
 

@@ -65,10 +65,14 @@ _WS = re.compile(r"\s+")
 
 
 def money(value: Decimal | None, currency: str = "SEK") -> str:
-    """A Swedish amount. Local to this package so no private import is needed."""
+    """A Swedish amount. Local to this package so no private import is needed.
+
+    No-break spaces throughout: an amount is one word. With breaking spaces a
+    narrow value column in the UI set "1 450,00" and "SEK" on separate lines.
+    """
     if value is None:
         return "—"
-    return f"{value:,.2f} {currency}".replace(",", " ").replace(".", ",", 1)
+    return f"{value:,.2f}\u00a0{currency}".replace(",", "\u00a0").replace(".", ",", 1)
 
 
 def percent(old: Decimal, new: Decimal) -> str | None:

@@ -14,10 +14,12 @@
 export function formatAmount(value, currency = 'SEK') {
   if (value === null || value === undefined || value === '') return '—';
   const number = Number(value);
-  if (Number.isNaN(number)) return `${value} ${currency}`;
+  // No-break space before the currency: an amount is one word. A breaking
+  // space let a narrow value column set "1 450,00" and "SEK" on two lines.
+  if (Number.isNaN(number)) return `${value}\u00A0${currency}`;
   return `${number.toLocaleString('sv-SE', {
     minimumFractionDigits: 2, maximumFractionDigits: 2,
-  })} ${currency}`;
+  })}\u00A0${currency}`;
 }
 
 export default formatAmount;

@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   AlertTriangle,
   ArrowLeft,
@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 import { integrationsApi, invoicesApi } from '../api';
 import TraffMark from './TraffMark';
+import Avsnitt from './Avsnitt';
 import CreateTask from './CreateTask';
 import { formatAmount } from './money';
 import PdfPane from './PdfPane';
@@ -400,7 +401,7 @@ function OriginalPane({ brfId, documents, onOpenDocument }) {
   if (!chosen) {
     return (
       <div className="case-original empty">
-        <h4>Originalhandling</h4>
+        <Avsnitt namn="Originalhandling" />
         <p className="muted">
           Ingen originalfil är kopplad till ärendet. Fakturan är läst ur ekonomisystemet
           som strukturerade fält — fälten nedan är den läsningen, inte ett original.
@@ -413,7 +414,7 @@ function OriginalPane({ brfId, documents, onOpenDocument }) {
 
   return (
     <div className="case-original">
-      <h4>Originalhandling</h4>
+      <Avsnitt namn="Originalhandling" />
       {documents.length > 1 && (
         <div className="original-picker" role="tablist" aria-label="Handlingar">
           {documents.map((doc, i) => (
@@ -715,6 +716,27 @@ export default function InvoiceCase({
   // Superseded findings, by run id. Fetched when somebody asks for one and
   // kept, because the record is immutable — there is nothing to re-fetch.
   const [replaced, setReplaced] = useState({});
+  const bandRef = useRef(null);
+  const recapRef = useRef(null);
+
+  // The recap strip shows only while the band — which already answers "which
+  // invoice is this?" — is scrolled out of view. Observed against the actual
+  // scroll container, which is an ancestor pane, not the window.
+  useEffect(() => {
+    const band = bandRef.current;
+    const recap = recapRef.current;
+    if (!band || !recap || typeof IntersectionObserver === 'undefined') return undefined;
+    let scroller = band.parentElement;
+    while (scroller && !/(auto|scroll)/.test(getComputedStyle(scroller).overflowY)) {
+      scroller = scroller.parentElement;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => { recap.classList.toggle('visible', !entry.isIntersecting); },
+      { root: scroller || null },
+    );
+    observer.observe(band);
+    return () => observer.disconnect();
+  }, [data]);
 
   const refresh = useCallback(async () => {
     if (!brfId || !caseId) return;
@@ -785,6 +807,18 @@ export default function InvoiceCase({
 
   return (
     <div className="invoice-case">
+      {/* What invoice am I reading? The band answers it and then scrolls away,
+          on the one screen that runs four windows deep. This strip is the
+          band's answer held at the top edge — name, number, sum, nothing that
+          is not already on the page — and it hides while the band is visible.
+          aria-hidden: it repeats the h2 and the instrument verbatim. */}
+      <div className="case-recap" ref={recapRef} aria-hidden="true">
+        <div className="case-recap-bar">
+          <strong>{kase.supplier_name || 'Okänd leverantör'}</strong>
+          <span>Faktura {kase.invoice_number || '—'}</span>
+          <span className="case-recap-amount">{formatAmount(kase.total_amount, kase.currency)}</span>
+        </div>
+      </div>
       {/* The case opens on the app's band, like every other page.
        *
        * It used to open on its own furniture: a bare back link, then a
@@ -800,14 +834,14 @@ export default function InvoiceCase({
        * measuring cut for the same reason. The way back joins the actions row,
        * which is where this product has put "the way out of a pane" since
        * Inkommande and Anslutningar started swapping there. */}
-      <header className="page-header">
+      <header className="page-header" ref={bandRef}>
         <div className="page-header-text">
           <h2 className="page-title">{kase.supplier_name || 'Okänd leverantör'}</h2>
           <p className="page-header-sub">
             Faktura {kase.invoice_number || '—'}
-            {' · '}{kase.invoice_date || 'utan datum'}
-            {kase.due_date && ` · förfaller ${kase.due_date}`}
-            {kase.period_start && ` · period ${kase.period_start} – ${kase.period_end}`}
+            {' · '}{kase.invoice_date ? datum(kase.invoice_date) : 'utan datum'}
+            {kase.due_date && ` · förfaller ${datum(kase.due_date)}`}
+            {kase.period_start && ` · period ${datum(kase.period_start)} – ${datum(kase.period_end)}`}
           </p>
         </div>
 
@@ -980,9 +1014,7 @@ export default function InvoiceCase({
           )}
 
           <div className="case-panel">
-            <div className="case-panel-head">
-              <h4>Granskning mot föreningens dokument</h4>
-            </div>
+            <Avsnitt namn="Granskning mot föreningens dokument" />
             {documentFindings.length === 0 ? (
               <p className="muted">
                 Ingen granskning mot dokumenten har körts för den här fakturan.
@@ -1027,13 +1059,10 @@ export default function InvoiceCase({
           </div>
 
           <div className="case-panel">
-            <div className="case-panel-head">
-              <h4>Jämfört med föreningens tidigare fakturor</h4>
-            </div>
-            <p className="muted case-history-note">
+            <Avsnitt namn="Jämfört med föreningens tidigare fakturor">
               De här fynden bygger på fakturor föreningen redan läst in — inte på ett
               dokument. Därför saknar de citat, och det är avsiktligt.
-            </p>
+            </Avsnitt>
             {historyFindings.length === 0 ? (
               <p className="muted">Ingen historikjämförelse har körts ännu.</p>
             ) : historyFindings.map((finding) => (

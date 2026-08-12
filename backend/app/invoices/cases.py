@@ -501,11 +501,23 @@ def findings_for_invoice(store: Store, invoice_id: str) -> list[ReviewFinding]:
     return [f for f in store.integrations.list_findings() if f.invoice_id == invoice_id]
 
 
+def _klipp(text: str, limit: int) -> str:
+    """A summary is a sentence, not a buffer: cut on a word and say so.
+
+    A plain ``[:160]`` ended timeline entries mid-word ("... så slutdatum
+    finn") with nothing to say the sentence continues.
+    """
+    text = text or ""
+    if len(text) <= limit:
+        return text
+    return text[:limit].rsplit(" ", 1)[0].rstrip(" ,;:") + "…"
+
+
 def _change_detail(finding: ReviewFinding) -> str:
     for fact in finding.verified_facts:
         if fact.label == "Förändring":
             return fact.value
-    return finding.suggestion[:120]
+    return _klipp(finding.suggestion, 120)
 
 
 def signals_for(findings: list[ReviewFinding]) -> list[CaseSignal]:
@@ -534,7 +546,7 @@ def signals_for(findings: list[ReviewFinding]) -> list[CaseSignal]:
 
     for f in active:
         if f.finding_type == "invoice_possible_duplicate":
-            add("possible_duplicate", f.suggestion[:160], f.id)
+            add("possible_duplicate", _klipp(f.suggestion, 160), f.id)
         elif f.finding_type == "invoice_without_contract":
             add(
                 "missing_contract",
@@ -545,9 +557,9 @@ def signals_for(findings: list[ReviewFinding]) -> list[CaseSignal]:
         elif f.finding_type == "invoice_previous_comparison" and f.verdict == "possible_deviation":
             add("price_change", _change_detail(f), f.id)
         elif f.finding_type == "invoice_new_line":
-            add("new_line", f.suggestion[:160], f.id)
+            add("new_line", _klipp(f.suggestion, 160), f.id)
         elif f.finding_type == "invoice_credit_relation":
-            add("credit_relation", f.suggestion[:160], f.id)
+            add("credit_relation", _klipp(f.suggestion, 160), f.id)
         if f.alias_proposal is not None:
             add(
                 "unresolved_supplier",
@@ -666,7 +678,7 @@ def analyse_case(store: Store, case_id: str) -> InvoiceCase:
             _machine_event(
                 "finding_recorded",
                 at=at,
-                summary=f"{f.verdict_label}: {f.suggestion[:160]}",
+                summary=f"{f.verdict_label}: {_klipp(f.suggestion, 160)}",
                 ref_id=f.id,
                 by=f.suggested_by or ENGINE,
                 dedupe_key="finding:"
@@ -785,7 +797,7 @@ def comment(store: Store, case_id: str, *, text: str, user_id: str) -> InvoiceCa
             update={
                 "timeline": [
                     *case.timeline,
-                    _human_event("commented", by=user_id, summary=said[:160], note=said),
+                    _human_event("commented", by=user_id, summary=_klipp(said, 160), note=said),
                 ]
             }
         )

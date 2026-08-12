@@ -485,6 +485,12 @@ class AnalysisRun(BaseModel):
 # board that meets weekly sees it once, short enough that it means something.
 DUE_SOON_DAYS = 7
 
+# Month names as a Swedish sentence abbreviates them (same forms the UI's own
+# date formatting produces), for the one place this module writes a date into
+# prose rather than into a field.
+MANADER = ("jan.", "feb.", "mars", "apr.", "maj", "juni",
+           "juli", "aug.", "sep.", "okt.", "nov.", "dec.")
+
 
 class InvoiceCase(BaseModel):
     """One invoice, as a case somebody works on."""
@@ -546,6 +552,21 @@ class InvoiceCase(BaseModel):
         due = parse_iso(self.due_date or "")
         return (due - today).days if due else None
 
+    def _due_display(self, today: date) -> str:
+        """The due date as a person says it — "5 mars", not "2026-03-05".
+
+        The queue's chips already write dates this way; a signal sentence with
+        a machine timestamp in the middle read as a log line. The year comes
+        back only when it is not this year, because then it is the part that
+        matters.
+        """
+        due = parse_iso(self.due_date or "")
+        if due is None:
+            return self.due_date or "—"
+        namn = MANADER[due.month - 1]
+        ar = "" if due.year == today.year else f" {due.year}"
+        return f"{due.day} {namn}{ar}"
+
     def overdue(self, today: date) -> bool:
         """Past its date and nobody has finished looking at it.
 
@@ -578,14 +599,14 @@ class InvoiceCase(BaseModel):
                 out.append(
                     CaseSignal(
                         kind="overdue",
-                        detail=f"Förföll {self.due_date} — {abs(left)} dagar sedan.",
+                        detail=f"Förföll {self._due_display(today)} — {abs(left)} dagar sedan.",
                     )
                 )
             elif left <= DUE_SOON_DAYS:
                 out.append(
                     CaseSignal(
                         kind="due_soon",
-                        detail=f"Förfaller {self.due_date} om {left} dagar.",
+                        detail=f"Förfaller {self._due_display(today)} om {left} dagar.",
                     )
                 )
         if self.review_status == "question_sent":

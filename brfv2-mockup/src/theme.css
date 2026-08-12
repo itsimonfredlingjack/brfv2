@@ -1042,6 +1042,18 @@ code, pre, kbd, samp { font-family: var(--font-mono); }
 .ui-btn--primary { background: var(--primary); color: var(--primary-foreground); }
 .ui-btn--primary:hover { background: var(--primary-action-hover); }
 
+/* A primary with nothing to do does not keep its ink. Half-opacity on a filled
+   ink pill renders a solid grey slab — three of those met the reader on the
+   case view before anything had been touched, reading as broken rather than as
+   waiting. The inert surface is what "nothing to save yet" looks like; the
+   button earns its fill the moment there is something to send. */
+.ui-btn--primary:disabled,
+.ui-btn--primary[aria-disabled='true'] {
+  background: var(--skal-pressed);
+  color: var(--ink-subtle);
+  opacity: 1;
+}
+
 .ui-btn--outline { border-color: var(--input); }
 .ui-btn--outline:hover { background: var(--surface-accent); }
 

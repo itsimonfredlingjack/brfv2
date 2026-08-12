@@ -294,7 +294,7 @@ class TestPreviousComparison:
         finding = compare.previous_comparison(new, [old, new])
 
         assert finding.verdict == "possible_deviation"
-        assert "4 625,00 SEK" in finding.suggestion
+        assert "4\u00a0625,00\u00a0SEK" in finding.suggestion
         assert "+74,0 %" in finding.suggestion
         # The quantity effect is explained by the invoice; the price effect is not.
         assert "Fakturan förklarar själv en del av det" in finding.suggestion
@@ -302,9 +302,9 @@ class TestPreviousComparison:
         assert "Det här förklarar den inte" in finding.suggestion
         assert "à-priset" in finding.suggestion
         # 6 × (1450 − 1250) = 1 200 of the difference is the price rise.
-        assert "1 200,00 SEK av skillnaden" in finding.suggestion
+        assert "1\u00a0200,00\u00a0SEK av skillnaden" in finding.suggestion
         # 1250 × (6 − 4) = 2 500 is the quantity rise.
-        assert "2 500,00 SEK av skillnaden" in finding.suggestion
+        assert "2\u00a0500,00\u00a0SEK av skillnaden" in finding.suggestion
 
     def test_it_never_claims_the_rise_is_wrong(self):
         old = snapshot(external_ref="A", number="1", invoice_date="2026-01-01", total="1000.00")
