@@ -98,7 +98,7 @@ function Setup({ state, onProvisioned }) {
   if (step === 'model') {
     return (
       <div className="setup-screen">
-        <div className="setup-panel glass-panel">
+        <div className="setup-panel">
           <Lockup />
           <h1 className="setup-title">Föreningen är skapad</h1>
           <p className="setup-subtitle">
@@ -108,9 +108,10 @@ function Setup({ state, onProvisioned }) {
           </p>
 
           <div className="setup-form">
-            <label className="setup-field">
+            <label className="ui-field">
               <span>Modelltjänstens adress</span>
               <input
+                className="ui-input"
                 type="url"
                 autoFocus
                 placeholder="http://127.0.0.1:8000/v1"
@@ -118,7 +119,7 @@ function Setup({ state, onProvisioned }) {
                 onChange={(e) => setBaseUrl(e.target.value)}
                 disabled={busy}
               />
-              <small>
+              <small className="ui-hint">
                 OpenAI-kompatibel adress på den här datorn (<code>localhost</code>,
                 {' '}<code>127.0.0.0/8</code> — till exempel en SSH-forward) eller en
                 självhostad tjänst på ditt eget privata nät över https. Domännamn
@@ -126,13 +127,14 @@ function Setup({ state, onProvisioned }) {
               </small>
             </label>
             <div className="setup-row">
-              <label className="setup-field">
+              <label className="ui-field">
                 <span>Modell</span>
-                <input value={model} onChange={(e) => setModel(e.target.value)} disabled={busy} />
+                <input className="ui-input" value={model} onChange={(e) => setModel(e.target.value)} disabled={busy} />
               </label>
-              <label className="setup-field">
+              <label className="ui-field">
                 <span>Etikett (valfri)</span>
                 <input
+                  className="ui-input"
                   placeholder="agenntserver"
                   value={label}
                   onChange={(e) => setLabel(e.target.value)}
@@ -152,7 +154,7 @@ function Setup({ state, onProvisioned }) {
             <div className="setup-actions">
               <button
                 type="button"
-                className="setup-secondary"
+                className="ui-btn ui-btn--outline ui-btn--lg"
                 onClick={finish}
                 disabled={busy}
               >
@@ -160,7 +162,7 @@ function Setup({ state, onProvisioned }) {
               </button>
               <button
                 type="button"
-                className="setup-submit"
+                className="ui-btn ui-btn--primary ui-btn--lg"
                 onClick={async () => {
                   const result = await saveModelRuntime();
                   if (result?.ok) finish();
@@ -183,7 +185,7 @@ function Setup({ state, onProvisioned }) {
 
   return (
     <div className="setup-screen">
-      <div className="setup-panel glass-panel">
+      <div className="setup-panel">
         <Lockup />
         <h1 className="setup-title">Välkommen</h1>
         <p className="setup-subtitle">
@@ -192,9 +194,10 @@ function Setup({ state, onProvisioned }) {
         </p>
 
         <form className="setup-form" onSubmit={submitAccount}>
-          <label className="setup-field">
+          <label className="ui-field">
             <span>Föreningens namn</span>
             <input
+              className="ui-input"
               autoFocus
               required
               placeholder="Brf Gjutformen 12"
@@ -203,9 +206,10 @@ function Setup({ state, onProvisioned }) {
               disabled={busy}
             />
           </label>
-          <label className="setup-field">
+          <label className="ui-field">
             <span>Ditt namn</span>
             <input
+              className="ui-input"
               placeholder="Maria Andersson"
               autoComplete="name"
               value={name}
@@ -213,9 +217,10 @@ function Setup({ state, onProvisioned }) {
               disabled={busy}
             />
           </label>
-          <label className="setup-field">
+          <label className="ui-field">
             <span>E-postadress</span>
             <input
+              className="ui-input"
               type="email"
               required
               autoComplete="username"
@@ -226,9 +231,10 @@ function Setup({ state, onProvisioned }) {
             />
           </label>
           <div className="setup-row">
-            <label className="setup-field">
+            <label className="ui-field">
               <span>Lösenord</span>
               <input
+                className="ui-input"
                 type="password"
                 required
                 minLength={MIN_PASSWORD_LENGTH}
@@ -237,13 +243,14 @@ function Setup({ state, onProvisioned }) {
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={busy}
               />
-              <small className={passwordTooShort ? 'warn' : undefined}>
+              <small className={passwordTooShort ? 'ui-hint warn' : 'ui-hint'}>
                 Minst {MIN_PASSWORD_LENGTH} tecken.
               </small>
             </label>
-            <label className="setup-field">
+            <label className="ui-field">
               <span>Upprepa lösenord</span>
               <input
+                className="ui-input"
                 type="password"
                 required
                 autoComplete="new-password"
@@ -251,7 +258,7 @@ function Setup({ state, onProvisioned }) {
                 onChange={(e) => setRepeat(e.target.value)}
                 disabled={busy}
               />
-              {passwordMismatch && <small className="warn">Lösenorden är inte lika.</small>}
+              {passwordMismatch && <small className="ui-hint warn">Lösenorden är inte lika.</small>}
             </label>
           </div>
 
@@ -259,7 +266,7 @@ function Setup({ state, onProvisioned }) {
 
           <button
             type="submit"
-            className="setup-submit"
+            className="ui-btn ui-btn--primary ui-btn--lg"
             disabled={busy || passwordTooShort || passwordMismatch}
           >
             {busy ? (<><Loader2 size={16} className="spin" /> Skapar…</>) : 'Skapa förening'}

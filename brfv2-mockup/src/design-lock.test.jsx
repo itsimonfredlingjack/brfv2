@@ -620,7 +620,6 @@ const BARE_BUTTON_RULES = new Set([
   'App.css :: .extraction-actions button',
   'App.css :: .mobile-qa-segmented-control button',
   'App.css :: .report-menu button',
-  'components/DesktopSettings.css :: .ds-backup-actions button',
   'components/Invoices.css :: .composition-legend button',
   'components/Invoices.css :: .composition-segment button',
   'components/Invoices.css :: .invoices-available button',

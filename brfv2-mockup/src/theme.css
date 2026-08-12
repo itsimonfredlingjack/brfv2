@@ -1090,6 +1090,13 @@ code, pre, kbd, samp { font-family: var(--font-mono); }
   color: var(--foreground);
 }
 
+/* --h-lg's own comment names its use: "the one action on an empty screen;
+   login". The arrival screens are that screen, and each was carrying a
+   private 40px button between the system's 36 and 44 — the variant belongs
+   here so no screen has to invent that number again. */
+.ui-btn--lg { height: var(--h-lg); padding: 0 var(--s5); }
+.ui-btn--lg > svg { width: 16px; height: 16px; }
+
 .ui-btn--sm { height: 30px; padding: 0 var(--s2h); font-size: var(--text-sm); }
 .ui-btn--sm > svg { width: 14px; height: 14px; }
 .ui-btn--xs { height: 24px; padding: 0 var(--s2h); font-size: var(--text-xs); }

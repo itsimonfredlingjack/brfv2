@@ -8,6 +8,11 @@
   width: 100vw;
   display: grid;
   grid-template-columns: minmax(380px, 40%) 1fr;
+  /* Optisk mitt. Båda kolumnerna centrerade sina block geometriskt, och ett
+     block mitt i en hög ruta läses som hängande lågt. Samma mått på båda
+     sidor, så varumärket och formuläret behåller en gemensam axel. Av skalan
+     med avsikt: lyftet följer fönstrets höjd, inte typografins rytm. */
+  --login-optisk-lyft: 8vh;
 }
 
 /* The ink panel, written for ink text on paper.
@@ -32,6 +37,7 @@
   align-items: center;
   justify-content: center;
   padding: var(--s12);
+  padding-bottom: calc(var(--s12) + var(--login-optisk-lyft));
 }
 
 .login-brand-inner { max-width: 340px; }
@@ -76,6 +82,7 @@
   align-items: center;
   justify-content: center;
   padding: var(--s6);
+  padding-bottom: calc(var(--s6) + var(--login-optisk-lyft));
   background: var(--skal);
 }
 
@@ -122,40 +129,10 @@
   gap: var(--s4);
 }
 
-.login-field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s1h);
-  text-align: left;
-}
-
-.login-field span {
-  font-size: var(--text-base);
-  font-weight: 500;
-  color: var(--muted-foreground);
-}
-
-.login-field input {
-  height: 40px;
-  padding: 0 var(--s3h);
-  border: 1px solid var(--input);
-  border-radius: var(--radius-2xl);
-  background: var(--field);
-  color: var(--foreground);
-  font-size: var(--text-md);
-  outline: none;
-  transition: border-color 0.14s ease, box-shadow 0.14s ease;
-}
-
-.login-field input::placeholder {
-  color: var(--subtle-foreground);
-}
-
-.login-field input:focus {
-  border-color: var(--ring);
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
-}
+/* Fields and the submit are the primitives (.ui-field/.ui-input/.ui-btn).
+   They used to be private copies at a height of their own — 40px, sitting
+   between the system's 36 and 44 — which is exactly how thirteen control
+   heights happened the first time. */
 
 .login-error {
   display: flex;
@@ -170,35 +147,10 @@
   text-align: left;
 }
 
-.login-submit {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--s2);
-  height: 40px;
+/* The submit stretches with the form column and keeps the small nudge that
+   separates the action from the last field. */
+.login-form > .ui-btn {
   margin-top: var(--s1);
-  border: none;
-  border-radius: var(--radius-2xl);
-  background: var(--primary);
-  color: var(--primary-foreground);
-  font-size: var(--text-md);
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.14s ease;
-}
-
-.login-submit:hover:not(:disabled) {
-  background: var(--primary-action-hover);
-}
-
-.login-submit:disabled {
-  opacity: 0.6;
-  cursor: default;
-}
-
-/* App.css tints .spin with a color — on the light button, inherit instead. */
-.login-submit .spin {
-  color: inherit;
 }
 
 /* Two credentials, so they are set in the cut this product gives to anything

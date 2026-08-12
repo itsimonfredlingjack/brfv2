@@ -61,9 +61,10 @@ function Login({ onLoggedIn, modelStatus = null }) {
           {modelStatus && <div className="login-model-status">{modelStatus}</div>}
 
           <form className="login-form" onSubmit={handleSubmit}>
-            <label className="login-field">
+            <label className="ui-field">
               <span>E-postadress</span>
               <input
+                className="ui-input"
                 type="email"
                 autoComplete="email"
                 autoFocus
@@ -74,13 +75,16 @@ function Login({ onLoggedIn, modelStatus = null }) {
                 disabled={busy}
               />
             </label>
-            <label className="login-field">
+            <label className="ui-field">
               <span>Lösenord</span>
+              {/* No dot placeholder: eight dots in an empty password field are
+                  indistinguishable from a filled one — it read as "someone is
+                  already signed in here". An empty field asks; dots answer. */}
               <input
+                className="ui-input"
                 type="password"
                 autoComplete="current-password"
                 required
-                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 disabled={busy}
@@ -93,17 +97,22 @@ function Login({ onLoggedIn, modelStatus = null }) {
               </div>
             )}
 
-            <button type="submit" className="login-submit" disabled={busy}>
+            <button type="submit" className="ui-btn ui-btn--primary ui-btn--lg" disabled={busy}>
               {busy ? (<><Loader2 size={16} className="spin" /> Loggar in…</>) : 'Logga in'}
             </button>
           </form>
 
-          {/* DEMO.md's own premise is "runnable without Simon in the room" —
-              gating this to dev builds only worked against that in exactly
-              the pilot build people actually use to try the demo. */}
-          <div className="login-demo-hint">
-            Demo: anna@gjutformen12.se / gjutformen-demo-2026
-          </div>
+          {/* Dev builds only. This used to ship unconditionally so DEMO.md's
+              "runnable without Simon in the room" held in the built app too —
+              but the same built app is what a pilot board signs into, and a
+              working credential printed under their login is wrong there in a
+              way no demo convenience justifies. Demo rigs run `vite dev`
+              (import.meta.env.DEV), so the hint still shows where it helps. */}
+          {import.meta.env.DEV && (
+            <div className="login-demo-hint">
+              Demo: anna@gjutformen12.se / gjutformen-demo-2026
+            </div>
+          )}
         </div>
       </div>
     </div>

@@ -15,23 +15,30 @@
   min-height: 100vh;
   width: 100vw;
   display: flex;
-  align-items: center;
   justify-content: center;
   padding: var(--s6);
   overflow-y: auto;
   background: var(--background);
 }
 
+/* Not a card, for the same reason login's form is not one: a box drawn around
+   the only thing on the screen distinguishes it from nothing. The lifted
+   hairline panel this was — the one --shadow-md on an elevation system whose
+   whole vocabulary is a hairline and an inverted surface — arrived from the
+   dark shell with the rest of the screen. The paper is the surface; the form
+   stands on it.
+
+   Vertical centring is the panel's auto margins rather than align-items on
+   the screen: a centred flex child taller than a short window clips its top
+   above the scroll, auto margins collapse to zero and keep it reachable. */
 .setup-panel {
   width: 100%;
   max-width: 540px;
-  padding: var(--s10) var(--s10) var(--s8);
+  margin-block: auto;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  background: var(--card);
-  box-shadow: var(--shadow-md);
 }
 
 /* §05 Lockup, primary horizontal. The gap is the diameter of the core. */
@@ -84,62 +91,24 @@
   gap: var(--s3h);
 }
 
-.setup-row .setup-field {
+/* Fields are the primitives (.ui-field/.ui-input/.ui-hint); the rules below
+   only say what this screen composes, never what a field looks like. */
+.setup-row .ui-field {
   flex: 1 1 0;
-  min-width: 0;
 }
 
-.setup-field {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s1h);
+.setup-form .ui-field {
   text-align: left;
 }
 
-/* Sentence case, not shouted small caps: a field label explains, and §07 puts
-   what explains in the sans at ordinary size. */
-.setup-field > span {
-  font-size: var(--text-base);
-  font-weight: 500;
-  color: var(--foreground);
-}
-
-.setup-field input {
-  width: 100%;
-  padding: var(--s2h) var(--s3h);
-  background: var(--field);
-  border: 1px solid var(--input);
-  border-radius: var(--radius-block);
-  font-size: var(--text-md);
-  font-family: inherit;
-  color: var(--foreground);
-  outline: none;
-  transition: border-color 0.14s ease, box-shadow 0.14s ease;
-}
-
-.setup-field input::placeholder {
-  color: var(--subtle-foreground);
-}
-
-.setup-field input:focus-visible {
-  border-color: var(--ring);
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
-}
-
-.setup-field small {
-  font-size: var(--text-sm);
-  line-height: 1.5;
-  color: var(--muted-foreground);
-}
-
-.setup-field small code {
-  font-family: var(--font-mono);
+/* A code fragment inside a hint steps down a size, or the mono reads wider
+   than the prose around it. */
+.setup-form .ui-hint code {
   font-size: var(--text-dense);
 }
 
 /* A rule that has not been met yet: no support for what was typed. */
-.setup-field small.warn {
+.setup-form .ui-hint.warn {
   color: var(--warn);
   font-weight: 500;
 }
@@ -176,72 +145,22 @@
   color: var(--foreground);
 }
 
+/* Both actions are the button primitive; what this screen adds is layout —
+   the primary carries the row, the escape hatch keeps its natural width, and
+   the small nudge separates the action from the last field. */
 .setup-actions {
   display: flex;
   gap: var(--s2h);
   margin-top: var(--s0h);
 }
 
-.setup-submit,
-.setup-secondary {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--s2);
-  height: 40px;
-  padding: 0 var(--s5);
-  border-radius: var(--radius-2xl);
-  font-size: var(--text-md);
-  font-family: inherit;
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.14s ease, border-color 0.14s ease, color 0.14s ease;
-  flex: 1 1 0;
+.setup-actions .ui-btn--primary {
+  flex: 1 1 auto;
 }
 
-.setup-submit {
-  background: var(--primary);
-  color: var(--primary-foreground);
-  border: 1px solid transparent;
+.setup-form > .ui-btn,
+.setup-actions .ui-btn {
   margin-top: var(--s1);
-}
-
-/* The button does not grow under the pointer. A control that changes size is a
-   control that moves the thing you were about to click. */
-.setup-submit:hover:not(:disabled) {
-  background: var(--primary-action-hover);
-}
-
-.setup-submit:focus-visible,
-.setup-secondary:focus-visible {
-  outline: none;
-  border-color: var(--ring);
-  outline: 2px solid var(--ring);
-  outline-offset: 2px;
-}
-
-.setup-submit:disabled,
-.setup-secondary:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.setup-secondary {
-  background: var(--field);
-  color: var(--muted-foreground);
-  border: 1px solid var(--input);
-  margin-top: var(--s1);
-  flex: 0 0 auto;
-  padding-inline: var(--s6);
-}
-
-.setup-secondary:hover:not(:disabled) {
-  background: var(--surface-3);
-  color: var(--foreground);
-}
-
-.setup-submit .spin {
-  color: inherit;
 }
 
 .setup-note {
@@ -278,7 +197,6 @@
 }
 
 @media (max-width: 560px) {
-  .setup-panel { padding: var(--s7) var(--s5) var(--s6); }
   .setup-row { flex-direction: column; }
   .setup-lockup-name { font-size: var(--text-title-sm); }
 }
