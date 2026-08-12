@@ -246,16 +246,16 @@ def _propose_notice(words: list[str]) -> list[_Proposal]:
         due = deadline.resolve()
         renews = _near(deadline.span, words, RENEWAL_WORDS)
         title = (
-            f"Säg upp eller ompröva avtalet senast {due}"
+            f"Säg upp eller ompröva avtalet senast {terms_mod.svenskt_datum(due)}"
             if renews
-            else f"Uppsägning måste ske senast {due}"
+            else f"Uppsägning måste ske senast {terms_mod.svenskt_datum(due)}"
         )
         out.append(
             _Proposal(
                 kind="notice_deadline",
                 title=title,
                 due=due,
-                derivation=f"{deadline.anchor_iso} minus {deadline.human().split(' före ')[0]}",
+                derivation=f"{terms_mod.svenskt_datum(deadline.anchor_iso)} minus {deadline.human().split(' före ')[0]}",
                 span=deadline.span,
             )
         )
@@ -306,10 +306,10 @@ def _propose_notice_from_period(words: list[str]) -> list[_Proposal]:
         out.append(
             _Proposal(
                 kind="notice_deadline",
-                title=f"Säg upp eller ompröva avtalet senast {due}",
+                title=f"Säg upp eller ompröva avtalet senast {terms_mod.svenskt_datum(due)}",
                 due=due,
                 derivation=(
-                    f"avtalstidens utgång {period.end_iso} enligt citerad avtalstid "
+                    f"avtalstidens utgång {terms_mod.svenskt_datum(period.end_iso)} enligt citerad avtalstid "
                     f"{period.human()}, minus {notice.count} {unit}"
                 ),
                 span=period.span.merged_with(terms_mod.Span(notice.span.start, end_word_at)),
@@ -334,7 +334,7 @@ def _propose_expiry(words: list[str], already: set[str]) -> list[_Proposal]:
         out.append(
             _Proposal(
                 kind="expiry",
-                title=f"Avtalet upphör {period.end_iso}",
+                title=f"Avtalet upphör {terms_mod.svenskt_datum(period.end_iso)}",
                 due=period.end_iso,
                 derivation=f"citerad avtalstid {period.human()}",
                 span=period.span,
@@ -353,9 +353,9 @@ def _propose_warranty(words: list[str]) -> list[_Proposal]:
         out.append(
             _Proposal(
                 kind="warranty",
-                title=f"Garantitiden går ut {due}",
+                title=f"Garantitiden går ut {terms_mod.svenskt_datum(due)}",
                 due=due,
-                derivation=f"{deadline.anchor_iso} plus {deadline.human().split(' efter ')[0]}",
+                derivation=f"{terms_mod.svenskt_datum(deadline.anchor_iso)} plus {deadline.human().split(' efter ')[0]}",
                 span=deadline.span,
             )
         )
@@ -386,15 +386,16 @@ def _propose_inspection(words: list[str]) -> list[_Proposal]:
             _Proposal(
                 kind="inspection",
                 title=(
-                    f"Besiktning eller kontroll senast {due}"
+                    f"Besiktning eller kontroll senast {terms_mod.svenskt_datum(due)}"
                     if cycle == "none"
-                    else f"Återkommande kontroll, nästa gång {due}"
+                    else f"Återkommande kontroll, nästa gång {terms_mod.svenskt_datum(due)}"
                 ),
                 due=due,
                 derivation=(
-                    f"citerat datum {hit.iso}"
+                    f"citerat datum {terms_mod.svenskt_datum(hit.iso)}"
                     if cycle == "none"
-                    else f"{hit.iso} plus ett intervall ({cycle})"
+                    else f"{terms_mod.svenskt_datum(hit.iso)} plus ett intervall "
+                    f"({terms_mod.RECURRENCE_HUMAN[cycle]})"
                 ),
                 span=hit.span,
                 recurrence=cycle,
@@ -422,9 +423,9 @@ def _propose_recurring_duty(words: list[str]) -> list[_Proposal]:
         out.append(
             _Proposal(
                 kind="recurring_obligation",
-                title=f"Återkommande skyldighet, nästa gång {due}",
+                title=f"Återkommande skyldighet, nästa gång {terms_mod.svenskt_datum(due)}",
                 due=due,
-                derivation=f"{anchor.iso} plus ett intervall ({recurrence.every})",
+                derivation=f"{terms_mod.svenskt_datum(anchor.iso)} plus ett intervall ({recurrence.human()})",
                 span=recurrence.span.merged_with(anchor.span),
                 recurrence=recurrence.every,  # type: ignore[arg-type]
             )
@@ -447,10 +448,13 @@ def _unresolved(words: list[str], dated_spans: list[terms_mod.Span]) -> list[tup
     for notice in terms_mod.scan_notice_periods(words):
         if covered(notice.span):
             continue
+        # notice.human() ends in the word "uppsägningstid" itself, so using it
+        # after the label said the same word twice in a row.
+        enhet = {"month": "månader", "year": "år", "week": "veckor"}[notice.unit]
         out.append(
             (
                 notice.span,
-                f"Uppsägningstid: {notice.human()}",
+                f"Uppsägningstid: {notice.count} {enhet}",
                 "Klausulen anger hur lång uppsägningstiden är, men inte vilket datum den "
                 "räknas från. Fyll i avtalets slutdatum för att få en bevakning.",
             )

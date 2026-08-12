@@ -216,7 +216,7 @@ describe('a proposal', () => {
     // The arithmetic reads as a sentence on the card rather than as a row in a
     // definition list, so it is asserted where a reader actually meets it.
     expect(within(card).getByText(/ur 2026-12-31 minus 3 månader/)).toBeInTheDocument();
-    expect(within(card).getByText('2026-09-30')).toBeInTheDocument();
+    expect(within(card).getByText('30 sep.')).toBeInTheDocument();
     expect(within(card).getByText(/Snöröjningsavtal 2026\.pdf · s\. 3/)).toBeInTheDocument();
     expect(within(card).getByText(CITATION.quote)).toBeInTheDocument();
 
@@ -352,9 +352,9 @@ describe('the board', () => {
     expect(within(card).getByText('ej utsedd')).toBeInTheDocument();
     expect(within(card).getByText('ansvarig')).toBeInTheDocument();
     // The rest of what a board has to know to act on it.
-    expect(within(card).getByText('2026-08-20')).toBeInTheDocument();
+    expect(within(card).getByText('20 aug.')).toBeInTheDocument();
     expect(within(card).getByText(/om 19 dagar/)).toBeInTheDocument();
-    expect(within(card).getByText(/2026-07-21, 30 d före/)).toBeInTheDocument();
+    expect(within(card).getByText(/21 juli, 30 d före/)).toBeInTheDocument();
     expect(within(card).getAllByText(/Snöröjningsavtal 2026\.pdf/).length).toBeGreaterThan(0);
     expect(within(card).getByText('Avtalet upphör')).toBeInTheDocument();
   });
@@ -366,8 +366,8 @@ describe('the board', () => {
 
     expect(within(card).getByText(/Motorn räknade fram/)).toBeInTheDocument();
     // The engine's arithmetic, and the date that is actually in force.
-    expect(within(card).getByText('2026-10-31')).toBeInTheDocument();
-    expect(within(card).getAllByText('2026-11-15').length).toBeGreaterThan(0);
+    expect(within(card).getByText('31 okt.')).toBeInTheDocument();
+    expect(within(card).getAllByText('15 nov.').length).toBeGreaterThan(0);
     expect(within(card).getByText(/ur 2021-10-31 plus 5 år/)).toBeInTheDocument();
     expect(within(card).getByText(/En människa har flyttat datumet/)).toBeInTheDocument();
   });
@@ -392,7 +392,7 @@ describe('the board', () => {
     await waitFor(() => expect(watchesApi.decide)
       .toHaveBeenCalledWith('brf-a', 'w4', { status: 'done' }));
     expect(await screen.findByRole('status')).toHaveTextContent(
-      /Avklarad\. Nästa gång 2029-12-12 — den turen är redan godkänd/,
+      /Avklarad\. Nästa gång 12 dec\. 2029 — den turen är redan godkänd/,
     );
   });
 

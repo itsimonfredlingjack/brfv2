@@ -242,6 +242,32 @@ def parse_iso(value: str) -> date | None:
         return None
 
 
+# Month names as a Swedish sentence abbreviates them — the same forms the UI's
+# own date formatting produces, so backend prose and frontend chrome cannot
+# read as two dialects.
+MANADER = ("jan.", "feb.", "mars", "apr.", "maj", "juni",
+           "juli", "aug.", "sep.", "okt.", "nov.", "dec.")
+
+
+def svenskt_datum(day: date | str | None, *, idag: date | None = None) -> str:
+    """A date as a person says it: "31 maj 2029", never "2029-05-31".
+
+    ISO stays in the machine fields; this is for prose — titles, derivations,
+    signal sentences. Pass *idag* to drop the year when it is the current one
+    (what a register column wants); leave it out where the year always
+    matters, as in a deadline years ahead.
+    """
+    if isinstance(day, str):
+        parsed = parse_iso(day)
+        if parsed is None:
+            return day
+        day = parsed
+    if day is None:
+        return "—"
+    ar = "" if idag is not None and day.year == idag.year else f" {day.year}"
+    return f"{day.day} {MANADER[day.month - 1]}{ar}"
+
+
 @dataclass(frozen=True)
 class DateHit:
     span: Span
@@ -542,19 +568,25 @@ class RelativeDeadline:
         return f"{self.count} {unit} {direction} {self.anchor_iso}"
 
 
+# One place for how an interval is said in Swedish — derive.py writes these
+# into proposal prose, so an inline dict here would be a second dialect
+# ("triennial") leaking into a board's reading the day someone forgets one.
+RECURRENCE_HUMAN = {
+    "monthly": "varje månad",
+    "quarterly": "varje kvartal",
+    "yearly": "varje år",
+    "biennial": "vartannat år",
+    "triennial": "vart tredje år",
+}
+
+
 @dataclass(frozen=True)
 class RecurrenceTerm:
     span: Span
     every: str  # "monthly" | "quarterly" | "yearly" | "biennial" | "triennial"
 
     def human(self) -> str:
-        return {
-            "monthly": "varje månad",
-            "quarterly": "varje kvartal",
-            "yearly": "varje år",
-            "biennial": "vartannat år",
-            "triennial": "vart tredje år",
-        }[self.every]
+        return RECURRENCE_HUMAN[self.every]
 
 
 # Words that say a date is the far end of a countdown rather than the deadline

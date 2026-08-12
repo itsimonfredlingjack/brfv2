@@ -127,7 +127,7 @@ function Proposal({ watch, busy, canDecide, onApprove, onDismiss, onDelete, onOp
     <Arendekort
       tillstand={{ form: 'oprovad', text: 'förslag — ingen bevakning ännu' }}
       namn={watch.title}
-      figur={watch.derived_due_date}
+      figur={datum(watch.derived_due_date)}
       fakta={[
         { etikett: 'slag', varde: watch.kind_label },
         { etikett: 'påminner', varde: `${watch.remind_lead_days} d före`, matt: true },
@@ -204,7 +204,7 @@ function Proposal({ watch, busy, canDecide, onApprove, onDismiss, onDelete, onOp
               the old card asking a board to defend itself before it had
               agreed to anything. */}
           <details className="watch-dismiss-wrap">
-            <summary>Avfärda eller ta bort …</summary>
+            <summary>Avfärda eller ta bort…</summary>
             <div className="watch-dismiss">
               <label>
                 <span>Varför avfärdas den? (krävs)</span>
@@ -263,12 +263,12 @@ function BoardWatch({
     <Arendekort
       tillstand={{ form: 'belagd', text: watch.status_label }}
       namn={watch.title}
-      figur={watch.due_date}
+      figur={datum(watch.due_date)}
       fakta={[
         { etikett: 'slag', varde: watch.kind_label },
         { etikett: '', varde: daysLeftText(watch.days_left), matt: true },
         { etikett: 'ansvarig', varde: watch.responsible || 'ej utsedd' },
-        { etikett: 'påminns', varde: `${watch.remind_at}, ${watch.remind_lead_days} d före` },
+        { etikett: 'påminns', varde: `${datum(watch.remind_at)}, ${watch.remind_lead_days} d före` },
         ...(watch.recurrence !== 'none'
           ? [{ etikett: 'återkommer', varde: RECURRENCE_LABEL[watch.recurrence] || watch.recurrence }]
           : []),
@@ -292,7 +292,7 @@ function BoardWatch({
               {/* Dismissing is the exception, so its reason field waits behind a
                   disclosure instead of standing open on every card on the board. */}
               <details className="watch-dismiss-wrap">
-                <summary>Avfärda …</summary>
+                <summary>Avfärda…</summary>
                 <div className="watch-dismiss">
                   <label>
                     <span>Varför avfärdas den? (krävs)</span>
@@ -334,8 +334,8 @@ function BoardWatch({
     >
       {moved ? (
         <>
-          Motorn räknade fram <strong>{watch.derived_due_date}</strong> ur {watch.derivation}.
-          {' '}En människa har flyttat datumet till <strong>{watch.due_date}</strong>.
+          Motorn räknade fram <strong>{datum(watch.derived_due_date)}</strong> ur {watch.derivation}.
+          {' '}En människa har flyttat datumet till <strong>{datum(watch.due_date)}</strong>.
         </>
       ) : (
         <>Datumet är motorns eget: {watch.derivation}. En människa har godkänt det.</>
@@ -468,7 +468,7 @@ export default function Watches({ brfId, isAdmin = false, onOpenCitation }) {
   const approve = (watch, fields) => decide(
     watch,
     { status: 'approved', ...fields },
-    (result) => `Godkänd och bevakas till ${result.watch.due_date}. Ansvarig: `
+    (result) => `Godkänd och bevakas till ${datum(result.watch.due_date)}. Ansvarig: `
       + `${result.watch.responsible || 'ej utsedd'}.`,
   );
 
@@ -485,7 +485,7 @@ export default function Watches({ brfId, isAdmin = false, onOpenCitation }) {
     watch,
     { status: 'done' },
     (result) => (result.successor
-      ? `Avklarad. Nästa gång ${result.successor.due_date} — den turen är redan `
+      ? `Avklarad. Nästa gång ${datum(result.successor.due_date)} — den turen är redan `
         + 'godkänd och ligger under Återkommande.'
       : 'Avklarad.'),
   );

@@ -37,7 +37,7 @@ from typing import Literal
 from pydantic import BaseModel, Field
 
 from ..integrations.models import ReviewFinding, utc_now_iso
-from ..terms import parse_iso
+from ..terms import parse_iso, svenskt_datum
 
 # ---------------------------------------------------------------------------
 # What this product's own review says
@@ -485,12 +485,6 @@ class AnalysisRun(BaseModel):
 # board that meets weekly sees it once, short enough that it means something.
 DUE_SOON_DAYS = 7
 
-# Month names as a Swedish sentence abbreviates them (same forms the UI's own
-# date formatting produces), for the one place this module writes a date into
-# prose rather than into a field.
-MANADER = ("jan.", "feb.", "mars", "apr.", "maj", "juni",
-           "juli", "aug.", "sep.", "okt.", "nov.", "dec.")
-
 
 class InvoiceCase(BaseModel):
     """One invoice, as a case somebody works on."""
@@ -563,9 +557,7 @@ class InvoiceCase(BaseModel):
         due = parse_iso(self.due_date or "")
         if due is None:
             return self.due_date or "—"
-        namn = MANADER[due.month - 1]
-        ar = "" if due.year == today.year else f" {due.year}"
-        return f"{due.day} {namn}{ar}"
+        return svenskt_datum(due, idag=today)
 
     def overdue(self, today: date) -> bool:
         """Past its date and nobody has finished looking at it.

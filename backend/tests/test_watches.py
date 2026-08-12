@@ -184,8 +184,8 @@ class TestDerivation:
         watch = notice[0]
         assert watch.due_date == "2026-09-30"
         assert watch.derived_due_date == "2026-09-30"
-        assert "2026-12-31 minus 3 månader" == watch.derivation
-        assert "Säg upp eller ompröva avtalet senast 2026-09-30" == watch.title
+        assert "31 dec. 2026 minus 3 månader" == watch.derivation
+        assert "Säg upp eller ompröva avtalet senast 30 sep. 2026" == watch.title
         assert watch.status == "proposed"
         assert watch.responsible == ""
         # The evidence opens where the date was read.
@@ -234,7 +234,7 @@ class TestDerivation:
         notice = next(w for w in mine if w.kind == "notice_deadline")
         assert notice.due_date == "2027-07-31"
         assert notice.derivation == (
-            "avtalstidens utgång 2028-01-31 enligt citerad avtalstid "
+            "avtalstidens utgång 31 jan. 2028 enligt citerad avtalstid "
             "2026-02-01 – 2028-01-31, minus 6 månader"
         )
         # The expiry is not offered beside it: one obligation, one entry.
@@ -268,7 +268,7 @@ class TestDerivation:
         assert inspections, "ingen besiktningsbevakning ur protokollet"
         watch = next(w for w in inspections if w.recurrence == "triennial")
         assert watch.due_date == "2029-05-31"
-        assert watch.derivation == "2026-05-31 plus ett intervall (triennial)"
+        assert watch.derivation == "31 maj 2026 plus ett intervall (vart tredje år)"
 
     def test_a_month_without_a_day_is_not_a_date(self, integration_env):
         """"genomföras i maj 2026" must not become the 1st, or the 31st, of May."""
@@ -289,7 +289,7 @@ class TestDerivation:
         result = scan_documents(env.store, now_iso="2026-08-01T00:00:00+00:00")
         warranty = next(w for w in result.watches if w.kind == "warranty")
         assert warranty.due_date == "2029-05-12"
-        assert "Garantitiden går ut 2029-05-12" == warranty.title
+        assert "Garantitiden går ut 12 maj 2029" == warranty.title
 
     def test_a_queued_attachment_is_not_scanned_until_it_is_adopted(self, integration_env):
         """Same evidence rule as the invoice review, for the same reason."""
