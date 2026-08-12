@@ -550,7 +550,7 @@ function ResolveForm({ event, resolutions, busy, onResolve }) {
                   className="date-chip"
                   onClick={() => setWatch({ ...watch, due_date: iso })}
                 >
-                  {iso}
+                  {datum(iso)}
                 </button>
               ))}
             </p>
@@ -571,7 +571,7 @@ function ResolveForm({ event, resolutions, busy, onResolve }) {
       <div className="resolve-actions">
         <button
           type="button"
-          className="resolve-submit"
+          className="ui-btn ui-btn--primary"
           disabled={!canSubmit}
           title={needsNote && !note.trim() ? 'Skriv först varför posten ska bevaras.' : undefined}
           onClick={() => onResolve(event.id, {
@@ -614,7 +614,7 @@ function ResolutionSummary({ event, busy, onReopen, onOpenDocument }) {
       </ul>
       {resolution.note && <p className="resolution-note">Anteckning: {resolution.note}</p>}
       <div className="resolution-foot">
-        <button type="button" className="reopen" disabled={busy} onClick={() => onReopen(event.id)}>
+        <button type="button" className="ui-btn ui-btn--outline ui-btn--sm" disabled={busy} onClick={() => onReopen(event.id)}>
           <RotateCcw size={13} /> Öppna i kön igen
         </button>
         <span className="muted">
@@ -645,7 +645,8 @@ function Message({ event, showSubject = true, busy, onRetriage, onOpenDocument }
             <time dateTime={event.occurred_at || event.received_at}>
               {datumTid(event.occurred_at || event.received_at)}
             </time>
-            {event.attachments.length > 0 && ` · ${event.attachments.length} bilaga(or)`}
+            {event.attachments.length > 0
+              && ` · ${event.attachments.length} ${event.attachments.length === 1 ? 'bilaga' : 'bilagor'}`}
           </span>
         </span>
       </header>

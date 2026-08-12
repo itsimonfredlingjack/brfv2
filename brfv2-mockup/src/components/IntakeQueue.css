@@ -1040,21 +1040,9 @@
   line-height: 1.5;
 }
 
-.resolve-submit {
-  height: 32px;
-  padding: 0 var(--s5);
-  border: none;
-  border-radius: var(--radius-2xl);
-  background: var(--primary);
-  color: var(--primary-foreground);
-  font-size: var(--text-md);
-  font-weight: 600;
-  cursor: pointer;
-  transition: background-color 0.14s ease;
-}
-
-.resolve-submit:hover:not(:disabled) { background: var(--primary-action-hover); }
-.resolve-submit:disabled { opacity: 0.45; cursor: not-allowed; }
+/* "Spara beslutet" is the primitive's primary now — it was a 32px private
+   copy whose disabled state kept its ink at 0.45 opacity, i.e. the grey slab
+   the primitive's quiet disabled state exists to prevent. */
 
 /* ---------- a decided item ---------- */
 
@@ -1092,22 +1080,9 @@
 .resolution-note { margin-bottom: var(--s2h); font-size: var(--text-base); color: var(--muted-foreground); }
 .resolution-foot { display: flex; align-items: center; gap: var(--s3h); flex-wrap: wrap; }
 
-.reopen {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s1h);
-  height: 28px;
-  padding: 0 var(--s3);
-  border: 1px solid var(--input);
-  border-radius: var(--radius-2xl);
-  background: var(--field);
-  color: var(--foreground);
-  font-size: var(--text-base);
-  cursor: pointer;
-}
-
-.reopen:hover:not(:disabled) { background: var(--surface-3); }
-.reopen:disabled { opacity: 0.5; cursor: not-allowed; }
+/* "Öppna i kön igen" takes ui-btn--outline ui-btn--sm — it was a 28px private
+   copy of the small outline button, a fourth control height in a product
+   that has three. */
 
 .intake .muted { color: var(--muted-foreground); font-size: var(--text-base); }
 

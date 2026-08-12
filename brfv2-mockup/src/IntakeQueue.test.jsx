@@ -767,7 +767,9 @@ describe('resolving', () => {
     openForm();
 
     fireEvent.click(screen.getByRole('checkbox', { name: 'Bevaka' }));
-    const chip = screen.getByRole('button', { name: '2026-09-30' });
+    // The chip says the date the way a person says it; what it *sets* is the
+    // machine form the date field needs.
+    const chip = screen.getByRole('button', { name: '30 sep.' });
     expect(screen.getByLabelText('Datum')).toHaveValue('');
 
     fireEvent.click(chip);
