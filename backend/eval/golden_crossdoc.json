@@ -24,6 +24,14 @@
         "Avsättningen till yttre fond uppgår till 240000 kr per år.",
         "Stammbyte bedöms bli aktuellt tidigast 2035."
       ]
+    },
+    {
+      "name": "Prisjustering.pdf",
+      "lines": [
+        "Från 1 januari 2026 höjs ersättningen till 1400 kr per påbörjad timme.",
+        "Justeringen följer entreprenadindex E84 enligt avtalets paragraf 9.",
+        "Övriga villkor i snöröjningsavtalet lämnas oförändrade."
+      ]
     }
   ],
   "cases": [
@@ -69,6 +77,38 @@
       "expect_documents": [],
       "expect_min_citations": 0,
       "clarification": "Vilket avtal menar du — snöröjningsavtalet eller något annat?"
+    },
+    {
+      "id": "x03",
+      "kind": "conflicting_documents",
+      "_comment": "Two documents state different hourly rates. The answer must SHOW both and cite both — silently picking one is the failure this case exists to catch.",
+      "question": "Vad är ersättningen per påbörjad timme för snöröjning?",
+      "expect_mode": "multi",
+      "expect_documents": ["Snöröjningsavtal.pdf", "Prisjustering.pdf"],
+      "expect_min_citations": 2,
+      "subqueries": [
+        "ersättning per påbörjad timme snöröjningsavtal",
+        "höjd ersättning prisjustering timme"
+      ],
+      "answer": "Avtalet anger 1250 kr per påbörjad timme, men från 1 januari 2026 höjs ersättningen till 1400 kr per påbörjad timme.",
+      "citations": [
+        {"contains": "1250 kr", "quote": "Ersättning utgår med 1250 kr per påbörjad timme"},
+        {"contains": "1400 kr", "quote": "Från 1 januari 2026 höjs ersättningen till 1400 kr per påbörjad timme"}
+      ]
+    },
+    {
+      "id": "x04",
+      "kind": "no_evidence_refuses",
+      "_comment": "Nothing in the corpus answers this. The planned path must refuse, not assemble a plausible answer out of adjacent documents — fan-out widens retrieval, and wider retrieval must not lower the bar for answering.",
+      "question": "Hur ofta besiktigas hissen och vem ansvarar för besiktningen?",
+      "expect_mode": "multi",
+      "expect_documents": [],
+      "expect_min_citations": 0,
+      "expect_refusal_reason": "insufficient_data",
+      "subqueries": ["hissbesiktning intervall", "ansvarig för hissbesiktning"],
+      "answer": "Dokumenten säger ingenting om hissbesiktning.",
+      "citations": [],
+      "insufficient_data": true
     }
   ]
 }

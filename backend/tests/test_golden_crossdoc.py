@@ -50,7 +50,7 @@ def _script(store: Store, case: dict) -> FakeLLM:
                 {"chunk_id": _chunk_id_containing(store, c["contains"]), "quote": c["quote"]}
                 for c in case["citations"]
             ],
-            "insufficient_data": False,
+            "insufficient_data": case.get("insufficient_data", False),
         },
     ])
 
@@ -65,6 +65,14 @@ def test_golden_crossdoc_case(store, case):
         assert result.response.refusal, f"{case['id']}: en tvetydig fråga får inte besvaras"
         assert result.response.citations == []
         assert result.response.answer.strip() == case["clarification"].strip()
+        return
+
+    if case.get("expect_refusal_reason"):
+        # A negative case: fan-out widens RETRIEVAL, it must not lower the bar
+        # for answering. No citations may survive, and no answer is shown.
+        assert result.response.refusal, f"{case['id']}: borde ha vägrat"
+        assert result.response.refusal_reason == case["expect_refusal_reason"]
+        assert result.response.citations == []
         return
 
     assert not result.response.refusal, f"{case['id']}: {result.response.answer}"
@@ -82,9 +90,20 @@ def test_golden_crossdoc_case(store, case):
 
 
 def test_every_golden_kind_from_brf4_is_covered():
-    """The three shapes this slice committed to."""
+    """The shapes this slice committed to."""
     assert {c["kind"] for c in CASES} == {
         "two_document_answer",
         "multi_part_question",
         "ambiguous_asks_for_clarification",
+        "conflicting_documents",
+        "no_evidence_refuses",
     }
+
+
+def test_conflicting_case_really_states_two_different_figures():
+    """Guards the guard: if both quotes named the same amount, the conflict
+    case would pass while proving nothing about conflicting evidence."""
+    case = next(c for c in CASES if c["kind"] == "conflicting_documents")
+    figures = {q["contains"] for q in case["citations"]}
+    assert len(figures) == 2, "motstridighetsfallet måste ange två OLIKA belopp"
+    assert all(f in case["answer"] for f in figures), "svaret måste visa båda beloppen"
