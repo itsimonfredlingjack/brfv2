@@ -101,6 +101,30 @@ skriver över env med den lagrade (tomma) configen, så konfigurera via
 Modellen når agenntserver-lan:8000 (vLLM, gemma-4-12b) via en `ssh -L`-tunnel;
 loopback-adressen godkänns av endpoint-policyn.
 
+## Verifiera det riktiga skalet med tauri-driver, inte bara dist:en
+
+Login/setup/inställningar döljs av auto-login i dev-webbläsaren, så dist-bygget
+i Chrome visar dem aldrig. Det riktiga WebKitGTK-skalet når man utan att röra
+någon data: `desktop_acceptance.py` har alla primitiv — `isolated_environment()`
+ger en egen XDG-home (färsk first-run), `tauri-driver` + `WebDriver` startar
+release-binären (`src-tauri/target/release/brfv2-desktop`) och `driver.screenshot`
+tar riktiga skärmbilder. Setup-modellsteget har en "Hoppa över" (Setup.jsx), så
+man kommer in i appen utan modelltunneln. Fällor: "Logga ut" är en `<div>` utan
+`role=button` — `click_text` (som söker `button,[role=button]`) hittar den inte,
+klicka via `.user-menu-item`-text; och skapa en säkerhetskopia FÖRE skärmbilden,
+annars är radlistan (med den destruktiva papperskorgen) tom. Alla tre skärmarna
+höll i WebKitGTK, inklusive det mänskliga datumet i backup-raden ("12 aug. 2026
+17:13"). Bevis: `docs/design/2026-08-12-polering/skal-verifiering/`.
+
+## Papperskorgen på backup-raden får behålla sin röda ton
+
+Bedömningen efter att ha sett den bredvid en lugn skärm (07-backup-row.png): den
+röd-tonade `ui-btn--destructive ui-btn--icon` är enda tintade elementet på en
+annars monokrom modal och drar blicken — men det är den enda oåterkalleliga
+kontrollen (radera för gott), och asymmetrin mot den neutrala "Återställ" ÄR
+informationen raden finns för. Den ligger redan på den mjuka änden (`--avbrott-soft`
+fyllning, inte mättad). Att dämpa den mot ghost suddar distinktionen. Lämnad orörd.
+
 ## Belopp är ett ord: NBSP hela vägen
 
 "1 450,00 / SEK"-brytet kom från två håll: frontends formatAmount (vanligt
