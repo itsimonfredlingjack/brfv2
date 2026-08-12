@@ -230,7 +230,20 @@ export default function AppNavigation({
                       <Settings size={16} /> Appinställningar
                     </div>
                   )}
-                  <div className="user-menu-item text-danger" onClick={onLogout}><LogOut size={16} /> Logga ut</div>
+                  <div
+                    className="user-menu-item text-danger"
+                    role="button"
+                    tabIndex={0}
+                    onClick={onLogout}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onLogout();
+                      }
+                    }}
+                  >
+                    <LogOut size={16} /> Logga ut
+                  </div>
                 </div>
               )}
 
