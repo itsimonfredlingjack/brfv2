@@ -135,17 +135,41 @@ def required_chunk_ids(store: Store, case: dict) -> set[str]:
     return needed
 
 
-def single_evidence(store: Store, question: str) -> set[str]:
-    """What the unchanged single-search path would put in front of the model."""
+def single_evidence(store: Store, question: str, *, weight: float | None = None) -> set[str]:
+    """What the unchanged single-search path would put in front of the model.
+
+    `weight` overrides Settings.searchWeighting (0.0 = BM25 only, 1.0 = dense
+    only) so the fusion knob can be swept without mutating tenant settings.
+    """
     s = store.settings
     hits = store.index.search(
         question,
-        weight=s.searchWeighting / 100.0,
+        weight=s.searchWeighting / 100.0 if weight is None else weight,
         candidates=s.candidateCount,
         top_k=s.topK,
         min_confidence=0.0,
     )
     return {h.chunk_id for h in hits}
+
+
+def weight_sweep(store: Store, golden: dict, weights: tuple[float, ...]) -> dict[float, float]:
+    """Mean evidence recall of a SINGLE search at each fusion weight.
+
+    Deliberately single-search only: this measures what the dense half of the
+    hybrid index contributes, a question that is independent of BRF-1's
+    planning layer and applies to every question the product answers.
+    """
+    out: dict[float, float] = {}
+    for w in weights:
+        scores = []
+        for case in golden["cases"]:
+            required = required_chunk_ids(store, case)
+            if not required:
+                continue
+            found = required & single_evidence(store, case["question"], weight=w)
+            scores.append(len(found) / len(required))
+        out[w] = sum(scores) / len(scores) if scores else 0.0
+    return out
 
 
 def planned_evidence(
@@ -282,6 +306,10 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Mät bevisrecall: enkel sökning vs planerad fan-out.")
     ap.add_argument("--sweep", action="store_true", help="svep PER_QUERY_TOP_K och expansion")
     ap.add_argument(
+        "--weights", action="store_true",
+        help="svep searchWeighting (0 = bara BM25, 100 = bara embeddings) för en enkel sökning",
+    )
+    ap.add_argument(
         "--distractors", type=int, default=20,
         help="antal utfyllnadsdokument (0 = bara golden-korpusen, där varje sökning "
              "returnerar allt och mätningen inte säger något)",
@@ -297,6 +325,16 @@ def main() -> int:
             f"korpus: {len(store.documents)} dokument, {len(store.chunks)} chunkar "
             f"(topK={store.settings.topK})\n"
         )
+        if args.weights:
+            for budget in (4, 6):
+                store.update_settings(store.settings.model_copy(update={"topK": budget}))
+                res = weight_sweep(store, golden, (0.0, 0.25, 0.5, 0.75, 1.0))
+                print(f"budget {budget}:")
+                for w, recall in res.items():
+                    bar = "#" * round(recall * 40)
+                    print(f"  searchWeighting {int(w * 100):>3}  recall {recall:.2f}  {bar}")
+            return 0
+
         if not args.sweep:
             report = measure(store, golden)
             _print(report)

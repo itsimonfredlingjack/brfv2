@@ -109,9 +109,44 @@ på samtliga v-fall. Hybridsökningen följer BM25, inte embeddings.
 | v01 | 1.00 | 1.00 | 0.00 |
 | v02 | 1.00 | 1.00 | 0.00 |
 
-Det är ett fynd som står på egna ben och gäller oavsett BRF-1:
-**embeddingmodellen förtjänar inte sin halva av `searchWeighting` på den här
-sortens svensk avtalstext.** Värt en egen mätning.
+Jag drog av detta slutsatsen att **embeddingmodellen inte förtjänar sin halva
+av `searchWeighting`**, och rekommenderade att mäta det. Det gjordes — och
+slutsatsen höll inte.
+
+### Omgång 5 — svep av searchWeighting (motbevisar omgång 4:s rekommendation)
+
+`scripts/eval_crossdoc.py --weights` sveper fusionsvikten för en ENKEL sökning,
+en fråga som är oberoende av BRF-1 och gäller varje fråga produkten besvarar.
+
+Golden-korpusen (11 fall, budget 4 och 6) — vikt 0, 25 och 50 är likvärdiga,
+och först *över* 50 rasar det:
+
+| searchWeighting | 0 | 25 | 50 | 75 | 100 |
+|---|---:|---:|---:|---:|---:|
+| medelrecall | 0.86 | 0.86 | 0.86 | 0.73 | 0.50 |
+
+Men på den **verkliga korpusen** (9 handlingar, 130 chunkar) replikerades det
+inte. Fyra frågor i styrelsespråk, bevis definierade av distinkta termer:
+
+| Fråga | w0 | w25 | w50 | w75 | w100 |
+|---|---:|---:|---:|---:|---:|
+| Fast pris för sophämtningen | 0.00 | 0.00 | 0.00 | 0.00 | 0.00 |
+| Uppsägningstid sophämtning | **1.00** | 0.80 | 0.80 | 0.80 | 0.60 |
+| Vad kostar parkeringsplatsen | 0.36 | 0.36 | 0.36 | **0.45** | **0.45** |
+| ~~Vad ska vi renovera~~ | — | — | — | — | — |
+
+Fjärde proben är **ogiltig och räknas inte**: nyckelordsgrunden fångade 54 av
+130 chunkar, alltså halva korpusen. Det är inte bevis, det är brus — samma
+sorts slarv som gjorde den första expansionslocken verkningslös.
+
+**Slutsats: ingen grund att ändra `searchWeighting=50`.** De två giltiga
+verkliga fallen drar åt var sitt håll — BM25 vinner klart på uppsägningstid,
+embeddings vinner klart på parkeringskostnad. Golden-korpusens signal att
+embeddings skadar var en artefakt av korta, ämnesrena fixturdokument.
+
+Fallet "fast pris" är 0.00 vid *varje* vikt. Det bekräftar att det är ett äkta
+ordförrådsglapp och inte ett fusionsproblem: **ingen inställning på den här
+ratten hade räddat det.** Det är precis därför fan-out är rätt svar just där.
 
 ### OCR: redan löst, tvärtemot vad jag rekommenderade
 
