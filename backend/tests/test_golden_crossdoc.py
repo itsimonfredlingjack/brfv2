@@ -82,6 +82,12 @@ def test_golden_crossdoc_case(store, case):
     # Every surviving citation was verified against the real page words.
     assert all(c.rects for c in result.response.citations), f"{case['id']}: källa utan sidkoordinater"
 
+    for needle in case.get("expect_answer_contains", []):
+        assert needle in result.response.answer, (
+            f"{case['id']}: svaret saknar {needle!r} — en tidsbestämd fråga måste bära "
+            "både beloppet och när det började gälla"
+        )
+
     cited_docs = {c.document_name for c in result.response.citations}
     assert set(case["expect_documents"]) <= cited_docs, (
         f"{case['id']}: svaret belades inte i alla väntade dokument — fick {cited_docs}"
@@ -97,7 +103,20 @@ def test_every_golden_kind_from_brf4_is_covered():
         "ambiguous_asks_for_clarification",
         "conflicting_documents",
         "no_evidence_refuses",
+        "time_bound_question",
     }
+
+
+def test_time_bound_case_asserts_more_than_the_amount():
+    """Guards the guard: a time-bound case that only checks the figure would
+    pass on an answer that never says WHEN the figure started applying — the
+    exact thing the case exists to test."""
+    case = next(c for c in CASES if c["kind"] == "time_bound_question")
+    needles = case["expect_answer_contains"]
+    assert len(needles) >= 2
+    assert any(any(ch.isalpha() for ch in n) for n in needles), (
+        "minst ett villkor måste gälla datumet, inte bara beloppet"
+    )
 
 
 def test_conflicting_case_really_states_two_different_figures():

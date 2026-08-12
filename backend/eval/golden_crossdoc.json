@@ -109,6 +109,25 @@
       "answer": "Dokumenten säger ingenting om hissbesiktning.",
       "citations": [],
       "insufficient_data": true
+    },
+    {
+      "id": "x05",
+      "kind": "time_bound_question",
+      "_comment": "The rate depends on WHEN. Answering with the contract's original figure alone is wrong for a date after the adjustment took effect, so the answer must carry the effective date as evidence — not just the amount. The date and the amount live in different documents.",
+      "question": "Vilken ersättning per timme gäller för snöröjning utförd i mars 2026?",
+      "expect_mode": "multi",
+      "expect_documents": ["Prisjustering.pdf", "Snöröjningsavtal.pdf"],
+      "expect_min_citations": 2,
+      "expect_answer_contains": ["1400", "1 januari 2026"],
+      "subqueries": [
+        "höjd ersättning från januari 2026 per timme",
+        "snöröjningsavtalets giltighetstid och ersättning"
+      ],
+      "answer": "Från 1 januari 2026 höjs ersättningen till 1400 kr per påbörjad timme, så i mars 2026 gäller den nivån. Snöröjningsavtalet gäller från 1 oktober 2025 till 30 september 2026.",
+      "citations": [
+        {"contains": "1400 kr", "quote": "Från 1 januari 2026 höjs ersättningen till 1400 kr per påbörjad timme"},
+        {"contains": "1 oktober 2025", "quote": "Snöröjningsavtalet gäller från 1 oktober 2025 till 30 september 2026"}
+      ]
     }
   ]
 }
