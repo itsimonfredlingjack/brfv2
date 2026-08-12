@@ -67,6 +67,32 @@
         "Sekreteraren fick i uppdrag att begära skriftlig bekräftelse.",
         "Punkten bordlades till nästa sammanträde."
       ]
+    },
+    {
+      "_provenance": "Generisk föreningsrättslig text som jag skrivit själv utifrån en kartläggning av vokabulärglapp i svenska BRF:er. Ingen verklig förenings handling — dessa tre täcker de kategorier kartläggningen pekar ut som störst och som korpusen annars saknade: avgiftsbegränsning, indexreglering och förverkande.",
+      "name": "Stadgar avgifter.pdf",
+      "lines": [
+        "Föreningen får ta ut årsavgift, upplåtelseavgift, överlåtelseavgift och pantsättningsavgift.",
+        "Avgift för andrahandsupplåtelse får tas ut enligt bostadsrättslagen.",
+        "Andra avgifter än de i lag angivna saknar stöd och får inte debiteras medlem."
+      ]
+    },
+    {
+      "name": "Lokalhyresavtal indexklausul.pdf",
+      "lines": [
+        "Grundhyran räknas om per den 1 januari varje år.",
+        "Omräkningen följer förändringen i konsumentprisindex för oktober månad.",
+        "Bastalet utgörs av indextalet för oktober det år avtalet tecknades.",
+        "Någon omförhandling eller tilläggsavtal krävs inte för omräkningen."
+      ]
+    },
+    {
+      "name": "Rutin forverkande.pdf",
+      "lines": [
+        "Nyttjanderätten kan förverkas om årsavgiften inte betalas i rätt tid.",
+        "Bostadsrättshavaren ska delges underrättelse om återvinningsfristen.",
+        "Socialnämnden i kommunen ska underrättas innan handräckning begärs."
+      ]
     }
   ],
   "cases": [
@@ -239,6 +265,66 @@
       "citations": [
         {"contains": "sex månader", "quote": "Uppsägning ska ske skriftligen senast sex månader före avtalets utgång"},
         {"contains": "muntligen att uppsägningstiden", "quote": "Leverantören uppgav muntligen att uppsägningstiden är tre månader"}
+    ]
+    },
+    {
+      "id": "v00",
+      "kind": "vocabulary_gap",
+      "source": "kartlaggning",
+      "_comment": "Avgiftsbegränsning. Noll ordöverlappning: styrelsen söker 'straffavgift', 'skolkar', 'städdagen'; stadgarna räknar upp 'årsavgift, upplåtelseavgift, överlåtelseavgift, pantsättningsavgift' och säger att andra avgifter saknar stöd. Inget av frågans ord finns i handlingen.",
+      "question": "Får vi ta ut en straffavgift av dem som skolkar från städdagen?",
+      "expect_mode": "multi",
+      "expect_documents": ["Stadgar avgifter.pdf"],
+      "expect_cross_document": false,
+      "expect_min_citations": 2,
+      "subqueries": [
+        "vilka avgifter föreningen får ta ut årsavgift upplåtelseavgift",
+        "avgifter utan stöd i lag får inte debiteras medlem"
+      ],
+      "answer": "Nej. Andra avgifter än de i lag angivna saknar stöd och får inte debiteras medlem; föreningen får ta ut årsavgift, upplåtelseavgift, överlåtelseavgift och pantsättningsavgift.",
+      "citations": [
+        {"contains": "saknar stöd", "quote": "Andra avgifter än de i lag angivna saknar stöd och får inte debiteras medlem"},
+        {"contains": "upplåtelseavgift", "quote": "Föreningen får ta ut årsavgift, upplåtelseavgift, överlåtelseavgift och pantsättningsavgift"}
+      ]
+    },
+    {
+      "id": "v01",
+      "kind": "vocabulary_gap",
+      "source": "kartlaggning",
+      "_comment": "Indexreglering. Styrelsen frågar om 'höja hyran' och 'nytt kontrakt'; avtalet svarar med 'konsumentprisindex', 'bastal' och 'omräkning'. Frågan söker en avtalsändring, dokumentet reglerar en matematisk uppräkning som sker av sig själv.",
+      "question": "Får hyran för lokalen höjas utan att vi skriver ett nytt kontrakt?",
+      "expect_mode": "multi",
+      "expect_documents": ["Lokalhyresavtal indexklausul.pdf"],
+      "expect_cross_document": false,
+      "expect_min_citations": 2,
+      "subqueries": [
+        "grundhyran räknas om konsumentprisindex oktober",
+        "omförhandling eller tilläggsavtal krävs inte omräkning"
+      ],
+      "answer": "Ja. Omräkningen följer förändringen i konsumentprisindex för oktober månad, och någon omförhandling eller tilläggsavtal krävs inte för omräkningen.",
+      "citations": [
+        {"contains": "konsumentprisindex", "quote": "Omräkningen följer förändringen i konsumentprisindex för oktober månad"},
+        {"contains": "omförhandling", "quote": "Någon omförhandling eller tilläggsavtal krävs inte för omräkningen"}
+      ]
+    },
+    {
+      "id": "v02",
+      "kind": "vocabulary_gap",
+      "source": "kartlaggning",
+      "_comment": "Förverkande. Styrelsen söker 'vräka' och 'byta lås'; rutinen talar om 'förverkas', 'återvinningsfrist' och 'socialnämnden'. Noll ordöverlappning, och frågans premiss är dessutom fel — det är just därför svaret måste komma ur handlingen och inte ur modellens allmänbildning.",
+      "question": "Kan vi vräka en medlem som inte betalat och byta lås direkt?",
+      "expect_mode": "multi",
+      "expect_documents": ["Rutin forverkande.pdf"],
+      "expect_cross_document": false,
+      "expect_min_citations": 2,
+      "subqueries": [
+        "nyttjanderätten förverkas årsavgiften betalas inte i tid",
+        "underrättelse återvinningsfrist socialnämnden handräckning"
+      ],
+      "answer": "Nej. Bostadsrättshavaren ska delges underrättelse om återvinningsfristen, och socialnämnden i kommunen ska underrättas innan handräckning begärs.",
+      "citations": [
+        {"contains": "återvinningsfristen", "quote": "Bostadsrättshavaren ska delges underrättelse om återvinningsfristen"},
+        {"contains": "Socialnämnden", "quote": "Socialnämnden i kommunen ska underrättas innan handräckning begärs"}
       ]
     }
   ]

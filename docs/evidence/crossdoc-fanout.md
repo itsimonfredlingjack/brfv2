@@ -69,7 +69,51 @@ Per fall vid budget 4:
 x06 är det **enda** fallet där fan-out vinner — och den vinner med färre utdrag
 (2.8 mot 4.0 i snitt). Enkelsökningen fastnar på 0.50 där ända upp till budget 6.
 
-### Det största fyndet ligger inte i den här mätningen
+### Omgång 4 — mätning på den verkliga korpusen (driftbevis)
+
+Alla nio verkliga handlingar kördes genom `Store.add_document`, alltså den
+riktiga ingest-vägen med OCR. **9 av 9 lyckades**, 130 chunkar. Sedan
+styrelsens egen fråga, "Betalar vi fortfarande fast pris för sophämtningen?",
+mot den korpusen vid budget 4:
+
+| Strategi | Bevischunkar funna (av 5) |
+|---|---|
+| Enkel sökning | **0** — alla fyra träffar i *Avtal Teknisk förvaltning* |
+| Planerad fan-out | **3** |
+
+Enkelsökningen hämtade fyra chunkar ur **fel avtal** och noll bevis. Det
+lexikala lockbetet — ett dokument som matchar frågans ord bättre än det som
+svarar — uppstod alltså av sig självt i en verklig korpus på nio handlingar.
+Det behövde inte konstrueras.
+
+Detta är driftbeviset som saknades i omgång 3.
+
+### Två motbevisade hypoteser, värda att spara
+
+**"Nollöverlappning räcker för att fälla sökningen."** Tre fall byggda direkt
+på kartläggningens glapp-par (v00 avgiftsbegränsning, v01 indexklausul, v02
+förverkande) får alla 1.00 på enkel sökning — även när lexikala lockbeten
+läggs till. BM25 hittar dem ändå. Mina konstruerade fall är systematiskt för
+lätta, på sätt jag upprepade gånger misslyckats med att förutse. Det enda fall
+som verkligen fallerar kommer från en verklig handling. **Slutsats: bygg inte
+fler syntetiska glapp-fall — mät på riktiga arkiv.**
+
+**"Den täta vektordelen överbryggar glappet."** Tvärtom. Med `weight=1` (bara
+embeddings) sjunker recall till 0.00 på x06, v01 och v02; BM25 ensamt ger 1.00
+på samtliga v-fall. Hybridsökningen följer BM25, inte embeddings.
+
+| Fall | BM25 (w=0) | Hybrid (0.5) | Tät (w=1) |
+|---|---:|---:|---:|
+| x06 | 0.50 | 0.50 | 0.00 |
+| r01 | 0.00 | 0.00 | 0.00 |
+| v01 | 1.00 | 1.00 | 0.00 |
+| v02 | 1.00 | 1.00 | 0.00 |
+
+Det är ett fynd som står på egna ben och gäller oavsett BRF-1:
+**embeddingmodellen förtjänar inte sin halva av `searchWeighting` på den här
+sortens svensk avtalstext.** Värt en egen mätning.
+
+### OCR: redan löst, tvärtemot vad jag rekommenderade
 
 Materialet från en verklig styrelse (nio handlingar) karakteriserades innan
 fallen skrevs. Resultatet gör om prioriteringen:
@@ -90,11 +134,24 @@ Det förklarar styrelsens egna loggade händelser bättre än vår hypotes gjord
 "visste inte var bredbandsavtalet fanns", "slutbesiktningsprotokollet grävdes
 fram". Det är inte sökproblem — handlingarna var inte maskinläsbara.
 
-Den befintliga OCR-vägen klarar dem: `app.ocr.ocr_pdf` på sophanteringsavtalet
-gav **542 ord ur 3 sidor**, sammanhängande svenska, med avtalets nyckeltermer
-intakta (`schablonbelopp`, `avräkning`, `kvartalsvis`, `uppsägning`). Så
-åtgärden är inte att bygga något nytt, utan att se till att skannade handlingar
-faktiskt OCR-körs vid ingest.
+Jag rekommenderade utifrån detta att OCR-täckning skulle gå före allt annat
+BRF-1-arbete. **Den rekommendationen var fel — arbetet var redan gjort.**
+`Store.add_document` upptäcker att textlagret är tomt och kör `ocr_pdf`
+automatiskt, med ett tydligt svenskt fel om tesseract saknas.
+
+Verifierat på hela det verkliga materialet:
+
+| | Resultat |
+|---|---|
+| Handlingar som gick igenom ingest | **9 av 9** |
+| Skannade som OCR-kördes automatiskt | 7 av 7 |
+| Chunkar totalt | 130 |
+| Tid, skannade | 4–31 s/handling (digitala: 0,1 s) |
+
+Så den bindande begränsningen var aldrig OCR-*täckningen* utan att jag inte
+hade kontrollerat om den fanns. Kvar som verklig konsekvens: OCR kostar upp
+till en halvminut per handling, vilket är en uppladdnings-UX-fråga, inte en
+retrieval-fråga.
 
 ### Omgång 3 — verkliga fall
 

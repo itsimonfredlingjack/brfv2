@@ -65,6 +65,14 @@ DISTRACTOR_TOPICS = [
     ("Underhallsbudget.pdf", "Notan för löpande underhåll budgeteras till 310000 kr för kommande verksamhetsår."),
     ("Vinterberedskap.pdf", "Vinterunderhållet planeras varje höst och stäms av mot föregående säsongs utfall."),
     ("Fakturarutin.pdf", "Notan attesteras av två styrelseledamöter innan betalning verkställs."),
+    # Decoys for the vocabulary-gap cases v00/v01/v02. Each carries the words
+    # the QUESTION uses without answering it — the pattern that actually broke
+    # retrieval on the real case r01, where `Sophamtning.pdf` outranked the
+    # contract. A gap alone does not defeat search when nothing competes; a gap
+    # PLUS a better lexical match does.
+    ("Staddagsrutin.pdf", "Inför städdagen sätts en lista upp i porten och den som skolkar får ingen förtäring."),
+    ("Hyresrutin.pdf", "Vid hyreshöjning bör ett nytt kontrakt skrivas under av båda parter."),
+    ("Lasrutin.pdf", "Vid byte av lås i entrén ska samtliga boende få nya nycklar utkvitterade."),
 ]
 
 
