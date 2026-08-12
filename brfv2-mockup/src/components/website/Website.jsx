@@ -23,6 +23,7 @@ import { createWebsiteConfig } from './websiteConfig';
 import WorkspaceShell from './WorkspaceShell';
 import Instrument from '../Instrument';
 import EmptyState from '../EmptyState';
+import { datumTid } from '../datum';
 import {
   actionToCommands,
   coalesce,
@@ -498,7 +499,7 @@ export default function Website({ brfId, isAdmin, onOpenCitation }) {
                         {revision.id === revisions.current && <span className="site-pill site-pill--live">Publicerad nu</span>}
                       </div>
                       <div className="site-revisions__meta">
-                        {revision.created_at?.slice(0, 16).replace('T', ' ')} · {revision.block_count} block
+                        {datumTid(revision.created_at)} · {revision.block_count} block
                         {revision.note ? ` · ${revision.note}` : ''}
                       </div>
                     </div>
