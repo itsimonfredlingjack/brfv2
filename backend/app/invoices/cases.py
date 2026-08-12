@@ -510,7 +510,7 @@ def _klipp(text: str, limit: int) -> str:
     text = text or ""
     if len(text) <= limit:
         return text
-    return text[:limit].rsplit(" ", 1)[0].rstrip(" ,;:") + "…"
+    return text[:limit].rsplit(" ", 1)[0].rstrip(" ,;:.") + "…"
 
 
 def _change_detail(finding: ReviewFinding) -> str:
