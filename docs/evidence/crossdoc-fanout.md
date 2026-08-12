@@ -69,19 +69,54 @@ Per fall vid budget 4:
 x06 är det **enda** fallet där fan-out vinner — och den vinner med färre utdrag
 (2.8 mot 4.0 i snitt). Enkelsökningen fastnar på 0.50 där ända upp till budget 6.
 
+### Det största fyndet ligger inte i den här mätningen
+
+Materialet från en verklig styrelse (nio handlingar) karakteriserades innan
+fallen skrevs. Resultatet gör om prioriteringen:
+
+| | Sidor | Ord ur textlagret |
+|---|---:|---:|
+| Avtal Ekonomisk förvaltning | 13 | 2082 |
+| Underhållsplan 30 år | 36 | 3553 |
+| **Övriga sju avtal** | 3–30 | **0** |
+
+**Sju av nio avtal saknar textlager helt** — de är inskannade. Hela den här
+mätningen handlar om *vilken sökstrategi* som hittar rätt stycke, men för 78 %
+av den här styrelsens avtal finns inget stycke att hitta förrän OCR körts.
+Fan-out ligger nedströms ett steg som inte har körts. **Ordförrådsglappet är
+verkligt, men läsbarheten är den bindande begränsningen.**
+
+Det förklarar styrelsens egna loggade händelser bättre än vår hypotes gjorde:
+"visste inte var bredbandsavtalet fanns", "slutbesiktningsprotokollet grävdes
+fram". Det är inte sökproblem — handlingarna var inte maskinläsbara.
+
+Den befintliga OCR-vägen klarar dem: `app.ocr.ocr_pdf` på sophanteringsavtalet
+gav **542 ord ur 3 sidor**, sammanhängande svenska, med avtalets nyckeltermer
+intakta (`schablonbelopp`, `avräkning`, `kvartalsvis`, `uppsägning`). Så
+åtgärden är inte att bygga något nytt, utan att se till att skannade handlingar
+faktiskt OCR-körs vid ingest.
+
 ### Omgång 3 — verkliga fall
 
-Tre fall härledda ur en verklig styrelses loggade händelser (BRF Eken, aug
-2026). **Frågorna och ordförrådet är äkta; dokumentens exakta formuleringar är
-rekonstruerade** — vi har inte originalhandlingarna. Det fallen står och faller
-med är glappet mellan styrelsens ord och handlingens ord, och det är äkta.
+Tre fall härledda ur en verklig styrelses loggade händelser. Frågorna och
+ordförrådet är äkta, och **mekanismen är nu avläst ur den faktiska handlingen
+efter OCR**. Meningarna, beloppen och parterna i golden-filen är däremot
+hittepå: originalavtalet är en verklig förenings handling och dess text får
+inte ligga i git.
+
+Det gav en rättelse värd att notera. Både styrelsens sammanfattning och min
+rekonstruktion sa "fast pris fram till 2024, därefter rörligt". Avtalet säger
+något annat: *kvartal 1–3 faktureras schablonbelopp, avräkning sker efter
+kvartal 4 mot årets verkliga kostnader*, och avtalet reglerar verkliga kostnader
+med prisjusteringar när de uppkommer. Schablonbeloppet är alltså ett à-conto,
+inte ett fast pris — vilket gör styrelsens oro *mer* befogad, inte mindre.
 
 Per fall vid budget 4, korpus 48 chunkar:
 
 | Fall | Ursprung | Enkel | Planerad |
 |---|---|---:|---:|
-| r00 snöröjning på aprilfaktura | verklig | 1.00 | 1.00 |
-| **r01 tyst prisändring** | **verklig** | **0.00** | **1.00** |
+| r00 snöröjning på kvartalsfaktura | verklig | 1.00 | 1.00 |
+| **r01 schablon vs verklig kostnad** | **verklig** | **0.00** | **1.00** |
 | r02 muntligt vs skriftligt | verklig | 1.00 | 1.00 |
 
 **r01 är det starkaste resultatet i hela mätningen.** Enkelsökningen hittar

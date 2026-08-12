@@ -35,9 +35,15 @@ def test_every_golden_needle_resolves_to_a_chunk(golden):
     with tempfile.TemporaryDirectory() as tmp:
         store = build_store(golden, Path(tmp))
         for case in golden["cases"]:
+            citations = case.get("citations", [])
+            # required_chunk_ids raises if a needle matches nothing, so the
+            # call itself is the check. Two needles MAY land in one chunk —
+            # r01's contract is a single chunk carrying both clauses — so the
+            # count is bounded by, not equal to, the citation count.
             required = required_chunk_ids(store, case)
-            assert len(required) == len(case.get("citations", [])), (
-                f"{case['id']}: needle matchar fel antal chunkar"
+            assert len(required) <= len(citations)
+            assert bool(required) == bool(citations), (
+                f"{case['id']}: fall med citat måste ha bevis att nå"
             )
 
 

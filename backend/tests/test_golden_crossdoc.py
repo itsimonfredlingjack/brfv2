@@ -92,7 +92,13 @@ def test_golden_crossdoc_case(store, case):
     assert set(case["expect_documents"]) <= cited_docs, (
         f"{case['id']}: svaret belades inte i alla väntade dokument — fick {cited_docs}"
     )
-    assert len(cited_docs) >= 2, f"{case['id']}: detta är ett tvärdokumentfall"
+    # Most cases here are cross-document, but not all: r01 turned out to be a
+    # SINGLE-document question with a vocabulary gap once the real contract was
+    # read. Fan-out's value is the gap, not the document count (see
+    # docs/evidence/crossdoc-fanout.md), so a case may opt out rather than have
+    # a second source invented for it.
+    if case.get("expect_cross_document", True):
+        assert len(cited_docs) >= 2, f"{case['id']}: detta är ett tvärdokumentfall"
 
 
 def test_every_golden_kind_from_brf4_is_covered():

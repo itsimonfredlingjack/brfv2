@@ -34,10 +34,10 @@
       ]
     },
     {
-      "_provenance": "REKONSTRUERAD. Frågorna och ordförrådet kommer från en verklig styrelses loggade händelser (BRF Eken, aug 2026). Dokumentens exakta formuleringar är däremot MINA — vi har inte originalhandlingarna. Det som är äkta och som fallen står och faller med är glappet mellan styrelsens ord och handlingens ord; den exakta meningsbyggnaden är det inte.",
-      "name": "Faktura Stena Q2 2026.pdf",
+      "_provenance": "REKONSTRUERAD, men mot en verifierad förlaga. Frågorna och ordförrådet kommer från en verklig styrelses loggade händelser; MEKANISMEN och terminologin (schablonbelopp, avräkning, verkliga kostnader, kvartalsvis i efterskott) är avläst ur den faktiska handlingen efter OCR. Meningarna, beloppen, parterna och fakturanumren är däremot HITTEPÅ — originalavtalet är en verklig förenings handling och dess text får inte ligga i git. Det fallen står och faller med är glappet mellan styrelsens ord och handlingens ord, och det är nu bekräftat äkta.",
+      "name": "Faktura Q2 2026.pdf",
       "lines": [
-        "Fakturanummer 2026-04-0182 avser perioden april till juni 2026.",
+        "Fakturanummer 2026-04-0182 avser andra kvartalet 2026.",
         "Post: Snöröjning och halkbekämpning, 8750 kr.",
         "Post: Sophantering och gårdsskötsel, 21400 kr."
       ]
@@ -46,10 +46,10 @@
       "name": "Avtal Sophantering och gardsskotsel 2022.pdf",
       "lines": [
         "Avtalet omfattar sophantering, gårdsskötsel samt vinterväghållning.",
-        "Fakturering sker kvartalsvis i förskott.",
-        "Kostnaderna fördelas jämnt över avtalsåret oberoende av när arbetet utförs.",
-        "Schablonbeloppet gäller till och med 31 mars 2024.",
-        "Från och med 1 april 2024 faktureras verklig kostnad i stället för schablonbelopp."
+        "Fakturering sker kvartalsvis i efterskott.",
+        "Kvartal 1 till 3 faktureras schablonbelopp.",
+        "Avräkning sker efter kvartal 4 då årets verkliga kostnader redovisas.",
+        "Då avtalet reglerar verkliga kostnader sker prisjusteringar när dessa uppkommer."
       ]
     },
     {
@@ -186,38 +186,39 @@
       "id": "r00",
       "kind": "vocabulary_gap",
       "source": "reality",
-      "_comment": "Verkligt fall. Styrelsen såg snöröjning på en kvartalsfaktura för april-juni och trodde att något var fel. Ordet 'snöröjning' står på FAKTURAN, men förklaringen står i en klausul som varken nämner snö eller april. En sökning på frågans egna ord hittar alltså problemet men inte svaret — och avtalet säger dessutom 'vinterväghållning', inte 'snöröjning'.",
-      "question": "Varför står snöröjning på fakturan för april till juni när det inte snöar då?",
+      "_comment": "Verkligt fall. Styrelsen såg snöröjning på en kvartalsfaktura för april-juni och trodde att något var fel. Ordet 'snöröjning' står på FAKTURAN, men förklaringen står i en klausul som varken nämner snö eller april: kvartal 1-3 faktureras schablonbelopp och stäms av först efter kvartal 4. En sökning på frågans egna ord hittar alltså problemet men inte svaret.",
+      "question": "Varför står snöröjning på fakturan för andra kvartalet när det inte snöar då?",
       "expect_mode": "multi",
-      "expect_documents": ["Faktura Stena Q2 2026.pdf", "Avtal Sophantering och gardsskotsel 2022.pdf"],
+      "expect_documents": ["Faktura Q2 2026.pdf", "Avtal Sophantering och gardsskotsel 2022.pdf"],
       "expect_min_citations": 2,
       "subqueries": [
-        "kostnadsfördelning över avtalsåret kvartalsvis fakturering",
+        "schablonbelopp kvartal avräkning fakturering",
         "vinterväghållning ingår i avtal sophantering gårdsskötsel"
       ],
-      "answer": "Posten Snöröjning och halkbekämpning, 8750 kr står på fakturan trots perioden april till juni eftersom kostnaderna fördelas jämnt över avtalsåret oberoende av när arbetet utförs.",
+      "answer": "Posten Snöröjning och halkbekämpning, 8750 kr står på fakturan för andra kvartalet eftersom kvartal 1 till 3 faktureras schablonbelopp.",
       "citations": [
         {"contains": "Snöröjning och halkbekämpning", "quote": "Post: Snöröjning och halkbekämpning, 8750 kr"},
-        {"contains": "fördelas jämnt", "quote": "Kostnaderna fördelas jämnt över avtalsåret oberoende av när arbetet utförs"}
+        {"contains": "faktureras schablonbelopp", "quote": "Kvartal 1 till 3 faktureras schablonbelopp"}
       ]
     },
     {
       "id": "r01",
       "kind": "vocabulary_gap",
       "source": "reality",
-      "_comment": "Verkligt fall, och det styrelsen faktiskt MISSADE: schablonbeloppet upphörde 2024-03-31 och priset blev rörligt utan att någon behövde göra något. Dubbelt ordförrådsglapp — styrelsen säger 'fast pris' och 'sophämtning', handlingen säger 'schablonbelopp' och 'Sophantering och gårdsskötsel'.",
+      "_comment": "Verkligt fall, och det styrelsen faktiskt MISSADE. Schablonbeloppet är inte ett fast pris — det är ett à-conto som stäms av mot verkliga kostnader, och avtalet justerar priset när kostnaderna uppkommer. Dubbelt ordförrådsglapp: styrelsen säger 'fast pris' och 'sophämtning', handlingen säger 'schablonbelopp', 'avräkning' och 'Sophantering och gårdsskötsel'. Ingendera av frågans nyckelord finns i handlingen.",
       "question": "Betalar vi fortfarande fast pris för sophämtningen?",
       "expect_mode": "multi",
-      "expect_documents": ["Avtal Sophantering och gardsskotsel 2022.pdf", "Faktura Stena Q2 2026.pdf"],
+      "expect_documents": ["Avtal Sophantering och gardsskotsel 2022.pdf"],
+      "expect_cross_document": false,
       "expect_min_citations": 2,
       "subqueries": [
-        "schablonbelopp upphör verklig kostnad faktureras",
-        "post sophantering och gårdsskötsel belopp faktura"
+        "schablonbelopp avräkning verkliga kostnader redovisas",
+        "prisjusteringar uppkommer avtalet reglerar verkliga kostnader"
       ],
-      "answer": "Nej. Från och med 1 april 2024 faktureras verklig kostnad i stället för schablonbelopp, och senaste fakturan tar upp Sophantering och gårdsskötsel, 21400 kr.",
+      "answer": "Nej. Avräkning sker efter kvartal 4 då årets verkliga kostnader redovisas, och då avtalet reglerar verkliga kostnader sker prisjusteringar när dessa uppkommer.",
       "citations": [
-        {"contains": "verklig kostnad", "quote": "Från och med 1 april 2024 faktureras verklig kostnad i stället för schablonbelopp"},
-        {"contains": "21400", "quote": "Post: Sophantering och gårdsskötsel, 21400 kr"}
+        {"contains": "Avräkning sker", "quote": "Avräkning sker efter kvartal 4 då årets verkliga kostnader redovisas"},
+        {"contains": "prisjusteringar", "quote": "Då avtalet reglerar verkliga kostnader sker prisjusteringar när dessa uppkommer"}
       ]
     },
     {
