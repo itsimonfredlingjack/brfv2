@@ -59,6 +59,48 @@ Instrument.css: `@media (max-height: 780px) { .instrument { display: none } }`
 — "plåten ger upp sin fasta höjd före arbetet". Vid 860×620 saknas alltså
 bandets mätare; det är beslutet, inte en bugg. Rör den inte.
 
+## Systematiska läckor genom hela produkten, en klass i taget
+
+Poleringen var till 80 % samma fyra fel om och om igen, tvärs ytor:
+1. **Rått datum** (ISO `2026-09-15`) där en styrelse ska läsa "15 sep." —
+   fanns i fakturaärende, fakturakö, inkommande, bevakningar, uppgifter,
+   dokumentläsare, hemsidans versionslista. Lösning: `datum()`/`datumTid()`
+   (frontend), och en delad `svenskt_datum()` i backend/terms.py för prosa
+   (rubriker, härledningar, signalmeningar) — maskinfälten behåller ISO.
+2. **Privat knappvokabulär** vid egen geometri, vars inaktiva läge blev en grå
+   kloss (`opacity: 0.5` på fylld bläckknapp). Fanns i anslutningar, login,
+   setup, inställningar, inkommande, uppgifter. Lösning: `.ui-btn`-primitiven
+   + nytt lås (Beslut 12b) för den tysta inaktiva primären.
+3. **Rått användar-id** (`c36ab380d399`) som aktör i händelseströmmar. En
+   `display_actor()` i auth.py (namn→e-post→id) vid alla VISNINGS-poster;
+   OAuth/enhetsinloggningens kopplingsposter behåller id.
+4. **Engelska/maskinord** i svensk läsning: "triennial", "Systembearbetning",
+   "1 sidor"/"1 bilaga(or)"-plural. En delad `RECURRENCE_HUMAN`, mänskliga
+   etiketter, riktig singular/plural-böjning.
+Leta efter alla fyra på varje ny yta — de sitter aldrig ensamma.
+
+## Regelversionsvakten fångar backend-prosaändringar
+
+När compare.py/terms.py ändras (t.ex. NBSP, minustecken, svenska datum) faller
+`test_invoice_rules_version` med rätta: fynd stämplade med gamla
+ANALYSIS_ENGINE_VERSION skulle annars påstå att de skrevs av de nya reglerna.
+Höj versionen i app/invoices/models.py och kör
+`.venv/bin/python -m app.invoices.rules --write`.
+
+## Riggning efter en omstart: seeda om och läs om aktörsnamn
+
+Efter datorstart var min seedade dataroot halvtömd (auth.db kvar, tenants tomt)
+och gav 401. Rätt återställning: radera dataroten, starta `--seed-demo` på ny,
+och kör HELA riggen via produktens egen API med curl+cookie-jar (login →
+importera fakturor → importera .eml → watch-scan → godkänn förslag via
+`/watches/{id}/decision` med `{"status":"approved"}` → skapa uppgift). Chatten
+kräver dessutom en riktig modell: `BRF_LLM_BASE_URL`/`_MODEL`/`_RUNTIME_LABEL`
+som env vid backend-start räcker INTE — desktop.py:s `apply_model_runtime`
+skriver över env med den lagrade (tomma) configen, så konfigurera via
+`PUT /api/desktop/model-runtime` som installationsadmin (Anna är det i seeden).
+Modellen når agenntserver-lan:8000 (vLLM, gemma-4-12b) via en `ssh -L`-tunnel;
+loopback-adressen godkänns av endpoint-policyn.
+
 ## Belopp är ett ord: NBSP hela vägen
 
 "1 450,00 / SEK"-brytet kom från två håll: frontends formatAmount (vanligt
