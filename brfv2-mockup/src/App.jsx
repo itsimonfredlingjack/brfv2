@@ -918,7 +918,7 @@ function App() {
                       <span className="status-text muted"><Loader2 size={12} className="spin"/> Behandlas</span>
                     )}
                     <span className="meta-divider">·</span>
-                    <span className="status-text">{pdfDisplayPages != null ? `${pdfDisplayPages} sidor` : '… sidor'}</span>
+                    <span className="status-text">{pdfDisplayPages != null ? `${pdfDisplayPages} ${pdfDisplayPages === 1 ? 'sida' : 'sidor'}` : '… sidor'}</span>
                   </div>
                 </div>
               </div>
@@ -979,7 +979,7 @@ function App() {
                           <span className="info-value">{selectedDocument.date}</span>
                         </div>
                         <div className="info-item">
-                          <span className="info-label">Systembearbetning</span>
+                          <span className="info-label">Inläsning</span>
                           <span className="info-value">
                             {selectedDocument.status === 'Färdigbehandlad' ? <span className="status-text ok">Färdigbehandlad</span> : <span className="status-text muted">Behandlas</span>}
                           </span>
