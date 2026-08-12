@@ -128,6 +128,24 @@
         {"contains": "1400 kr", "quote": "Från 1 januari 2026 höjs ersättningen till 1400 kr per påbörjad timme"},
         {"contains": "1 oktober 2025", "quote": "Snöröjningsavtalet gäller från 1 oktober 2025 till 30 september 2026"}
       ]
+    },
+    {
+      "id": "x06",
+      "kind": "vocabulary_gap",
+      "_comment": "The case fan-out actually exists for. The board asks in its own vernacular — 'vinterunderhållet', 'upphandlat', 'notan' — and NONE of those words appear in the documents, which say 'snöröjning', 'beslutade att godkänna' and 'ersättning'. One search on the question's own words has nothing to match. The subqueries are lexical bridges the question does not contain. If fan-out cannot beat a single search here, it cannot beat it anywhere.",
+      "question": "Är vinterunderhållet upphandlat på rätt sätt och vad blir notan per timme?",
+      "expect_mode": "multi",
+      "expect_documents": ["Snöröjningsavtal.pdf", "Styrelseprotokoll.pdf"],
+      "expect_min_citations": 2,
+      "subqueries": [
+        "snöröjningsavtal ersättning per påbörjad timme",
+        "styrelsen beslutade godkänna snöröjningsavtalet protokoll"
+      ],
+      "answer": "Styrelsen beslutade att godkänna snöröjningsavtalet, och ersättningen är 1250 kr per påbörjad timme.",
+      "citations": [
+        {"contains": "1250 kr", "quote": "Ersättning utgår med 1250 kr per påbörjad timme"},
+        {"contains": "godkänna snöröjningsavtalet", "quote": "Styrelsen beslutade att godkänna snöröjningsavtalet"}
+      ]
     }
   ]
 }

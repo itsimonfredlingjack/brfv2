@@ -56,6 +56,15 @@ DISTRACTOR_TOPICS = [
     ("Ventilationsprotokoll.pdf", "Obligatorisk ventilationskontroll utfördes utan anmärkning i samtliga lägenheter."),
     ("Forsakringsbrev.pdf", "Fastighetsförsäkringen omfattar bostadsrättstillägg för samtliga lägenheter."),
     ("Tradgardsgrupp.pdf", "Trädgårdsgruppen ansvarar för planteringar och gemensamma arbetsdagar på våren."),
+    # Deliberate lexical decoys for the vocabulary-gap case (x06): these carry
+    # the words the BOARD uses — vinterunderhåll, upphandling, nota — while the
+    # documents that actually answer use snöröjning, godkänna, ersättning. A
+    # single search on the question's own words should be pulled here, which
+    # is exactly the failure fan-out is supposed to survive.
+    ("Upphandlingspolicy.pdf", "Vid upphandling ska minst tre offerter inhämtas och utvärderas av styrelsen."),
+    ("Underhallsbudget.pdf", "Notan för löpande underhåll budgeteras till 310000 kr för kommande verksamhetsår."),
+    ("Vinterberedskap.pdf", "Vinterunderhållet planeras varje höst och stäms av mot föregående säsongs utfall."),
+    ("Fakturarutin.pdf", "Notan attesteras av två styrelseledamöter innan betalning verkställs."),
 ]
 
 

@@ -5,15 +5,19 @@
 
 ## Kort svar
 
-**Nej — inte på nuvarande underlag, vid samma promptbudget.** Den planerade
-fan-outen slår inte en enkel sökning på golden-korpusen. Den vinner bara när
-den får fler utdrag än enkelsökningen, vilket inte är en vinst utan en större
-nota.
+**Ja — men bara vid ordförrådsglapp, inte vid flerdokumentsfrågor i allmänhet.**
 
-Det ändrar inte att arkitekturen är riktig eller att `clarify` är värdefullt i
-sig. Det betyder att **fan-outens nytta är obevisad**, och att
-`PER_QUERY_TOP_K` och `MAX_EVIDENCE_CHUNKS` inte får trimmas på det här
-underlaget.
+Det är en skarpare slutsats än den första körningen gav, och den ändrar vad
+planeraren borde utlösa på. Mätningen gjordes i två omgångar; omgång ett
+saknade det fall som visade skillnaden.
+
+- På frågor som *har flera delar* men bär orden som ska sökas: fan-out är
+  neutral eller **sämre** än en sökning vid samma budget.
+- På en fråga ställd med **andra ord än dokumenten använder**: fan-out är det
+  enda som fungerar vid trång budget (1.00 mot 0.50), och med färre utdrag.
+
+`PER_QUERY_TOP_K` och `MAX_EVIDENCE_CHUNKS` får fortfarande inte trimmas på det
+här underlaget — ett syntetiskt fall är för tunt för att kalibrera rattar på.
 
 ## Vad som mäts
 
@@ -31,26 +35,49 @@ Korpus: 4 golden-dokument + 40 distraktorer = 44 dokument/chunkar. Båda
 strategierna får **samma totala promptbudget** — annars "vinner" fan-out bara
 genom att få kosta mer.
 
+### Omgång 1 — utan ordförrådsglappsfall
+
 | Budget (utdrag) | Enkel sökning | Planerad fan-out |
 |---:|---:|---:|
-| 1 | 0.50 | 0.38 |
 | 2 | 0.88 | 0.62 |
 | 3 | **1.00** | 0.62 |
 | 4 | 1.00 | 1.00 |
-| 6 | 1.00 | 1.00 |
-| 8 | 1.00 | 1.00 |
 
-Enkelsökningen når full recall vid budget 3; fan-outen behöver 4. Vid trång
-budget är den **sämre**, för att den delar budgeten mellan delfrågor som ofta
-hämtar överlappande chunkar.
+Enkelsökningen nådde full recall vid budget 3; fan-outen behövde 4. Slutsatsen
+då: fan-out ger ingenting. Men korpusen saknade det fall den finns för.
 
-## Varför — och vad som är fel på underlaget
+### Omgång 2 — med `x06 vocabulary_gap`
 
-Golden-fallen är skrivna så att **frågan själv innehåller termer ur varje
-dokument den behöver**. "Vem är leverantör och har styrelsen godkänt det?"
-matchar både avtalet och protokollet i en enda sökning. Fan-out löser problemet
-att en fråga har en del *utan* lexikal överlappning mot sitt dokument — och den
-sortens fall finns inte i korpusen ännu.
+Ett fall där frågan är ställd i styrelsens vardagsspråk — "vinterunderhållet",
+"upphandlat", "notan" — medan dokumenten säger "snöröjning", "beslutade att
+godkänna" och "ersättning". Inget av frågans nyckelord finns i de dokument som
+svarar. Korpusen fick också fyra **lexikala lockbeten** som bär frågans ord
+(Upphandlingspolicy, Underhållsbudget, Vinterberedskap, Fakturarutin), så en
+enkel sökning aktivt dras dit.
+
+Per fall vid budget 4:
+
+| Fall | Shape | Enkel | Planerad |
+|---|---|---:|---:|
+| x00 | two_document_answer | 1.00 | 1.00 |
+| x01 | multi_part_question | 1.00 | 1.00 |
+| x03 | conflicting_documents | 1.00 | 1.00 |
+| x05 | time_bound_question | 1.00 | 1.00 |
+| **x06** | **vocabulary_gap** | **0.50** | **1.00** |
+
+x06 är det **enda** fallet där fan-out vinner — och den vinner med färre utdrag
+(2.8 mot 4.0 i snitt). Enkelsökningen fastnar på 0.50 där ända upp till budget 6.
+
+## Vad det betyder för planeraren
+
+Fan-outens värde ligger i **ordförrådsglappet, inte i flerdokumentsheten**. Det
+gör den ursprungliga planerarinstruktionen fel: den sa "välj multi när frågan
+har flera delar", och just den utlösaren är mätt som verkningslös — flerdelade
+frågor bär redan orden som ska sökas, och en sökning hittar dem.
+
+`PLANNER_CONTRACT` är därför omskriven: `multi` utlöses av att frågan är ställd
+med andra ord än dokumenten använder, och delfrågorna ska vara **översättningar
+till dokumentens terminologi**, inte frågans egna ord uppdelade i bitar.
 
 Två fällor jag gick i och som är värda att minnas:
 
@@ -64,13 +91,18 @@ Två fällor jag gick i och som är värda att minnas:
 
 ## Vad som borde göras härnäst
 
-- **Skriv golden-fall som faktiskt kräver fan-out**: en fråga vars andra del är
-  lexikalt disjunkt från sitt dokument. Utan sådana fall mäter BRF-5 fel sak.
+- **Fler ordförrådsglappsfall, och riktiga.** Ett syntetiskt fall visar att
+  mekanismen finns; det säger inte hur ofta den utlöses i verkligheten. Hämta
+  formuleringar ur riktiga styrelsefrågor.
 - **Mät på riktig korpus**, inte fixturer med en chunk per dokument. Verkliga
   årsredovisningar och stadgar har många chunkar per dokument, vilket är där
   budgettrycket faktiskt uppstår.
+- **Mät planeraren separat.** Harnesset kör fallens egna delfrågor, inte
+  planerarens — avsiktligt, så att retrieval och planering inte blandas ihop.
+  Men det betyder att ingenting ännu mäter om en riktig modell *upptäcker*
+  ordförrådsglappet. Det är nu den svagaste länken.
 - **Först därefter** trimma `PER_QUERY_TOP_K` / `MAX_EVIDENCE_CHUNKS`.
 
 Tills dess: den planerade vägen ligger kvar bakom `BRF_PLANNED_ASK` och är
-avstängd som default. Det är rätt läge för en funktion vars nytta ännu inte är
-uppmätt.
+avstängd som default. Mekanismen är visad på ett fall — det är inte samma sak
+som att funktionen är bevisad i drift.

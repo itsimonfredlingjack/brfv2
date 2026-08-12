@@ -104,6 +104,7 @@ def test_every_golden_kind_from_brf4_is_covered():
         "conflicting_documents",
         "no_evidence_refuses",
         "time_bound_question",
+        "vocabulary_gap",
     }
 
 
