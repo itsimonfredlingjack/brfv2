@@ -62,7 +62,7 @@ class TestScanAndPropose:
         assert notice["status_label"] == "väntar på godkännande"
         assert notice["responsible"] == ""
         assert notice["citations"][0]["page"] >= 1
-        assert notice["derivation"] == "2026-12-31 minus 3 månader"
+        assert notice["derivation"] == "31 dec. 2026 minus 3 månader"
 
     def test_a_proposal_is_not_yet_on_the_board(self, seeded):
         env = seeded
@@ -131,7 +131,7 @@ class TestDeciding:
         ).json()["watch"]
         assert watch["due_date"] == "2026-09-15"
         assert watch["derived_due_date"] == "2026-09-30"
-        assert watch["derivation"] == "2026-12-31 minus 3 månader"
+        assert watch["derivation"] == "31 dec. 2026 minus 3 månader"
 
     def test_a_nonsense_date_is_refused(self, seeded):
         env = seeded

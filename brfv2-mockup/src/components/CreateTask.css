@@ -187,27 +187,9 @@
   margin-top: var(--s1);
 }
 
-.task-create-submit,
-.task-create-cancel {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s1h);
-  padding: var(--s2) var(--s3h);
-  border-radius: var(--r-sm);
-  border: 1px solid var(--panel-border);
-  background: transparent;
-  color: var(--text-primary);
-  font-size: var(--text-dense);
-  font-weight: 600;
-  font-family: inherit;
-  cursor: pointer;
-}
-
-.task-create-submit { border-color: var(--ink); }
-.task-create-cancel { color: var(--text-secondary); }
-
-.task-create-submit:disabled,
-.task-create-cancel:disabled { opacity: 0.5; cursor: not-allowed; }
+/* The submit and the close take the primitive (ui-btn--primary / --ghost,
+   small) — they were two more private buttons at their own geometry, and the
+   submit's disabled state was another half-opacity slab. */
 
 .task-create .spin { animation: task-create-spin 1s linear infinite; }
 

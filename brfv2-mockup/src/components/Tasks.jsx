@@ -68,7 +68,7 @@ function daysLeftText(days) {
 // An undated task is not urgent, it is unscheduled — and the card says so
 // rather than leaving the field blank.
 const dueText = (task) => (task.due_date
-  ? `${task.due_date} · ${daysLeftText(task.days_left)}`
+  ? `${datum(task.due_date)} · ${daysLeftText(task.days_left)}`
   : 'inget datum satt');
 
 const originText = (task) => (task.origin.label
@@ -493,7 +493,7 @@ export default function Tasks({ brfId, isAdmin = false, onOpenCitation }) {
       setNotice(
         `Sparat. ${updated.title}: ${updated.status_label}, ansvarig `
         + `${updated.responsible || 'ej utsedd'}, `
-        + `${updated.due_date || 'inget datum'}.`,
+        + `${updated.due_date ? datum(updated.due_date) : 'inget datum'}.`,
       );
       await refresh();
     } catch (err) {

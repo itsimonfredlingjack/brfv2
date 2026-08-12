@@ -19,6 +19,8 @@ from datetime import date
 from typing import Callable
 
 from fastapi import APIRouter, Depends, HTTPException
+
+from ..auth import display_actor
 from pydantic import BaseModel
 
 from ..store import Store
@@ -158,7 +160,7 @@ def build_router(
             if req.remind_lead_days is not None:
                 update["remind_lead_days"] = req.remind_lead_days
             if req.status != "proposed":
-                update["decided_by"] = user["id"]
+                update["decided_by"] = display_actor(user)
                 update["decided_at"] = _now_iso()
             else:
                 update["decided_by"] = None

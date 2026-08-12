@@ -420,7 +420,7 @@ describe('the active list', () => {
     const card = cardFor(OVERDUE.title);
 
     expect(within(card).getByText('försenad')).toBeInTheDocument();
-    expect(within(card).getByText('2026-07-30 · 3 dagar försenat')).toBeInTheDocument();
+    expect(within(card).getByText('30 juli · 3 dagar försenat')).toBeInTheDocument();
   });
 
   it('reads an unnamed responsible as “ej utsedd”, and counts them', async () => {
@@ -429,7 +429,7 @@ describe('the active list', () => {
     const card = cardFor(UNASSIGNED.title);
 
     expect(within(card).getByText('ej utsedd')).toBeInTheDocument();
-    expect(within(card).getByText('2026-08-20 · om 18 dagar')).toBeInTheDocument();
+    expect(within(card).getByText('20 aug. · om 18 dagar')).toBeInTheDocument();
 
     // And the same fact as a number somebody can act on. The three numerals
     // live in the masthead band's instrument now, not in a counter row on the
@@ -701,7 +701,7 @@ describe('creating work', () => {
     expect(await within(card).findByText('Det finns redan en uppgift för det här'))
       .toBeInTheDocument();
     expect(within(card).getByText('Boka besiktningen inför 2026-12-12')).toBeInTheDocument();
-    expect(within(card).getByText(/pågår · Ordförande Ek · 2026-09-01/)).toBeInTheDocument();
+    expect(within(card).getByText(/pågår · Ordförande Ek · 1 sep\./)).toBeInTheDocument();
 
     // Creating a second one is still possible, but only as a deliberate act.
     expect(within(card).queryByRole('button', { name: 'Skapa uppgift' })).toBeNull();

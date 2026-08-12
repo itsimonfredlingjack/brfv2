@@ -21,6 +21,7 @@ from typing import Callable
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 
+from ..auth import display_actor
 from ..store import Store
 from ..terms import parse_iso
 from .store import TaskNotFound
@@ -80,7 +81,7 @@ def build_router(
 
     def _event(user: dict, kind: str, **fields) -> TaskEvent:
         return TaskEvent(
-            id=uuid.uuid4().hex[:12], at=_now(), by=user["id"], kind=kind, **fields
+            id=uuid.uuid4().hex[:12], at=_now(), by=display_actor(user), kind=kind, **fields
         )
 
     def _origin_evidence(store: Store, kind: str, ref_id: str) -> tuple[TaskOrigin, list, str, str]:
@@ -241,7 +242,7 @@ def build_router(
             citations=citations,
             source_document_id=document_id,
             source_document_name=document_name,
-            created_by=user["id"],
+            created_by=display_actor(user),
             created_at=_now(),
         )
         task = task.model_copy(
@@ -265,7 +266,7 @@ def build_router(
             from ..invoices.cases import note_task
 
             try:
-                note_task(store, origin.ref_id, task=stored, user_id=user["id"])
+                note_task(store, origin.ref_id, task=stored, user_id=display_actor(user))
             except Exception as exc:
                 # Deliberately broad, and the breadth is the point. The task is
                 # already committed and is the record; the case entry is a

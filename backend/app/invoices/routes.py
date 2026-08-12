@@ -28,6 +28,8 @@ from datetime import date
 from typing import Callable
 
 from fastapi import APIRouter, Depends, HTTPException
+
+from ..auth import display_actor
 from pydantic import BaseModel
 
 from ..integrations.accounting_fixture import FixtureAccountingAdapter, FixtureError
@@ -254,12 +256,12 @@ def build_router(
         try:
             if req.responsible is not None:
                 case = case_ops.assign(
-                    store, case.id, responsible=req.responsible, user_id=user["id"]
+                    store, case.id, responsible=req.responsible, user_id=display_actor(user)
                 )
                 changed = True
             if req.review_status is not None:
                 case = case_ops.set_review_status(
-                    store, case.id, status=req.review_status, note=req.note, user_id=user["id"]
+                    store, case.id, status=req.review_status, note=req.note, user_id=display_actor(user)
                 )
                 changed = True
         except case_ops.CaseError as exc:
@@ -277,7 +279,7 @@ def build_router(
     ) -> dict:
         case = _case(store, case_id)
         try:
-            case = case_ops.comment(store, case.id, text=req.note, user_id=user["id"])
+            case = case_ops.comment(store, case.id, text=req.note, user_id=display_actor(user))
         except case_ops.CaseError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         return case.public(today())

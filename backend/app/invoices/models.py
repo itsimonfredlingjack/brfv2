@@ -289,7 +289,7 @@ ENGINE = "regelmotor"
 # `tests/test_invoice_rules_version.py` fails — naming the module that moved —
 # if they part company. After a deliberate rule change: bump this, then run
 # `make invoice-rules-lock`. See :mod:`app.invoices.rules`.
-ANALYSIS_ENGINE_VERSION = "2026.08.2"
+ANALYSIS_ENGINE_VERSION = "2026.08.3"
 
 
 class CaseEvent(BaseModel):

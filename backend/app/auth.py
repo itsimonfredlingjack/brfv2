@@ -49,6 +49,17 @@ def _hash_password(password: str, salt: bytes) -> bytes:
     return hashlib.scrypt(password.encode("utf-8"), salt=salt, **_SCRYPT)
 
 
+def display_actor(user: dict) -> str:
+    """The actor a reader should meet in a record: a name, never a hash.
+
+    Every module used to write ``user["id"]`` into its event streams, and the
+    UI printed it verbatim — a board member reading a task's history met
+    "c36ab380d399" where "Anna Andersson" was meant. Records written before
+    this keep their ids; nothing compares these fields, they are prose.
+    """
+    return user.get("name") or user.get("email") or user["id"]
+
+
 def _token_hash(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 

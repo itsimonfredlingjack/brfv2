@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { ClipboardList, Loader2 } from 'lucide-react';
 import { tasksApi } from '../api';
+import { datum } from './datum';
 import './CreateTask.css';
 
 /**
@@ -51,6 +52,7 @@ export default function CreateTask({
   const [due, setDue] = useState(suggestedDue || '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [titleTouched, setTitleTouched] = useState(false);
   const [existing, setExisting] = useState(null);
   const [looking, setLooking] = useState(false);
 
@@ -157,7 +159,7 @@ export default function CreateTask({
                   <span className="task-create-duplicate-title">{task.title}</span>
                   <span className="muted">
                     {task.status_label} · {task.responsible || 'ej utsedd'}
-                    {task.due_date ? ` · ${task.due_date}` : ' · inget datum'}
+                    {task.due_date ? ` · ${datum(task.due_date)}` : ' · inget datum'}
                   </span>
                 </li>
               ))}
@@ -176,7 +178,7 @@ export default function CreateTask({
             value={title}
             maxLength={MAX_TITLE}
             disabled={busy}
-            onChange={(e) => setTitle(e.target.value)}
+            onChange={(e) => { setTitle(e.target.value); setTitleTouched(true); }}
           />
         </label>
         <label>
@@ -210,7 +212,7 @@ export default function CreateTask({
           </label>
         </div>
 
-        {!trimmed && <p className="task-invalid">Uppgiften behöver en rubrik.</p>}
+        {titleTouched && !trimmed && <p className="task-invalid">Uppgiften behöver en rubrik.</p>}
         {!dueValid && <p className="task-invalid">Datum ska skrivas ÅÅÅÅ-MM-DD.</p>}
         {!responsible.trim() && (
           <p className="muted">
@@ -224,7 +226,7 @@ export default function CreateTask({
         <div className="task-create-actions">
           <button
             type="button"
-            className="task-create-submit"
+            className="ui-btn ui-btn--primary ui-btn--sm"
             disabled={!ready}
             onClick={submit}
           >
@@ -233,7 +235,7 @@ export default function CreateTask({
           </button>
           <button
             type="button"
-            className="task-create-cancel"
+            className="ui-btn ui-btn--ghost ui-btn--sm"
             disabled={busy}
             onClick={() => { setOpen(false); setError(''); }}
           >

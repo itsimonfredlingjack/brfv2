@@ -59,6 +59,7 @@ from .resolve import (
 from .store import FindingNotFound, SourceEventNotFound
 from .threads import build_threads
 from .triage import analyze_and_refine
+from ..auth import display_actor
 from .oauth import PendingLogins
 from .review import review_invoice
 from .sources import INVOICE_SOURCES, accounting_source, live_runner
@@ -324,7 +325,7 @@ def build_router(
                 integrations=store.integrations,
                 raw=raw,
                 filename=f"{message_id[:40]}.eml",
-                imported_by=user["id"],
+                imported_by=display_actor(user),
                 method="graph-mailbox-import",
                 adapter_name=PROVIDER_GRAPH,
                 external_hint=message_id,
@@ -381,7 +382,7 @@ def build_router(
                 integrations=store.integrations,
                 raw=data,
                 filename=filename,
-                imported_by=user["id"],
+                imported_by=display_actor(user),
             )
         except DuplicateSourceEvent as exc:
             # 409, not 200-with-a-note: the caller asked to create something and
@@ -432,7 +433,7 @@ def build_router(
                     if req.linked_document_ids is not None
                     else event.linked_document_ids
                 ),
-                "decided_by": user["id"] if req.status != "open" else None,
+                "decided_by": display_actor(user) if req.status != "open" else None,
                 "decided_at": decided_at if req.status != "open" else None,
                 "decision_note": req.note,
             }
@@ -448,7 +449,7 @@ def build_router(
                         resolution=event.resolution,
                         review_status=event.review_status,
                         superseded_at=decided_at,
-                        superseded_by=user["id"],
+                        superseded_by=display_actor(user),
                         note=(req.note or "").strip(),
                     ),
                 ]
@@ -500,7 +501,7 @@ def build_router(
                 integrations=store.integrations,
                 event_id=event_id,
                 attachment_id=attachment_id,
-                user_id=user["id"],
+                user_id=display_actor(user),
                 note=req.note,
             )
         except AdoptionError as exc:
@@ -599,7 +600,7 @@ def build_router(
                     adapter=adapter,
                     provider=PROVIDER_GRAPH,
                     folder=folder,
-                    user_id=user["id"],
+                    user_id=display_actor(user),
                     limit=max(1, min(int(limit), 100)),
                     only_with_attachments=onlyWithAttachments,
                 )
@@ -664,7 +665,7 @@ def build_router(
         confirmation = TriageConfirmation(
             category=req.category,
             category_label=TRIAGE_CATEGORY_LABELS[req.category],
-            confirmed_by=user["id"],
+            confirmed_by=display_actor(user),
             confirmed_at=utc_now_iso(),
             note=(req.note or "").strip(),
         )
@@ -704,7 +705,7 @@ def build_router(
             event = resolve_source_event(
                 store=store,
                 event_id=event_id,
-                user_id=user["id"],
+                user_id=display_actor(user),
                 kinds=list(req.outcomes),
                 note=req.note,
                 attachment_ids=list(req.attachment_ids),
@@ -736,7 +737,7 @@ def build_router(
         settled it.
         """
         try:
-            event = reopen_source_event(store=store, event_id=event_id, user_id=user["id"])
+            event = reopen_source_event(store=store, event_id=event_id, user_id=display_actor(user))
         except ResolutionError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
         return event.model_dump(mode="json")
@@ -915,7 +916,7 @@ def build_router(
                 lambda finding: finding.model_copy(
                     update={
                         "status": req.status,
-                        "decided_by": user["id"] if req.status != "open" else None,
+                        "decided_by": display_actor(user) if req.status != "open" else None,
                         "decided_at": decided_at if req.status != "open" else None,
                         "decision_note": req.note,
                     }
