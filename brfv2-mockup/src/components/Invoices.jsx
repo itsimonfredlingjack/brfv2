@@ -1,16 +1,11 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  AlertTriangle,
-  Building2,
-  CalendarClock,
-  CheckCircle2,
   Download,
   Loader2,
   Receipt,
   RefreshCw,
   Search,
   Table2,
-  User,
   X,
 } from 'lucide-react';
 import { integrationsApi, invoicesApi } from '../api';
@@ -41,19 +36,6 @@ import { datum } from './datum';
  *    and the case says what it was read from. A row never asserts more than the
  *    finding behind it does.
  */
-
-const SIGNAL_ICON = {
-  possible_duplicate: AlertTriangle,
-  overdue: CalendarClock,
-  due_soon: CalendarClock,
-  price_change: AlertTriangle,
-  missing_contract: AlertTriangle,
-  unresolved_supplier: Building2,
-  new_line: AlertTriangle,
-  open_question: AlertTriangle,
-  credit_relation: Receipt,
-  no_deviation_found: CheckCircle2,
-};
 
 const SOURCE_LABEL = {
   fixture: 'Syntetiskt underlag',
@@ -177,22 +159,6 @@ function Banner({ tone, children, onDismiss }) {
   );
 }
 
-// A date that has passed or approaches is arithmetic, not a claim the
-// documents fail to support — so these two signals wear the measurement's
-// box, never Vägran's amber (theme.css, beside --avbrott).
-const MEASURED_SIGNALS = new Set(['overdue', 'due_soon']);
-
-function SignalChip({ signal }) {
-  if (!signal) return <span className="signal-chip none">—</span>;
-  const Icon = SIGNAL_ICON[signal.kind] || AlertTriangle;
-  const tone = MEASURED_SIGNALS.has(signal.kind) ? 'measured' : signal.severity;
-  return (
-    <span className={`signal-chip ${tone}`} title={`${signal.label} — ${signal.detail || ''}`}>
-      <Icon size={12} /> <span className="signal-chip-label">{signal.label}</span>
-    </span>
-  );
-}
-
 /**
  * Reading an invoice in.
  *
@@ -268,7 +234,7 @@ function ReadInPanel({
               <tr key={row.external_ref}>
                 <td><code>{row.external_ref}</code></td>
                 <td>{row.supplier_name}</td>
-                <td>{row.invoice_date || '—'}</td>
+                <td>{row.invoice_date ? datum(row.invoice_date) : '—'}</td>
                 <td>{formatAmount(row.total_amount, row.currency)}</td>
                 {source === 'fortnox' && (
                   <>

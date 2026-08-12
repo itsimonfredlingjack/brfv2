@@ -223,8 +223,10 @@ describe('design lock: every variable names something', () => {
 // section labels that are on none of that list, which is what made the product
 // read as instrumentation. They now go through --etikett-*; this lock keeps the
 // list closed, so a new caption cannot quietly join them.
+// 'overdue-flag' and 'signal-chip' left this list when the queue table they
+// dressed was deleted from Invoices.css — the allowance shrinks with the code.
 const MONO_CAPS_ALLOWED = [
-  'matt', 'answer-state', 'verdict', 'overdue-flag', 'signal-chip',
+  'matt', 'answer-state', 'verdict',
   'task-badge', 'logo-qualifier', 'login-brand-qualifier', 'docs-register-count',
 ];
 
@@ -570,6 +572,28 @@ describe('design lock: the case view draws no box around its own structure', () 
     const drawn = block.match(BOXES);
     expect(drawn, `${selector} draws ${drawn && drawn[1]} — the case is back to cards in cards`)
       .toBeNull();
+  });
+});
+
+// Beslut 12b: a disabled primary gives up its ink.
+//
+// The primitive's generic disabled state is opacity 0.5, which on a filled ink
+// pill renders a solid grey slab — three of them met the reader on the invoice
+// case before anything had been touched, reading as broken rather than as
+// waiting. theme.css therefore states a quiet disabled primary: the inert
+// surface, full opacity, defined after the generic rule so the cascade keeps
+// it. This lock holds all three parts, because losing any one of them brings
+// the slab back without a test going red.
+describe('design lock: a disabled primary gives up its ink', () => {
+  it('theme.css quiets .ui-btn--primary:disabled after the generic dimming', () => {
+    const generic = THEME.indexOf('.ui-btn:disabled');
+    const quiet = THEME.indexOf('.ui-btn--primary:disabled');
+    expect(generic, '.ui-btn:disabled not found in theme.css').toBeGreaterThan(-1);
+    expect(quiet, '.ui-btn--primary:disabled not found in theme.css — the grey slab is back').toBeGreaterThan(-1);
+    expect(quiet, 'the quiet rule must come after the generic one or it loses the cascade').toBeGreaterThan(generic);
+    const block = THEME.slice(quiet, THEME.indexOf('}', quiet));
+    expect(block, 'the disabled primary must take the inert surface').toContain('background: var(--skal-pressed)');
+    expect(block, 'the disabled primary must undo the generic opacity dimming').toContain('opacity: 1');
   });
 });
 

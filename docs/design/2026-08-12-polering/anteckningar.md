@@ -37,6 +37,28 @@ Spacing-låset regexar `gap:`/`margin:` var de än står — en prosa-kommentar
 ("No flex gap: … 24px …") föll i låset. Skriv kommentarer utan `<egenskap>:`
 följt av skalvärden, eller formulera om med tokennamn (--s6) i stället för px.
 
+## Mät scrollbarheten, inte utseendet
+
+Fakturakön SÅG färdig ut men gick inte att rulla med hjulet: `.invoices-work`
+var skärmens scroll-låda (kedjan .tab-content:has(.invoices) fyller fönstret)
+men hade `overflow: hidden` kvar från kortet den en gång var — 900px kö
+oåtkomlig utom via tangentbordsfokus. Skärmdumpar avslöjar inte detta; räkna
+`scrollHeight - clientHeight` mot `overflow-y` på varje pane som ska rulla.
+
+## Skärmbevis måste vara yngre än koden det påstås visa
+
+Verifieraren (färsk kontext) underkände två av commitens påståenden för att
+efter-bilderna togs mot en backend som ännu inte kört fixarna. Rätt rutin:
+efter varje backendändring, starta om den seedade backenden FÖRE
+bevis-skärmdumparna, och demonstrera lagrings-beteenden (t.ex. _klipp) genom
+att trigga en ny händelse — gamla lagrade strängar läker aldrig.
+
+## Instrumentet släcks avsiktligt under 780px fönsterhöjd
+
+Instrument.css: `@media (max-height: 780px) { .instrument { display: none } }`
+— "plåten ger upp sin fasta höjd före arbetet". Vid 860×620 saknas alltså
+bandets mätare; det är beslutet, inte en bugg. Rör den inte.
+
 ## Belopp är ett ord: NBSP hela vägen
 
 "1 450,00 / SEK"-brytet kom från två håll: frontends formatAmount (vanligt

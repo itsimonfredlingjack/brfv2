@@ -230,7 +230,13 @@
   border-radius: 0;
   background: transparent;
   box-shadow: none;
-  overflow: hidden;
+  /* The register is the screen's scroll region — the band and the read-in
+     strip stay put above it, and the top hairline marks the cut a scrolled
+     row slides under. This was `hidden`, a leftover from the card the queue
+     used to be: 900px of queue were unreachable by wheel, and only keyboard
+     focus could drag them into view. */
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .invoices-work-head .invoices-tabs {
@@ -259,15 +265,6 @@
 .invoices-work-body {
   padding: var(--s4) 0 0;
   min-width: 0;
-}
-
-.invoices-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--s3);
-  flex-wrap: wrap;
-  margin-bottom: var(--s3h);
 }
 
 /* The same segmented control as everywhere else: a pill track with the
@@ -512,238 +509,12 @@
 
 /* ---- the queue ---- */
 
-/* The register is the sheet's body — no second card around it. */
-.invoices-queue-wrap {
-  flex: 1;
-  min-height: 0;
-  overflow-x: auto;
-  overflow-y: auto;
-  background: transparent;
-}
-
-/* The ledger: column labels in the measuring cut on a half-step surface, so
-   the head reads as the register's rail rather than as its first row. */
-.invoices-queue {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: var(--text-base);
-}
-
-.invoices-queue th {
-  height: var(--h-md);
-  padding: 0 var(--s3) 0 0;
-  border-bottom: 1px solid var(--border-strong);
-  background: transparent;
-  color: var(--muted-foreground); /* contrast rule: <12px mono needs 6.2:1 */
-  font-family: var(--etikett-family);
-  font-size: var(--etikett-size);
-  font-weight: var(--etikett-weight);
-  letter-spacing: var(--etikett-tracking);
-  text-transform: var(--etikett-case);
-  text-align: left;
-  white-space: nowrap;
-}
-
-.invoices-queue td {
-  padding: var(--s3) var(--s3) var(--s3) 0;
-  border-bottom: 1px solid var(--border);
-  color: var(--foreground);
-  vertical-align: middle;
-  white-space: nowrap;
-  /* Terminal output: every figure in a column lines up under the one above it,
-     whatever digits it happens to contain. */
-  font-variant-numeric: tabular-nums;
-}
-
-/* A name is identification, not prose: it may truncate before it may widen
-   the ledger past its window. */
-.invoices-queue .responsible { max-width: 112px; }
-.invoices-queue .responsible > svg { flex-shrink: 0; }
-.invoices-queue .responsible .truncate { min-width: 0; }
-
-/* Flush left at the register's own edge — no inset, because there is no card
-   to inset from. The last column keeps its right edge clean. */
-.invoices-queue th:first-child,
-.invoices-queue td:first-child { padding-left: 0; }
-.invoices-queue th:last-child,
-.invoices-queue td:last-child { padding-right: 0; }
-
-/* A number column is read down, not across: right-aligned so the units line up
-   in a single vertical rule, and set in the measuring cut. */
-.invoices-queue th.numeric,
-.invoices-queue td.numeric {
-  text-align: right;
-  font-family: var(--font-mono);
-  font-variant-numeric: tabular-nums;
-}
-
-/* Dates are measurements; at register size they buy the ledger its width. */
-.invoices-queue td.col-due,
-.invoices-queue td.numeric.muted {
-  font-family: var(--font-mono);
-  font-size: var(--text-dense);
-  letter-spacing: 0.01em;
-}
-
-.invoices-queue tbody tr { cursor: pointer; transition: background-color 0.12s ease; }
-.invoices-queue tbody tr:hover { background: var(--surface-2); }
-/* Keyboard mark: inset ring (a table row's outline clips in WebKitGTK) plus
-   the soft Handling tint — the same treatment as .thread-row. */
-.invoices-queue tbody tr:focus-visible {
-  outline: none;
-  box-shadow: inset 0 0 0 2px var(--ring);
-  background: var(--handling-soft);
-}
-.invoices-queue tbody tr:last-child td { border-bottom: none; }
-
-.invoices-queue th.col-amount,
-.invoices-queue td.col-amount { text-align: right; }
-.invoices-queue td.col-amount {
-  font-family: var(--font-mono);
-  font-size: var(--text-dense);
-  letter-spacing: 0.01em;
-}
-.invoices-queue td.numeric { font-variant-numeric: tabular-nums; }
-.invoices-queue td.col-due { font-variant-numeric: tabular-nums; }
-.invoices-queue td.col-due .overdue-flag { display: flex; }
-
-/* The accounting system's own words, allowed to wrap: it is a sentence
-   ("Bokförd i ekonomisystemet"), not a code, and forcing it onto one line
-   costs the columns that follow it more than it is worth. */
-.invoices-queue td.col-source-status { white-space: normal; min-width: 110px; max-width: 150px; }
-
-/* An overdue invoice is the one row that has to be found at a glance. A dot
-   beside the supplier does that without an inset bar fighting the card's
-   corner radius.
-
-   The dot is ink, not red: a date that has passed is a measurement, and red in
-   this product means the machinery broke (see --avbrott). What makes the row
-   findable is that it is the only full-strength mark in a column of muted
-   ones — contrast of weight, which is also the only kind that survives a
-   reader who cannot separate red from amber. */
-.invoices-queue tr.overdue .case-link strong::before {
-  content: '';
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  margin-right: var(--s2);
-  border-radius: var(--radius-pill);
-  background: var(--ink);
-  vertical-align: middle;
-}
-
-.invoices-queue .case-link {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s1);
-  max-width: 190px;
-  padding: 0;
-  border: none;
-  background: none;
-  color: var(--foreground);
-  font: inherit;
-  text-align: left;
-  cursor: pointer;
-}
-
-.invoices-queue .case-link strong {
-  font-weight: 600;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.invoices-queue .case-link:hover strong { text-decoration: underline; text-underline-offset: 3px; }
-.case-link-sub { display: flex; align-items: center; gap: var(--s1h); flex-wrap: wrap; font-size: var(--text-sm); }
-
-/* The word, set as the measurement it is (theme.css .matt--overdue). Below
-   the date rather than beside it — the column stays narrow, and the flag
-   reads as a remark on the date it belongs to. */
-.overdue-flag {
-  display: inline-flex;
-  align-items: center;
-  width: fit-content;
-  height: 18px;
-  margin-top: var(--s1);
-  padding: 0 var(--s2);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--radius-sm);
-  background: var(--surface-3);
-  color: var(--foreground);
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  font-weight: 600;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  white-space: nowrap;
-}
-
-.source-badge {
-  padding: var(--s0h) var(--s2);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--r-sm);
-  color: var(--muted-foreground);
-  font-size: var(--text-xs);
-  white-space: nowrap;
-}
-
-/* The association's own review state. Neutral by design — it is a place in a
-   workflow, not a judgement, and colouring it would make it read as one. */
-.review-badge {
-  display: inline-block;
-  padding: var(--s0h) var(--s2h);
-  border: 1px solid var(--border-strong);
-  border-radius: var(--r-sm);
-  color: var(--foreground);
-  font-size: var(--text-sm);
-  white-space: nowrap;
-}
-
-.responsible { display: inline-flex; align-items: center; gap: var(--s1h); }
-
-/* `.invoices button.link` stood here — eleven declarations that were
-   `.ui-link` in theme.css with one digit changed (45% underline instead of
-   40%). The case's text actions use the primitive now. The lock named the two
-   classes the consolidation deleted, which is why it never noticed a third
-   vocabulary growing quietly beside it; it counts controls now. */
-
-.signal-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--s1h);
-  max-width: 150px;
-  padding: var(--s0h) var(--s2h);
-  border: 1px solid transparent;
-  border-radius: var(--r-sm);
-  font-size: var(--text-xs);
-  font-weight: 500;
-  white-space: nowrap;
-}
-
-.signal-chip > svg { flex-shrink: 0; }
-.signal-chip-label { overflow: hidden; text-overflow: ellipsis; }
-
-/* Severity is a ramp inside ONE meaning, not two colours. Both of these say
-   the same thing — the invoice asserts something the association's own
-   documents do not support — so both are Vägran, and the ramp is fill versus
-   outline. Red is impossible here by construction: nothing has broken. */
-.signal-chip.warning { background: var(--warn-soft); border-color: var(--warn-border); color: var(--warn); }
-.signal-chip.attention { background: transparent; border-color: var(--warn-border); color: var(--warn); }
-.signal-chip.info { background: var(--muted); border-color: transparent; color: var(--muted-foreground); }
-.signal-chip.none { color: var(--subtle-foreground); }
-
-/* Overdue and due-soon: the calendar, measured — the same box as
-   .matt--overdue, never amber. */
-.signal-chip.measured {
-  background: var(--surface-3);
-  border-color: var(--border-strong);
-  border-radius: var(--radius-sm);
-  color: var(--foreground);
-  font-family: var(--font-mono);
-  font-size: var(--text-2xs);
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
+/* The queue is Arendekort in an .arendelista — one case per card, the facts
+   in the mono row underneath. The eight-column ledger this section used to
+   style (.invoices-queue with its badges, chips and flags) was replaced by
+   the cards and its ~150 lines of rules sat here unreferenced; dead rules in
+   a stylesheet are how two designs end up in one product, so they are gone
+   rather than waiting to be half-revived. */
 
 .invoices-loading {
   display: flex;

@@ -72,7 +72,10 @@ def money(value: Decimal | None, currency: str = "SEK") -> str:
     """
     if value is None:
         return "—"
-    return f"{value:,.2f}\u00a0{currency}".replace(",", "\u00a0").replace(".", ",", 1)
+    text = f"{value:,.2f}\u00a0{currency}".replace(",", "\u00a0").replace(".", ",", 1)
+    # A negative takes the real minus (U+2212), matching the UI's own number
+    # formatting — an ASCII hyphen beside it reads as a second dialect.
+    return text.replace("-", "\u2212", 1)
 
 
 def percent(old: Decimal, new: Decimal) -> str | None:
@@ -85,7 +88,7 @@ def percent(old: Decimal, new: Decimal) -> str | None:
         return None
     rounded = share.quantize(Decimal("0.1"))
     sign = "+" if rounded > 0 else ""
-    return f"{sign}{rounded}".replace(".", ",") + " %"
+    return f"{sign}{rounded}".replace(".", ",").replace("-", "\u2212", 1) + "\u00a0%"
 
 
 def _description_key(text: str) -> str:

@@ -295,7 +295,7 @@ class TestPreviousComparison:
 
         assert finding.verdict == "possible_deviation"
         assert "4\u00a0625,00\u00a0SEK" in finding.suggestion
-        assert "+74,0 %" in finding.suggestion
+        assert "+74,0\u00a0%" in finding.suggestion
         # The quantity effect is explained by the invoice; the price effect is not.
         assert "Fakturan förklarar själv en del av det" in finding.suggestion
         assert "antalet" in finding.suggestion
