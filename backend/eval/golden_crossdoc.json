@@ -1,0 +1,74 @@
+{
+  "_comment": "Cross-document golden cases (BRF-1 first slice, from BRF-4's list). Shape differs from golden.json deliberately: those cases assert ONE passage in ONE document, these assert a PLAN SHAPE and a spread of verified evidence across documents. The rest of BRF-4's list is out of scope for this slice. Executed by tests/test_golden_crossdoc.py.",
+  "corpus": [
+    {
+      "name": "Snöröjningsavtal.pdf",
+      "lines": [
+        "Snöröjningsavtalet gäller från 1 oktober 2025 till 30 september 2026.",
+        "Leverantör är Vinterservice AB med organisationsnummer 556677-8899.",
+        "Ersättning utgår med 1250 kr per påbörjad timme."
+      ]
+    },
+    {
+      "name": "Styrelseprotokoll.pdf",
+      "lines": [
+        "Styrelsen beslutade att godkänna snöröjningsavtalet vid mötet.",
+        "Beslutet fattades enhälligt av en styrelse på sju ledamöter.",
+        "Ordföranden fick i uppdrag att underteckna handlingen."
+      ]
+    },
+    {
+      "name": "Underhallsplan.pdf",
+      "lines": [
+        "Fasadrenoveringen är planerad till 2029 enligt underhållsplanen.",
+        "Avsättningen till yttre fond uppgår till 240000 kr per år.",
+        "Stammbyte bedöms bli aktuellt tidigast 2035."
+      ]
+    }
+  ],
+  "cases": [
+    {
+      "id": "x00",
+      "kind": "two_document_answer",
+      "question": "Vem är leverantör i snöröjningsavtalet och har styrelsen godkänt det?",
+      "expect_mode": "multi",
+      "expect_documents": ["Snöröjningsavtal.pdf", "Styrelseprotokoll.pdf"],
+      "expect_min_citations": 2,
+      "subqueries": [
+        "leverantör snöröjningsavtal organisationsnummer",
+        "styrelsen beslutade godkänna snöröjningsavtalet"
+      ],
+      "answer": "Leverantör är Vinterservice AB och styrelsen beslutade att godkänna avtalet.",
+      "citations": [
+        {"contains": "Vinterservice AB", "quote": "Leverantör är Vinterservice AB"},
+        {"contains": "godkänna snöröjningsavtalet", "quote": "Styrelsen beslutade att godkänna snöröjningsavtalet"}
+      ]
+    },
+    {
+      "id": "x01",
+      "kind": "multi_part_question",
+      "question": "Vad kostar snöröjningen per timme och när är fasadrenoveringen planerad?",
+      "expect_mode": "multi",
+      "expect_documents": ["Snöröjningsavtal.pdf", "Underhallsplan.pdf"],
+      "expect_min_citations": 2,
+      "subqueries": [
+        "ersättning per påbörjad timme snöröjning",
+        "fasadrenovering planerad år underhållsplan"
+      ],
+      "answer": "Ersättning utgår med 1250 kr per påbörjad timme och fasadrenoveringen är planerad till 2029.",
+      "citations": [
+        {"contains": "1250 kr", "quote": "Ersättning utgår med 1250 kr per påbörjad timme"},
+        {"contains": "Fasadrenoveringen", "quote": "Fasadrenoveringen är planerad till 2029"}
+      ]
+    },
+    {
+      "id": "x02",
+      "kind": "ambiguous_asks_for_clarification",
+      "question": "När går avtalet ut?",
+      "expect_mode": "clarify",
+      "expect_documents": [],
+      "expect_min_citations": 0,
+      "clarification": "Vilket avtal menar du — snöröjningsavtalet eller något annat?"
+    }
+  ]
+}

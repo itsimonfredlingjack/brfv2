@@ -11,6 +11,7 @@ from collections.abc import Iterable
 import logging
 
 from .citations import Rejected, Resolved, resolve_citation
+from .evidence import EvidencePack
 from .llm import LLMError, LLMFormatError, LLMProvider, parse_llm_json, pick_provider
 from .linked_context import append_linked_table_legends
 from .numeric_grounding import NumericGroundingResult, check_numeric_grounding, describe_mismatch
@@ -101,8 +102,18 @@ def ask(
     provider: LLMProvider | None = None,
     *,
     trusted_names: Iterable[str] = (),
+    evidence: "EvidencePack | None" = None,
 ) -> AskResponse:
-    """`trusted_names` (optional, keyword-only): server-trusted entity names
+    """`evidence` (optional, keyword-only): a pre-gathered EvidencePack from
+    the planned multi-search path (app/multihop.py, BRF-1). When supplied,
+    the excerpts in the pack REPLACE this function's own single retrieval —
+    everything after retrieval (prompt assembly, the citation-alias contract,
+    `citations.resolve_citation`, the requireSources gate and the numeric
+    grounding gate with its one repair attempt) runs completely unchanged.
+    That is the point: multi-document answers must not get a second, weaker
+    verification path. When None, behaviour is exactly as before.
+
+    `trusted_names` (optional, keyword-only): server-trusted entity names
     (e.g. the tenant's own registered name from auth.get_tenant()) whose
     numeric-identifier digits (SPEC §2.10 follow-up) are exempt from the
     numeric grounding gate — see app/numeric_grounding.py. Every existing
@@ -132,6 +143,32 @@ def ask(
             retrieval=[],
             provider=provider.name,
             model=model,
+        )
+
+    if evidence is not None:
+        # The planned path already retrieved (and deduplicated, and context-
+        # expanded) under the same tenant snapshot. Skip straight to synthesis.
+        hits = list(evidence.hits)
+        if not hits:
+            return _refusal(
+                "low_relevance",
+                "Det står inte i något av era dokument.",
+                retrieval=[],
+                provider=provider.name,
+                model=model,
+            )
+        return _synthesize(
+            store=store,
+            question=question,
+            hits=hits,
+            chunks=chunks,
+            pages=pages,
+            documents=documents,
+            provider=provider,
+            generation_model=generation_model,
+            model=model,
+            trusted_names=trusted_names,
+            low_relevance=False,
         )
 
     if s.rerankEnabled and not reranker_available():
@@ -192,6 +229,43 @@ def ask(
     # remain exactly those of the original retrieval survivors.
     hits = append_linked_table_legends(hits, chunks, documents)
 
+    return _synthesize(
+        store=store,
+        question=question,
+        hits=hits,
+        chunks=chunks,
+        pages=pages,
+        documents=documents,
+        provider=provider,
+        generation_model=generation_model,
+        model=model,
+        trusted_names=trusted_names,
+        low_relevance=low_relevance,
+    )
+
+
+def _synthesize(
+    *,
+    store: Store,
+    question: str,
+    hits: list[RetrievalHit],
+    chunks: dict,
+    pages: dict,
+    documents: dict,
+    provider: LLMProvider,
+    generation_model: str,
+    model: str,
+    trusted_names: tuple[str, ...],
+    low_relevance: bool,
+) -> AskResponse:
+    """Generate → verify citations → gate → numeric-ground, over a fixed set
+    of excerpts.
+
+    Extracted verbatim from `ask` so the planned multi-search path (BRF-1)
+    reaches the SAME verification, rather than growing a parallel one. It
+    takes the excerpts as given and makes no retrieval decisions of its own.
+    """
+    s = store.settings
     system = (s.systemPrompt.strip() + "\n\n" if s.systemPrompt.strip() else "") + GROUNDING_CONTRACT
     excerpts, alias_map = _render_excerpts(hits)
     user = f"FRÅGA: {question}\n\nUTDRAG:\n{excerpts}"
