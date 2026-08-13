@@ -418,3 +418,40 @@ BRF_LLM_BASE_URL=http://127.0.0.1:8000/v1 BRF_LLM=selfhosted \
 Cirka två minuter med `--runs 1`. Kör den inte parallellt med pytest-sviten.
 Raden `Applikationen överrullade planeraren i N av M körningar` under varje
 tabell är den som säger om steg 2 och steg 3 gjorde något alls.
+
+### Efterspel — steg 3 borttaget, och den billiga fixen för fynd 2 finns inte
+
+**Steg 3 är borttaget ur koden.** En regel som utlöst 0 av 59 gånger på den enda
+riktiga mätning som finns är verkningslös kod som *ser ut som* en åtgärd: den
+läser som om överutlösningen vore hanterad, och den är inte det. Kvar står en
+kommentar i `query_plan.py` med siffran och premissen som föll, så att ingen
+skriver den igen utan att först mäta att den utlöser. De tre enhetslåsen togs
+bort med den — ett lås på en regel som aldrig utlöser är samma vakuositet en
+nivå upp. Överutlösningen står **oåtgärdad på 14 av 46** och siffrorna ovan
+gäller oförändrat, eftersom regeln aldrig påverkade dem.
+
+**Fynd 2 har ingen billig fix.** Den självklara särskiljaren — "överrulla bara
+clarify när materialet ligger i ETT dokument" — mättes innan den föreslogs, och
+den separerar inte:
+
+| fall | dokument över `minRelevance` |
+|---|---:|
+| x02 (äkta tvetydighet, ska förbli clarify) | 6 |
+| g21 (falsk clarify, ska räddas) | 4 |
+| g33 (falsk clarify, ska räddas) | 4 |
+| g43 (falsk clarify, ska räddas) | 3 |
+| g23 (falsk clarify, ska räddas) | 1 |
+
+Ingen tröskel på dokumentantal räddar g21/g33/g43 och behåller x02. `minRelevance`
+mäter om korpusen **har material**, och spridning mäter bara hur brett — ingen av
+dem mäter om frågan **pekar ut** en handling, vilket är vad tvetydighet är.
+
+Det lämnar tre vägar, alla med känd kostnad och alla produktbeslut:
+
+| väg | kontrollrecall | falsk clarify | äkta clarify |
+|---|---:|---:|---|
+| **A. behåll steg 2** (nuläget) | **1.00** | 0 av 46 | borta — 0 av 59 fall valde clarify |
+| **B. återställ steg 2** | 0.91 | 4 av 46 | bevarad |
+| **C. överrulla bara vid ett dokument** | 0.93 | 3 av 46 | bevarad |
+
+Koden står på **A**, och de två röda testen är A:s pris utskrivet.

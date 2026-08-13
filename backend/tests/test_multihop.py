@@ -148,55 +148,6 @@ class TestQueryPlan:
         assert plan.subqueries == ["Vad kostar snöröjningen?"]
         assert plan.degraded
 
-    def test_multi_that_only_repeats_the_question_is_degraded_to_single(self):
-        """Rule 1b enforced in code, not asked for in the prompt.
-
-        Measured: 14 of 46 single-search questions were planned `multi`, and
-        the extra searches bought no recall on any of them — the subqueries
-        re-queried words the question already carried, so the fan-out could
-        only reorder a vocabulary the single search had already put to the
-        index.
-        """
-        fake = FakeLLM([{
-            "mode": "multi",
-            "subqueries": ["Vad kostar snöröjningen?", "När görs snöröjningen?"],
-            "clarification": "",
-        }])
-        plan = plan_query("Vad kostar snöröjningen och när görs den?", fake)
-        assert plan.mode == "single"
-        assert plan.downgraded_from == "multi"
-        assert plan.subqueries == ["Vad kostar snöröjningen och när görs den?"]
-        assert not plan.degraded, "en överrullad plan är ett beslut, inte ett haveri"
-
-    def test_multi_that_translates_into_the_documents_vocabulary_survives(self):
-        """The other direction, and the one that matters more.
-
-        Degrading a genuine translation would remove the only thing fan-out
-        has been shown to buy, so the rule above must be conservative: one
-        subquery carrying one word the question did not is enough to keep it.
-        """
-        fake = FakeLLM([{
-            "mode": "multi",
-            "subqueries": ["ersättning vinterservice", "utförande snöröjning"],
-            "clarification": "",
-        }])
-        plan = plan_query("Vad kostar snöröjningen och när görs den?", fake)
-        assert plan.mode == "multi"
-        assert plan.downgraded_from == ""
-        assert len(plan.subqueries) == 2
-
-    def test_a_function_word_is_not_a_contribution(self):
-        """"Vad", "och", "för" are not vocabulary. Without this the rule would
-        be trivially escapable by any subquery phrased as a sentence."""
-        fake = FakeLLM([{
-            "mode": "multi",
-            "subqueries": ["Vad gäller för snöröjningen?", "När och hur görs snöröjningen?"],
-            "clarification": "",
-        }])
-        plan = plan_query("snöröjningen kostnad görs", fake)
-        assert plan.mode == "single"
-        assert plan.downgraded_from == "multi"
-
     def test_planner_is_never_shown_document_content(self, store):
         fake = FakeLLM([{"mode": "single", "subqueries": [], "clarification": ""}])
         plan_query("Fråga", fake, document_names=["Snöröjningsavtal.pdf"])

@@ -16,7 +16,6 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from .indexer import tokenize
 from .llm import LLMProvider, extract_json_object
 
 logger = logging.getLogger("brf.query_plan")
@@ -30,51 +29,17 @@ MAX_SUBQUERIES = 3
 
 PlanMode = Literal["single", "multi", "clarify"]
 
-# Words that carry no retrieval signal, used ONLY by the over-trigger check
-# below. This is not a retrieval stopword list and must not become one:
-# `tokenize` (and therefore BM25) indexes these words like any other, and
-# removing them from the index would be a retrieval change. Here the question
-# is narrower — did the planner contribute a word the board did not already
-# say — and a subquery that adds only "vad" or "och" contributed nothing.
-_FUNCTION_WORDS = frozenset({
-    "att", "den", "det", "detta", "dessa", "eller", "finns", "från", "för",
-    "gäller", "har", "hur", "här", "inte", "kan", "med", "mellan", "något",
-    "någon", "när", "och", "om", "per", "ska", "skall", "som", "till",
-    "under", "vad", "var", "vem", "vid", "vilka", "vilken", "vilket", "vår",
-    "våra", "över",
-})
+# MÄTT OCH BORTTAGET (2026-08-13): en regel som degraderade `multi` till
+# `single` när ingen delfråga tillförde ett innehållsord som frågan saknade.
+# Den utlöste 0 av 59 gånger mot den riktiga modellen. Premissen höll inte —
+# planeraren hackar inte upp frågan, den ÖVERSÄTTER den ("Vilket år byggdes
+# fastigheten?" → byggår · uppförande · fastighetsdata), och en TEXTregel kan
+# per konstruktion inte skilja en översättning som behövdes från en som inte
+# gjorde det: skillnaden syns först i hämtningen. Överutlösningen står därför
+# oåtgärdad på 14 av 46. Siffrorna ligger i
+# docs/evidence/planner-vs-real-model.md, tillägg 2. Skriv inte regeln igen
+# utan en mätning som visar att den utlöser på något.
 
-
-def _content_words(text: str) -> set[str]:
-    """The words a search on `text` would actually put to the index.
-
-    Deliberately `indexer.tokenize` and not a second tokenizer: the whole
-    point of the check below is what BM25 gets to see, and a private
-    tokenizer here would answer a slightly different question every time
-    canonicalization changed.
-    """
-    return {t for t in tokenize(text) if len(t) > 2 and t not in _FUNCTION_WORDS}
-
-
-def _adds_no_vocabulary(question: str, subqueries: list[str]) -> bool:
-    """True when no subquery contributes a word the question did not have.
-
-    Rule 1b of the contract says subqueries must be TRANSLATIONS into the
-    documents' terminology; a plan that only chops the question into pieces
-    is `multi` bought with nothing. Measured: 14 of 46 single-search
-    questions were planned as `multi`, and none of the extra searches bought
-    recall — every one of those plans re-searched words the question already
-    carried, so the fan-out could only reorder a vocabulary the single search
-    had already put to the index.
-
-    Conservative on purpose. Inflection counts as a new word ("underhåll" vs
-    "underhållet") because the index has no stemmer either, so the fan-out
-    really would query a term the original did not. Degrading a genuine
-    translation is the expensive error; keeping a pointless `multi` costs
-    two searches.
-    """
-    asked = _content_words(question)
-    return all(_content_words(sub) <= asked for sub in subqueries)
 
 PLANNER_CONTRACT = f"""Du planerar dokumentsökningar åt en bostadsrättsförenings styrelse. Du svarar på svenska.
 
@@ -111,10 +76,9 @@ class QueryPlan(BaseModel):
     # True when planning did not run or failed and this plan is the safe
     # `single` fallback rather than a real decision.
     degraded: bool = False
-    # The mode the planner ASKED for, when the application overruled it:
-    # "multi" (the subqueries added no vocabulary) or "clarify" (retrieval
-    # found material above minRelevance anyway). Empty when the plan is the
-    # planner's own. Kept separate from `degraded`, which means the planner
+    # The mode the planner ASKED for, when the application overruled it.
+    # Today only "clarify" (retrieval found material above minRelevance
+    # anyway); empty when the plan is the planner's own. Kept separate from `degraded`, which means the planner
     # never produced a usable answer at all — an overrule is a decision made
     # ON a working plan, and conflating the two would hide both.
     downgraded_from: str = ""
@@ -189,18 +153,9 @@ def plan_query(
             logger.info(
                 "Planeraren föreslog %d sökningar; kapar till %d.", len(subqueries), MAX_SUBQUERIES
             )
-        kept = subqueries[:MAX_SUBQUERIES]
-        # Checked on what will actually RUN, after the cap — a subquery that
-        # was truncated away cannot cost a search and cannot buy one either.
-        if _adds_no_vocabulary(question, kept):
-            logger.info(
-                "Planeraren valde multi men delfrågorna upprepar frågans egna ord; "
-                "kör en sökning i stället: %s", kept,
-            )
-            return QueryPlan(mode="single", subqueries=[question], downgraded_from="multi")
         return QueryPlan(
             mode="multi",
-            subqueries=kept,
+            subqueries=subqueries[:MAX_SUBQUERIES],
             truncated=truncated,
         )
 
