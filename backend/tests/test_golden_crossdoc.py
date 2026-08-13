@@ -8,6 +8,7 @@ the numeric gate are all genuine here.
 """
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -114,22 +115,53 @@ def test_every_golden_kind_from_brf4_is_covered():
     }
 
 
+_MONTHS = (
+    "januari", "februari", "mars", "april", "maj", "juni",
+    "juli", "augusti", "september", "oktober", "november", "december",
+)
+_YEAR_RE = re.compile(r"\b(19|20)\d{2}\b")
+
+
+def _is_temporal(needle: str) -> bool:
+    """Does this condition name a POINT IN TIME rather than an amount?"""
+    folded = needle.casefold()
+    return any(m in folded for m in _MONTHS) or bool(_YEAR_RE.search(needle))
+
+
 def test_time_bound_case_asserts_more_than_the_amount():
     """Guards the guard: a time-bound case that only checks the figure would
     pass on an answer that never says WHEN the figure started applying — the
-    exact thing the case exists to test."""
-    case = next(c for c in CASES if c["kind"] == "time_bound_question")
-    needles = case["expect_answer_contains"]
-    assert len(needles) >= 2
-    assert any(any(ch.isalpha() for ch in n) for n in needles), (
-        "minst ett villkor måste gälla datumet, inte bara beloppet"
-    )
+    exact thing the case exists to test.
+
+    The previous form asked only whether some condition contained a LETTER,
+    which "1250 kr" satisfies. Split the conditions instead: at least one must
+    name a time, at least one must not, or the case is not time-bound at all.
+    """
+    cases = [c for c in CASES if c["kind"] == "time_bound_question"]
+    assert cases, "ingen tidsbestämd fråga i golden — vaktposten vaktar ingenting"
+    for case in cases:
+        needles = case["expect_answer_contains"]
+        assert len(needles) >= 2, f"{case['id']}: ett enda villkor kan inte täcka både belopp och tidpunkt"
+        assert any(_is_temporal(n) for n in needles), (
+            f"{case['id']}: inget villkor gäller NÄR beloppet började gälla"
+        )
+        assert any(not _is_temporal(n) for n in needles), (
+            f"{case['id']}: inget villkor gäller själva beloppet"
+        )
 
 
-def test_conflicting_case_really_states_two_different_figures():
-    """Guards the guard: if both quotes named the same amount, the conflict
-    case would pass while proving nothing about conflicting evidence."""
-    case = next(c for c in CASES if c["kind"] == "conflicting_documents")
-    figures = {q["contains"] for q in case["citations"]}
-    assert len(figures) == 2, "motstridighetsfallet måste ange två OLIKA belopp"
-    assert all(f in case["answer"] for f in figures), "svaret måste visa båda beloppen"
+def test_conflicting_cases_really_state_two_different_things():
+    """Guards the guard: if both quotes named the same figure, the conflict
+    case would pass while proving nothing about conflicting evidence.
+
+    Every case of the kind, not `next(...)`: the first form guarded x03 and
+    left r02 — the case built from a real board situation — unguarded.
+    """
+    cases = [c for c in CASES if c["kind"] == "conflicting_documents"]
+    assert len(cases) >= 2, "vaktposten skrevs för flera motstridighetsfall"
+    for case in cases:
+        figures = {q["contains"] for q in case["citations"]}
+        assert len(figures) == 2, f"{case['id']}: måste ange två OLIKA uppgifter"
+        assert all(f in case["answer"] for f in figures), (
+            f"{case['id']}: svaret måste visa båda uppgifterna"
+        )

@@ -12,6 +12,23 @@ rekommendation.
 Granskningen frågar **vad som finns**, inte om tidigare påståenden stämmer.
 Observerade fakta står skilt från slutsatser.
 
+> **Åtgärdsstatus 2026-08-13 (efter granskningen).** Fynden nedan beskriver
+> koden som den såg ut vid granskningstillfället. Sedan dess är följande stängt,
+> vart och ett med ett lås som är brutet på riktigt och sett falla:
+>
+> | Fynd | Åtgärd | Lås |
+> |---|---|---|
+> | §1.1 vakuöst `test_evidence_is_bounded` | ny `wide_store`-fixtur; taket biter och testet kräver det | `test_evidence_is_bounded` |
+> | §1.2 svag tidsvaktpost | villkoren delas i tidpunkt och belopp; loopar alla fall av sorten | `test_time_bound_case_asserts_more_than_the_amount` |
+> | §1.3 motstridighetsvaktposten vaktade bara första fallet | loopar alla; r02 är inte längre ovaktad | `test_conflicting_cases_really_state_two_different_things` |
+> | §3 `minRelevance` hoppades över på planerade vägen | `low_relevance` beräknas och vägrar/varnar där också | `test_low_relevance_refuses_on_the_planned_path_too`, `…_warns_…` |
+> | §3 rerank-`LLMError` var onåbar på planerade vägen | kontrollen flyttad före bevisgrenen | `test_rerank_unavailable_is_loud_on_the_planned_path_too` |
+> | §3 `append_linked_table_legends` kördes inte på planerade vägen | tillämpas där också, som beslut med skäl i koden | `test_linked_legend_reaches_the_planned_prompt_too` |
+> | katalogordningen var uppladdningsordning | sorteras i `multihop.catalogue_names` | `test_catalogue_order_is_the_corpus_not_its_upload_history` |
+>
+> **Inte åtgärdat, medvetet uppskjutet:** falsk `clarify` och överutlösning —
+> se [beslutet om fan-out](planner-vs-real-model.md#tillägg-2026-08-13-sorterad-katalog).
+
 ---
 
 ## 1. Påstår testerna något?

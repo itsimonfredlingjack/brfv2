@@ -10,7 +10,7 @@ import pytest
 
 from app.answer import ask
 from app.evidence import EvidencePack, expand_context
-from app.llm import FakeLLM
+from app.llm import FakeLLM, LLMError
 from app.multihop import MAX_EVIDENCE_CHUNKS, ask_planned
 from app.query_plan import MAX_SUBQUERIES, plan_query
 from app.schemas import Settings
@@ -53,6 +53,30 @@ def dense_store(tmp_path) -> Store:
     st = Store(data_dir=tmp_path)
     st.add_document("Underhållsplan.pdf", build_pdf([lines]))
     st.update_settings(Settings(minRelevance=0.05, topK=2, chunkSize=20, chunkOverlap=0))
+    return st
+
+
+@pytest.fixture()
+def wide_store(tmp_path) -> Store:
+    """Enough distinct matter that the evidence ceiling actually binds.
+
+    The `store` fixture holds two chunks, so `<= MAX_EVIDENCE_CHUNKS` (10)
+    held there no matter what the cap did. Three disjoint vocabularies, seven
+    chunks each: a three-subquery fan-out retrieves 3 × PER_QUERY_TOP_K = 12
+    distinct excerpts and the ceiling is reached rather than assumed.
+    """
+    st = Store(data_dir=tmp_path)
+    for topic, word in (
+        ("Sophantering", "sophämtning"),
+        ("Hissunderhåll", "hissmotor"),
+        ("Fasadrenovering", "fogbruk"),
+    ):
+        lines = [
+            (f"{word} punkt {i}: bestämmelsen om {word} nummer {i} gäller hela föreningen.", 72, 90 + 14 * i)
+            for i in range(14)
+        ]
+        st.add_document(f"{topic}.pdf", build_pdf([lines]))
+    st.update_settings(Settings(minRelevance=0.05, topK=3, chunkSize=20, chunkOverlap=0))
     return st
 
 
@@ -130,6 +154,38 @@ class TestQueryPlan:
         user = fake.calls[0]["user"]
         assert "Snöröjningsavtal.pdf" in user
         assert "1250 kr" not in user  # names only, never excerpts
+
+    def test_catalogue_order_is_the_corpus_not_its_upload_history(self, tmp_path):
+        """The plan must be a function of WHICH documents exist, not of the
+        order they happened to be uploaded in.
+
+        Decoding is greedy, so catalogue order was the last remaining source
+        of run-to-run variance — and an undesigned one: re-uploading a
+        document could change how a question got planned. Measured before the
+        sort, 22 of 59 cases changed mode when the catalogue was shuffled.
+        """
+        uploaded = ["Ärendelista.pdf", "budget.pdf", "Avtal.pdf", "Zonkarta.pdf", "årsredovisning.pdf"]
+        st = Store(data_dir=tmp_path)
+        for name in uploaded:
+            st.add_document(name, build_pdf([[("Innehåll utan betydelse här.", 72, 100)]]))
+
+        # Non-vacuity: upload order must not already be the sorted order,
+        # or the assertion below would hold with no sort at all.
+        assert [m.name for m in st.documents.values()] == uploaded
+        assert uploaded != sorted(uploaded, key=lambda n: (n.casefold(), n))
+
+        fake = FakeLLM([
+            {"mode": "single", "subqueries": [], "clarification": ""},
+            {"answer": "Vet ej.", "citations": [], "insufficient_data": True},
+        ])
+        ask_planned(st, "Vad gäller?", provider=fake)
+        planner_user = fake.calls[0]["user"]
+
+        positions = [planner_user.index(n) for n in uploaded]
+        by_position = [n for _, n in sorted(zip(positions, uploaded))]
+        assert by_position == sorted(uploaded, key=lambda n: (n.casefold(), n)), (
+            "katalogen skickas i uppladdningsordning — planen beror på historik"
+        )
 
 
 class TestEvidencePack:
@@ -318,14 +374,125 @@ class TestPlannedAnswering:
         assert not result.response.refusal
         assert result.response.citations
 
-    def test_evidence_is_bounded(self, store):
+    def test_evidence_is_bounded(self, wide_store):
         fake = FakeLLM([
             {"mode": "multi", "clarification": "", "subqueries": [
-                "snöröjning", "styrelsen", "ersättning"]},
+                "sophämtning", "hissmotor", "fogbruk"]},
             {"answer": "Vet ej.", "citations": [], "insufficient_data": True},
         ])
-        result = ask_planned(store, "Berätta allt", provider=fake)
-        assert len(result.pack.hits) <= MAX_EVIDENCE_CHUNKS
+        result = ask_planned(wide_store, "Berätta allt", provider=fake)
+
+        # Non-vacuity first: unless the fan-out found MORE than the ceiling,
+        # the assertion below holds whatever the ceiling does. This test read
+        # `<= MAX_EVIDENCE_CHUNKS` against a two-chunk corpus for a while and
+        # asserted nothing at all.
+        distinct_found = len({cid for e in result.pack.executed for cid in e.hit_ids})
+        assert distinct_found > MAX_EVIDENCE_CHUNKS, (
+            f"fan-outen hittade bara {distinct_found} chunkar — taket ({MAX_EVIDENCE_CHUNKS}) "
+            "biter inte och testet mäter ingenting"
+        )
+        assert len(result.pack.hits) == MAX_EVIDENCE_CHUNKS
+
+    def test_low_relevance_refuses_on_the_planned_path_too(self, store):
+        """XS-64 gate parity.
+
+        `ask()` used to pass `low_relevance=False` for a supplied evidence
+        pack, so the fan-out's own excerpts were relevant by construction:
+        the planned path could neither refuse on a thin corpus nor warn about
+        one, and answered where the single path refused.
+        """
+        store.update_settings(store.settings.model_copy(update={"minRelevance": 0.99}))
+        fake = FakeLLM([
+            {"mode": "multi", "clarification": "", "subqueries": [
+                "snöröjning leverantör", "styrelsens beslut"]},
+            {"answer": "Något.", "citations": [], "insufficient_data": False},
+        ])
+        result = ask_planned(store, "Hur fungerar kvantdatorer?", provider=fake)
+
+        # Non-vacuity: the fan-out must have FOUND something, or the existing
+        # empty-pack branch would return the same refusal without the gate.
+        assert result.pack.hits, "tom bevispåse — då mäter testet fel gren"
+        assert result.response.refusal
+        assert result.response.refusal_reason == "low_relevance"
+        assert len(fake.calls) == 1, "grinden ska stoppa före syntesen, inte efter"
+
+    def test_low_relevance_warns_on_the_planned_path_in_warn_mode(self, store):
+        """Same gate, warn mode: the answer is shown but must carry the
+        uncertainty. Silently confident is the failure this catches."""
+        avtal = chunk_id_containing(store, "Vinterservice AB")
+        store.update_settings(store.settings.model_copy(
+            update={"minRelevance": 0.99, "insufficientDataBehavior": "warn"}))
+        fake = FakeLLM([
+            {"mode": "multi", "clarification": "", "subqueries": [
+                "snöröjning leverantör", "styrelsens beslut"]},
+            {"answer": "Leverantör är Vinterservice AB.",
+             "citations": [{"chunk_id": avtal, "quote": "Leverantör är Vinterservice AB"}],
+             "insufficient_data": False},
+        ])
+        result = ask_planned(store, "Vem är leverantör och vad beslutade styrelsen?", provider=fake)
+
+        assert result.pack.hits
+        assert not result.response.refusal
+        assert result.response.warning and "Osäkert underlag" in result.response.warning
+
+    def test_rerank_unavailable_is_loud_on_the_planned_path_too(self, store, monkeypatch):
+        """XS-64 gate parity. The rerank check sat AFTER the evidence branch,
+        so the planned path answered with unreranked hits while the single
+        path raised — a second, quieter route past a gate that exists to be
+        loud."""
+        monkeypatch.setattr("app.answer.reranker_available", lambda: False)
+        store.update_settings(store.settings.model_copy(update={"rerankEnabled": True}))
+        fake = FakeLLM([
+            {"mode": "multi", "clarification": "", "subqueries": [
+                "snöröjning leverantör", "styrelsens beslut"]},
+            {"answer": "Något.", "citations": [], "insufficient_data": False},
+        ])
+
+        with pytest.raises(LLMError, match="Omrankning"):
+            ask_planned(store, "Vem är leverantör och vad beslutade styrelsen?", provider=fake)
+
+        assert len(fake.calls) == 1, "bara planeringen fick köra; ingen syntes"
+
+    def test_linked_legend_reaches_the_planned_prompt_too(self, tmp_path):
+        """XS-64 gate parity, decision 1c. A coded leaf row is unreadable
+        without the legend that defines its letter, and neither the citation
+        resolver nor the numeric gate catches the resulting error: the quote
+        is verbatim and the false claim is a WORD, not a number."""
+        ekonomi = [
+            (f"A2.31.{i:02d} Upprättande av årsredovisning och bokslut delmoment {i} A JA", 72, 90 + 14 * i)
+            for i in range(8)
+        ]
+        underhall = [
+            (f"A4.12.{i:02d} Besiktning av fasad och tak delmoment {i} B JA", 72, 90 + 14 * i)
+            for i in range(8)
+        ]
+        st = Store(data_dir=tmp_path)
+        st.add_document("Underhållsavtal.pdf", build_pdf([
+            [('Kolumnen "utföres av" har markerats med ett "A" för Leverantören '
+              'och med ett "B" för Beställaren.', 72, 100)],
+            ekonomi,
+            underhall,
+        ]))
+        st.update_settings(Settings(minRelevance=0.0, topK=3, chunkSize=20, chunkOverlap=0))
+
+        fake = FakeLLM([
+            {"mode": "multi", "clarification": "", "subqueries": [
+                "årsredovisning bokslut delmoment", "besiktning fasad tak delmoment"]},
+            {"answer": "Vet ej.", "citations": [], "insufficient_data": True},
+        ])
+        result = ask_planned(st, "Vem upprättar årsredovisningen?", provider=fake)
+
+        # Non-vacuity: the coded row must be in the pack and the legend must
+        # NOT be — otherwise the assertion below proves nothing about linking.
+        pack_text = " ".join(h.text for h in result.pack.hits)
+        assert "A2.31.01" in pack_text, "kodraden hämtades inte; testet mäter fel sak"
+        assert "för Beställaren" not in pack_text, "legenden hämtades av sökningen själv"
+
+        synthesis_user = fake.calls[1]["user"]
+        assert "för Beställaren" in synthesis_user, (
+            "legenden nådde aldrig prompten — den planerade vägen får en kodrad "
+            "den inte kan tolka"
+        )
 
     def test_empty_corpus_refuses_without_planning(self, tmp_path):
         st = Store(data_dir=tmp_path)

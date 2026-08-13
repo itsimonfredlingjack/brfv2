@@ -67,6 +67,22 @@ class PlannedAnswer:
         self.pack = pack
 
 
+def catalogue_names(documents: dict) -> list[str]:
+    """The document catalogue the planner is shown, in a deterministic order.
+
+    Sorted, not upload-ordered. The planner decodes greedily, so for a fixed
+    prompt it is deterministic — which made the ORDER of this list the only
+    remaining source of run-to-run variance, and an undesigned one: it was
+    `documents.values()`, i.e. upload order, so re-uploading a document could
+    silently change how a question got planned. Measured before the fix: with
+    the catalogue shuffled, 22 of 59 cases changed mode.
+
+    A total order (casefold first so case cannot reorder, raw name as
+    tie-break) makes the plan a function of the corpus, not of its history.
+    """
+    return sorted((m.name for m in documents.values()), key=lambda n: (n.casefold(), n))
+
+
 def _clarify_response(plan: QueryPlan, provider_name: str, model: str) -> AskResponse:
     """A clarification is NOT an answer and must never look like one: no
     citations, and the existing `insufficient_data` refusal reason, so every
@@ -116,7 +132,7 @@ def ask_planned(
             pack,
         )
 
-    doc_names = [m.name for m in documents.values()]
+    doc_names = catalogue_names(documents)
     plan = plan_query(question, provider, document_names=doc_names, model=generation_model)
     pack.planned_subqueries = list(plan.subqueries)
 

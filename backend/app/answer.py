@@ -145,6 +145,22 @@ def ask(
             model=model,
         )
 
+    if s.rerankEnabled and not reranker_available():
+        # Loud failure, never a silent skip: a deployment that turned
+        # reranking on is relying on it to surface financial-table rows that
+        # hybrid retrieval alone buries past the prompt's top_k. Answering
+        # anyway with unreranked hits would look like it worked while
+        # quietly reverting to the exact failure mode this fix addresses.
+        #
+        # BEFORE the evidence branch, deliberately. It used to sit after it,
+        # so the planned path answered where the single path refused — a
+        # second, quieter route past a gate whose entire purpose is to be
+        # loud. A refusal that one code path can walk around is not a gate.
+        raise LLMError(
+            "Omrankning är aktiverad men omrankningsmodellen är inte tillgänglig "
+            "(kör 'uv sync --extra rerank' i backend, eller inaktivera omrankning i inställningarna)."
+        )
+
     if evidence is not None:
         # The planned path already retrieved (and deduplicated, and context-
         # expanded) under the same tenant snapshot. Skip straight to synthesis.
@@ -157,6 +173,44 @@ def ask(
                 provider=provider.name,
                 model=model,
             )
+        # The minRelevance gate applies here too, on the same signal and with
+        # the same semantics as below: the best ABSOLUTE retrieval confidence
+        # among the excerpts that reached the prompt. This used to be hardcoded
+        # `low_relevance=False`, which meant the planned path could neither
+        # refuse on a thin corpus nor warn about one — the fan-out's own
+        # excerpts were treated as relevant by construction.
+        #
+        # Context-expansion chunks carry confidence 0.0 by design (they earned
+        # no retrieval score, see evidence.expand_context), and `max` is what
+        # keeps them from dragging the gate down: the question is whether
+        # RETRIEVAL found anything close, not what padding was added around it.
+        top_confidence = max((h.confidence for h in hits), default=0.0)
+        low_relevance = top_confidence < s.minRelevance
+        if low_relevance and s.insufficientDataBehavior == "refuse":
+            return _refusal(
+                "low_relevance",
+                "Det står inte i något av era dokument.",
+                retrieval=hits,
+                provider=provider.name,
+                model=model,
+            )
+        # DECISION (XS-64 gate parity): the legend linker runs here too.
+        #
+        # It is not retrieval widening, it is interpretability. A coded leaf
+        # row ("B12.3.4 … B") is unreadable without the legend that defines
+        # what B means, and neither the citation resolver nor the numeric gate
+        # catches the resulting error: the model's quote is verbatim and the
+        # false claim is a WORD (who is responsible), not a number. The
+        # fan-out can retrieve such a row exactly as a single search can, so
+        # withholding the legend here gives the planned path a strictly worse
+        # prompt over the same document.
+        #
+        # It is additional to MAX_EVIDENCE_CHUNKS, not inside it — the same
+        # way it is additional to topK on the path below. A dependency of a
+        # retrieved row is not a competitor for the excerpt budget. This
+        # leaves `evidence.hits` itself untouched, so the pack's own ceiling
+        # stays a statement about what the fan-out gathered.
+        hits = append_linked_table_legends(hits, chunks, documents)
         return _synthesize(
             store=store,
             question=question,
@@ -168,18 +222,7 @@ def ask(
             generation_model=generation_model,
             model=model,
             trusted_names=trusted_names,
-            low_relevance=False,
-        )
-
-    if s.rerankEnabled and not reranker_available():
-        # Loud failure, never a silent skip: a deployment that turned
-        # reranking on is relying on it to surface financial-table rows that
-        # hybrid retrieval alone buries past the prompt's top_k. Answering
-        # anyway with unreranked hits would look like it worked while
-        # quietly reverting to the exact failure mode this fix addresses.
-        raise LLMError(
-            "Omrankning är aktiverad men omrankningsmodellen är inte tillgänglig "
-            "(kör 'uv sync --extra rerank' i backend, eller inaktivera omrankning i inställningarna)."
+            low_relevance=low_relevance,
         )
 
     # Retrieve WIDE when reranking so the cross-encoder has a real pool to

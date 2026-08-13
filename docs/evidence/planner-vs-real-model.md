@@ -1,5 +1,11 @@
 # Planeraren mot en riktig modell (XS-62)
 
+> **Läs [tillägget om sorterad katalog](#tillägg-2026-08-13-sorterad-katalog) först.**
+> Allt nedanför mättes med katalogen i **uppladdningsordning**. Sedan dess
+> sorteras den (`multihop.catalogue_names`), vilket är en annan prompt — och
+> r01, huvudresultatet i det här dokumentet, vänder från 0.00 till 1.00.
+> Siffrorna nedan är inte fel; de gäller en kodversion som inte längre finns.
+
 **Datum:** 2026-08-13 · **Harness:** `backend/scripts/eval_planner.py` ·
 **Rådata:** `backend/eval/last_planner_run.json` · **Gren:** `feat/brf-1-cross-document`
 
@@ -184,3 +190,111 @@ BRF_LLM_TIMEOUT_S=300 HF_HUB_OFFLINE=1 \
 Ungefär 25 minuter på en obelastad maskin. Kör den **inte** parallellt med
 pytest-sviten — två sviter plus mätningen slog maskinen i minnestak och båda
 stannade.
+
+---
+
+## Tillägg 2026-08-13: sorterad katalog
+
+Mätningen ovan pekade ut dokumentkatalogens ordning som en **verklig men
+odesignad produktionsvariabel**: `ask_planned` skickade
+`[m.name for m in documents.values()]`, alltså uppladdningsordning, och 22 av 59
+fall bytte läge när den blandades. Det är åtgärdat — `multihop.catalogue_names`
+sorterar katalogen (casefold först, rånamn som tiebreak), så planen är en
+funktion av vilka handlingar som finns, inte av i vilken ordning de laddades upp.
+Låset heter `test_catalogue_order_is_the_corpus_not_its_upload_history`.
+
+Det gör `shuffled`-varianten inert. Harnesset observerar det i stället för att
+låta tabellen se stabil ut: `Run.catalogue_changed` räknar hur många körningar
+som faktiskt fick en annan prompt, och rubriken skriver ut "0 av N — katalogen
+sorteras, så omblandningen är inert och tabellen mäter INTE stabilitet".
+`--catalogue` defaultar därför till `fixed`.
+
+**Sorterad katalog är en tredje prompt.** Den är varken den gamla `fixed` eller
+någon av de blandade, så siffrorna nedan är en ny mätning, inte en omtolkning.
+
+### Tvärdokumentsfallen — sorterad katalog
+
+Girig avkodning gör en körning per fall till hela sanningen för en given prompt.
+r01 kördes ändå tre gånger som kontroll: **multi×3, recall 1.00 varje gång.**
+
+| Fall | Läge | Recall | Enkel baslinje | Mot uppladdningsordning |
+|---|---|---:|---:|---|
+| x00 two_document_answer | single | 1.00 | 1.00 | oförändrat |
+| x01 multi_part_question | single | 1.00 | 1.00 | oförändrat |
+| x02 clarification | clarify | — | — | oförändrat |
+| x03 conflicting_documents | single | 1.00 | 1.00 | oförändrat |
+| x04 no_evidence_refuses | single | — | — | oförändrat |
+| x05 time_bound_question | single | 1.00 | 1.00 | oförändrat |
+| x06 vocabulary_gap | multi | 1.00 | 0.50 | oförändrat |
+| r00 vocabulary_gap | single | 1.00 | 1.00 | oförändrat |
+| **r01 vocabulary_gap** | **multi** | **1.00** | **0.00** | **0.00 → 1.00** |
+| r02 conflicting_documents | single | 1.00 | 1.00 | oförändrat |
+| v00 vocabulary_gap | multi | 1.00 | 1.00 | oförändrat |
+| **v01 vocabulary_gap** | **multi** | **0.00** | **1.00** | **1.00 → 0.00** |
+| v02 vocabulary_gap | multi | 1.00 | 1.00 | 0.00 → 1.00 |
+| **medel** | 38 % multi, 1.7 sökn | **0.91** | **0.86** | 0.82 → 0.91 |
+
+Tvärdokumentsmängden går från **0.04 under** baslinjen till **0.05 över** den.
+Det är fem fall som rör sig, inte en trend: r01 och v02 upp, v01 ner.
+
+### r01 — motivfallet fungerar nu
+
+r01 är det enda verkliga fall där enkel sökning får 0.00: styrelsen frågar om
+"sophämtningen", handlingen heter *Sophantering och gårdsskötsel* och säger
+"schablonbelopp", och distraktorn `Sophamtning.pdf` matchar frågans ord perfekt
+utan att besvara den.
+
+Med sorterad katalog väljer planeraren `multi` och når **1.00**, tre gånger av
+tre. Mekanismen är den som redan beskrevs ovan: bron mellan `sophämtning` och
+`sophantering` är **dokumentets namn, avskrivet ur katalogen**. Sorteringen
+avgjorde inte att bron finns — den avgjorde att planeraren ser samma katalog
+varje gång, och för den här korpusen är det en katalog där den fäster vid rätt
+filnamn.
+
+Två saker som därför står kvar oförändrade från analysen ovan:
+
+- Värdet hänger fortfarande på **välnamngivna handlingar**. En förening med
+  `Scan_2022_004.pdf` har ingen bro att låna, och sortering ger den ingen.
+- Att resultatet vänder på en sorteringsändring säger att marginalen är tunn.
+  Ett fall är ett fall.
+
+### Negativa kontroller — sorterad katalog (46 frågor)
+
+| | uppladdningsordning | sorterad |
+|---|---:|---:|
+| Fall som valde `multi` | 14 av 46 | **14 av 46** |
+| Fall som valde `clarify` | 2 (g33, g41) | **4 (g21, g23, g33, g43)** |
+| Medelantal sökningar (idealet 1.0) | 1.57 | **1.50** |
+| Medelrecall, planerarens delfrågor | 0.96 | **0.91** |
+| Medelrecall, enkel sökning (baslinje) | 1.00 | **1.00** |
+
+**Båda regressionerna står kvar.** Överutlösningen är oförändrad — 14 av 46
+frågor kostar tre sökningar plus ett modellanrop utan att hitta något som en
+sökning inte hittade (varje `multi`-fall ligger på 1.00, precis som baslinjen).
+Den falska `clarify` blev fler fall, inte färre: fyra besvarbara frågor får noll
+sökningar och recall 0.00 mot en baslinje på 1.00.
+
+Uppdelningen från mätningen ovan håller alltså exakt: **ingen recallförlust kom
+från en `multi`. Varje förlust är en `clarify`.**
+
+### Vad tillägget ändrar, och vad det inte ändrar
+
+| Slutsats ovan | Efter sortering |
+|---|---|
+| "Vid fast katalog levererar den planerade vägen inte funktionens motiv" | **Faller.** r01 går 0.00 → 1.00. |
+| "Överutlösning är en nettokostnad utan recallvinst" | Står. 14 av 46, 1.50 sökningar mot idealets 1.0. |
+| "`clarify` är en spärr utan tröskel" | Står, och blev värre: 2 → 4 fall. |
+| "Katalogordningen är en odesignad produktionsvariabel" | Åtgärdad, med lås. |
+| "Siffrorna gäller `gemma-4-12b-it` Q4_K_XL" | Står. |
+
+### Reproduktion av tillägget
+
+```bash
+cd backend
+ssh -N -L 8000:127.0.0.1:8000 agenntserver-lan &      # OBS: -lan, inte tailnet-aliaset
+BRF_LLM_BASE_URL=http://127.0.0.1:8000/v1 BRF_LLM=selfhosted \
+  uv run python -m scripts.eval_planner --runs 1 --catalogue fixed
+```
+
+Ungefär fem minuter. Samma varning som ovan: kör den inte parallellt med
+pytest-sviten.

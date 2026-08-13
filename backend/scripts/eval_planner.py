@@ -47,7 +47,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.indexer import HybridIndex  # noqa: E402
-from app.multihop import ask_planned  # noqa: E402
+from app.multihop import ask_planned, catalogue_names  # noqa: E402
 from app.query_plan import PLANNER_CONTRACT  # noqa: E402
 from app.store import Store  # noqa: E402
 from scripts.eval import fresh_store, golden_span, load_golden as load_golden_a  # noqa: E402
@@ -126,21 +126,31 @@ class Run:
     retrieved: set[str]
     degraded: bool
     seconds: float
+    # Ändrade omblandningen faktiskt prompten? Se one_run.
+    catalogue_changed: bool = False
 
 
 def one_run(store: Store, question: str, provider, *, catalogue_seed: int | None = None) -> Run:
     """En körning genom den RIKTIGA `ask_planned`.
 
-    `catalogue_seed` blandar om dokumentkatalogens ordning innan planeringen.
-    Ordningen är en verklig produktionsvariabel — `ask_planned` läser
-    `documents.values()`, vars ordning följer uppladdningsordningen — och den
-    är den enda variationskälla som finns kvar när avkodningen är girig
-    (temperature=0). Utan den mäter N körningar av samma prompt ingenting.
+    `catalogue_seed` blandar om lagrets dokumentordning innan planeringen.
+    Ordningen VAR en verklig produktionsvariabel: `ask_planned` läste
+    `documents.values()`, vars ordning följer uppladdningsordningen, och den
+    var den enda variationskälla som fanns kvar när avkodningen är girig
+    (temperature=0).
+
+    Sedan katalogen sorteras (`multihop.catalogue_names`) är omblandningen
+    inert. Det får inte mätas tyst: `catalogue_changed` observerar om
+    prompten faktiskt blev en annan, så en "shuffled"-tabell där ingenting
+    ändrades rapporterar det i stället för att se ut som stabilitet.
     """
+    catalogue_changed = False
     if catalogue_seed is not None:
+        before = catalogue_names(store.documents)
         keys = list(store.documents)
         random.Random(catalogue_seed).shuffle(keys)
         store.documents = {k: store.documents[k] for k in keys}
+        catalogue_changed = catalogue_names(store.documents) != before
 
     p = PlannerOnlyProvider(provider)
     _local.searches = 0
@@ -168,6 +178,7 @@ def one_run(store: Store, question: str, provider, *, catalogue_seed: int | None
         retrieved={h.chunk_id for h in result.pack.hits},
         degraded=result.plan.degraded,
         seconds=elapsed,
+        catalogue_changed=catalogue_changed,
     )
 
 
@@ -299,6 +310,10 @@ class CaseMeasurement:
     def distinct_plans(self) -> int:
         return len({(r.mode, tuple(r.subqueries)) for r in self.runs})
 
+    @property
+    def catalogue_changed_runs(self) -> int:
+        return sum(1 for r in self.runs if r.catalogue_changed)
+
 
 def measure(
     store: Store,
@@ -384,6 +399,7 @@ def as_json(measurements: list[CaseMeasurement]) -> list[dict]:
                 "mean_recall": None if m.mean_recall is None else round(m.mean_recall, 4),
                 "recall_range": m.recall_range,
                 "distinct_plans": m.distinct_plans,
+                "catalogue_changed_runs": m.catalogue_changed_runs,
                 "plans": sorted({(r.mode, " | ".join(r.subqueries)) for r in m.runs}),
             }
         )
@@ -399,8 +415,11 @@ def main() -> int:
     ap.add_argument(
         "--catalogue",
         choices=("fixed", "shuffled", "both"),
-        default="both",
-        help="fixed = identisk prompt varje körning; shuffled = dokumentkatalogens ordning blandas",
+        default="fixed",
+        help=(
+            "fixed = identisk prompt varje körning (default sedan katalogen sorteras); "
+            "shuffled = lagrets dokumentordning blandas, numera inert och rapporteras som sådan"
+        ),
     )
     ap.add_argument("--out", default=str(EVAL_DIR / "last_planner_run.json"))
     args = ap.parse_args()
@@ -461,11 +480,24 @@ def main() -> int:
                     runs=args.runs, shuffle_catalogue=shuffled, label=f"neg/{variant}",
                 )
 
-            head = (
-                "Identisk prompt varje körning."
-                if not shuffled
-                else "Dokumentkatalogens ordning blandas per körning (en verklig produktionsvariabel)."
-            )
+            if not shuffled:
+                head = "Identisk prompt varje körning."
+            else:
+                # Sedan katalogen sorteras är omblandningen inert. Att låta
+                # tabellen se stabil ut vore att mäta ingenting: säg i stället
+                # hur många körningar som faktiskt fick en annan prompt.
+                total_runs = sum(len(m.runs) for m in [*mx, *mn])
+                changed = sum(m.catalogue_changed_runs for m in [*mx, *mn])
+                head = (
+                    f"Lagrets dokumentordning blandas per körning. Prompten blev faktiskt "
+                    f"en annan i {changed} av {total_runs} körningar"
+                    + (
+                        " — katalogen sorteras, så omblandningen är inert och tabellen "
+                        "nedan mäter INTE stabilitet."
+                        if changed == 0
+                        else "."
+                    )
+                )
             print_table(
                 f"Tvärdokumentsfall — katalog: {variant}",
                 head + " `multi` är inte ett betyg; kolumnen visar vad planeraren valde.",
