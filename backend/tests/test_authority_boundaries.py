@@ -238,6 +238,26 @@ class TestK5AskingIsReadOnly:
 # ---------- K6: mänskliga godkännandegränser ----------
 
 
+def _all_route_paths(app) -> set[str]:
+    """Varje ruttsökväg i appen, inklusive de som monterats med
+    `include_router`. FastAPI 0.139 lägger de sistnämnda bakom ett
+    `_IncludedRouter` som saknar `.path` och bär originalet i
+    `original_router` — en naiv `app.routes`-läsning ser dem inte."""
+
+    def walk(routes) -> set[str]:
+        found: set[str] = set()
+        for r in routes:
+            path = getattr(r, "path", None)
+            if path:
+                found.add(path)
+            original = getattr(r, "original_router", None)
+            if original is not None and getattr(original, "routes", None):
+                found |= walk(original.routes)
+        return found
+
+    return walk(app.routes)
+
+
 class TestK6TheAskSurfaceStaysAdvisory:
     """K6 — BRF-1 får inte ge frågevägen någon handlingsförmåga.
 
@@ -262,10 +282,25 @@ class TestK6TheAskSurfaceStaysAdvisory:
 
     def test_brf1_added_no_endpoint_beside_ask(self, two_tenant_app):
         """Den planerade vägen delar endpoint med den vanliga frågan; den har
-        medvetet ingen egen. En ny rutt här vore en ny auktoriseringsyta."""
-        paths = {
-            r.path for r in two_tenant_app.client.app.routes if "ask" in getattr(r, "path", "")
-        }
-        assert paths == {"/api/brf/{brf_id}/ask"}, (
-            f"frågeytan har växt: {sorted(paths)} — en ny rutt behöver eget grindbeslut."
+        medvetet ingen egen. En ny rutt här vore en ny auktoriseringsyta.
+
+        Matchningen går på sista *segmentet*, inte på delsträng: `/tasks`
+        innehåller "ask" och hade annars fällt låset av fel skäl. Ett lås som
+        felar av fel skäl lär folk att ignorera det.
+        """
+        paths = _all_route_paths(two_tenant_app.client.app)
+
+        # Icke-vakuositet för själva vandringen. Första versionen av det här
+        # låset läste `app.routes` rakt av och såg 19 av 75 rutter: allt som
+        # monteras med `include_router` gömmer sig bakom ett `_IncludedRouter`
+        # utan `.path`, så en ny rutt i integrations/fakturor/uppgifter hade
+        # varit osynlig. Kanariefågeln fäller en vandring som tappar dem igen.
+        assert any(p.endswith("/invoices") for p in paths), (
+            "ruttvandringen når inte router-monterade rutter — låset nedan mäter "
+            "då bara de rutter som ligger direkt på app och är verkningslöst."
+        )
+
+        ask_routes = {p for p in paths if p.rsplit("/", 1)[-1] == "ask"}
+        assert ask_routes == {"/api/brf/{brf_id}/ask"}, (
+            f"frågeytan har växt: {sorted(ask_routes)} — en ny rutt behöver eget grindbeslut."
         )

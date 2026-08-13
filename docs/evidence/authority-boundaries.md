@@ -69,6 +69,37 @@ väsentliga bröts:
 Utan dessa hade ett skrivlås mot en kortsluten väg passerat och sett ut som ett
 bevis.
 
+## Ett vakuöst lås till — mitt eget, fångat efter första gröna körningen
+
+K6:s ruttlås skrevs först som `{r.path for r in app.routes if "ask" in
+getattr(r, "path", "")}`. Det passerade brott 7, och såg färdigt ut. Det var
+verkningslöst på två sätt samtidigt:
+
+1. **Det såg 19 av 75 rutter.** FastAPI 0.139 lägger allt som monteras med
+   `include_router` bakom ett `_IncludedRouter` som saknar `.path`. `getattr(…,
+   "path", "")` gav tom sträng för dem, tyst. Hela integrations-, faktura-,
+   uppgifts-, bevaknings- och hemsideytan var osynlig för låset — alltså
+   precis de ytor där de mänskliga godkännandegränserna faktiskt bor.
+2. **`tasks` innehåller delsträngen `ask`.** Så fort vandringen lagades hade
+   delsträngsmatchningen fällt låset av fel skäl. Ett lås som felar av fel skäl
+   lär folk att ignorera det.
+
+Rättat: vandringen följer `original_router` rekursivt, och matchningen går på
+sista segmentet. Två nya RED-körningar:
+
+| Brott | Utfall |
+|---|---|
+| Ny `POST /ask` monterad via integrations-routern | RÖTT — `frågeytan har växt: ['/api/brf/{brf_id}/ask', '/ask']` (det gamla låset hade varit grönt) |
+| Vandringen regredierar till naiv `app.routes` | RÖTT — `ruttvandringen når inte router-monterade rutter` |
+
+Den andra är kanariefågeln som gör att felet inte kan komma tillbaka tyst.
+
+**Det här är sessionens femte vakuösa test, och det första jag skrev själv i en
+fil vars uttryckliga syfte var att undvika dem.** Mönstret är stabilt nog att
+formulera som en regel: `getattr(x, "attr", default)` i en assertion döljer
+strukturen den påstår sig läsa. Ett lås över en samling måste först bevisa att
+samlingen innehåller det den ska täcka.
+
 ## Vad K2 täcker och inte
 
 `app/model_endpoint.py` validerar **vilken** adress som är tillåten (bara
