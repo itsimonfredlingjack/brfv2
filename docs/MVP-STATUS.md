@@ -33,6 +33,11 @@ med två verifierade citat samtidigt som q11 fortsätter att vägras säkert.
   gör och punkt 9–10 under bevisgränserna för vad den inte gör. Den här raden
   finns för att listan ovan påstod motsatsen på ett annat ställe i samma
   dokument.
+- **Planerad tvärdokumentsfan-out (BRF-1) skeppas inte i MVP.** Koden finns,
+  dubbelgrindad och onåbar: `BRF_PLANNED_ASK` sätts ingenstans i drift, och
+  klienten skickar aldrig `planned`. Frågor besvaras av en sökning, som förut.
+  Skälen och de fyra villkoren för att slå på den står i
+  [beslutet om fan-out](evidence/fan-out-mvp-beslut.md).
 
 ## Skrivbordsleverans (XS-47, 2026-07-28)
 

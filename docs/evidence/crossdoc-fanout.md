@@ -3,6 +3,12 @@
 **Datum:** 2026-08-12 · **Harness:** `backend/scripts/eval_crossdoc.py` ·
 **Gren:** `feat/brf-1-cross-document`
 
+> **Det här dokumentet mäter HÄMTNINGSSTRATEGIN**, med fallens handskrivna
+> delfrågor och ingen modell alls. Slutsatserna nedan står. Om en riktig
+> planerare väljer rätt läge och skriver de delfrågorna mättes senare i
+> [`planner-vs-real-model.md`](planner-vs-real-model.md), och grindbeslutet
+> togs på de siffrorna: [fan-out skeppas inte i MVP](fan-out-mvp-beslut.md).
+
 ## Kort svar
 
 **Ja — men bara vid ordförrådsglapp, inte vid flerdokumentsfrågor i allmänhet.**

@@ -26,8 +26,10 @@ Observerade fakta står skilt från slutsatser.
 > | §3 `append_linked_table_legends` kördes inte på planerade vägen | tillämpas där också, som beslut med skäl i koden | `test_linked_legend_reaches_the_planned_prompt_too` |
 > | katalogordningen var uppladdningsordning | sorteras i `multihop.catalogue_names` | `test_catalogue_order_is_the_corpus_not_its_upload_history` |
 >
-> **Inte åtgärdat, medvetet uppskjutet:** falsk `clarify` och överutlösning —
-> se [beslutet om fan-out](planner-vs-real-model.md#tillägg-2026-08-13-sorterad-katalog).
+> **Inte åtgärdat, medvetet uppskjutet:** falsk `clarify` och överutlösning.
+> De är priset för en funktion som inte skeppas — se
+> [beslutet om fan-out](fan-out-mvp-beslut.md), där de står som villkor A och B
+> för att slå på vägen igen.
 
 ---
 

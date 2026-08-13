@@ -1,5 +1,9 @@
 # Planeraren mot en riktig modell (XS-62)
 
+> **Grindbeslutet som togs på de här siffrorna:**
+> [fan-out skeppas inte i MVP](fan-out-mvp-beslut.md) — med de fyra villkor som
+> måste vara sanna för att slå på den igen.
+>
 > **Läs [tillägget om sorterad katalog](#tillägg-2026-08-13-sorterad-katalog) först.**
 > Allt nedanför mättes med katalogen i **uppladdningsordning**. Sedan dess
 > sorteras den (`multihop.catalogue_names`), vilket är en annan prompt — och
