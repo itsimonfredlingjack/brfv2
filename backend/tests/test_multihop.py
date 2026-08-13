@@ -148,6 +148,55 @@ class TestQueryPlan:
         assert plan.subqueries == ["Vad kostar snöröjningen?"]
         assert plan.degraded
 
+    def test_multi_that_only_repeats_the_question_is_degraded_to_single(self):
+        """Rule 1b enforced in code, not asked for in the prompt.
+
+        Measured: 14 of 46 single-search questions were planned `multi`, and
+        the extra searches bought no recall on any of them — the subqueries
+        re-queried words the question already carried, so the fan-out could
+        only reorder a vocabulary the single search had already put to the
+        index.
+        """
+        fake = FakeLLM([{
+            "mode": "multi",
+            "subqueries": ["Vad kostar snöröjningen?", "När görs snöröjningen?"],
+            "clarification": "",
+        }])
+        plan = plan_query("Vad kostar snöröjningen och när görs den?", fake)
+        assert plan.mode == "single"
+        assert plan.downgraded_from == "multi"
+        assert plan.subqueries == ["Vad kostar snöröjningen och när görs den?"]
+        assert not plan.degraded, "en överrullad plan är ett beslut, inte ett haveri"
+
+    def test_multi_that_translates_into_the_documents_vocabulary_survives(self):
+        """The other direction, and the one that matters more.
+
+        Degrading a genuine translation would remove the only thing fan-out
+        has been shown to buy, so the rule above must be conservative: one
+        subquery carrying one word the question did not is enough to keep it.
+        """
+        fake = FakeLLM([{
+            "mode": "multi",
+            "subqueries": ["ersättning vinterservice", "utförande snöröjning"],
+            "clarification": "",
+        }])
+        plan = plan_query("Vad kostar snöröjningen och när görs den?", fake)
+        assert plan.mode == "multi"
+        assert plan.downgraded_from == ""
+        assert len(plan.subqueries) == 2
+
+    def test_a_function_word_is_not_a_contribution(self):
+        """"Vad", "och", "för" are not vocabulary. Without this the rule would
+        be trivially escapable by any subquery phrased as a sentence."""
+        fake = FakeLLM([{
+            "mode": "multi",
+            "subqueries": ["Vad gäller för snöröjningen?", "När och hur görs snöröjningen?"],
+            "clarification": "",
+        }])
+        plan = plan_query("snöröjningen kostnad görs", fake)
+        assert plan.mode == "single"
+        assert plan.downgraded_from == "multi"
+
     def test_planner_is_never_shown_document_content(self, store):
         fake = FakeLLM([{"mode": "single", "subqueries": [], "clarification": ""}])
         plan_query("Fråga", fake, document_names=["Snöröjningsavtal.pdf"])
@@ -291,6 +340,61 @@ class TestPlannedAnswering:
         assert result.response.citations == []
         assert "Menar du" in result.response.answer
         assert len(fake.calls) == 1, "en clarify får inte kosta en syntes-körning"
+
+    def test_clarify_stands_when_retrieval_finds_nothing(self, store):
+        """The counter-question is now a decision AFTER retrieval.
+
+        It may only stand where the same signal the single path refuses on
+        says the corpus has nothing — otherwise the planner gets to silence
+        an answerable question on wording alone, which it did four times in
+        46 (g21, g23, g33, g43).
+        """
+        store.update_settings(Settings(minRelevance=0.18, topK=3))
+        question = "Hur många parkeringsplatser finns i garaget?"
+
+        # Non-vacuity: the probe must really come up empty, or this case
+        # would pass whatever the rule below did.
+        probe = store.index.search(question, weight=0.5, candidates=store.settings.candidateCount,
+                                   top_k=3, min_confidence=0.0)
+        assert max((h.confidence for h in probe), default=0.0) < store.settings.minRelevance
+
+        fake = FakeLLM([{
+            "mode": "clarify", "subqueries": [],
+            "clarification": "Vilken byggnad menar du?",
+        }])
+        result = ask_planned(store, question, provider=fake)
+        assert result.plan.mode == "clarify"
+        assert result.plan.downgraded_from == ""
+        assert result.response.refusal
+        assert "Vilken byggnad" in result.response.answer
+
+    def test_clarify_is_overruled_when_retrieval_finds_material(self, store):
+        """An answerable question must not be silenced by a counter-question.
+
+        The planner decides before any retrieval, on wording alone. Here the
+        corpus plainly answers, so the clarification is overruled and the
+        question is searched — the ONE cost being an extra index lookup, not
+        a second model call.
+        """
+        store.update_settings(Settings(minRelevance=0.18, topK=3))
+        question = "Vilken ersättning utgår per timme enligt snöröjningsavtalet?"
+        probe = store.index.search(question, weight=0.5, candidates=store.settings.candidateCount,
+                                   top_k=3, min_confidence=0.0)
+        assert max((h.confidence for h in probe), default=0.0) >= store.settings.minRelevance
+
+        ersättning = chunk_id_containing(store, "1250 kr")
+        fake = FakeLLM([
+            {"mode": "clarify", "subqueries": [], "clarification": "Vilket avtal menar du?"},
+            {"answer": "Ersättning utgår med 1250 kr per påbörjad timme.",
+             "citations": [{"chunk_id": ersättning, "quote": "Ersättning utgår med 1250 kr per påbörjad timme."}],
+             "insufficient_data": False},
+        ])
+        result = ask_planned(store, question, provider=fake)
+        assert result.plan.mode == "single"
+        assert result.plan.downgraded_from == "clarify"
+        assert not result.response.refusal, result.response.answer
+        assert result.response.clarification is None
+        assert [c.chunk_id for c in result.response.citations] == [ersättning]
 
     def test_two_document_answer_verifies_through_the_existing_path(self, store):
         avtal = chunk_id_containing(store, "Vinterservice AB")

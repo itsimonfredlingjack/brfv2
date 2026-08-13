@@ -137,8 +137,35 @@ def ask_planned(
     pack.planned_subqueries = list(plan.subqueries)
 
     if plan.mode == "clarify":
-        logger.info("Frågan behöver förtydligas: %s", plan.clarification)
-        return PlannedAnswer(_clarify_response(plan, provider.name, model), plan, pack)
+        # A clarification is only honest if the corpus really cannot answer.
+        # The planner decides BEFORE any retrieval, on the question's wording
+        # alone, and it was wrong four times in 46: "När hålls nästa
+        # styrelsemöte?" is vague as a sentence and perfectly answerable as a
+        # search. So the counter-question becomes a decision AFTER retrieval —
+        # it may only stand where the same signal the single path refuses on
+        # (`minRelevance`) says there is nothing to find.
+        #
+        # This costs one search on every clarify, and two on a question the
+        # probe rescues: the rescue hands back to the unchanged single path
+        # rather than reusing these hits, because `single` staying literally
+        # the same code is worth more than one index lookup. It costs no
+        # extra model call, which is the expensive resource.
+        probe = index.search(
+            question,
+            weight=s.searchWeighting / 100.0,
+            candidates=s.candidateCount,
+            top_k=s.topK,
+            min_confidence=0.0,
+        )
+        top_confidence = max((h.confidence for h in probe), default=0.0)
+        if top_confidence < s.minRelevance:
+            logger.info("Frågan behöver förtydligas: %s", plan.clarification)
+            return PlannedAnswer(_clarify_response(plan, provider.name, model), plan, pack)
+        logger.info(
+            "Planeraren ville förtydliga, men hämtningen hittade material (%.2f ≥ %.2f); söker i stället.",
+            top_confidence, s.minRelevance,
+        )
+        plan = QueryPlan(mode="single", subqueries=[question], downgraded_from="clarify")
 
     if plan.mode == "single":
         # One search — hand straight back to the unchanged single path so

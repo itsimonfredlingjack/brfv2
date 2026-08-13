@@ -5,6 +5,12 @@ Underlag: [`planner-vs-real-model.md`](planner-vs-real-model.md) (XS-62,
 mätning mot riktig modell), [`crossdoc-fanout.md`](crossdoc-fanout.md)
 (hämtningsstrategin), [`cold-review-brf1.md`](cold-review-brf1.md) (XS-64).
 
+> **Siffrorna nedan är mätta före steg 2 och 3** (clarify efter hämtning,
+> degraderad överutlösning). Två av dem har rört sig sedan dess — falsk
+> `clarify` 4 → 0 och kontrollrecall 0.91 → 1.00 — och ett fynd talar emot
+> fixen själv. Se `planner-vs-real-model.md`, tillägg 2 (2026-08-13).
+> Grindbeslutet är inte omprövat här.
+
 ## Beslut
 
 **Den planerade multi-vägen är av som produktväg i MVP.** Koden ligger kvar,

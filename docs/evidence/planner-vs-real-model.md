@@ -302,3 +302,119 @@ BRF_LLM_BASE_URL=http://127.0.0.1:8000/v1 BRF_LLM=selfhosted \
 
 Ungefär fem minuter. Samma varning som ovan: kör den inte parallellt med
 pytest-sviten.
+
+---
+
+## Tillägg 2026-08-13 (2): clarify efter hämtning, degraderad överutlösning
+
+Tillägget ovan lämnade två regressioner öppna: falsk `clarify` (4 av 46) och
+överutlösning (14 av 46). Två ändringar gjordes mot dem, och mätningen kördes om
+en gång på **samma sorterade katalog** — planeraren avkodar girigt, så en
+körning per fall är hela sanningen för en given prompt.
+
+**Steg 2 — `clarify` blir ett beslut EFTER hämtning.** `ask_planned` söker på
+originalfrågan innan motfrågan får verka; når något över `minRelevance` faller
+clarify och frågan söks som `single`. Kostnad: en sökning på varje clarify, två
+på en räddad fråga (räddningen lämnar tillbaka till den *oförändrade*
+enkelvägen i stället för att återanvända träffarna). Noll extra modellanrop.
+Lås: `test_clarify_stands_when_retrieval_finds_nothing`,
+`test_clarify_is_overruled_when_retrieval_finds_material`.
+
+**Steg 3 — en `multi` som inte tillför ordförråd degraderas.** `plan_query`
+jämför delfrågornas innehållsord (`indexer.tokenize`, funktionsord bort) med
+frågans egna; är varje delfråga en delmängd blir planen `single`. Lås:
+`test_multi_that_only_repeats_the_question_is_degraded_to_single`,
+`test_multi_that_translates_into_the_documents_vocabulary_survives`,
+`test_a_function_word_is_not_a_contribution`. Alla fem låsen är brutna på riktigt
+och sedda falla.
+
+`QueryPlan.downgraded_from` bär vilket läge planeraren *bad* om när
+applikationen överrullade den, och harnesset räknar och skriver ut det — annars
+hade en överrullad plan sett ut som ett `single` planeraren själv valde, och båda
+stegen varit omätbara.
+
+### De fyra talen
+
+| | före steg 2/3 | efter |
+|---|---:|---:|
+| g21 `Med hur mycket höjdes årsavgifterna 2026?` | clarify, recall 0.00, 0 sökn | **single (←clarify), recall 1.00, 2 sökn** |
+| g23 `Hur hög var soliditeten?` | clarify, recall 0.00, 0 sökn | **single (←clarify), recall 1.00, 2 sökn** |
+| g33 `När hålls nästa styrelsemöte?` | clarify, recall 0.00, 0 sökn | **single (←clarify), recall 1.00, 2 sökn** |
+| g43 `Vad beräknas takomläggningen kosta?` | clarify, recall 0.00, 0 sökn | **single (←clarify), recall 1.00, 2 sökn** |
+| Överutlösning, 46 negativa kontroller | 14 av 46 (30 %) | **14 av 46 (30 %) — oförändrat** |
+| r01, recall | 1.00 (multi×3) | **1.00 (multi)** |
+| Recall, hela kontrollpopulationen | 0.91 | **1.00** — lika med baslinjens 1.00 |
+| Medelantal sökningar, kontrollerna (idealet 1.0) | 1.50 | 1.70 |
+
+Falsk `clarify` är **4 → 0**. Recallglappet mot baslinjen är stängt: den
+planerade vägen når nu samma 1.00 som enkel sökning på den population som
+dominerar verklig användning. Sökkostnaden steg från 1.50 till 1.70, eftersom de
+fyra räddade frågorna gick från noll sökningar till två.
+
+### Fynd 1 — steg 3 utlöste inte en enda gång
+
+**Applikationen degraderade 0 av 59 planer från `multi`.** Överutlösningen är
+oförändrad, och tabellen ovan visar det i stället för att antyda en förbättring.
+
+Premissen bakom steg 3 håller inte. Alla 14 `multi`-planer på kontrollerna
+tillför nya innehållsord — planeraren hackar inte upp frågan, den **översätter**,
+precis som regel 1b begär:
+
+| fråga | delfrågor | nya ord |
+|---|---|---|
+| g14 `Vilket år byggdes fastigheten?` | byggår · uppförande · fastighetsdata | alla tre |
+| g26 `Vad ersätts de gamla fönstren med?` | fönsterbyte · fönsterrenovering · fönsterutbyte | alla tre |
+| g20 `Hur stora är föreningens lån?` | låneuppgifter · skuldsättning · låneresumé | alla tre |
+
+Överutlösning är alltså **inte** "delfrågorna upprepar frågans ord". Det är
+"planeraren översätter en fråga som inte behövde översättas" — och en
+delmängdsregel kan per konstruktion aldrig se skillnad på en översättning som
+behövdes och en som inte gjorde det, eftersom båda ser likadana ut i texten.
+Skillnaden syns först i hämtningen.
+
+Regeln är därför **verkningslös kod på verklig planerarutdata**, grön i
+enhetstesten och tyst i produktionen. Den ena sak den bevisligen gör är att den
+inte skadar: r01:s plan (`sophamtning pris | sophamtning avtal | sophamtning
+kostnad`) överlever, eftersom `sophamtning` inte är frågans `sophämtningen`.
+
+### Fynd 2 — steg 2 tar den äkta `clarify` med sig
+
+`minRelevance` mäter om korpusen **har material**, inte om frågan **pekar ut ett
+dokument**. En fråga som är tvetydig mellan två handlingar hämtar bra ur båda, så
+regeln överrullar den också:
+
+- **x02** (`När går avtalet ut?`, golden-fallet för tvetydighet, två avtal i
+  korpusen) blev `single` och besvarades ur det som råkade ranka högst.
+- Enhetsfallet `Vad står det i dokumentet?` likaså.
+
+Två test är därför **röda** och har medvetet inte skrivits om:
+`tests/test_golden_crossdoc.py::test_golden_crossdoc_case[x02]` och
+`tests/test_multihop.py::TestPlannedAnswering::test_clarify_refuses_instead_of_guessing`.
+Att ändra dem vore att skriva om kravet så att det passar koden. Svit: **1347
+passerade, 2 fallerade, 3 hoppade**.
+
+Netto för `clarify` som läge: falska försvann, äkta försvann också. Efter
+körningen valde **0 av 59** fall `clarify`.
+
+### Vad tillägget ändrar, och vad det inte ändrar
+
+| Slutsats i tillägg 1 | Efter steg 2/3 |
+|---|---|
+| "Fyra besvarabara frågor får noll sökningar" | **Faller.** 4 → 0, alla fyra på recall 1.00. |
+| "Recall 0.91 mot baslinjens 1.00 på kontrollerna" | **Faller.** 1.00 mot 1.00. |
+| "Överutlösning: 14 av 46 utan recallvinst" | **Står oförändrat.** Steg 3 utlöste noll gånger. |
+| "`clarify` är en spärr utan tröskel" | Tröskeln finns nu — och släpper igenom allt, äkta tvetydighet inkluderad. |
+| "r01 går 0.00 → 1.00" | Står. Oförändrat 1.00. |
+
+### Reproduktion
+
+```bash
+cd backend
+ssh -N -L 8000:127.0.0.1:8000 agenntserver-lan &      # OBS: -lan, inte tailnet-aliaset
+BRF_LLM_BASE_URL=http://127.0.0.1:8000/v1 BRF_LLM=selfhosted \
+  uv run python -m scripts.eval_planner --runs 1 --catalogue fixed
+```
+
+Cirka två minuter med `--runs 1`. Kör den inte parallellt med pytest-sviten.
+Raden `Applikationen överrullade planeraren i N av M körningar` under varje
+tabell är den som säger om steg 2 och steg 3 gjorde något alls.
