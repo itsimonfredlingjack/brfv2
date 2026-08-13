@@ -531,3 +531,60 @@ formalitet utan hela frågan.
 utan att hitta något en sökning inte hittade (varje `multi`-fall ligger på 1.00,
 precis som baslinjen). Regeln som skulle mäta bort den är borttagen som
 verkningslös (tillägg 2, efterspel), och ingen ny har satts i dess ställe.
+
+---
+
+## Tillägg 2026-08-14 (4): vad överutlösningen faktiskt gör med prompten
+
+Överutlösningen står oåtgärdad på 12 av 46, och varje mätning hittills har sagt
+"recall oförändrad". Det har lästs som *slöseri men ofarligt*. Det är en slutsats
+måttet inte kan bära: **recall mäter om beviset finns i påsen, inte vad som
+ligger bredvid det.**
+
+`backend/scripts/eval_fanout_delta.py` (ny) kör den riktiga `ask_planned` med den
+plan `eval_planner` redan spelat in, utan modellanrop, och jämför fan-outens
+bevispåse med vad enkelsökningen hade lagt fram.
+
+| | tvärdokument (4 multi) | negativa kontroller (12 multi) |
+|---|---:|---:|
+| Nya utdrag fan-outen lade till | 16 | **27** |
+| …av dem som bär svaret | **1** (x06) | **0** |
+| Utdrag enkelsökningen hade och fan-outen tappade | 7 | **18** |
+| …av dem som bar svaret | 0 | 0 |
+
+**Överutlösningen är inte ett nollsummeslöseri — den byter ut prompten.** På de
+12 kontrollerna lade fan-outen till 27 utdrag av vilka inte ett enda bär svaret,
+och trängde undan 18 som enkelsökningen hade valt. På fem av fallen (g03, g04,
+g16, g26, g41) är påsen exakt lika stor som enkelsökningens sex: där är det inte
+utspädning utan **ren utbyteshandel**, två användbara-eller-neutrala utdrag mot
+två som inte kan hjälpa.
+
+Att inget av de 18 undanträngda bar svaret är ett **utfall, inte en garanti**.
+Undanträngning är precis mekanismen bakom en recallförlust, och vi har sett den
+inträffa: v01 låg på 1.00 → 0.00 i tillägg 2:s körning, och är 1.00 igen nu.
+
+### Vad det gör med villkor B
+
+Villkor B i [`fan-out-mvp-beslut.md`](fan-out-mvp-beslut.md) lyder "överutlösning
+≤ 2 av 46, **eller** bevis för att de extra sökningarna köper recall". Andra
+ledet går inte att uppfylla eller falsifiera med harnesset som finns:
+syntessteget är kanonsvarat i varje mätning, så **svarskvalitet under utbytt
+bevispåse har aldrig mätts**. Recall är det instrument som säger att allt är
+bra. Skadan, om den finns, ligger i det instrumentet inte tittar på.
+
+Det är en anmärkning på villkorets formulering, inte ett omprövat grindbeslut.
+
+### En kandidat, mätt men inte byggd
+
+Sista kolumnen i harnesset prövar ett efterhämtningsfilter: *släpp igenom bara
+utdrag vars confidence når enkelsökningens egen toppträff.* Utfallet:
+
+- **22 av 27** diluterande utdrag på kontrollerna faller bort.
+- x06:s enda nyttiga nya utdrag (0.721 mot enkelsökningens topp 0.255)
+  **överlever** — vinsten går inte förlorad.
+- Fem utdrag överlever ändå på kontrollerna (g08 ×2, g11, g17, g41).
+
+Den är **inte implementerad.** Skälet är samma som fällde steg 3: dess nytta
+kan inte mätas med harnesset som finns, eftersom nyttan är svarskvalitet och
+syntesen är kanonsvarad. Att bygga den nu vore att skeppa en åtgärd vars effekt
+ingen kan se — vilket är exakt det fel som just har rättats en gång.

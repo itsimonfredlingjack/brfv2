@@ -12,7 +12,8 @@ mätning mot riktig modell), [`crossdoc-fanout.md`](crossdoc-fanout.md)
 > promptändring som inte rör ordförrådsglappet. Skäl 3 nedan ("skör mekanism")
 > är därmed mätt tre gånger i stället för en; skäl 1 och 2 är däremot åtgärdade.
 > Se `planner-vs-real-model.md`, tilläggen 2 och 3. Grindbeslutet är inte
-> omprövat här.
+> omprövat här. Se även tillägg 4: villkor B:s andra led går inte att
+> uppfylla med harnesset som finns.
 
 ## Beslut
 
