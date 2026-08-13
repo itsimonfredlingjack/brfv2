@@ -128,12 +128,7 @@ class Run:
     seconds: float
     # Ändrade omblandningen faktiskt prompten? Se one_run.
     catalogue_changed: bool = False
-    # Vilket läge planeraren BAD om när applikationen överrullade den:
-    # "multi" (delfrågorna tillförde inget ordförråd) eller "clarify"
-    # (hämtningen hittade material ändå). Tomt när planen är planerarens
-    # egen. Utan den här kolumnen ser en överrullad plan ut som ett
-    # `single` planeraren själv valde, och steg 2/3 vore omätbara.
-    downgraded_from: str = ""
+
 
 
 def one_run(store: Store, question: str, provider, *, catalogue_seed: int | None = None) -> Run:
@@ -183,7 +178,6 @@ def one_run(store: Store, question: str, provider, *, catalogue_seed: int | None
         searches=searches,
         retrieved={h.chunk_id for h in result.pack.hits},
         degraded=result.plan.degraded,
-        downgraded_from=result.plan.downgraded_from,
         seconds=elapsed,
         catalogue_changed=catalogue_changed,
     )
@@ -296,12 +290,14 @@ class CaseMeasurement:
         return out
 
     @property
-    def downgrade_counts(self) -> dict[str, int]:
-        out: dict[str, int] = {}
-        for r in self.runs:
-            if r.downgraded_from:
-                out[r.downgraded_from] = out.get(r.downgraded_from, 0) + 1
-        return out
+    def degraded_runs(self) -> int:
+        """Körningar där planeraren inte gav en plan vi bad om.
+
+        Sedan `clarify` lämnade kontraktet (2026-08-13) är det HÄR en modell
+        som ändå svarar `clarify` dyker upp: den faller till ett degraderat
+        `single`. En nolla säger att modellen håller sig till kontraktet.
+        """
+        return sum(1 for r in self.runs if r.degraded)
 
     @property
     def mean_searches(self) -> float:
@@ -375,8 +371,8 @@ def print_table(title: str, note: str, measurements: list[CaseMeasurement], runs
             recall += f" ({rng[0]:.2f}–{rng[1]:.2f})"
         baseline = "—" if not c.required else f"{c.baseline:.2f}"
         modes = " ".join(f"{k}×{v}" for k, v in sorted(m.mode_counts.items()))
-        if m.downgrade_counts:
-            modes += " " + " ".join(f"(←{k}×{v})" for k, v in sorted(m.downgrade_counts.items()))
+        if m.degraded_runs:
+            modes += f" (degraderad×{m.degraded_runs})"
         print(
             f"| {c.id} | {c.kind} | {c.expect_mode or '—'} | {modes} | {recall} | "
             f"{m.multi_share:.0%} | {m.mean_searches:.1f} | {baseline} | {m.distinct_plans} |"
@@ -394,20 +390,13 @@ def print_table(title: str, note: str, measurements: list[CaseMeasurement], runs
         f"**{statistics.fmean(m.mean_searches for m in measurements):.1f}** | "
         f"**{mean_baseline:.2f}** | |"
     )
-    # Överrullningarna räknas ut och skrivs ut, inte antas. En nolla här
-    # betyder att steg 2/3 aldrig utlöste under körningen och att inget i
-    # tabellen ovan kan tillskrivas dem.
+    # Räknas ut och skrivs ut, inte antas: hur ofta planeraren svarade något
+    # applikationen inte bad om (`clarify` efter borttagningen, okänt läge,
+    # eller ett haveri) och därför fick ett degraderat `single`.
     total_runs = sum(len(m.runs) for m in measurements)
-    overruled: dict[str, int] = {}
-    for m in measurements:
-        for k, v in m.downgrade_counts.items():
-            overruled[k] = overruled.get(k, 0) + v
+    degraded = sum(m.degraded_runs for m in measurements)
     print(f"\n{runs} körningar per fall.")
-    if overruled:
-        detail = ", ".join(f"{v} från `{k}`" for k, v in sorted(overruled.items()))
-        print(f"Applikationen överrullade planeraren i {sum(overruled.values())} av {total_runs} körningar: {detail}.")
-    else:
-        print(f"Applikationen överrullade planeraren i 0 av {total_runs} körningar.")
+    print(f"Planeraren svarade utanför kontraktet i {degraded} av {total_runs} körningar.")
 
 
 def as_json(measurements: list[CaseMeasurement]) -> list[dict]:
@@ -429,7 +418,7 @@ def as_json(measurements: list[CaseMeasurement]) -> list[dict]:
                 "mean_recall": None if m.mean_recall is None else round(m.mean_recall, 4),
                 "recall_range": m.recall_range,
                 "distinct_plans": m.distinct_plans,
-                "downgraded_from_counts": m.downgrade_counts,
+                "degraded_runs": m.degraded_runs,
                 "catalogue_changed_runs": m.catalogue_changed_runs,
                 "plans": sorted({(r.mode, " | ".join(r.subqueries)) for r in m.runs}),
             }

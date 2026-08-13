@@ -41,8 +41,6 @@ def _chunk_id_containing(store: Store, needle: str) -> str:
 
 
 def _script(store: Store, case: dict) -> FakeLLM:
-    if case["expect_mode"] == "clarify":
-        return FakeLLM([{"mode": "clarify", "subqueries": [], "clarification": case["clarification"]}])
     return FakeLLM([
         {"mode": "multi", "clarification": "", "subqueries": case["subqueries"]},
         {
@@ -61,12 +59,6 @@ def test_golden_crossdoc_case(store, case):
     result = ask_planned(store, case["question"], provider=_script(store, case))
 
     assert result.plan.mode == case["expect_mode"], f"{case['id']}: fel planläge"
-
-    if case["expect_mode"] == "clarify":
-        assert result.response.refusal, f"{case['id']}: en tvetydig fråga får inte besvaras"
-        assert result.response.citations == []
-        assert result.response.answer.strip() == case["clarification"].strip()
-        return
 
     if case.get("expect_refusal_reason"):
         # A negative case: fan-out widens RETRIEVAL, it must not lower the bar
@@ -104,10 +96,15 @@ def test_golden_crossdoc_case(store, case):
 
 def test_every_golden_kind_from_brf4_is_covered():
     """The shapes this slice committed to."""
+    # `ambiguous_asks_for_clarification` stod här till 2026-08-13. Läget
+    # `clarify` togs bort ur PLANNER_CONTRACT och fallet med det — skälet
+    # ligger i golden-filens `_comment` och i
+    # docs/evidence/planner-vs-real-model.md, tillägg 2. Raden är struken,
+    # inte utkommenterad, så att listan fortsätter vara en fullständig
+    # uppräkning av vad skivan faktiskt lovar.
     assert {c["kind"] for c in CASES} == {
         "two_document_answer",
         "multi_part_question",
-        "ambiguous_asks_for_clarification",
         "conflicting_documents",
         "no_evidence_refuses",
         "time_bound_question",

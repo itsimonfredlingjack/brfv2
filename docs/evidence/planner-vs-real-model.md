@@ -455,3 +455,79 @@ Det lämnar tre vägar, alla med känd kostnad och alla produktbeslut:
 | **C. överrulla bara vid ett dokument** | 0.93 | 3 av 46 | bevarad |
 
 Koden står på **A**, och de två röda testen är A:s pris utskrivet.
+
+---
+
+## Tillägg 2026-08-13 (3): `clarify` borttaget ur kontraktet — och r01 föll tillbaka
+
+Tillägg 2 lämnade `clarify` i ett tillstånd som inte gick att försvara: grinden
+räddade alla fyra falska motfrågor och tog den enda äkta med sig, så läget
+utlöste 0 av 59 gånger till någon nytta. **Läget är därför borttaget ur
+`PLANNER_CONTRACT`**, tillsammans med efterhämtningsgrinden (som därmed blev
+onåbar kod), `QueryPlan.clarification` och wire-fältet `AskResponse.clarification`.
+Kontraktet har två lägen: `single` och `multi`.
+
+Valet mellan att behålla grinden och att ta bort läget avgjordes av att de gör
+**samma sak på alla 59 fall** — de fyra falska besvaras, den äkta besvaras — men
+borttagningen gör det med en sökning i stället för två, utan grind och utan ett
+wire-fält som alltid är null. Bevisningen för skadan var fyra fall ur den golden
+produkten mäts mot; bevisningen för nyttan var ett konstruerat fall.
+
+Låsen: `test_clarify_left_the_contract_and_cannot_come_back_through_the_model`
+(en modell som ändå svarar `clarify` måste SÖKA), `test_an_off_contract_clarify_is_answered_not_refused`,
+`test_an_off_contract_clarify_never_blocks_the_question` (API-nivå, skiljer på
+`low_relevance` och den gamla `insufficient_data`-genvägen) och den frusna
+fältmängden i `test_ask_response_exposes_no_actionable_field`. Alla tre nya
+brutna på riktigt och sedda falla. Golden-fallet **x02 är borttaget**, inte
+omskrivet — motiveringen ligger i `eval/golden_crossdoc.json`s `_comment`.
+
+### Vad mätningen gav
+
+| | tillägg 2 (clarify + grind) | nu (clarify borta) |
+|---|---:|---:|
+| Recall, 46 negativa kontroller | 1.00 | **1.00** |
+| Överutlösning | 14 av 46 | **12 av 46** |
+| Medelantal sökningar, kontrollerna | 1.70 | **1.52** |
+| Falsk `clarify` | 0 (via grind) | **0 (strukturellt)** |
+| Planeraren svarade utanför kontraktet | — | **0 av 58 körningar** |
+| **r01, recall** | **1.00** | **0.00** |
+| v01, recall | 0.00 | **1.00** |
+| Recall, tvärdokumentsfallen | 0.91 | 0.91 |
+
+Kontrollpopulationen blev alltså bättre på varje axel. Och så det som inte är en
+detalj:
+
+### Fynd 3 — r01 vänder på en promptändring som inte rör ordförrådsglappet
+
+**r01 planeras nu `single` och får recall 0.00.** Fallet är motivet för hela
+funktionen: styrelsen frågar om "sophämtningen", handlingen säger
+"sophantering" och "schablonbelopp", och en enkel sökning hittar ingenting.
+
+Det som ändrades var att ett stycke om ett **annat läge** togs bort ur
+systemprompten. Ingenting i regel 1 eller 1b rördes, ingenting i hämtningen,
+ingenting i katalogen. Avkodningen är girig, så planen är en funktion av
+prompten — och den funktionen visade sig gå åt andra hållet.
+
+Det är tredje gången r01 vänder på en ändring som inte handlar om fallet:
+
+| ändring | r01 |
+|---|---|
+| uppladdningsordnad katalog | 0.00 |
+| sorterad katalog | 1.00 |
+| `clarify` borttaget ur kontraktet | **0.00** |
+
+Slutsatsen är inte att borttagningen var fel — kontrollpopulationen, som är den
+verkliga användningen, blev bättre på varje axel, och v01 gick åt andra hållet
+(0.00 → 1.00) i samma körning. Slutsatsen är att **det ena verkliga
+ordförrådsfallet inte bär någon vikt**: dess utfall bestäms av promptdetaljer
+som inte har med ordförrådsglapp att göra. Villkor C i
+[`fan-out-mvp-beslut.md`](fan-out-mvp-beslut.md) — reproducera vinsten på minst
+tre verkliga fall, varav ett utan filnamnsbro — är efter det här inte en
+formalitet utan hela frågan.
+
+### Vad som står kvar oåtgärdat
+
+Överutlösningen: **12 av 46** frågor kostar tre sökningar och ett modellanrop
+utan att hitta något en sökning inte hittade (varje `multi`-fall ligger på 1.00,
+precis som baslinjen). Regeln som skulle mäta bort den är borttagen som
+verkningslös (tillägg 2, efterspel), och ingen ny har satts i dess ställe.

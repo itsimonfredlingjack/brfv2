@@ -183,7 +183,7 @@ cd xs_mobilapp && npm install
 make mobile-test
 ```
 
-Senast mätta lokala verifiering (2026-08-13, Fedora 44): backend **1344 passed,
+Senast mätta lokala verifiering (2026-08-13, Fedora 44): backend **1341 passed,
 3 skipped**, isolerings/auth/livscykel **49 passed**, kanonisk frontend **258
 passed**. Playwright, lint och produktionsbygge var gröna vid sin senaste
 körning men är inte omkörda det datumet. Alla skip är miljöberoende och

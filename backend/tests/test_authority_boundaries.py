@@ -274,7 +274,7 @@ class TestK6TheAskSurfaceStaysAdvisory:
         proveniens — inget av dem beordrar något."""
         assert set(AskResponse.model_fields) == {
             "answer", "refusal", "refusal_reason", "warning", "citations",
-            "rejected_citations", "retrieval", "provider", "model", "clarification",
+            "rejected_citations", "retrieval", "provider", "model",
         }, (
             "AskResponse har ändrat form — kontrollera att inget nytt fält kan utlösa "
             "en åtgärd utan att en människa godkänt den, och uppdatera sedan låset."

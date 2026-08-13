@@ -12,7 +12,7 @@ from app.answer import ask
 from app.evidence import EvidencePack, expand_context
 from app.llm import FakeLLM, LLMError
 from app.multihop import MAX_EVIDENCE_CHUNKS, ask_planned
-from app.query_plan import MAX_SUBQUERIES, plan_query
+from app.query_plan import MAX_SUBQUERIES, PLANNER_CONTRACT, plan_query
 from app.schemas import Settings
 from app.store import Store
 from tests.pdf_fixtures import build_pdf
@@ -117,21 +117,25 @@ class TestQueryPlan:
         assert len(plan.subqueries) == MAX_SUBQUERIES
         assert plan.truncated
 
-    def test_clarify_carries_a_counter_question(self):
+    def test_clarify_left_the_contract_and_cannot_come_back_through_the_model(self):
+        """`clarify` was removed (2026-08-13): decided on wording alone, it
+        silenced four answerable questions in 46 and the only post-retrieval
+        gate that rescued them also destroyed the one case it existed for.
+
+        A model that emits it anyway must SEARCH. The mode must not be able
+        to re-enter the product through the parser.
+        """
+        assert "clarify" not in PLANNER_CONTRACT
         fake = FakeLLM([{
             "mode": "clarify",
             "subqueries": [],
             "clarification": "Vilket av era två avtal menar du?",
         }])
         plan = plan_query("Vad står det i avtalet?", fake)
-        assert plan.mode == "clarify"
-        assert plan.subqueries == []
-        assert "avtal" in plan.clarification
-
-    def test_clarify_without_a_question_degrades_to_search(self):
-        fake = FakeLLM([{"mode": "clarify", "subqueries": [], "clarification": "  "}])
-        plan = plan_query("Vad står det i avtalet?", fake)
-        assert plan.mode == "single" and plan.degraded
+        assert plan.mode == "single"
+        assert plan.subqueries == ["Vad står det i avtalet?"]
+        assert plan.degraded, "en plan vi inte bad om är ett haveri, inte ett val"
+        assert not hasattr(plan, "clarification")
 
     def test_multi_with_one_subquery_is_just_single(self):
         fake = FakeLLM([{"mode": "multi", "subqueries": ["bara en"], "clarification": ""}])
@@ -280,72 +284,29 @@ class TestEvidencePack:
 
 
 class TestPlannedAnswering:
-    def test_clarify_refuses_instead_of_guessing(self, store):
-        fake = FakeLLM([{
-            "mode": "clarify", "subqueries": [],
-            "clarification": "Menar du snöröjningsavtalet eller styrelseprotokollet?",
-        }])
-        result = ask_planned(store, "Vad står det i dokumentet?", provider=fake)
-        assert result.plan.mode == "clarify"
-        assert result.response.refusal
-        assert result.response.citations == []
-        assert "Menar du" in result.response.answer
-        assert len(fake.calls) == 1, "en clarify får inte kosta en syntes-körning"
+    def test_an_off_contract_clarify_is_answered_not_refused(self, store):
+        """End-to-end form of the same rule.
 
-    def test_clarify_stands_when_retrieval_finds_nothing(self, store):
-        """The counter-question is now a decision AFTER retrieval.
-
-        It may only stand where the same signal the single path refuses on
-        says the corpus has nothing — otherwise the planner gets to silence
-        an answerable question on wording alone, which it did four times in
-        46 (g21, g23, g33, g43).
+        Before 2026-08-13 this question came back as a counter-question with
+        no search run. It is now searched and answered — which is also the
+        recorded LOSS: `Vad står det i dokumentet?` is genuinely ambiguous
+        between the two documents in this fixture, and the product no longer
+        says so. See docs/evidence/planner-vs-real-model.md, tillägg 2.
         """
-        store.update_settings(Settings(minRelevance=0.18, topK=3))
-        question = "Hur många parkeringsplatser finns i garaget?"
-
-        # Non-vacuity: the probe must really come up empty, or this case
-        # would pass whatever the rule below did.
-        probe = store.index.search(question, weight=0.5, candidates=store.settings.candidateCount,
-                                   top_k=3, min_confidence=0.0)
-        assert max((h.confidence for h in probe), default=0.0) < store.settings.minRelevance
-
-        fake = FakeLLM([{
-            "mode": "clarify", "subqueries": [],
-            "clarification": "Vilken byggnad menar du?",
-        }])
-        result = ask_planned(store, question, provider=fake)
-        assert result.plan.mode == "clarify"
-        assert result.plan.downgraded_from == ""
-        assert result.response.refusal
-        assert "Vilken byggnad" in result.response.answer
-
-    def test_clarify_is_overruled_when_retrieval_finds_material(self, store):
-        """An answerable question must not be silenced by a counter-question.
-
-        The planner decides before any retrieval, on wording alone. Here the
-        corpus plainly answers, so the clarification is overruled and the
-        question is searched — the ONE cost being an extra index lookup, not
-        a second model call.
-        """
-        store.update_settings(Settings(minRelevance=0.18, topK=3))
-        question = "Vilken ersättning utgår per timme enligt snöröjningsavtalet?"
-        probe = store.index.search(question, weight=0.5, candidates=store.settings.candidateCount,
-                                   top_k=3, min_confidence=0.0)
-        assert max((h.confidence for h in probe), default=0.0) >= store.settings.minRelevance
-
         ersättning = chunk_id_containing(store, "1250 kr")
         fake = FakeLLM([
-            {"mode": "clarify", "subqueries": [], "clarification": "Vilket avtal menar du?"},
+            {"mode": "clarify", "subqueries": [],
+             "clarification": "Menar du snöröjningsavtalet eller styrelseprotokollet?"},
             {"answer": "Ersättning utgår med 1250 kr per påbörjad timme.",
              "citations": [{"chunk_id": ersättning, "quote": "Ersättning utgår med 1250 kr per påbörjad timme."}],
              "insufficient_data": False},
         ])
-        result = ask_planned(store, question, provider=fake)
+        result = ask_planned(store, "Vad står det i dokumentet?", provider=fake)
         assert result.plan.mode == "single"
-        assert result.plan.downgraded_from == "clarify"
         assert not result.response.refusal, result.response.answer
-        assert result.response.clarification is None
+        assert "Menar du" not in result.response.answer
         assert [c.chunk_id for c in result.response.citations] == [ersättning]
+        assert len(fake.calls) == 2, "frågan ska ha nått både planeraren och syntesen"
 
     def test_two_document_answer_verifies_through_the_existing_path(self, store):
         avtal = chunk_id_containing(store, "Vinterservice AB")

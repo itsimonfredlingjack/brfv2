@@ -90,7 +90,7 @@ med seedad datarot, tesseract och byggd mobil-dist:
 
 | Kontroll | Resultat | Kört |
 |---|---:|---|
-| Backend `pytest -q` | **1344 passed, 3 skipped** (317 s) | 2026-08-13 |
+| Backend `pytest -q` | **1341 passed, 3 skipped** (272 s) | 2026-08-13 |
 | Auth/isolation/livscykel (`make test-isolation`) | **49 passed** | 2026-08-13 |
 | Kanonisk frontend Vitest | **258 passed** (12 filer) | 2026-08-13 |
 | Kanonisk frontend lint | exit 0 | tidigare körning |

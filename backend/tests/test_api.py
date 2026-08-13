@@ -400,23 +400,27 @@ class TestPlannedAskFlag:
         assert r.status_code == 200
         assert all("planerar dokumentsökningar" not in c["system"] for c in stub.calls)
 
-    def test_clarify_is_distinguishable_from_an_ordinary_refusal(self, env, monkeypatch):
+    def test_an_off_contract_clarify_never_blocks_the_question(self, env, monkeypatch):
+        """`clarify` left the contract (2026-08-13). A model that emits it
+        anyway must fall back to searching — it must never be able to silence
+        an answerable question by returning a mode we no longer offer."""
         monkeypatch.setenv("BRF_PLANNED_ASK", "1")
-        self._plan_provider(monkeypatch, [
+        stub = self._plan_provider(monkeypatch, [
             {"mode": "clarify", "subqueries": [], "clarification": "Vilket avtal menar du?"},
+            {"answer": "Vet ej.", "citations": [], "insufficient_data": True},
         ])
         body = env.client.post(
             "/api/brf/brf-a/ask",
             json={"question": "När går avtalet ut?", "planned": True},
             headers=env.admin_a_headers,
         ).json()
-        assert body["refusal"] is True
-        assert body["citations"] == []
-        assert body["clarification"] == "Vilket avtal menar du?"
-
-    def test_ordinary_refusal_carries_no_clarification(self, env):
-        body = env.client.post(
-            "/api/brf/brf-a/ask", json={"question": "Vad står i stadgarna?"}, headers=env.admin_a_headers
-        ).json()
-        assert body["refusal"] is True
-        assert body["clarification"] is None
+        # The counter-question must not reach the board in any shape.
+        assert "clarification" not in body, "wire-kontraktet bär inte längre en motfråga"
+        assert "Vilket avtal menar du" not in body["answer"]
+        # And the question must actually have reached RETRIEVAL. This corpus
+        # holds nothing about the question, so the honest outcome is the
+        # ordinary `low_relevance` refusal — which is exactly the proof:
+        # `clarify` short-circuited before any search and refused with
+        # `insufficient_data`. The reason code is what tells the two apart.
+        assert body["refusal_reason"] == "low_relevance", body
+        assert "planerar dokumentsökningar" in stub.calls[0]["system"]

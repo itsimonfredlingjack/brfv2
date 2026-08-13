@@ -156,14 +156,11 @@ class AskResponse(BaseModel):
     retrieval: list[RetrievalHit] = Field(default_factory=list)
     provider: str = ""
     model: str = ""
-    # Set ONLY when the planner asked for a clarification instead of guessing
-    # (BRF-1 `clarify`). A clarification is not an answer: `refusal` is True
-    # and `citations` is empty, so every existing consumer already handles it
-    # safely as a refusal. This field lets a client that wants to tell the two
-    # apart do so — a counter-question, not "det står inte i era dokument" —
-    # without any consumer having to learn a new refusal_reason. None on every
-    # other response, including every response from the unchanged path.
-    clarification: str | None = None
+    # BORTTAGET 2026-08-13: `clarification`, som bar planerarens motfråga.
+    # Läget `clarify` finns inte längre (se app/query_plan.py), så fältet hade
+    # varit null på varje svar produkten kan ge — ett löfte i wire-kontraktet
+    # om något systemet aldrig gör. Ingen konsument läste det: varken
+    # brfv2-mockup eller mobilklienten nämner `clarification`.
 
 
 class Settings(BaseModel):
