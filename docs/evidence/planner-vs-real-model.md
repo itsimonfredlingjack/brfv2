@@ -767,3 +767,86 @@ Frågorna är skrivna i styrelsens ordförråd, delfrågorna i avtalets. Metodik
 annan fråga, och tillägg 3 visade att den frågan är den svaga länken.
 
 Kör om: `uv run python -m scripts.eval_real_corpus --archive <arkiv> --fall <fall.json>`.
+
+---
+
+## Tillägg 2026-08-14 (8): budgetkontrollen fäller två av tre — och rättar tillägg 7
+
+Tillägg 7 rapporterade tre verkliga ordförrådsvinster och drog slutsatsen att
+villkor C var uppfyllt med marginal. **Den slutsatsen var fel, och felet var en
+kontroll som inte kördes.**
+
+Jämförelsen ställde fan-out mot enkel sökning med `topK = 6`. Men fan-outens
+bevispåse rymmer upp till `MAX_EVIDENCE_CHUNKS = 10`. De två sidorna hade alltså
+inte samma budget, och skillnaden tillskrevs ordförrådet.
+
+### Kontrollen
+
+Samma frågor, samma korpus, enkel sökning med bredare budget:
+
+| fall | topK=6 | topK=10 | topK=20 |
+|---|---:|---:|---:|
+| R3 vem betalar om en bil blir skadad | 0.00 | **1.00** | 1.00 |
+| R5 vad är det för extra avgift | 0.00 | **1.00** | 1.00 |
+| R7 måste de säga till innan de höjer | 0.00 | 0.00 | **1.00** |
+| R7b får leverantören höja utan att meddela | 0.00 | 0.00 | **0.00** |
+
+**Två av de tre vinsterna var budget, inte ordförråd.** R3 och R5 löses av att
+enkel sökning får samma tio platser som fan-outen redan hade. R7 löses vid tjugo.
+Bara **R7b** står emot — och R7 och R7b är samma underliggande fråga i två
+formuleringar.
+
+Rätt siffra är därför: **ett distinkt ordförrådsglapp i elva verkliga fall**, inte
+tre av åtta. Villkor C är uppfyllt på formuleringens bokstav och inte på dess
+mening; formuleringen sa inte att baslinjen skulle vara budgetmatchad, och det
+borde den ha gjort.
+
+### Vad som ändå står kvar från tillägg 7
+
+Mätningen är inte värdelös, bara felaktigt sammanfattad. Det som håller:
+
+- **R7b är ett äkta glapp på verklig avtalstext, utan bro i filnamnet.** Styrelsen
+  frågar *får leverantören höja priset utan att meddela oss först*; avtalet säger
+  *varsko om betydande prisjusteringar*. Ingen budgetbreddning hittar det — inte
+  ens tjugo utdrag.
+- **Enkelsökningens toppträff låg i fel handling i 7 av 8 fall.** Budget rättar
+  inte det; det gör bara att rätt stycke smyger med längre ner i listan.
+
+### Planeraren, mätt mot det verkliga arkivet
+
+Den mätning som hela grindfrågan hängde på (se
+[`brf1-vad-som-fattas.md`](brf1-vad-som-fattas.md)) kördes samtidigt, och dess
+resultat påverkas inte av budgetfelet — den mäter om planeraren *väljer* rätt, inte
+om valet slår baslinjen.
+
+| | utfall |
+|---|---:|
+| Fall planerade som `multi` | **10 av 11** |
+| Fall där planeraren nådde svarsstycket | **11 av 11** |
+
+Planeraren skriver bron själv: på R7b valde den `prisjustering · kostnadsökning ·
+ändring av pris` utan att frågan innehöll något av orden. Robusthetsvarianterna
+(R3b/R5b/R7b, skrivna utan motpartens namn efter att namnet visat sig vara en
+genväg jag själv lagt in) gav 3 av 3.
+
+**Det är ett annat resultat än på den rekonstruerade korpusen**, där samma modell
+överutlöste på 12 av 46 utan nytta och tappade motivfallet r01. På verkliga
+handlingar väljer den `multi` nästan alltid, och den har rätt varje gång. Skillnaden
+mellan korpusarna är att `golden.json`s frågor per konstruktion besvaras av en
+sökning — baslinjen är 1.00 rakt igenom — medan ett verkligt arkiv innehåller frågor
+där den inte gör det. Skäl 1 i [`fan-out-mvp-beslut.md`](fan-out-mvp-beslut.md)
+("på den population som dominerar verklig användning är vägen sämre") vilar på att
+`golden.json` är representativ, och det antagandet är nu ifrågasatt utan att vara
+motbevisat.
+
+### Den billigare åtgärden
+
+Den mätning som faller ut ur kontrollen är inte om fan-out ska på, utan att
+**`topK = 6` är för snävt**. Att höja till 10 återvinner två av tre apparenta
+vinster till noll extra sökningar och noll modellanrop — och tillägg 5 mätte redan
+att fler irrelevanta utdrag i prompten inte ändrade ett enda svar, vilket är den
+invändning en breddning annars skulle mötas av.
+
+Det är en inställningsändring med egen räckvidd — den träffar hela produkten, inte
+bara den planerade vägen — och den är inte gjord här. Men den ska vägas *före*
+fan-out, eftersom den är gratis.

@@ -1,5 +1,12 @@
 # BRF-1 fan-out: vad som är mätt, och den mätning som fattas före grindbeslutet
 
+> **Uppdaterat samma dag:** mätningen nedan är utförd. Planeraren nådde
+> svarsstycket i 11 av 11 verkliga fall och valde `multi` i 10 av 11 — men en
+> budgetkontroll fällde samtidigt två av de tre vinster villkor C vilade på.
+> Läs `planner-vs-real-model.md` tillägg 8 innan du agerar på det här
+> dokumentet; beslutsregeln nedan står kvar men ska tillämpas på tilläggets
+> siffror, inte på tillägg 7:s.
+
 *Fristående underlag, 2026-08-14. Skrivet för att kunna läsas av någon utan
 förkunskap om kodbasen — klistra in det i vilken AI som helst, eller läs det som
 det står. Alla siffror kommer ur `docs/evidence/planner-vs-real-model.md`
