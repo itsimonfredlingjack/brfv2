@@ -43,14 +43,20 @@ from __future__ import annotations
 import logging
 import re
 from dataclasses import dataclass
+from datetime import date
 from decimal import Decimal
 
 from ..store import Store
 from ..terms import (
+    STOCKHOLM_TZ,
+    anchor_relative,
+    calendar_date_in,
     scan_dates,
+    scan_day_deadlines,
     scan_notice_periods,
     scan_recurrence,
     scan_relative_deadlines,
+    svenskt_datum,
 )
 from .models import (
     TRIAGE_CATEGORY_LABELS,
@@ -354,7 +360,7 @@ def classify(sources: list[_TextSource], *, asks_something: bool) -> tuple[str, 
 # ---------------------------------------------------------------------------
 
 
-def _date_signals(source: _TextSource) -> list[TriageSignal]:
+def _date_signals(source: _TextSource, *, reference_date: date | None = None) -> list[TriageSignal]:
     """Dates, deadlines and rhythms — read by the same scanners as contracts.
 
     Reusing :mod:`app.terms` is the point. A notice period stated in an email
@@ -362,6 +368,11 @@ def _date_signals(source: _TextSource) -> list[TriageSignal]:
     reader written for mail would drift from the one the watch engine uses,
     which is exactly how a product ends up disagreeing with itself about a
     date.
+
+    Day-counts with no date of their own ("inom tio dagar") are the one
+    extra the mail path does: they are resolved against the message's
+    received date, never against a contract's signing date, and never by
+    changing the scanners the watch engine calls.
     """
     words = source.words
     signals: list[TriageSignal] = []
@@ -377,6 +388,26 @@ def _date_signals(source: _TextSource) -> list[TriageSignal]:
                 source_ref=source.ref,
             )
         )
+
+    if reference_date is not None:
+        hits = scan_day_deadlines(words)
+        for hit, anchored in zip(
+            hits, anchor_relative(hits, reference_date=reference_date), strict=True
+        ):
+            if hit.anchor_iso:
+                label = f"Beräknat från {svenskt_datum(anchored.anchor_iso)}"
+            else:
+                label = f"Beräknat från mottaget {svenskt_datum(anchored.anchor_iso)}"
+            signals.append(
+                TriageSignal(
+                    kind="deadline",
+                    label=label,
+                    value=anchored.resolve(),
+                    quote=source.quote(anchored.span.start, anchored.span.end),
+                    source=source.source,
+                    source_ref=source.ref,
+                )
+            )
 
     covered = {(s.value) for s in signals}
     for hit in scan_dates(words):
@@ -705,8 +736,9 @@ def analyze(store: Store, event: SourceEvent) -> TriageSuggestion:
         category, category_signals = classify(sources, asks_something=awaiting)
 
         signals: list[TriageSignal] = []
+        reference_date = calendar_date_in(event.received_at, zone=STOCKHOLM_TZ)
         for source in sources:
-            signals.extend(_date_signals(source))
+            signals.extend(_date_signals(source, reference_date=reference_date))
             signals.extend(_amount_signals(source))
         if question_signal is not None:
             signals.append(question_signal)

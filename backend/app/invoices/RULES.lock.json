@@ -31,6 +31,16 @@
         "app/invoices/compare.py": "6c8a8cd3b04d4ec3",
         "app/terms.py": "397811c2c93522c4"
       }
+    },
+    "2026.08.4": {
+      "fingerprint": "4699f7e0ca01ee0f",
+      "parts": {
+        "app/integrations/models.py::ANCHOR_LABELS,FINDING_TYPE_LABELS,FindingType,VERDICT_LABELS,Verdict": "45483c855d42d1c9",
+        "app/integrations/review.py": "4ae380874dffa0df",
+        "app/integrations/supplier.py": "656301fbb2cd0e02",
+        "app/invoices/compare.py": "6c8a8cd3b04d4ec3",
+        "app/terms.py": "e9fb5c3d06d06962"
+      }
     }
   }
 }

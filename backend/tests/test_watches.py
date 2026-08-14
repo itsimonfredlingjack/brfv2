@@ -13,6 +13,7 @@ Nothing here needs a credential, a network endpoint or a running model.
 
 from __future__ import annotations
 
+import inspect
 from datetime import date
 from pathlib import Path
 
@@ -117,6 +118,84 @@ class TestRelativeDeadlines:
             )
             == []
         )
+
+    def test_the_signature_does_not_take_a_reference_date(self):
+        """Email receipt is not this scanner's problem. An extra parameter here
+        would let the contract scan start counting from a mailbox timestamp."""
+        assert "reference_date" not in inspect.signature(terms.scan_relative_deadlines).parameters
+        assert "reference_date" not in inspect.signature(terms.scan_dates).parameters
+
+
+class TestDayDeadlines:
+    """Swedish day-counts that name no date of their own.
+
+    ``scan_relative_deadlines`` will not touch these, and should not: they
+    have no in-text anchor. The email path resolves them against the
+    message's received date via ``anchor_relative``.
+    """
+
+    def test_spelled_out_counts_up_to_ten_are_read(self):
+        (hit,) = terms.scan_day_deadlines(words("Ni har tio dagar på er att svara."))
+        assert hit.count == 10
+        assert hit.unit == "day"
+        assert hit.anchor_iso == ""
+
+    def test_inom_and_senast_om_are_the_particles(self):
+        inom = terms.scan_day_deadlines(words("Svara inom tio dagar."))
+        senast = terms.scan_day_deadlines(words("Besked senast om fem dagar."))
+        assert [h.count for h in inom] == [10]
+        assert [h.count for h in senast] == [5]
+
+    def test_a_bare_day_count_without_a_particle_or_date_is_not_a_deadline(self):
+        assert terms.scan_day_deadlines(words("Arbetet tog tio dagar.")) == []
+
+    def test_working_days_are_not_calendar_days(self):
+        assert terms.scan_day_deadlines(words("Svara inom tio arbetsdagar.")) == []
+        assert terms.scan_day_deadlines(words("Ni har tio arbetsdagar på er.")) == []
+
+    def test_an_in_text_date_is_recorded_as_the_anchor(self):
+        (hit,) = terms.scan_day_deadlines(
+            words("Betala 15 dagar från fakturadatum 2026-09-01.")
+        )
+        assert hit.count == 15
+        assert hit.anchor_iso == "2026-09-01"
+
+    def test_scan_relative_deadlines_still_ignores_unanchored_day_counts(self):
+        assert terms.scan_relative_deadlines(words("Ni har tio dagar på er.")) == []
+        assert terms.scan_relative_deadlines(words("Svara inom tio dagar.")) == []
+
+
+class TestAnchorRelative:
+    def test_a_hit_without_an_in_text_date_uses_the_reference_date(self):
+        (hit,) = terms.scan_day_deadlines(words("Ni har tio dagar på er."))
+        (anchored,) = terms.anchor_relative([hit], reference_date=date(2026, 8, 14))
+        assert anchored.anchor_iso == "2026-08-14"
+        assert anchored.resolve() == "2026-08-24"
+
+    def test_an_in_text_anchor_wins_over_the_reference_date(self):
+        (hit,) = terms.scan_day_deadlines(
+            words("Betala 15 dagar från fakturadatum 2026-09-01.")
+        )
+        (anchored,) = terms.anchor_relative([hit], reference_date=date(2026, 8, 14))
+        assert anchored.anchor_iso == "2026-09-01"
+        assert anchored.resolve() == "2026-09-16"
+
+    def test_ten_calendar_days_across_the_march_2026_dst_shift(self):
+        """29 March 2026 is the spring-forward. Ten days is ten dates, not 240 hours."""
+        (hit,) = terms.scan_day_deadlines(words("Svara inom tio dagar."))
+        (anchored,) = terms.anchor_relative([hit], reference_date=date(2026, 3, 29))
+        assert anchored.resolve() == "2026-04-08"
+
+    def test_ten_calendar_days_across_the_october_2026_dst_shift(self):
+        """25 October 2026 is the fall-back. 240 hours from midnight would land a day early."""
+        (hit,) = terms.scan_day_deadlines(words("Svara inom tio dagar."))
+        (anchored,) = terms.anchor_relative([hit], reference_date=date(2026, 10, 25))
+        assert anchored.resolve() == "2026-11-04"
+
+    def test_a_late_utc_instant_is_the_next_stockholm_calendar_day(self):
+        """14 Aug 2026 22:30Z is already 15 August in Europe/Stockholm."""
+        assert terms.calendar_date_in("2026-08-14T22:30:00Z") == date(2026, 8, 15)
+        assert terms.STOCKHOLM_TZ == "Europe/Stockholm"
 
 
 class TestNoticePeriods:
@@ -258,6 +337,24 @@ class TestDerivation:
         ]
         assert [
             u for u in result.unresolved if u.source_document_name == "Avtal utan avtalstid.pdf"
+        ]
+
+    def test_an_email_style_day_deadline_is_not_a_contract_watch(self, integration_env):
+        """The mail path may count "tio dagar" from receipt. The contract scan
+        must not, even when the same sentence sits in a PDF."""
+        env = integration_env
+        build_document(
+            env.store,
+            "Paerinnelse.pdf",
+            [
+                "Paerinnelse",
+                "Ni har tio dagar pa er att svara.",
+                "Svara inom tio dagar.",
+            ],
+        )
+        result = scan_documents(env.store, now_iso="2026-08-14T00:00:00+00:00")
+        assert not [
+            w for w in result.watches if w.source_document_name == "Paerinnelse.pdf"
         ]
 
     def test_a_dated_inspection_with_a_cycle_becomes_a_recurring_watch(self, integration_env):

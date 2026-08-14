@@ -187,6 +187,7 @@ def fetch_new(
                 method="graph-mailbox-import",
                 adapter_name=provider,
                 external_hint=message.id,
+                received_at=message.received_at or None,
             )
         except DuplicateSourceEvent:
             # The same bytes under a different id: a forward of something

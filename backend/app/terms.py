@@ -43,7 +43,8 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 # ---------------------------------------------------------------------------
 # Swedish dates
@@ -233,6 +234,31 @@ def shift(day: date, count: int, unit: str) -> date:
     if unit == "day":
         return day + timedelta(days=count)
     raise ValueError(f"okänd tidsenhet: {unit!r}")
+
+
+# IANA name, never CET/CEST/+02:00 — those flip twice a year and a stored
+# offset is a lie the other half of the year.
+STOCKHOLM_TZ = "Europe/Stockholm"
+
+
+def calendar_date_in(value: str, *, zone: str = STOCKHOLM_TZ) -> date | None:
+    """UTC instant → calendar date in ``zone``. ``date()`` is taken after conversion.
+
+    ``2026-08-14T22:30:00Z`` is already 15 August in Europe/Stockholm. Taking
+    the UTC date first starts a ten-day count on the wrong morning.
+    """
+    if not value:
+        return None
+    text = value.strip()
+    if text.endswith("Z"):
+        text = text[:-1] + "+00:00"
+    try:
+        instant = datetime.fromisoformat(text)
+    except ValueError:
+        return None
+    if instant.tzinfo is None:
+        instant = instant.replace(tzinfo=timezone.utc)
+    return instant.astimezone(ZoneInfo(zone)).date()
 
 
 def parse_iso(value: str) -> date | None:
@@ -568,6 +594,22 @@ class RelativeDeadline:
         return f"{self.count} {unit} {direction} {self.anchor_iso}"
 
 
+@dataclass(frozen=True)
+class RelativeHit:
+    """A day-count in the text, with an in-text anchor date when one is there.
+
+    "inom tio dagar" has no date of its own — ``anchor_iso`` is empty, and
+    :func:`anchor_relative` fills it from an external receipt date. "15 dagar
+    från fakturadatum 2026-09-01" already names its start, and that date wins.
+    """
+
+    span: Span
+    count: int
+    unit: str  # "day"
+    before: bool
+    anchor_iso: str  # "" when the text does not name a date
+
+
 # One place for how an interval is said in Swedish — derive.py writes these
 # into proposal prose, so an inline dict here would be a second dialect
 # ("triennial") leaking into a board's reading the day someone forgets one.
@@ -700,6 +742,147 @@ def _is_abbreviation(token: str) -> bool:
     return token.strip().casefold() in _ABBREVIATIONS
 
 
+# Day-counts that an email uses as a deadline. Kept off DURATION_UNITS on
+# purpose: putting "dagar" there would make the contract scan start proposing
+# watches from "tio dagar" in a PDF, counted from nothing.
+_DAY_UNITS = frozenset({"dag", "dagar", "dags"})
+_WORKDAY_UNITS = frozenset({"arbetsdag", "arbetsdagar", "vardag", "vardagar"})
+_PA_ER = frozenset({"på", "pa"})
+
+
+def _day_unit_at(words: list[str], index: int) -> tuple[int, bool] | None:
+    """Index of a day-unit after ``index``, and whether it is a working-day word.
+
+    Returns ``None`` when the next tokens are not a duration in days at all.
+    """
+    n = len(words)
+    count = _count_at(words, index)
+    if count is None:
+        return None
+    for j in range(index + 1, min(n, index + 4)):
+        token = _lower(words[j])
+        if token in _WORKDAY_UNITS:
+            return j, True
+        if token in _DAY_UNITS:
+            return j, False
+        if _count_at(words, j) == count:
+            continue
+        break
+    return None
+
+
+def scan_day_deadlines(words: list[str], *, reach: int = 12) -> list[RelativeHit]:
+    """Swedish day-deadlines: "inom tio dagar", "senast om fem dagar", "på er".
+
+    Working days are not calendar days. A hit whose unit is ``arbetsdagar``
+    (or that names them next to the count) is dropped rather than converted
+    with a guess about whose calendar applies.
+    """
+    out: list[RelativeHit] = []
+    n = len(words)
+    dates = scan_dates(words)
+    for i in range(n):
+        count = _count_at(words, i)
+        if count is None:
+            continue
+        if i > 0 and _count_at(words, i - 1) == count:
+            continue
+        located = _day_unit_at(words, i)
+        if located is None:
+            continue
+        unit_at, is_workday = located
+        neighbourhood = {_lower(w) for w in words[max(0, i - 1) : min(n, unit_at + 3)]}
+        if is_workday or neighbourhood & _WORKDAY_UNITS:
+            continue
+
+        particle_start: int | None = None
+        for k in range(max(0, i - 3), i):
+            if _lower(words[k]) == "inom":
+                particle_start = k
+                break
+        if particle_start is None:
+            for k in range(max(0, i - 4), i - 1 if i else 0):
+                if _lower(words[k]) == "senast" and _lower(words[k + 1]) == "om":
+                    particle_start = k
+                    break
+        particle_end: int | None = None
+        for k in range(unit_at + 1, min(n, unit_at + 3)):
+            if _lower(words[k]) in _PA_ER and k + 1 < n and _lower(words[k + 1]) == "er":
+                particle_end = k + 1
+                break
+
+        direction: bool | None = None
+        operator_at = -1
+        for k in range(unit_at + 1, min(n, unit_at + 4)):
+            token = _lower(words[k])
+            if token in _BEFORE_WORDS:
+                direction, operator_at = True, k
+                break
+            if token in _AFTER_WORDS:
+                direction, operator_at = False, k
+                break
+
+        anchor: DateHit | None = None
+        if operator_at >= 0:
+            for hit in dates:
+                if hit.span.start <= operator_at:
+                    continue
+                if hit.span.start - operator_at > reach:
+                    continue
+                if any(
+                    _clean(words[j]).endswith((".", "!", "?")) and not _is_abbreviation(words[j])
+                    for j in range(operator_at, hit.span.start)
+                ):
+                    continue
+                anchor = hit
+                break
+
+        if particle_start is None and particle_end is None and anchor is None:
+            continue
+
+        start = i if particle_start is None else particle_start
+        end = unit_at
+        if particle_end is not None:
+            end = max(end, particle_end)
+        if anchor is not None:
+            end = max(end, anchor.span.end)
+        out.append(
+            RelativeHit(
+                span=Span(start, end),
+                count=count,
+                unit="day",
+                before=bool(direction),
+                anchor_iso=anchor.iso if anchor is not None else "",
+            )
+        )
+    return out
+
+
+def anchor_relative(hits: list[RelativeHit], *, reference_date: date) -> list[RelativeDeadline]:
+    """Resolve day-counts against ``reference_date`` when the text named none.
+
+    Two-step, the way SUTime/HeidelTime split extraction from normalisation:
+    :func:`scan_day_deadlines` finds the duration; this function is the only
+    place an external date is applied. An in-text date on the hit wins.
+    Arithmetic is calendar days on a :class:`~datetime.date`, never a
+    timezone-aware timedelta — ten days across the October shift is ten dates,
+    not 240 hours.
+    """
+    out: list[RelativeDeadline] = []
+    for hit in hits:
+        anchor_iso = hit.anchor_iso or reference_date.isoformat()
+        out.append(
+            RelativeDeadline(
+                span=hit.span,
+                count=hit.count,
+                unit=hit.unit,
+                before=hit.before,
+                anchor_iso=anchor_iso,
+            )
+        )
+    return out
+
+
 def scan_recurrence(words: list[str]) -> list[RecurrenceTerm]:
     """How often something repeats, when the text says so in as many words."""
     out: list[RecurrenceTerm] = []
@@ -767,11 +950,16 @@ __all__ = [
     "PeriodTerm",
     "RecurrenceTerm",
     "RelativeDeadline",
+    "RelativeHit",
+    "STOCKHOLM_TZ",
     "SWEDISH_MONTHS",
     "SWEDISH_NUMBERS",
     "Span",
+    "anchor_relative",
+    "calendar_date_in",
     "parse_iso",
     "scan_dates",
+    "scan_day_deadlines",
     "scan_durations",
     "scan_index_clauses",
     "scan_notice_periods",

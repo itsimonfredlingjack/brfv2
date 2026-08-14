@@ -288,17 +288,21 @@ def import_eml(
     method: str = "manual-file-import",
     adapter_name: str | None = None,
     external_hint: str = "",
+    received_at: str | None = None,
 ) -> SourceEvent:
     """Import one message's raw MIME. All of it, or none of it.
 
-    The signature grew two parameters when the live mailbox arrived, and it is
-    worth saying why they are the only two. A message read from Microsoft Graph
-    is the same bytes as a message exported to a file — Graph's ``/$value``
-    returns the MIME as it stands — so the parsing, the format ceiling, the
-    attachment rule, the content hash, the duplicate check and the rollback are
-    all the same code, exercised by both paths. What genuinely differs is the
-    *provenance*: which method brought it in and which adapter read it. Those
-    are recorded; nothing else about the flow changes.
+    A message read from Microsoft Graph is the same bytes as a message exported
+    to a file — Graph's ``/$value`` returns the MIME as it stands — so the
+    parsing, the format ceiling, the attachment rule, the content hash, the
+    duplicate check and the rollback are all the same code. What genuinely
+    differs is recorded here: which method brought it in, which adapter read
+    it, and — when Graph said — when the mailbox received it.
+
+    ``received_at`` is Graph's ``receivedDateTime``. It is not in the MIME
+    (the ``Date:`` header is the sender's stamp, stored as ``occurred_at``)
+    and a forwarded message's nested headers are not a substitute. Manual
+    file import leaves it empty and is stamped with the import time.
 
     Raises :class:`~app.integrations.eml.EmlRejected` or
     :class:`DuplicateSourceEvent`; on success nothing is left half-done.
@@ -384,7 +388,7 @@ def import_eml(
             id=source_event_id_for(integrations.tenant_id, content_sha256),
             tenant_id=integrations.tenant_id,
             source_type="email",
-            received_at=utc_now_iso(),
+            received_at=received_at or utc_now_iso(),
             occurred_at=message.sent_at,
             external_ref=message.message_id or external_hint or None,
             in_reply_to=message.in_reply_to,

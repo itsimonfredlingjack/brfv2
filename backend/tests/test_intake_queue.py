@@ -176,6 +176,33 @@ class TestIncrementalFetch:
         assert result.checkpoint.high_water_mark == "2026-02-03T08:14:00Z"
         assert result.checkpoint.last_new_count == 1
 
+    def test_graph_received_datetime_is_the_events_received_at(self, queue):
+        """The mail path counts from Graph's receivedDateTime, not from import time
+        and not from the Date: header in the MIME."""
+        mailbox = StubMailbox(
+            [
+                {
+                    "id": "AAA",
+                    "subject": "Föreläggande",
+                    "received_at": "2026-08-14T22:30:00Z",
+                    "internet_message_id": "<graph-days@x.example>",
+                    "raw": message(
+                        subject="Föreläggande",
+                        body="Ni har tio dagar på er att svara.",
+                        message_id="<graph-days@x.example>",
+                        date_header="Thu, 13 Aug 2026 08:00:00 +0200",
+                    ),
+                }
+            ]
+        )
+        result = fetch_new(
+            store=queue.store, adapter=mailbox, provider="microsoft-graph",
+            folder="inbox", user_id="admin-1",
+        )
+        (event,) = result.imported
+        assert event.received_at == "2026-08-14T22:30:00Z"
+        assert [s.value for s in event.triage.signals if s.kind == "deadline"] == ["2026-08-25"]
+
     def test_the_second_fetch_asks_only_for_what_is_newer(self, queue):
         first = {
             "id": "AAA",
@@ -470,6 +497,74 @@ class TestTriage:
         values = {s.value for s in event.triage.signals}
         assert "2026-09-30" in values
         assert any("12 500" in v or "12500" in v for v in values)
+
+    def test_a_relative_day_count_is_anchored_to_when_the_message_was_received(self, queue):
+        event = queue.take_in(
+            message(
+                subject="Föreläggande",
+                body="Ni har tio dagar på er att svara.",
+                message_id="<days-1@x.example>",
+            )
+        )
+        event = event.model_copy(update={"received_at": "2026-08-14T10:00:00Z"})
+        triage = analyze(queue.store, event)
+        deadlines = [s for s in triage.signals if s.kind == "deadline"]
+        assert [s.value for s in deadlines] == ["2026-08-24"]
+        assert "14 aug. 2026" in deadlines[0].label
+        assert "tio dagar" in deadlines[0].quote
+
+    def test_a_late_utc_evening_starts_the_count_on_the_stockholm_date(self, queue):
+        event = queue.take_in(
+            message(
+                subject="Föreläggande",
+                body="Svara inom tio dagar.",
+                message_id="<days-2@x.example>",
+            )
+        )
+        event = event.model_copy(update={"received_at": "2026-08-14T22:30:00Z"})
+        triage = analyze(queue.store, event)
+        deadlines = [s for s in triage.signals if s.kind == "deadline"]
+        assert [s.value for s in deadlines] == ["2026-08-25"]
+        assert "15 aug. 2026" in deadlines[0].label
+
+    def test_ten_calendar_days_across_the_october_dst_shift(self, queue):
+        event = queue.take_in(
+            message(
+                subject="Föreläggande",
+                body="Svara inom tio dagar.",
+                message_id="<days-3@x.example>",
+            )
+        )
+        event = event.model_copy(update={"received_at": "2026-10-25T00:00:00+02:00"})
+        triage = analyze(queue.store, event)
+        assert [s.value for s in triage.signals if s.kind == "deadline"] == ["2026-11-04"]
+
+    def test_an_in_text_anchor_wins_over_the_messages_received_date(self, queue):
+        event = queue.take_in(
+            message(
+                subject="Faktura",
+                body="Betala 15 dagar från fakturadatum 2026-09-01.",
+                message_id="<days-4@x.example>",
+            )
+        )
+        event = event.model_copy(update={"received_at": "2026-08-14T10:00:00Z"})
+        triage = analyze(queue.store, event)
+        deadlines = [s for s in triage.signals if s.kind == "deadline"]
+        assert [s.value for s in deadlines] == ["2026-09-16"]
+        assert "1 sep. 2026" in deadlines[0].label
+        assert "2026-08-24" not in {s.value for s in triage.signals}
+
+    def test_working_days_do_not_become_a_deadline(self, queue):
+        event = queue.take_in(
+            message(
+                subject="Föreläggande",
+                body="Svara inom tio arbetsdagar.",
+                message_id="<days-5@x.example>",
+            )
+        )
+        event = event.model_copy(update={"received_at": "2026-08-14T10:00:00Z"})
+        triage = analyze(queue.store, event)
+        assert [s for s in triage.signals if s.kind == "deadline"] == []
 
     def test_a_message_with_nothing_readable_is_unclear_not_guessed(self, queue):
         event = queue.take_in(message(subject="...", body="...", message_id="<e@x.example>"))

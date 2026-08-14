@@ -300,7 +300,9 @@ function ReadingPanel({ thread, categories, busy, onConfirm }) {
                   {(allSignals ? thread.signals : thread.signals.slice(0, SIGNALS_SHOWN)).map((signal, i) => (
                     <li key={`${signal.kind}-${signal.value}-${i}`}>
                       <span className="signal-kind">
-                        {SIGNAL_LABEL[signal.kind] || signal.kind}
+                        {signal.kind === 'deadline' && signal.label
+                          ? signal.label
+                          : (SIGNAL_LABEL[signal.kind] || signal.kind)}
                       </span>
                       <span className="signal-value">{signal.value}</span>
                       <span className="muted"> ur {SOURCE_LABEL[signal.source] || signal.source}</span>
