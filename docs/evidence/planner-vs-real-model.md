@@ -702,3 +702,68 @@ Villkorets skärpning står kvar oförändrad: minst ett fall där handlingens
 **filnamn inte** innehåller det överbryggande ordet. Efter fynd 3 i tillägg 3 är
 det den delen som avgör, eftersom r01:s utfall vände tre gånger på promptdetaljer
 och alltså inte bär villkoret ensamt.
+
+---
+
+## Tillägg 2026-08-14 (7): villkor C uppfyllt — på verklig text, utan filnamnsbro
+
+Villkor C i [`fan-out-mvp-beslut.md`](fan-out-mvp-beslut.md): *ordförrådsvinsten
+reproducerad på minst tre verkliga fall, varav minst ett där handlingens filnamn
+inte innehåller det överbryggande ordet.* Det var det villkor som återstod, och
+det som fynd 3 gjorde till hela frågan — r01 vände tre gånger på promptdetaljer
+och bar det inte ensamt.
+
+**Villkoret är uppfyllt.** Åtta fall byggda ur två verkliga avtal ur en
+förenings arkiv; tre visar vinsten, och alla tre saknar bro i filnamnet.
+
+| fall | enkel sökning | fan-out | enkelsökningens toppträff |
+|---|---:|---:|---|
+| R1 kan en boende få en egen reserverad p-plats | 1.00 | 1.00 | rätt handling |
+| R2 kan vi säga upp med en månads varsel | 1.00 | 1.00 | fel handling |
+| **R3 vem betalar om en bil blir skadad** | **0.00** | **1.00** | fel handling (0.32) |
+| R4 betalar vi fortfarande fast pris för sophämtningen | 1.00 | 1.00 | fel handling |
+| **R5 vad är det för extra avgift på fakturorna** | **0.00** | **1.00** | fel handling (0.42) |
+| R6 hur stor del av kostnaderna ska vi betala | 1.00 | 1.00 | fel handling |
+| **R7 måste de säga till innan de höjer priset** | **0.00** | **1.00** | fel handling (0.26) |
+| R8 när kan vi tidigast säga upp avtalet | 1.00 | 1.00 | fel handling |
+
+De tre vinsterna är samma mekanism varje gång, och den är *inte* r01:s: bron går
+inte via filnamnet utan via avtalets fackord, som styrelsen aldrig skulle skriva.
+Styrelsen frågar *vem betalar om bilen blir skadad*, avtalet säger **friskrivning**.
+Styrelsen frågar *vad är det för extra avgift*, avtalet säger
+**administrationskostnad**. Styrelsen frågar *måste de säga till först*, avtalet
+säger **varsko om betydande prisjusteringar**. Inget av de orden står i något
+filnamn.
+
+Det gör villkoret uppfyllt med marginal: det krävde ett fall utan filnamnsbro
+och fick tre.
+
+### Ett större fynd vid sidan av: toppträffen är fel handling i sju av åtta
+
+Kolumnen längst till höger var inte det mätningen letade efter. **I sju av åtta
+fall låg enkelsökningens toppträff i fel avtal** — och i fyra av dem fanns rätt
+stycke ändå med bland de sex som når prompten, så recall räknar dem som träffar.
+
+Det är en annan felmod än den som mätts hittills, och den syns inte i något
+befintligt tal. Produkten visar citat med sidhänvisning: en styrelse som får rätt
+svar med fel avtal överst har fått något som *ser* verifierat ut och pekar på fel
+handling. Nio handlingar räckte för att framkalla det; ett riktigt arkiv har
+hundratals.
+
+Det här tillägget mäter det inte vidare — det noteras som ett eget fynd, med den
+population det vilar på (åtta fall, ett arkiv).
+
+### Hur facit togs fram, och vad som aldrig lämnade arkivet
+
+Innehållsklassificeraren hindrar bulkläsning av korpusen, och den kringgicks inte.
+Arbetsgången blev i stället: **Simon beskrev två handlingar med sina egna ord, och
+sidnumren slogs upp ur indexet med hans beskrivning som ingång — endast metadata
+(dokument, sida, confidence) lästes ut.** Ingen avtalstext har lästs ur arkivet,
+och ingen finns i fallfilen, som ligger kvar i arkivkatalogen och aldrig committas.
+
+Frågorna är skrivna i styrelsens ordförråd, delfrågorna i avtalets. Metodiken är
+`eval_crossdoc.py`:s — planeraren hålls utanför med flit, så villkor C mäter
+**hämtningsstrategin**. Att en riktig modell *väljer* de här delfrågorna är en
+annan fråga, och tillägg 3 visade att den frågan är den svaga länken.
+
+Kör om: `uv run python -m scripts.eval_real_corpus --archive <arkiv> --fall <fall.json>`.

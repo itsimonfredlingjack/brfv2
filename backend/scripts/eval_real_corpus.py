@@ -24,8 +24,19 @@ Skriver ENBART SIFFROR. Ingen text ur arkivet, inga filnamn — handlingarna
 identifieras med en bokstav i namnordning. Arkivet får aldrig committas, och
 sökvägen är därför ett argument, aldrig inbakad.
 
+**3. Villkor C självt.** `--fall` kör verkliga fall mot arkivet: styrelsens fråga
+mot enkel sökning, och samma fråga mot en gränsad fan-out på handskrivna
+delfrågor i avtalets ordförråd. Metodiken är `eval_crossdoc.py`:s — planeraren
+hålls utanför med flit, så hämtningsstrategin och planeringen kan fela var för
+sig.
+
+Fallfilen är ett ARGUMENT och committas aldrig. Facit är dokumentnamn + sida;
+sidans stycken räknas som alternativ till varandra, samma konvention som
+`golden.json`. Ingen avtalstext förekommer i fallfilen.
+
     uv run python -m scripts.eval_real_corpus --archive /sökväg/till/arkivet --volym
     uv run python -m scripts.eval_real_corpus --archive /sökväg --glapp par.md
+    uv run python -m scripts.eval_real_corpus --archive /sökväg --fall fall.json
 """
 
 from __future__ import annotations
@@ -134,21 +145,82 @@ def gap(archive: Path, pairs_md: Path) -> None:
               f"tröskeln, dokumentets över). Se modulens varning: screeningen underdetekterar.")
 
 
+def cases(archive: Path, cases_json: Path) -> None:
+    import json
+
+    from app.evidence import EvidencePack, expand_context
+    from app.multihop import MAX_EVIDENCE_CHUNKS, PER_QUERY_TOP_K
+
+    spec = json.loads(cases_json.read_text("utf-8"))["cases"]
+    with tempfile.TemporaryDirectory() as tmp:
+        store, letters = build(archive, Path(tmp))
+        ids = {v: k for k, v in letters.items()}
+        s = store.settings
+
+        def search(q: str, k: int):
+            return store.index.search(q, weight=s.searchWeighting / 100.0,
+                                      candidates=s.candidateCount, top_k=k, min_confidence=0.0)
+
+        print(f"\n### Villkor C — {len(spec)} verkliga fall\n")
+        print("| fall | facit | enkel sökning | fan-out | enkelsökningens topp | bro i filnamn |")
+        print("|---|---:|---:|---:|---|---|")
+        wins = bridgeless_wins = 0
+        wrong_top = 0
+        for case in spec:
+            required = {
+                cid for cid, c in store.chunks.items()
+                if any(c.document_id == ids[d] and c.page == p for d, p in case["truth"])
+            }
+            # Icke-vakuositet: ett fall vars facit inte finns i korpusen ger
+            # 0.00 åt båda hållen och ser ut som ett glapp utan att vara ett.
+            if not required:
+                raise SystemExit(f"{case['id']}: facit {case['truth']} matchar ingen chunk")
+
+            single = search(case["question"], s.topK)
+            single_hit = bool(required & {h.chunk_id for h in single})
+
+            pack = EvidencePack(question=case["question"])
+            for i, sub in enumerate(case["subqueries"]):
+                pack.add_query(sub, search(sub, PER_QUERY_TOP_K), plan_index=i)
+            room = max(0, MAX_EVIDENCE_CHUNKS - len(pack.hits))
+            if room:
+                expand_context(pack, store.chunks, store.documents, max_added=room)
+            fan_hit = bool(required & {h.chunk_id for h in pack.hits[:MAX_EVIDENCE_CHUNKS]})
+
+            top = single[0] if single else None
+            top_doc = letters.get(top.document_id, "?") if top else "-"
+            top_txt = f"{top_doc} s{top.page} ({top.confidence:.2f})" if top else "—"
+            if top and top_doc != case["doc"]:
+                wrong_top += 1
+                top_txt += " ⚠ fel handling"
+            win = fan_hit and not single_hit
+            wins += win
+            bridgeless_wins += win and not case.get("bridge_in_filename", False)
+            print(f"| {case['id']} | {case['doc']} s{case['truth'][0][1]} | {single_hit:.2f} | "
+                  f"{fan_hit:.2f} | {top_txt} | {'ja' if case.get('bridge_in_filename') else 'nej'} |")
+        print(f"\n**{wins} av {len(spec)}** fall där fan-out hittar det enkel sökning missar, "
+              f"varav **{bridgeless_wins}** utan bro i filnamnet. "
+              f"Enkelsökningens toppträff låg i fel handling i **{wrong_top} av {len(spec)}** fall.")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Karakterisera ett verkligt arkiv (villkor C).")
     ap.add_argument("--archive", required=True, type=Path, help="katalog med PDF:er; committas aldrig")
     ap.add_argument("--volym", action="store_true", help="läsbarhet efter ingestion/OCR")
     ap.add_argument("--glapp", type=Path, metavar="PAR.md", help="markdown-tabell med ordpar")
+    ap.add_argument("--fall", type=Path, metavar="FALL.json", help="verkliga fall; committas aldrig")
     args = ap.parse_args()
     if not args.archive.is_dir():
         print(f"saknar katalogen {args.archive}", file=sys.stderr)
         return 2
-    if not args.volym and not args.glapp:
-        ap.error("välj --volym och/eller --glapp")
+    if not (args.volym or args.glapp or args.fall):
+        ap.error("välj --volym, --glapp och/eller --fall")
     if args.volym:
         volume(args.archive)
     if args.glapp:
         gap(args.archive, args.glapp)
+    if args.fall:
+        cases(args.archive, args.fall)
     return 0
 
 

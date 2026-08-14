@@ -14,7 +14,11 @@ mätning mot riktig modell), [`crossdoc-fanout.md`](crossdoc-fanout.md)
 > Se `planner-vs-real-model.md`, tilläggen 2 och 3. Grindbeslutet är inte
 > omprövat här. Villkor B är dessutom besvarat i tilläggen 4 och 5: de extra
 > sökningarna köper ingen recall — och kostar heller ingen svarskvalitet, mätt
-> med riktig syntes på alla tolv överutlösande fall.
+> med riktig syntes på alla tolv överutlösande fall. **Villkor C är uppfyllt**
+> (tillägg 7): tre verkliga fall ur en förenings arkiv där fan-out hittar det
+> enkel sökning missar, alla tre utan bro i filnamnet. Kvar av de fyra villkoren
+> är därmed A (uppfyllt strukturellt sedan `clarify` togs bort), B (besvarat) och
+> **D**, rerank-asymmetrin — som är den enda som fortfarande kräver arbete.
 
 ## Beslut
 
