@@ -34,6 +34,37 @@ class TestStoreEnrichment:
         hit = next(h for h in hits if h.chunk_id == row.id)
         assert hit.text == row.text  # frozen, no enrichment leak
 
+    def test_document_name_is_searchable_but_never_citable(self, tmp_path):
+        """Which HANDLING a passage belongs to is usually not written in the
+        passage — the clause says "Parterna", not which contract it is. A
+        board's archive holds several of the same kind, so without the name
+        in the index the ranking cannot tell them apart. Measured on a real
+        archive: the top hit came from the wrong document in 10 of 11
+        questions, and a search for a word that exists only in a filename
+        landed in an unrelated document.
+
+        The name goes into the index only. It must never reach the model or
+        a citation, because it is not text on the page and could not be
+        verified against `PageData.words`.
+        """
+        store = Store(data_dir=tmp_path)
+        meta = store.add_document("Snoerojningsavtal_Vinterservice_2024.pdf", _table_pdf())
+        row = next(c for c in store.chunks.values()
+                   if c.document_id == meta.id and "Räntekostnader" in c.text)
+
+        # Non-vacuity: the word must exist ONLY in the name, or the search
+        # below would succeed with no enrichment at all.
+        assert "Vinterservice" not in row.text
+        assert "Vinterservice" in (row.search_text or "")
+        # Separators become spaces, so the name contributes words a board types.
+        assert "Snoerojningsavtal Vinterservice 2024" in (row.search_text or "")
+        assert ".pdf" not in (row.search_text or "")
+
+        hits = store.index.search("Vinterservice", weight=0.5, candidates=50,
+                                  top_k=5, min_confidence=0.0)
+        assert hits and hits[0].document_id == meta.id, "namnet nådde aldrig indexet"
+        assert "Vinterservice" not in hits[0].text, "namnet läckte till det citerbara utdraget"
+
     def test_disabled_toggle_leaves_search_text_none(self, tmp_path, monkeypatch):
         monkeypatch.setenv("BRF_ENRICH", "0")
         store = Store(data_dir=tmp_path)

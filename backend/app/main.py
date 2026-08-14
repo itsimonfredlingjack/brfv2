@@ -11,6 +11,7 @@ from fastapi.responses import Response as RawResponse
 from pydantic import BaseModel
 
 from .answer import ask
+from .multihop import ask_planned, planned_ask_enabled as multihop_enabled
 from .auth import AuthError, AuthStore
 from .registry import TenantRegistry
 from .schemas import AskRequest, AskResponse, Settings
@@ -348,6 +349,13 @@ def create_app(
         # only source for this.
         tenant = auth.get_tenant(brf_id)
         trusted_names = [tenant["name"]] if tenant else []
+        # Planned cross-document path (BRF-1) — behind BOTH a server flag and
+        # a per-request opt-in, so the default remains the single-search path
+        # with byte-for-byte identical behaviour. Verification is not
+        # duplicated here: ask_planned routes back through ask(), which runs
+        # requireSources and the numeric grounding gate unchanged.
+        if req.planned and multihop_enabled():
+            return ask_planned(store, question, trusted_names=trusted_names).response
         return ask(store, question, trusted_names=trusted_names)
 
     @app.delete("/api/brf/{brf_id}")

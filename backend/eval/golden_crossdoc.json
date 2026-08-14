@@ -1,0 +1,426 @@
+{
+  "_comment": "Cross-document golden cases (BRF-1 first slice, from BRF-4's list). Shape differs from golden.json deliberately: those cases assert ONE passage in ONE document, these assert a PLAN SHAPE and a spread of verified evidence across documents. The rest of BRF-4's list is out of scope for this slice. Executed by tests/test_golden_crossdoc.py. BORTTAGET 2026-08-13: fallet x02 (kind ambiguous_asks_for_clarification, «När går avtalet ut?»). Det låste att en tvetydig fråga besvaras med en motfråga i stället för en gissning. Läget clarify togs bort ur PLANNER_CONTRACT samma dag — mot den riktiga modellen valdes det på fyra besvarbara frågor av 46 och tystade dem helt, och den efterhämtningsgrind som räddade alla fyra överrullade också x02, eftersom minRelevance mäter om korpusen HAR material och inte om frågan PEKAR UT en handling. Fallet är borttaget och inte omskrivet: ett golden-fall för ett läge som inte finns är inget fall, och att skriva om det till «vi svarar» hade gjort regressionen till ett krav. Förlusten är verklig och står i docs/evidence/planner-vs-real-model.md, tillägg 2.",
+  "corpus": [
+    {
+      "name": "Snöröjningsavtal.pdf",
+      "lines": [
+        "Snöröjningsavtalet gäller från 1 oktober 2025 till 30 september 2026.",
+        "Leverantör är Vinterservice AB med organisationsnummer 556677-8899.",
+        "Ersättning utgår med 1250 kr per påbörjad timme."
+      ]
+    },
+    {
+      "name": "Styrelseprotokoll.pdf",
+      "lines": [
+        "Styrelsen beslutade att godkänna snöröjningsavtalet vid mötet.",
+        "Beslutet fattades enhälligt av en styrelse på sju ledamöter.",
+        "Ordföranden fick i uppdrag att underteckna handlingen."
+      ]
+    },
+    {
+      "name": "Underhallsplan.pdf",
+      "lines": [
+        "Fasadrenoveringen är planerad till 2029 enligt underhållsplanen.",
+        "Avsättningen till yttre fond uppgår till 240000 kr per år.",
+        "Stammbyte bedöms bli aktuellt tidigast 2035."
+      ]
+    },
+    {
+      "name": "Prisjustering.pdf",
+      "lines": [
+        "Från 1 januari 2026 höjs ersättningen till 1400 kr per påbörjad timme.",
+        "Justeringen följer entreprenadindex E84 enligt avtalets paragraf 9.",
+        "Övriga villkor i snöröjningsavtalet lämnas oförändrade."
+      ]
+    },
+    {
+      "_provenance": "REKONSTRUERAD, men mot en verifierad förlaga. Frågorna och ordförrådet kommer från en verklig styrelses loggade händelser; MEKANISMEN och terminologin (schablonbelopp, avräkning, verkliga kostnader, kvartalsvis i efterskott) är avläst ur den faktiska handlingen efter OCR. Meningarna, beloppen, parterna och fakturanumren är däremot HITTEPÅ — originalavtalet är en verklig förenings handling och dess text får inte ligga i git. Det fallen står och faller med är glappet mellan styrelsens ord och handlingens ord, och det är nu bekräftat äkta.",
+      "name": "Faktura Q2 2026.pdf",
+      "lines": [
+        "Fakturanummer 2026-04-0182 avser andra kvartalet 2026.",
+        "Post: Snöröjning och halkbekämpning, 8750 kr.",
+        "Post: Sophantering och gårdsskötsel, 21400 kr."
+      ]
+    },
+    {
+      "name": "Avtal Sophantering och gardsskotsel 2022.pdf",
+      "lines": [
+        "Avtalet omfattar sophantering, gårdsskötsel samt vinterväghållning.",
+        "Fakturering sker kvartalsvis i efterskott.",
+        "Kvartal 1 till 3 faktureras schablonbelopp.",
+        "Avräkning sker efter kvartal 4 då årets verkliga kostnader redovisas.",
+        "Då avtalet reglerar verkliga kostnader sker prisjusteringar när dessa uppkommer."
+      ]
+    },
+    {
+      "name": "Bredbandsavtal iTUX.pdf",
+      "lines": [
+        "Uppsägning ska ske skriftligen senast sex månader före avtalets utgång.",
+        "Avtalet förlängs automatiskt med tolv månader om uppsägning uteblir.",
+        "Muntliga besked är inte bindande för parterna."
+      ]
+    },
+    {
+      "name": "Styrelseprotokoll 2026-05.pdf",
+      "lines": [
+        "Leverantören uppgav muntligen att uppsägningstiden är tre månader.",
+        "Sekreteraren fick i uppdrag att begära skriftlig bekräftelse.",
+        "Punkten bordlades till nästa sammanträde."
+      ]
+    },
+    {
+      "_provenance": "Generisk föreningsrättslig text som jag skrivit själv utifrån en kartläggning av vokabulärglapp i svenska BRF:er. Ingen verklig förenings handling — dessa tre täcker de kategorier kartläggningen pekar ut som störst och som korpusen annars saknade: avgiftsbegränsning, indexreglering och förverkande.",
+      "name": "Stadgar avgifter.pdf",
+      "lines": [
+        "Föreningen får ta ut årsavgift, upplåtelseavgift, överlåtelseavgift och pantsättningsavgift.",
+        "Avgift för andrahandsupplåtelse får tas ut enligt bostadsrättslagen.",
+        "Andra avgifter än de i lag angivna saknar stöd och får inte debiteras medlem."
+      ]
+    },
+    {
+      "name": "Lokalhyresavtal indexklausul.pdf",
+      "lines": [
+        "Grundhyran räknas om per den 1 januari varje år.",
+        "Omräkningen följer förändringen i konsumentprisindex för oktober månad.",
+        "Bastalet utgörs av indextalet för oktober det år avtalet tecknades.",
+        "Någon omförhandling eller tilläggsavtal krävs inte för omräkningen."
+      ]
+    },
+    {
+      "name": "Rutin forverkande.pdf",
+      "lines": [
+        "Nyttjanderätten kan förverkas om årsavgiften inte betalas i rätt tid.",
+        "Bostadsrättshavaren ska delges underrättelse om återvinningsfristen.",
+        "Socialnämnden i kommunen ska underrättas innan handräckning begärs."
+      ]
+    }
+  ],
+  "cases": [
+    {
+      "id": "x00",
+      "kind": "two_document_answer",
+      "question": "Vem är leverantör i snöröjningsavtalet och har styrelsen godkänt det?",
+      "expect_mode": "multi",
+      "expect_documents": [
+        "Snöröjningsavtal.pdf",
+        "Styrelseprotokoll.pdf"
+      ],
+      "expect_min_citations": 2,
+      "subqueries": [
+        "leverantör snöröjningsavtal organisationsnummer",
+        "styrelsen beslutade godkänna snöröjningsavtalet"
+      ],
+      "answer": "Leverantör är Vinterservice AB och styrelsen beslutade att godkänna avtalet.",
+      "citations": [
+        {
+          "contains": "Vinterservice AB",
+          "quote": "Leverantör är Vinterservice AB"
+        },
+        {
+          "contains": "godkänna snöröjningsavtalet",
+          "quote": "Styrelsen beslutade att godkänna snöröjningsavtalet"
+        }
+      ]
+    },
+    {
+      "id": "x01",
+      "kind": "multi_part_question",
+      "question": "Vad kostar snöröjningen per timme och när är fasadrenoveringen planerad?",
+      "expect_mode": "multi",
+      "expect_documents": [
+        "Snöröjningsavtal.pdf",
+        "Underhallsplan.pdf"
+      ],
+      "expect_min_citations": 2,
+      "subqueries": [
+        "ersättning per påbörjad timme snöröjning",
+        "fasadrenovering planerad år underhållsplan"
+      ],
+      "answer": "Ersättning utgår med 1250 kr per påbörjad timme och fasadrenoveringen är planerad till 2029.",
+      "citations": [
+        {
+          "contains": "1250 kr",
+          "quote": "Ersättning utgår med 1250 kr per påbörjad timme"
+        },
+        {
+          "contains": "Fasadrenoveringen",
+          "quote": "Fasadrenoveringen är planerad till 2029"
+        }
+      ]
+    },
+    {
+      "id": "x03",
+      "kind": "conflicting_documents",
+      "_comment": "Two documents state different hourly rates. The answer must SHOW both and cite both — silently picking one is the failure this case exists to catch.",
+      "question": "Vad är ersättningen per påbörjad timme för snöröjning?",
+      "expect_mode": "multi",
+      "expect_documents": [
+        "Snöröjningsavtal.pdf",
+        "Prisjustering.pdf"
+      ],
+      "expect_min_citations": 2,
+      "subqueries": [
+        "ersättning per påbörjad timme snöröjningsavtal",
+        "höjd ersättning prisjustering timme"
+      ],
+      "answer": "Avtalet anger 1250 kr per påbörjad timme, men från 1 januari 2026 höjs ersättningen till 1400 kr per påbörjad timme.",
+      "citations": [
+        {
+          "contains": "1250 kr",
+          "quote": "Ersättning utgår med 1250 kr per påbörjad timme"
+        },
+        {
+          "contains": "1400 kr",
+          "quote": "Från 1 januari 2026 höjs ersättningen till 1400 kr per påbörjad timme"
+        }
+      ]
+    },
+    {
+      "id": "x04",
+      "kind": "no_evidence_refuses",
+      "_comment": "Nothing in the corpus answers this. The planned path must refuse, not assemble a plausible answer out of adjacent documents — fan-out widens retrieval, and wider retrieval must not lower the bar for answering.",
+      "question": "Hur ofta besiktigas hissen och vem ansvarar för besiktningen?",
+      "expect_mode": "multi",
+      "expect_documents": [],
+      "expect_min_citations": 0,
+      "expect_refusal_reason": "insufficient_data",
+      "subqueries": [
+        "hissbesiktning intervall",
+        "ansvarig för hissbesiktning"
+      ],
+      "answer": "Dokumenten säger ingenting om hissbesiktning.",
+      "citations": [],
+      "insufficient_data": true
+    },
+    {
+      "id": "x05",
+      "kind": "time_bound_question",
+      "_comment": "The rate depends on WHEN. Answering with the contract's original figure alone is wrong for a date after the adjustment took effect, so the answer must carry the effective date as evidence — not just the amount. The date and the amount live in different documents.",
+      "question": "Vilken ersättning per timme gäller för snöröjning utförd i mars 2026?",
+      "expect_mode": "multi",
+      "expect_documents": [
+        "Prisjustering.pdf",
+        "Snöröjningsavtal.pdf"
+      ],
+      "expect_min_citations": 2,
+      "expect_answer_contains": [
+        "1400",
+        "1 januari 2026"
+      ],
+      "subqueries": [
+        "höjd ersättning från januari 2026 per timme",
+        "snöröjningsavtalets giltighetstid och ersättning"
+      ],
+      "answer": "Från 1 januari 2026 höjs ersättningen till 1400 kr per påbörjad timme, så i mars 2026 gäller den nivån. Snöröjningsavtalet gäller från 1 oktober 2025 till 30 september 2026.",
+      "citations": [
+        {
+          "contains": "1400 kr",
+          "quote": "Från 1 januari 2026 höjs ersättningen till 1400 kr per påbörjad timme"
+        },
+        {
+          "contains": "1 oktober 2025",
+          "quote": "Snöröjningsavtalet gäller från 1 oktober 2025 till 30 september 2026"
+        }
+      ]
+    },
+    {
+      "id": "x06",
+      "kind": "vocabulary_gap",
+      "_comment": "The case fan-out actually exists for. The board asks in its own vernacular — 'vinterunderhållet', 'upphandlat', 'notan' — and NONE of those words appear in the documents, which say 'snöröjning', 'beslutade att godkänna' and 'ersättning'. One search on the question's own words has nothing to match. The subqueries are lexical bridges the question does not contain. If fan-out cannot beat a single search here, it cannot beat it anywhere.",
+      "question": "Är vinterunderhållet upphandlat på rätt sätt och vad blir notan per timme?",
+      "expect_mode": "multi",
+      "expect_documents": [
+        "Snöröjningsavtal.pdf",
+        "Styrelseprotokoll.pdf"
+      ],
+      "expect_min_citations": 2,
+      "subqueries": [
+        "snöröjningsavtal ersättning per påbörjad timme",
+        "styrelsen beslutade godkänna snöröjningsavtalet protokoll"
+      ],
+      "answer": "Styrelsen beslutade att godkänna snöröjningsavtalet, och ersättningen är 1250 kr per påbörjad timme.",
+      "citations": [
+        {
+          "contains": "1250 kr",
+          "quote": "Ersättning utgår med 1250 kr per påbörjad timme"
+        },
+        {
+          "contains": "godkänna snöröjningsavtalet",
+          "quote": "Styrelsen beslutade att godkänna snöröjningsavtalet"
+        }
+      ]
+    },
+    {
+      "id": "r00",
+      "kind": "vocabulary_gap",
+      "source": "reality",
+      "_comment": "Verkligt fall. Styrelsen såg snöröjning på en kvartalsfaktura för april-juni och trodde att något var fel. Ordet 'snöröjning' står på FAKTURAN, men förklaringen står i en klausul som varken nämner snö eller april: kvartal 1-3 faktureras schablonbelopp och stäms av först efter kvartal 4. En sökning på frågans egna ord hittar alltså problemet men inte svaret.",
+      "question": "Varför står snöröjning på fakturan för andra kvartalet när det inte snöar då?",
+      "expect_mode": "multi",
+      "expect_documents": [
+        "Faktura Q2 2026.pdf",
+        "Avtal Sophantering och gardsskotsel 2022.pdf"
+      ],
+      "expect_min_citations": 2,
+      "subqueries": [
+        "schablonbelopp kvartal avräkning fakturering",
+        "vinterväghållning ingår i avtal sophantering gårdsskötsel"
+      ],
+      "answer": "Posten Snöröjning och halkbekämpning, 8750 kr står på fakturan för andra kvartalet eftersom kvartal 1 till 3 faktureras schablonbelopp.",
+      "citations": [
+        {
+          "contains": "Snöröjning och halkbekämpning",
+          "quote": "Post: Snöröjning och halkbekämpning, 8750 kr"
+        },
+        {
+          "contains": "faktureras schablonbelopp",
+          "quote": "Kvartal 1 till 3 faktureras schablonbelopp"
+        }
+      ]
+    },
+    {
+      "id": "r01",
+      "kind": "vocabulary_gap",
+      "source": "reality",
+      "_comment": "Verkligt fall, och det styrelsen faktiskt MISSADE. Schablonbeloppet är inte ett fast pris — det är ett à-conto som stäms av mot verkliga kostnader, och avtalet justerar priset när kostnaderna uppkommer. Dubbelt ordförrådsglapp: styrelsen säger 'fast pris' och 'sophämtning', handlingen säger 'schablonbelopp', 'avräkning' och 'Sophantering och gårdsskötsel'. Ingendera av frågans nyckelord finns i handlingen.",
+      "question": "Betalar vi fortfarande fast pris för sophämtningen?",
+      "expect_mode": "multi",
+      "expect_documents": [
+        "Avtal Sophantering och gardsskotsel 2022.pdf"
+      ],
+      "expect_cross_document": false,
+      "expect_min_citations": 2,
+      "subqueries": [
+        "schablonbelopp avräkning verkliga kostnader redovisas",
+        "prisjusteringar uppkommer avtalet reglerar verkliga kostnader"
+      ],
+      "answer": "Nej. Avräkning sker efter kvartal 4 då årets verkliga kostnader redovisas, och då avtalet reglerar verkliga kostnader sker prisjusteringar när dessa uppkommer.",
+      "citations": [
+        {
+          "contains": "Avräkning sker",
+          "quote": "Avräkning sker efter kvartal 4 då årets verkliga kostnader redovisas"
+        },
+        {
+          "contains": "prisjusteringar",
+          "quote": "Då avtalet reglerar verkliga kostnader sker prisjusteringar när dessa uppkommer"
+        }
+      ]
+    },
+    {
+      "id": "r02",
+      "kind": "conflicting_documents",
+      "source": "reality",
+      "_comment": "Verkligt fall: leverantören sa en sak muntligt och en annan skriftligt, och en missad deadline hade förlängt avtalet ett helt år. Svaret måste visa BÅDA och låta den skriftliga handlingen väga — att tyst välja det muntliga beskedet är felet fallet finns för att fånga.",
+      "question": "Hur lång uppsägningstid har vi på bredbandsavtalet?",
+      "expect_mode": "multi",
+      "expect_documents": [
+        "Bredbandsavtal iTUX.pdf",
+        "Styrelseprotokoll 2026-05.pdf"
+      ],
+      "expect_min_citations": 2,
+      "expect_answer_contains": [
+        "sex månader",
+        "muntlig"
+      ],
+      "subqueries": [
+        "uppsägning skriftligen månader före avtalets utgång bredband",
+        "leverantören uppgav muntligen uppsägningstid protokoll"
+      ],
+      "answer": "Enligt avtalet ska uppsägning ske skriftligen senast sex månader före avtalets utgång. Leverantören uppgav muntligen att uppsägningstiden är tre månader, men muntliga besked är inte bindande för parterna.",
+      "citations": [
+        {
+          "contains": "sex månader",
+          "quote": "Uppsägning ska ske skriftligen senast sex månader före avtalets utgång"
+        },
+        {
+          "contains": "muntligen att uppsägningstiden",
+          "quote": "Leverantören uppgav muntligen att uppsägningstiden är tre månader"
+        }
+      ]
+    },
+    {
+      "id": "v00",
+      "kind": "vocabulary_gap",
+      "source": "kartlaggning",
+      "_comment": "Avgiftsbegränsning. Noll ordöverlappning: styrelsen söker 'straffavgift', 'skolkar', 'städdagen'; stadgarna räknar upp 'årsavgift, upplåtelseavgift, överlåtelseavgift, pantsättningsavgift' och säger att andra avgifter saknar stöd. Inget av frågans ord finns i handlingen.",
+      "question": "Får vi ta ut en straffavgift av dem som skolkar från städdagen?",
+      "expect_mode": "multi",
+      "expect_documents": [
+        "Stadgar avgifter.pdf"
+      ],
+      "expect_cross_document": false,
+      "expect_min_citations": 2,
+      "subqueries": [
+        "vilka avgifter föreningen får ta ut årsavgift upplåtelseavgift",
+        "avgifter utan stöd i lag får inte debiteras medlem"
+      ],
+      "answer": "Nej. Andra avgifter än de i lag angivna saknar stöd och får inte debiteras medlem; föreningen får ta ut årsavgift, upplåtelseavgift, överlåtelseavgift och pantsättningsavgift.",
+      "citations": [
+        {
+          "contains": "saknar stöd",
+          "quote": "Andra avgifter än de i lag angivna saknar stöd och får inte debiteras medlem"
+        },
+        {
+          "contains": "upplåtelseavgift",
+          "quote": "Föreningen får ta ut årsavgift, upplåtelseavgift, överlåtelseavgift och pantsättningsavgift"
+        }
+      ]
+    },
+    {
+      "id": "v01",
+      "kind": "vocabulary_gap",
+      "source": "kartlaggning",
+      "_comment": "Indexreglering. Styrelsen frågar om 'höja hyran' och 'nytt kontrakt'; avtalet svarar med 'konsumentprisindex', 'bastal' och 'omräkning'. Frågan söker en avtalsändring, dokumentet reglerar en matematisk uppräkning som sker av sig själv.",
+      "question": "Får hyran för lokalen höjas utan att vi skriver ett nytt kontrakt?",
+      "expect_mode": "multi",
+      "expect_documents": [
+        "Lokalhyresavtal indexklausul.pdf"
+      ],
+      "expect_cross_document": false,
+      "expect_min_citations": 2,
+      "subqueries": [
+        "grundhyran räknas om konsumentprisindex oktober",
+        "omförhandling eller tilläggsavtal krävs inte omräkning"
+      ],
+      "answer": "Ja. Omräkningen följer förändringen i konsumentprisindex för oktober månad, och någon omförhandling eller tilläggsavtal krävs inte för omräkningen.",
+      "citations": [
+        {
+          "contains": "konsumentprisindex",
+          "quote": "Omräkningen följer förändringen i konsumentprisindex för oktober månad"
+        },
+        {
+          "contains": "omförhandling",
+          "quote": "Någon omförhandling eller tilläggsavtal krävs inte för omräkningen"
+        }
+      ]
+    },
+    {
+      "id": "v02",
+      "kind": "vocabulary_gap",
+      "source": "kartlaggning",
+      "_comment": "Förverkande. Styrelsen söker 'vräka' och 'byta lås'; rutinen talar om 'förverkas', 'återvinningsfrist' och 'socialnämnden'. Noll ordöverlappning, och frågans premiss är dessutom fel — det är just därför svaret måste komma ur handlingen och inte ur modellens allmänbildning.",
+      "question": "Kan vi vräka en medlem som inte betalat och byta lås direkt?",
+      "expect_mode": "multi",
+      "expect_documents": [
+        "Rutin forverkande.pdf"
+      ],
+      "expect_cross_document": false,
+      "expect_min_citations": 2,
+      "subqueries": [
+        "nyttjanderätten förverkas årsavgiften betalas inte i tid",
+        "underrättelse återvinningsfrist socialnämnden handräckning"
+      ],
+      "answer": "Nej. Bostadsrättshavaren ska delges underrättelse om återvinningsfristen, och socialnämnden i kommunen ska underrättas innan handräckning begärs.",
+      "citations": [
+        {
+          "contains": "återvinningsfristen",
+          "quote": "Bostadsrättshavaren ska delges underrättelse om återvinningsfristen"
+        },
+        {
+          "contains": "Socialnämnden",
+          "quote": "Socialnämnden i kommunen ska underrättas innan handräckning begärs"
+        }
+      ]
+    }
+  ]
+}

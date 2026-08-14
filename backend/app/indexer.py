@@ -65,6 +65,17 @@ def _trigrams(t: str) -> frozenset[str]:
     return frozenset(t[i : i + 3] for i in range(len(t) - 2)) if len(t) >= 3 else frozenset()
 
 
+# Shortest token allowed to take part in substring expansion, on either side.
+# Five was picked to keep short function words out; it also excludes real
+# Swedish morphemes. `sop` is three characters, so "sophämtning" and
+# "sophantering" never meet lexically — which is exactly the gap the planned
+# fan-out path was built to bridge. Named rather than inlined so the threshold
+# can be swept against the golden suites instead of argued about.
+MIN_EXPANSION_LEN = 5
+# At least one side must be this long, so two short tokens cannot pair up.
+MIN_EXPANSION_PAIR_LEN = 6
+
+
 def _minmax(values: dict[int, float]) -> dict[int, float]:
     if not values:
         return {}
@@ -115,10 +126,14 @@ class HybridIndex:
             fuzzy: set[str] = set()
             if q in vocab:
                 strong.add(q)
-            if len(q) >= 5:
+            if len(q) >= MIN_EXPANSION_LEN:
                 q_tri = _trigrams(q)
                 for t in vocab:
-                    if t == q or min(len(t), len(q)) < 5 or max(len(t), len(q)) < 6:
+                    if (
+                        t == q
+                        or min(len(t), len(q)) < MIN_EXPANSION_LEN
+                        or max(len(t), len(q)) < MIN_EXPANSION_PAIR_LEN
+                    ):
                         continue
                     if abs(len(t) - len(q)) <= 12 and (q in t or t in q):
                         strong.add(t)

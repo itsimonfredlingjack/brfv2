@@ -139,6 +139,11 @@ RefusalReason = Literal[
 
 class AskRequest(BaseModel):
     question: str
+    # Opt in to the planned cross-document path (BRF-1, app/multihop.py).
+    # Default False = the single-search path, byte-for-byte as before. The
+    # field alone is not enough: the server must also have BRF_PLANNED_ASK
+    # set, so a client cannot switch on an unreleased path by itself.
+    planned: bool = False
 
 
 class AskResponse(BaseModel):
@@ -151,6 +156,11 @@ class AskResponse(BaseModel):
     retrieval: list[RetrievalHit] = Field(default_factory=list)
     provider: str = ""
     model: str = ""
+    # BORTTAGET 2026-08-13: `clarification`, som bar planerarens motfråga.
+    # Läget `clarify` finns inte längre (se app/query_plan.py), så fältet hade
+    # varit null på varje svar produkten kan ge — ett löfte i wire-kontraktet
+    # om något systemet aldrig gör. Ingen konsument läste det: varken
+    # brfv2-mockup eller mobilklienten nämner `clarification`.
 
 
 class Settings(BaseModel):

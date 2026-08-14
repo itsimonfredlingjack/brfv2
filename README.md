@@ -183,12 +183,12 @@ cd xs_mobilapp && npm install
 make mobile-test
 ```
 
-Senast sammanhållna verifiering, på Fedora 44 från ren checkout efter enbart
-`make setup`: backend **530 passed, 6 skipped**, isolerings/auth/livscykel
-**48 passed**, kanonisk frontend **14 passed**, Playwright **11 passed**, lint
-och produktionsbygge gröna. Alla skip är miljöberoende och avsiktliga; de
-räknas upp i [MVP-statusen](docs/MVP-STATUS.md) tillsammans med exakta
-körningar och bevisgränser.
+Senast mätta lokala verifiering (2026-08-13, Fedora 44): backend **1341 passed,
+3 skipped**, isolerings/auth/livscykel **49 passed**, kanonisk frontend **258
+passed**. Playwright, lint och produktionsbygge var gröna vid sin senaste
+körning men är inte omkörda det datumet. Alla skip är miljöberoende och
+avsiktliga; de räknas upp i [MVP-statusen](docs/MVP-STATUS.md) tillsammans med
+exakta körningar och bevisgränser.
 
 ## Pilot med Gemma 4 12B
 

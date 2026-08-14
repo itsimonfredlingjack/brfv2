@@ -24,9 +24,20 @@ med två verifierade citat samtidigt som q11 fortsätter att vägras säkert.
   juli 2026 låg katalogen i ett separat, gitignorerat repo; den historiken
   finns kvar på `migration/brfv2-mockup/*`-grenarna.
 - FastAPI-backend, driftverktyg och evidens ligger i huvudrepot.
-- Global sök, dokumentbunden chatt, kvalitetskontroll, bevakningar och
-  inställningsflöden ligger utanför MVP. I pilotvyn är de dolda, spärrade eller
-  uttryckligen märkta som otillgängliga; de visar inte fiktiva backendresultat.
+- Global sök, dokumentbunden chatt, kvalitetskontroll och inställningsflöden
+  ligger utanför MVP. I pilotvyn är de dolda, spärrade eller uttryckligen
+  märkta som otillgängliga; de visar inte fiktiva backendresultat.
+- **Bevakningar låg utanför MVP fram till 2026-08-01 och gör det inte längre.**
+  Fliken är en verklig funktion med verkliga backenddata — se
+  [Källstyrda bevakningar](#källstyrda-bevakningar-2026-08-01) för vad motorn
+  gör och punkt 9–10 under bevisgränserna för vad den inte gör. Den här raden
+  finns för att listan ovan påstod motsatsen på ett annat ställe i samma
+  dokument.
+- **Planerad tvärdokumentsfan-out (BRF-1) skeppas inte i MVP.** Koden finns,
+  dubbelgrindad och onåbar: `BRF_PLANNED_ASK` sätts ingenstans i drift, och
+  klienten skickar aldrig `planned`. Frågor besvaras av en sökning, som förut.
+  Skälen och de fyra villkoren för att slå på den står i
+  [beslutet om fan-out](evidence/fan-out-mvp-beslut.md).
 
 ## Skrivbordsleverans (XS-47, 2026-07-28)
 
@@ -74,38 +85,37 @@ Följande är täckt och grönt:
 - pilotvyn exponerar inga fiktiva sökresultat eller framtida
   administrationsåtgärder.
 
-Senast körda sammanhållna lokala resultat, från ren checkout på Fedora 44
-efter enbart `make setup`:
+Senast körda lokala resultat på Fedora 44, mätta **2026-08-13** på en maskin
+med seedad datarot, tesseract och byggd mobil-dist:
 
-| Kontroll | Resultat |
-|---|---:|
-| Backend `pytest -q` | 530 passed, 6 skipped |
-| Auth/isolation/livscykel | 48 passed |
-| Kanonisk frontend Vitest | 14 passed |
-| Kanonisk frontend lint | exit 0 |
-| Kanonisk frontend produktionsbygge | exit 0 |
-| Playwright acceptance | 11 passed |
+| Kontroll | Resultat | Kört |
+|---|---:|---|
+| Backend `pytest -q` | **1341 passed, 3 skipped** (272 s) | 2026-08-13 |
+| Auth/isolation/livscykel (`make test-isolation`) | **49 passed** | 2026-08-13 |
+| Kanonisk frontend Vitest | **258 passed** (12 filer) | 2026-08-13 |
+| Kanonisk frontend lint | exit 0 | tidigare körning |
+| Kanonisk frontend produktionsbygge | exit 0 | tidigare körning |
+| Playwright acceptance | 11 passed | tidigare körning |
+
+De tre nedersta raderna är **inte** omkörda 2026-08-13. De står kvar som senast
+kända resultat och är märkta som sådana; siffran ovanför dem är mätt idag.
 
 Skippen är alla avsiktliga och miljöberoende, inga fel:
 
 | Skip | Villkor |
 |---|---|
 | `test_llm.py` (1) | kör bara med `RUN_LLM_TESTS=1` — anropar en verklig LLM |
-| `test_ocr_ingestion.py`, `test_ocr_spike.py` (3) | kräver tesseract med svenskt språkpaket |
 | `test_rerank.py` (1) | kräver den valfria `rerank`-extran och nedladdade vikter |
-| `test_corpus_tripwire.py` (1) | kräver seedad data; kör efter `make demo-reset` |
+| `test_mobile_static.py` (1) | **omvänt villkor** — fallet gäller en *obyggd* utcheckning och hoppas över just för att `xs_mobilapp/dist` finns |
 
-Efter `make demo-reset` finns dataroten och tripwiren kör, vilket ger
-**531 passed, 5 skipped**.
+OCR-testerna och korpustripwiren kör på den här maskinen (tesseract med svenskt
+språkpaket är installerat och dataroten är seedad). På en ren utcheckning utan
+dem hoppas de över i stället; det är miljö, inte fel. Installera OCR på Fedora
+med `sudo dnf install tesseract tesseract-langpack-swe`.
 
-OCR behövs bara för skannade PDF:er och ingår inte i pilotslingan. Installera
-det på Fedora med `sudo dnf install tesseract tesseract-langpack-swe` om du
-vill köra de testerna.
-
-Tidigare status angav 532 passed, 1 skipped. Den siffran mättes på den gamla
-macOS-maskinen, där tesseract och reranker-vikterna råkade finnas installerade.
-Antalet testfall är oförändrat; skillnaden är vilka valfria beroenden som fanns
-på maskinen.
+Äldre siffror i det här dokumentet (530/6, 531/5, 532/1) mättes på en betydligt
+mindre svit och delvis på den gamla macOS-maskinen. De är ersatta, inte
+avstämda mot — antalet testfall har vuxit sedan dess.
 
 Deterministisk acceptans bevisar lokal reproducerbarhet. Den bevisar inte i
 sig att en extern modellserver är nåbar eller att en viss modell klarar den

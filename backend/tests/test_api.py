@@ -366,3 +366,61 @@ class TestDevReset:
     def test_reset_requires_authentication_in_dev(self, env):
         # Red-team finding: reset must never be anonymous, even in dev.
         assert env.client.post("/api/reset").status_code == 401
+
+
+class TestPlannedAskFlag:
+    """BRF-1 endpoint wiring: the planned path is reachable only behind BOTH
+    the server flag and the per-request opt-in, and the default is untouched."""
+
+    def _plan_provider(self, monkeypatch, script):
+        from app.llm import FakeLLM
+
+        stub = FakeLLM(script)
+        monkeypatch.setattr("app.llm.pick_provider", lambda: stub)
+        monkeypatch.setattr("app.answer.pick_provider", lambda: stub)
+        monkeypatch.setattr("app.multihop.pick_provider", lambda: stub)
+        return stub
+
+    def test_default_request_never_reaches_the_planner(self, env, monkeypatch):
+        monkeypatch.setenv("BRF_PLANNED_ASK", "1")
+        stub = self._plan_provider(monkeypatch, [])
+        env.client.post(
+            "/api/brf/brf-a/ask", json={"question": "Vad står i stadgarna?"}, headers=env.admin_a_headers
+        )
+        assert all("planerar dokumentsökningar" not in c["system"] for c in stub.calls)
+
+    def test_opt_in_without_the_server_flag_is_ignored(self, env, monkeypatch):
+        monkeypatch.delenv("BRF_PLANNED_ASK", raising=False)
+        stub = self._plan_provider(monkeypatch, [])
+        r = env.client.post(
+            "/api/brf/brf-a/ask",
+            json={"question": "Vad står i stadgarna?", "planned": True},
+            headers=env.admin_a_headers,
+        )
+        assert r.status_code == 200
+        assert all("planerar dokumentsökningar" not in c["system"] for c in stub.calls)
+
+    def test_an_off_contract_clarify_never_blocks_the_question(self, env, monkeypatch):
+        """`clarify` left the contract (2026-08-13). A model that emits it
+        anyway must fall back to searching — it must never be able to silence
+        an answerable question by returning a mode we no longer offer."""
+        monkeypatch.setenv("BRF_PLANNED_ASK", "1")
+        stub = self._plan_provider(monkeypatch, [
+            {"mode": "clarify", "subqueries": [], "clarification": "Vilket avtal menar du?"},
+            {"answer": "Vet ej.", "citations": [], "insufficient_data": True},
+        ])
+        body = env.client.post(
+            "/api/brf/brf-a/ask",
+            json={"question": "När går avtalet ut?", "planned": True},
+            headers=env.admin_a_headers,
+        ).json()
+        # The counter-question must not reach the board in any shape.
+        assert "clarification" not in body, "wire-kontraktet bär inte längre en motfråga"
+        assert "Vilket avtal menar du" not in body["answer"]
+        # And the question must actually have reached RETRIEVAL. This corpus
+        # holds nothing about the question, so the honest outcome is the
+        # ordinary `low_relevance` refusal — which is exactly the proof:
+        # `clarify` short-circuited before any search and refused with
+        # `insufficient_data`. The reason code is what tells the two apart.
+        assert body["refusal_reason"] == "low_relevance", body
+        assert "planerar dokumentsökningar" in stub.calls[0]["system"]

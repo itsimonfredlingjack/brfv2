@@ -11,6 +11,7 @@ from collections.abc import Iterable
 import logging
 
 from .citations import Rejected, Resolved, resolve_citation
+from .evidence import EvidencePack
 from .llm import LLMError, LLMFormatError, LLMProvider, parse_llm_json, pick_provider
 from .linked_context import append_linked_table_legends
 from .numeric_grounding import NumericGroundingResult, check_numeric_grounding, describe_mismatch
@@ -101,8 +102,18 @@ def ask(
     provider: LLMProvider | None = None,
     *,
     trusted_names: Iterable[str] = (),
+    evidence: "EvidencePack | None" = None,
 ) -> AskResponse:
-    """`trusted_names` (optional, keyword-only): server-trusted entity names
+    """`evidence` (optional, keyword-only): a pre-gathered EvidencePack from
+    the planned multi-search path (app/multihop.py, BRF-1). When supplied,
+    the excerpts in the pack REPLACE this function's own single retrieval —
+    everything after retrieval (prompt assembly, the citation-alias contract,
+    `citations.resolve_citation`, the requireSources gate and the numeric
+    grounding gate with its one repair attempt) runs completely unchanged.
+    That is the point: multi-document answers must not get a second, weaker
+    verification path. When None, behaviour is exactly as before.
+
+    `trusted_names` (optional, keyword-only): server-trusted entity names
     (e.g. the tenant's own registered name from auth.get_tenant()) whose
     numeric-identifier digits (SPEC §2.10 follow-up) are exempt from the
     numeric grounding gate — see app/numeric_grounding.py. Every existing
@@ -140,9 +151,78 @@ def ask(
         # hybrid retrieval alone buries past the prompt's top_k. Answering
         # anyway with unreranked hits would look like it worked while
         # quietly reverting to the exact failure mode this fix addresses.
+        #
+        # BEFORE the evidence branch, deliberately. It used to sit after it,
+        # so the planned path answered where the single path refused — a
+        # second, quieter route past a gate whose entire purpose is to be
+        # loud. A refusal that one code path can walk around is not a gate.
         raise LLMError(
             "Omrankning är aktiverad men omrankningsmodellen är inte tillgänglig "
             "(kör 'uv sync --extra rerank' i backend, eller inaktivera omrankning i inställningarna)."
+        )
+
+    if evidence is not None:
+        # The planned path already retrieved (and deduplicated, and context-
+        # expanded) under the same tenant snapshot. Skip straight to synthesis.
+        hits = list(evidence.hits)
+        if not hits:
+            return _refusal(
+                "low_relevance",
+                "Det står inte i något av era dokument.",
+                retrieval=[],
+                provider=provider.name,
+                model=model,
+            )
+        # The minRelevance gate applies here too, on the same signal and with
+        # the same semantics as below: the best ABSOLUTE retrieval confidence
+        # among the excerpts that reached the prompt. This used to be hardcoded
+        # `low_relevance=False`, which meant the planned path could neither
+        # refuse on a thin corpus nor warn about one — the fan-out's own
+        # excerpts were treated as relevant by construction.
+        #
+        # Context-expansion chunks carry confidence 0.0 by design (they earned
+        # no retrieval score, see evidence.expand_context), and `max` is what
+        # keeps them from dragging the gate down: the question is whether
+        # RETRIEVAL found anything close, not what padding was added around it.
+        top_confidence = max((h.confidence for h in hits), default=0.0)
+        low_relevance = top_confidence < s.minRelevance
+        if low_relevance and s.insufficientDataBehavior == "refuse":
+            return _refusal(
+                "low_relevance",
+                "Det står inte i något av era dokument.",
+                retrieval=hits,
+                provider=provider.name,
+                model=model,
+            )
+        # DECISION (XS-64 gate parity): the legend linker runs here too.
+        #
+        # It is not retrieval widening, it is interpretability. A coded leaf
+        # row ("B12.3.4 … B") is unreadable without the legend that defines
+        # what B means, and neither the citation resolver nor the numeric gate
+        # catches the resulting error: the model's quote is verbatim and the
+        # false claim is a WORD (who is responsible), not a number. The
+        # fan-out can retrieve such a row exactly as a single search can, so
+        # withholding the legend here gives the planned path a strictly worse
+        # prompt over the same document.
+        #
+        # It is additional to MAX_EVIDENCE_CHUNKS, not inside it — the same
+        # way it is additional to topK on the path below. A dependency of a
+        # retrieved row is not a competitor for the excerpt budget. This
+        # leaves `evidence.hits` itself untouched, so the pack's own ceiling
+        # stays a statement about what the fan-out gathered.
+        hits = append_linked_table_legends(hits, chunks, documents)
+        return _synthesize(
+            store=store,
+            question=question,
+            hits=hits,
+            chunks=chunks,
+            pages=pages,
+            documents=documents,
+            provider=provider,
+            generation_model=generation_model,
+            model=model,
+            trusted_names=trusted_names,
+            low_relevance=low_relevance,
         )
 
     # Retrieve WIDE when reranking so the cross-encoder has a real pool to
@@ -192,6 +272,43 @@ def ask(
     # remain exactly those of the original retrieval survivors.
     hits = append_linked_table_legends(hits, chunks, documents)
 
+    return _synthesize(
+        store=store,
+        question=question,
+        hits=hits,
+        chunks=chunks,
+        pages=pages,
+        documents=documents,
+        provider=provider,
+        generation_model=generation_model,
+        model=model,
+        trusted_names=trusted_names,
+        low_relevance=low_relevance,
+    )
+
+
+def _synthesize(
+    *,
+    store: Store,
+    question: str,
+    hits: list[RetrievalHit],
+    chunks: dict,
+    pages: dict,
+    documents: dict,
+    provider: LLMProvider,
+    generation_model: str,
+    model: str,
+    trusted_names: tuple[str, ...],
+    low_relevance: bool,
+) -> AskResponse:
+    """Generate → verify citations → gate → numeric-ground, over a fixed set
+    of excerpts.
+
+    Extracted verbatim from `ask` so the planned multi-search path (BRF-1)
+    reaches the SAME verification, rather than growing a parallel one. It
+    takes the excerpts as given and makes no retrieval decisions of its own.
+    """
+    s = store.settings
     system = (s.systemPrompt.strip() + "\n\n" if s.systemPrompt.strip() else "") + GROUNDING_CONTRACT
     excerpts, alias_map = _render_excerpts(hits)
     user = f"FRÅGA: {question}\n\nUTDRAG:\n{excerpts}"

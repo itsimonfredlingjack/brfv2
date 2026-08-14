@@ -39,6 +39,7 @@ backend/.env
 
 # Evidence artifacts are committed selectively; eval scratch is not
 backend/eval/last_run.json
+backend/eval/last_planner_run.json
 backend/eval/network_audit.json
 
 # Editor directories and files

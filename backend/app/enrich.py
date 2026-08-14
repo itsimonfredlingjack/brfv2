@@ -93,20 +93,74 @@ def enrichment_enabled() -> bool:
     return os.environ.get("BRF_ENRICH", "1") != "0"
 
 
-def build_search_text(chunk_text: str, *, year: str | None, section_heading: str | None) -> str:
-    prefix = " ".join(p for p in (year, section_heading) if p)
+def build_search_text(
+    chunk_text: str,
+    *,
+    document_name: str | None = None,
+    year: str | None = None,
+    section_heading: str | None = None,
+) -> str:
+    """Index-only representation: whose document, from when, under which
+    heading — then the frozen text.
+
+    `document_name` is first because it answers the question the other two
+    cannot: WHICH handling this is. A styrelse's archive holds several
+    contracts of the same kind, and the passage that distinguishes them
+    usually does not repeat the counterparty or the type — it says "Parterna"
+    and "avtalet". Measured on a real archive before this: the top hit came
+    from the WRONG document in 7 of 8 questions, with the right passage
+    present further down. That is a ranking failure between near-duplicates,
+    and no amount of lexical tuning fixes it, because the distinguishing
+    signal is not in the passage at all.
+
+    Prepending it is the cheapest known remedy (DAPR, arXiv:2305.13915:
+    document-aware retrieval lifts nDCG@10 by up to 38 points on exactly the
+    queries whose context sits in the document rather than the passage).
+
+    The name is never shown to the model and never citable: `Chunk.text`
+    stays frozen and verification reads `PageData.words`. See
+    `tests/test_enrich_invariant.py`.
+    """
+    prefix = " ".join(p for p in (document_name, year, section_heading) if p)
     return f"{prefix}\n{chunk_text}" if prefix else chunk_text
 
 
 def chunk_search_texts(
-    chunks: list[Chunk], pages_by_doc: dict[str, list[PageData]]
+    chunks: list[Chunk],
+    pages_by_doc: dict[str, list[PageData]],
+    doc_names: dict[str, str] | None = None,
 ) -> dict[str, str]:
-    """Per-chunk enriched search string: document year + carried-forward section
-    heading, prepended to the frozen chunk text. Degrades to the frozen text."""
+    """Per-chunk enriched search string: document name + year + carried-forward
+    section heading, prepended to the frozen chunk text. Degrades to the frozen
+    text."""
     years = {d: document_year(p) for d, p in pages_by_doc.items()}
     headings = {d: document_headings(p) for d, p in pages_by_doc.items()}
+    names = doc_names or {}
     out: dict[str, str] = {}
     for c in chunks:
         heading = heading_for(headings.get(c.document_id, []), c.page, c.word_start)
-        out[c.id] = build_search_text(c.text, year=years.get(c.document_id), section_heading=heading)
+        out[c.id] = build_search_text(
+            c.text,
+            document_name=_searchable_name(names.get(c.document_id)),
+            year=years.get(c.document_id),
+            section_heading=heading,
+        )
     return out
+
+
+def _searchable_name(name: str | None) -> str | None:
+    """The document's name as search terms, not as a filename.
+
+    Strips the extension and turns separators into spaces, so
+    `Avtal_Teknisk-forvaltning_2022.pdf` contributes the words a board would
+    actually type. Left otherwise untouched: a scanned archive is full of
+    names like `T2SECUREPRINT2_Output_22D15670`, and those carry no signal
+    either way — the cost of indexing them is a few junk tokens, while
+    guessing which names are "meaningful" would be a rule with no evidence
+    behind it.
+    """
+    if not name:
+        return None
+    stem = name.rsplit(".", 1)[0] if "." in name else name
+    cleaned = " ".join(stem.replace("_", " ").replace("-", " ").split())
+    return cleaned or None
