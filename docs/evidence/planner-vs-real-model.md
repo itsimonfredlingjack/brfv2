@@ -643,3 +643,62 @@ det är fortfarande v01:s felmod.
 Kandidatfiltret från tillägg 4 (confidence-golv vid enkelsökningens toppträff)
 är därmed **avfärdat, inte uppskjutet**: det skulle ta bort 22 av 27 utdrag som
 bevisligen inte gör någon skada.
+
+---
+
+## Tillägg 2026-08-14 (6): läsbarheten är inte längre den bindande gränsen
+
+Mätningen 2026-08-12 (`d32e606`) räknade textlager i en verklig förenings arkiv,
+fann att sju av nio handlingar saknade ett, och drog slutsatsen att **läsbarheten,
+inte sökstrategin, var den bindande begränsningen**. Den slutsatsen gäller inte
+längre: OCR-vägen kopplades in efter den mätningen (`app/store.py` →
+`app/ocr.py`, tesseract med svenskt språkstöd), och ingen har mätt vad den ger.
+
+`backend/scripts/eval_real_corpus.py` (ny) kör produktionens **egen**
+ingestionsväg över arkivet — samma dokumentnivådispatch, samma OCR — och
+rapporterar enbart siffror. Arkivets sökväg är ett argument, aldrig inbakad.
+
+### Läsbarhet efter OCR — nio verkliga handlingar
+
+| | sidor | ord/sida | ordlika tokens | tid |
+|---|---:|---:|---:|---:|
+| Två med textlager (digitala) | 13, 36 | 166, 104 | **75 %, 75 %** | 0 s |
+| Sju utan textlager (OCR:ade) | 3–30 | **118–437** | **82–95 %** | 5–36 s |
+
+**Alla sju OCR:ades utan fel**, på 99 sekunder tillsammans. Andelen ordlika
+tokens är genomgående **högre** i de OCR:ade handlingarna än i de två digitala —
+inte för att OCR är bättre, utan för att ett textlager också innehåller
+tabellceller, sidhuvuden och tal. Det gör 75 % till den rimliga baslinjen för
+"läsbar", och de sju ligger över den.
+
+Villkor C är alltså inte längre blockerat av läsbarhet.
+
+### Screening av glappet — och varför den inte är villkor C
+
+Arkivet innehåller en forskningssammanställning med **14 källbelagda par**
+*styrelsens ord → dokumentets ord*. Kört mot den OCR:ade korpusen visar **2 av
+14** r01:s mönster: styrelsens ord under `minRelevance`, dokumentets över.
+
+Den siffran ska inte läsas som "glappet finns knappt". Screeningen
+**underdetekterar systematiskt**, och gör det på precis den mekanism r01 handlar
+om: r01:s skada var att en distraktor matchade frågans ord *perfekt* utan att
+besvara den. Ett confidence-mått kan inte skilja en sådan träff från en riktig,
+så varje par där styrelsens ord landar högt men i fel handling räknas som "inget
+glapp". Tio av de fjorton paren landade i olika handlingar för de två
+ordförråden — hur många av dem som är den felmoden vet vi inte.
+
+### Vad villkor C nu kräver
+
+Inte mer teknik. Ett verkligt fall kräver ett **utpekat svarsstycke**, alltså att
+någon läser handlingarna och markerar var svaret står. Det är den enda återstående
+insatsen, och den går inte att ersätta med en numerisk gallring — det är just vad
+det här tillägget försökte och misslyckades med.
+
+Två saker gör det arbetet mindre än det låter: läsbarheten är löst, och
+kandidatlistan är 14 par med källor, inte ett blankt papper. Två av dem (nr 11 och
+13) är dessutom redan utpekade som troliga.
+
+Villkorets skärpning står kvar oförändrad: minst ett fall där handlingens
+**filnamn inte** innehåller det överbryggande ordet. Efter fynd 3 i tillägg 3 är
+det den delen som avgör, eftersom r01:s utfall vände tre gånger på promptdetaljer
+och alltså inte bär villkoret ensamt.
