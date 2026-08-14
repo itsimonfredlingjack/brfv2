@@ -915,3 +915,46 @@ BM25-sidan**, inte omrankning. Det är den starkast belagda svenska lexikala
 inte signifikant) och det är förutsättningen för att namnet i indexet ska göra
 någon nytta. En sak att kontrollera innan: OFFO:s svenska avstavningsfil har en
 licens som kan hindra att den paketeras i RPM:en.
+
+### Rättelse till tillägg 9, samma dag
+
+Meningen *"BM25 här har ingen sammansättningsdelning och ingen stamning"* är fel
+till hälften. **Sammansättningshantering finns**, i `HybridIndex._expand_query`,
+och dess docstring säger uttryckligen att den är byggd för svenskans
+sammansättningar. Den delar inte orden — den matchar delsträngar mot korpusens
+egen vokabulär, vilket ger samma effekt utan lexikon:
+
+| styrelsens ord | expanderas till |
+|---|---|
+| `parkeringsavtalet` | avtal · avtalet · parkering |
+| `underhållsplanen` | underhåll · underhållsplan · planen |
+| `uppsägningstiden` | uppsägning · uppsägningstid |
+| `sophämtningsavtalet` | avtalet · hämtning |
+| `sophämtning` | hämtning |
+
+Slutsatsen i tillägg 9 om *varför* namnet inte biter står alltså inte. Namnet
+biter inte för att signalen **väger för lätt mot frågans övriga innehållsord**,
+inte för att sammansättningen är osynlig. `parkering` finns i den expanderade
+frågan; den räcker bara inte för att slå `uppsägning`.
+
+Två verkliga svagheter syns däremot i tabellen, och de är smalare än det jag
+felaktigt påstod:
+
+- **Korta morfem faller bort.** `sop` är tre tecken och når inte
+  femteckensgränsen, så `sophämtning` och `sophantering` möts aldrig via
+  delsträng — de möts bara via embeddingdelen. Det är precis r01:s glapp.
+- **Delsträng är inte morfologi.** `underhållsplanen` expanderar också till
+  `under` och `erhålls`, som inte har med saken att göra. Det är
+  precisionskostnaden researchunderlaget varnar för vid delning, och den
+  betalas redan.
+
+Nästa steg är därför inte "inför sammansättningsdelning" utan den smalare frågan:
+**slår en morfemmedveten delning den delsträngsmatchning som redan finns?** Det
+är en mätning mot en befintlig baslinje, inte en ny funktion — och den kan köras
+på de elva verkliga fallen plus golden utan nya beroenden, genom att jämföra
+`_expand_query` mot en variant med lägre teckengräns och fogemorfemregler.
+
+Att jag skrev fel om detta är samma felmod som CLAUDE.md varnar för: påståenden
+om koden i prosa åldras, och ett felaktigt påstående är värre än inget. Den här
+rättelsen står kvar i stället för att tillägg 9 skrivs om, så att felet och dess
+korrigering är läsbara tillsammans.
