@@ -588,3 +588,58 @@ Den är **inte implementerad.** Skälet är samma som fällde steg 3: dess nytta
 kan inte mätas med harnesset som finns, eftersom nyttan är svarskvalitet och
 syntesen är kanonsvarad. Att bygga den nu vore att skeppa en åtgärd vars effekt
 ingen kan se — vilket är exakt det fel som just har rättats en gång.
+
+---
+
+## Tillägg 2026-08-14 (5): den utbytta bevispåsen ändrade ingenting i svaret
+
+Tillägg 4 visade att en överutlösande `multi` byter ut prompten — 27 utdrag in,
+18 ut — och drog slutsatsen att skadan låg där mätinstrumentet inte tittade.
+**Den slutsatsen höll inte. Skadan är mätt nu, och den finns inte på den här
+populationen.**
+
+`backend/scripts/eval_fanout_answer.py` (ny) kör **riktig syntes två gånger per
+fall** på samma fråga och samma korpus, och skiljer bara på vilken bevispåse
+modellen ser: enkelsökningens topK mot fan-outens påse. Måttet är produktens
+eget ur `scripts/eval.py` — citerades rätt handling, pekar markeringen på rätt
+sida och ruta — så ingen ny poängskala uppfanns för experimentet.
+
+| | baslinje (enkel) | fan-out |
+|---|---:|---:|
+| Rätt handling citerad | **12 av 12** | **12 av 12** |
+| Rätt markering | **12 av 12** | **12 av 12** |
+| Vägran | 0 | 0 |
+| Avvisade citat | 0 | 0 |
+| **Svar som skilde sig** | | **0 av 12** |
+
+Svaren är **ordagrant identiska på alla tolv fallen**. Inte "lika enligt måttet"
+— samma text, tecken för tecken.
+
+**Icke-vakuositeten är observerad, inte antagen.** Harnesset jämför de två
+syntesprompterna och avbryter om de är identiska; det gjorde de aldrig.
+Utdragsantalet skilde sig på sex av fallen (6→5, 6→7, 6→8, 6→9 ×2, 6→7) och på
+de övriga sex var antalet lika men innehållet ett annat. Alla 24 syntesanrop
+gick till den riktiga modellen.
+
+### Vad det gör med villkor B
+
+Villkor B går nu att svara på, och svaret är entydigt: **de extra sökningarna
+köper ingenting, och de kostar ingenting i svarskvalitet.** Överutlösning är en
+kostnad i sökningar, ett modellanrop och latens — inte en risk för svaret.
+
+Det retirerar tillägg 4:s oro utan att retirera dess mätning: undanträngning
+*är* mekanismen bakom en recallförlust, och v01 visade den falla ut åt fel håll
+en gång. Men på frågor enkelsökningen redan besvarar överlever det svarsbärande
+utdraget undanträngningen och dominerar prompten, och de tillagda utdragen
+ignoreras.
+
+### Vad mätningen inte säger
+
+Tolv fall, en modell, den rekonstruerade korpusen, och bara den population där
+enkelsökningen redan får 1.00. Den säger ingenting om ett fall där fan-outen
+tränger undan det enda utdrag som bar svaret — det är fortfarande möjligt, och
+det är fortfarande v01:s felmod.
+
+Kandidatfiltret från tillägg 4 (confidence-golv vid enkelsökningens toppträff)
+är därmed **avfärdat, inte uppskjutet**: det skulle ta bort 22 av 27 utdrag som
+bevisligen inte gör någon skada.
