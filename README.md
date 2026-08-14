@@ -62,27 +62,27 @@ gjorde att en ren klon inte gick att köra. Den historiken finns kvar på
 
 ## Grenar — läs det här om en fil verkar saknas
 
-Produktlinjerna har inte alltid slagits ihop i takt med att de utvecklats, så
-**vilken gren utcheckningen står på avgör vilka funktioner som finns.** Det är
-nästan alltid förklaringen när en katalog som dokumentationen beskriver inte
-går att hitta.
+Produktlinjerna gick isär under juli 2026 och är sedan dess sammanförda.
+**`main` är linjen — allt arbete sker där.**
 
 | Gren | Roll |
 | -- | -- |
-| `feat/produktbas` | **Här pågår arbetet.** Ligger före `main` med fakturaärendena som ärenden, samtidighets- och tillståndsreparationen, och acceptansresorna genom den riktiga desktopappen. |
-| `main` | Produktbas: backend, kanonisk frontend, mobil-PWA, Android-app, Tauri-skal, Fortnox, Microsoft Graph, Bevakningar, Uppgifter. |
+| `main` | **Här pågår arbetet.** Backend, kanonisk frontend, mobil-PWA, Android-app, Tauri-skal, Fortnox, Microsoft Graph, Bevakningar, Uppgifter, fakturaärendena, samtidighets- och tillståndsreparationen, och tvärdokumentsbevisen (BRF-1). |
+| `feat/produktbas` | **Historisk.** Ligger helt inne i `main` sedan sammanslagningen; noll unika commits. Checka inte ut den för nytt arbete. |
 | `bp6/fedora-pilot-closeout` (taggen `v0.2.0-fedora-pilot`) | Frusen pilotevidens. Ingen fortsatt utveckling sker på den linjen. |
 
-Konkret: `backend/app/invoices/`, `backend/app/history.py`,
-`backend/tests/test_concurrency_integrity.py` och
-`backend/scripts/intake_acceptance.py` finns **bara** på `feat/produktbas`. En
-utcheckning utan dem står på `main` — det är inte en trasig klon.
+Fram till augusti 2026 stod här att `backend/app/invoices/`,
+`backend/app/history.py`, `backend/tests/test_concurrency_integrity.py` och
+`backend/scripts/intake_acceptance.py` fanns **bara** på `feat/produktbas`. Det
+gäller inte längre — alla fyra ligger på `main`. Raden fick stå kvar efter
+sammanslagningen och skickade läsare till en gren som inte längre var före.
 
-Grenen hette `feat/kalla-mobile-pwa` fram till 2026-08-03. Namnet var sant den
-vecka mobilklienten byggdes på den och missvisande därefter, eftersom den sedan
-bar fakturor, samtidighet och desktopacceptans. Hela resonemanget om varför
-linjerna divergerade och hur de fördes ihop:
-[docs/POST-BP6-PRODUKTBAS.md](docs/POST-BP6-PRODUKTBAS.md).
+`feat/produktbas` hette `feat/kalla-mobile-pwa` fram till 2026-08-03. Namnet var
+sant den vecka mobilklienten byggdes på den och missvisande därefter, eftersom
+den sedan bar fakturor, samtidighet och desktopacceptans. Hela resonemanget om
+varför linjerna divergerade och hur de fördes ihop:
+[docs/POST-BP6-PRODUKTBAS.md](docs/POST-BP6-PRODUKTBAS.md), vars tabell är en
+ögonblicksbild från BP6 och inte dagens läge.
 
 ## Uppsättning
 
