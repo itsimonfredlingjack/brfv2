@@ -37,6 +37,19 @@ sidans stycken räknas som alternativ till varandra, samma konvention som
     uv run python -m scripts.eval_real_corpus --archive /sökväg/till/arkivet --volym
     uv run python -m scripts.eval_real_corpus --archive /sökväg --glapp par.md
     uv run python -m scripts.eval_real_corpus --archive /sökväg --fall fall.json
+
+**4. Den mätning grinden hänger på.** `--planerare` kör samma fall men låter en
+RIKTIG modell skriva delfrågorna i stället för att läsa dem ur fallfilen.
+
+Villkoren A och B mättes med planerarens egna delfrågor på den rekonstruerade
+korpusen; villkor C med handskrivna delfrågor på det verkliga arkivet. Ingen
+mätning hade satt ihop halvorna. Väljer planeraren inte `multi` på de fall där
+vinsten finns levererar fan-out noll i produktion, och då är villkor C uppfyllt
+medan funktionen ändå är värdelös. Se docs/evidence/brf1-vad-som-fattas.md.
+
+    BRF_LLM_BASE_URL=http://127.0.0.1:8000/v1 BRF_LLM=selfhosted \
+        uv run python -m scripts.eval_real_corpus --archive /sökväg \
+            --fall fall.json --planerare
 """
 
 from __future__ import annotations
@@ -203,12 +216,69 @@ def cases(archive: Path, cases_json: Path) -> None:
               f"Enkelsökningens toppträff låg i fel handling i **{wrong_top} av {len(spec)}** fall.")
 
 
+def planner(archive: Path, cases_json: Path) -> None:
+    import json
+
+    from app.llm import pick_provider
+    from app.multihop import ask_planned
+    from scripts.eval_planner import PlannerOnlyProvider, install_search_counter, _local
+
+    provider = pick_provider()
+    if provider.name in ("fake", "none"):
+        print(f"Ingen riktig modell (provider={provider.name}).", file=sys.stderr)
+        return
+    install_search_counter()
+
+    spec = json.loads(cases_json.read_text("utf-8"))["cases"]
+    with tempfile.TemporaryDirectory() as tmp:
+        store, letters = build(archive, Path(tmp))
+        ids = {v: k for k, v in letters.items()}
+
+        print(f"\n### Planeraren mot det verkliga arkivet — {len(spec)} fall\n")
+        print(f"Modell: `{getattr(provider, 'model', '') or provider.name}`. "
+              f"Endast planeringen körs mot modellen; syntesen är kanonsvarad.\n")
+        print("| fall | läge | sökningar | nådde svaret | delfrågor |")
+        print("|---|---|---:|---:|---|")
+        reached = multi = 0
+        for case in spec:
+            required = {
+                cid for cid, c in store.chunks.items()
+                if any(c.document_id == ids[d] and c.page == p for d, p in case["truth"])
+            }
+            if not required:
+                raise SystemExit(f"{case['id']}: facit {case['truth']} matchar ingen chunk")
+
+            p_ = PlannerOnlyProvider(provider)
+            _local.searches = 0
+            try:
+                result = ask_planned(store, case["question"], p_)
+            finally:
+                searches = getattr(_local, "searches", 0)
+                _local.searches = None
+            # Icke-vakuositet: exakt ett planeraranrop, annars mäter raden
+            # något annat än planerarens val.
+            if p_.planner_calls != 1:
+                raise SystemExit(f"{case['id']}: {p_.planner_calls} planeraranrop")
+
+            hit = bool(required & {h.chunk_id for h in result.pack.hits})
+            reached += hit
+            multi += result.plan.mode == "multi"
+            subs = " · ".join(result.plan.subqueries) if result.plan.mode == "multi" else "—"
+            print(f"| {case['id']} | {result.plan.mode}"
+                  f"{' (degraderad)' if result.plan.degraded else ''} | {searches} | "
+                  f"{hit:.2f} | {subs[:70]} |")
+        print(f"\n**{multi} av {len(spec)}** planerades som `multi`; "
+              f"planeraren nådde svarsstycket i **{reached} av {len(spec)}** fall.")
+
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="Karakterisera ett verkligt arkiv (villkor C).")
     ap.add_argument("--archive", required=True, type=Path, help="katalog med PDF:er; committas aldrig")
     ap.add_argument("--volym", action="store_true", help="läsbarhet efter ingestion/OCR")
     ap.add_argument("--glapp", type=Path, metavar="PAR.md", help="markdown-tabell med ordpar")
     ap.add_argument("--fall", type=Path, metavar="FALL.json", help="verkliga fall; committas aldrig")
+    ap.add_argument("--planerare", action="store_true",
+                    help="låt en riktig modell skriva delfrågorna i stället för fallfilens")
     args = ap.parse_args()
     if not args.archive.is_dir():
         print(f"saknar katalogen {args.archive}", file=sys.stderr)
@@ -219,8 +289,12 @@ def main() -> int:
         volume(args.archive)
     if args.glapp:
         gap(args.archive, args.glapp)
-    if args.fall:
+    if args.fall and not args.planerare:
         cases(args.archive, args.fall)
+    if args.planerare:
+        if not args.fall:
+            ap.error("--planerare kräver --fall")
+        planner(args.archive, args.fall)
     return 0
 
 
