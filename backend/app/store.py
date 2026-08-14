@@ -370,7 +370,11 @@ class Store:
                 # Enriched search string per chunk (app/enrich.py). Sets the
                 # index-only search_text; frozen c.text and PageData.words are
                 # untouched, so citation verification is wholly unaffected.
-                search_map = chunk_search_texts(list(new_chunks.values()), self.pages)
+                search_map = chunk_search_texts(
+                    list(new_chunks.values()),
+                    self.pages,
+                    {d.id: d.name for d in self.documents.values()},
+                )
                 for cid, search_text in search_map.items():
                     new_chunks[cid].search_text = search_text
             new_index = HybridIndex(self.index.embedder)

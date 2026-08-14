@@ -850,3 +850,68 @@ invändning en breddning annars skulle mötas av.
 Det är en inställningsändring med egen räckvidd — den träffar hela produkten, inte
 bara den planerade vägen — och den är inte gjord här. Men den ska vägas *före*
 fan-out, eftersom den är gratis.
+
+---
+
+## Tillägg 2026-08-14 (9): handlingens namn i indexet — och varför det inte räcker på svenska
+
+Extern researchgenomgång (Grok, aug 2026) rangordnade **dokumentmedveten
+hämtning** som första åtgärd mot "fel handling överst", med DAPR
+(arXiv:2305.13915) som belägg: att lägga dokumentets identitet framför stycket
+lyfter nDCG@10 med upp till 38 punkter på just de frågor vars sammanhang sitter i
+handlingen och inte i stycket. Det är exakt felmoden i tillägg 7 — toppträffen låg
+i fel avtal i 10 av 11 verkliga fall.
+
+Berikningen i `app/enrich.py` la redan **år + avsnittsrubrik** i söktexten. Den la
+inte handlingens **namn**. Nu gör den det, med separatorer omgjorda till
+mellanslag så att `Avtal_Teknisk-forvaltning_2022.pdf` bidrar med de ord en
+styrelse skriver. Invarianten är oförändrad och nu låst i båda riktningar:
+namnet når indexet, aldrig det citerbara utdraget
+(`test_document_name_is_searchable_but_never_citable`, bruten på båda sätten och
+sedd falla).
+
+### Vad det gav
+
+| sökning | utan namnet | med namnet |
+|---|---|---|
+| `T2SECUREPRINT2` | fel handling (0.21) | **rätt handling (0.65)** |
+| `parkeringsavtalet` | fel handling (0.77) | **rätt handling (0.79)** |
+| `Ekebäckshöjd` | oförändrad | oförändrad |
+| **11 verkliga fall, hela frågor** | 10/11 fel handling överst | **10/11 — oförändrat** |
+| **16 frågor, ändrad toppträff** | — | **0** |
+
+Ändringen fungerar, och den ändrar ingenting på riktiga frågor.
+
+### Varför — och det är fyndet
+
+`parkeringsavtalet` som ensam sökning hittar nu rätt. Samma ord inuti meningen
+*"Vad står i parkeringsavtalet om uppsägning?"* gör det inte: `uppsägning` och
+`står` drar mot en annan handlings uppsägningsklausul, och namnsignalen väger
+för lätt för att hålla emot.
+
+Under det ligger ett mekaniskt skäl. BM25 här har **ingen sammansättningsdelning
+och ingen stamning**. `parkeringsavtalet` är ett enda token. Det matchar varken
+`parkering` eller `avtal` — och det är just de orden filnamnet bidrar med.
+Namnsignalen finns alltså bara för den som råkar skriva exakt det sammansatta
+ordet, medan svenskan gör det motsatta: en styrelse skriver *parkeringsavtalet*,
+*sophämtningsavtalet*, *underhållsplanen* i ett ord.
+
+Researchunderlaget rangordnade dokumentmedveten omrankning som åtgärd 1 och
+svensk morfologi som åtgärd 2, som två oberoende spår. **På svenska är de inte
+oberoende.** Dokumentidentiteten är själv en sammansättning som användaren skriver
+ihop, så namnet i indexet biter först när delningen finns. Åtgärd 1 utan åtgärd 2
+är mätbart verkningslös på naturliga frågor — det är den här mätningen.
+
+### Vad som är gjort och vad som inte är det
+
+Namnet ligger kvar i indexet. Det kostar ingenting, det skadade ingen mätning
+(11 fall oförändrade, noll försämringar), och det gör ensamma namnsökningar rätt.
+Men det ska inte redovisas som en åtgärd mot fel-handling-överst förrän
+sammansättningsdelningen finns, eftersom det inte är det förrän då.
+
+Nästa steg enligt underlaget är därför **sammansättningsdelning + stamning på
+BM25-sidan**, inte omrankning. Det är den starkast belagda svenska lexikala
+åtgärden (CLEF: delning + stamning +25,3 % MAP, signifikant; stamning ensam +1,7 %,
+inte signifikant) och det är förutsättningen för att namnet i indexet ska göra
+någon nytta. En sak att kontrollera innan: OFFO:s svenska avstavningsfil har en
+licens som kan hindra att den paketeras i RPM:en.
