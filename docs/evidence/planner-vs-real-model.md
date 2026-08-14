@@ -958,3 +958,69 @@ Att jag skrev fel om detta är samma felmod som CLAUDE.md varnar för: påståen
 om koden i prosa åldras, och ett felaktigt påstående är värre än inget. Den här
 rättelsen står kvar i stället för att tillägg 9 skrivs om, så att felet och dess
 korrigering är läsbara tillsammans.
+
+---
+
+## Tillägg 2026-08-14 (10): tröskelhypotesen är falsk — och r01 är inte längre en mätning
+
+Rättelsen till tillägg 9 gav en skarp hypotes: `_expand_query` kräver minst fem
+tecken på båda sidor, `sop` är tre, alltså möts `sophämtning` och `sophantering`
+aldrig lexikalt — och alltså skulle r01:s glapp stängas av att sänka gränsen. Om
+det stämde vore hela den planerade fan-out-vägen en femrading i indexet.
+
+**Det stämde inte.** De två magiska talen är nu namngivna (`MIN_EXPANSION_LEN`,
+`MIN_EXPANSION_PAIR_LEN`) så att de går att svepa i stället för att diskuteras.
+
+| gräns | golden.json (46) | r01 | tvärdokument, medel | verkliga arkivet (11) |
+|---:|---:|---:|---:|---:|
+| **5** (oförändrat) | **1.000** | 0.00 | 0.864 | **7/11** |
+| 4 | 1.000 | 1.00 | 0.955 | 6/11 |
+| 3 | 0.978 | 0.00 | 0.864 | 6/11 |
+
+Vid gränsen 3 släpps `sop` in — och **r01 ligger kvar på 0.00**, samtidigt som
+produktens egen golden tappar recall. Hypotesen är därmed prövad på sina egna
+villkor och faller: `sop`-bron finns, den fungerar inte, och den kostar.
+
+### Varför r01 lyfte vid 4, och varför det inte betyder något
+
+Enda skillnaden i r01:s expansion mellan 5 och 4:
+
+```
+pris  ->  prisjustering, prisjusteringar
+```
+
+Det är hela mekanismen. Ordet **`pris`** i frågan råkar matcha `prisjustering` i
+korpusen. Ingenting av det rör `sophämtning` mot `sophantering`, som är det glapp
+r01 påstås representera. Fallet lyfts av en tokensammanträffande som är ett
+särdrag hos den här korpusen.
+
+Det är fjärde gången r01 vänder, och första gången orsaken är direkt synlig:
+
+| ändring | r01 |
+|---|---|
+| uppladdningsordnad katalog | 0.00 |
+| sorterad katalog | 1.00 |
+| `clarify` borttaget ur kontraktet | 0.00 |
+| expansionsgräns 5 → 4 | 1.00 |
+
+Ingen av de fyra ändringarna handlar om ordförråd. **r01 ska inte längre användas
+som belägg för någonting.** Det är ett fall vars utfall bestäms av brus, och det
+har burit mer argumentation i det här underlaget än det tål. Villkor C:s krav på
+*flera* verkliga fall var rätt ställt, och skälet är nu demonstrerat i stället för
+misstänkt.
+
+### Vad som ändrades i koden
+
+Ingenting i beteendet. Gränsen står kvar på 5 — sänkning ger ingen vinst som
+håller, och 3 kostar produktrecall. Namngivningen står kvar: två magiska tal i en
+rankningsgrind är sämre än två namngivna, och sveptabellen ovan är gjord för att
+kunna köras om när korpusen växer.
+
+### Vad detta lämnar
+
+Ordförrådsglappet på verklig text är fortfarande **ett** fall (R7b, tillägg 8),
+inte fyra. Fel-handling-överst står oförändrat på 10 av 11 och är fortfarande det
+största mätta felet. Ingen av de tre billiga åtgärder som prövats — bredare
+bevisbudget, handlingens namn i indexet, lägre expansionsgräns — rör det.
+Researchunderlagets näst starkaste rekommendation, **cross-encoder-omrankning**,
+är därmed den enda kvarvarande obeprövade åtgärden mot det felet.
