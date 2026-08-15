@@ -605,7 +605,7 @@ class RelativeHit:
 
     span: Span
     count: int
-    unit: str  # "day"
+    unit: str  # "day" | "month" | "week" | "year"
     before: bool
     anchor_iso: str  # "" when the text does not name a date
 
@@ -742,6 +742,18 @@ def _is_abbreviation(token: str) -> bool:
     return token.strip().casefold() in _ABBREVIATIONS
 
 
+def _ends_a_sentence(token: str) -> bool:
+    """Whether this token closes the sentence it sits in.
+
+    Checked on the raw token: :func:`_clean` strips ``.?!``, so using it here
+    would never see a sentence end.
+    """
+    raw = token.strip()
+    if _is_abbreviation(raw):
+        return False
+    return raw.endswith((".", "!", "?"))
+
+
 # Day-counts that an email uses as a deadline. Kept off DURATION_UNITS on
 # purpose: putting "dagar" there would make the contract scan start proposing
 # watches from "tio dagar" in a PDF, counted from nothing.
@@ -859,11 +871,14 @@ def scan_day_deadlines(words: list[str], *, reach: int = 12) -> list[RelativeHit
 
 
 def anchor_relative(hits: list[RelativeHit], *, reference_date: date) -> list[RelativeDeadline]:
-    """Resolve day-counts against ``reference_date`` when the text named none.
+    """Resolve hits against ``reference_date`` when the text named none.
 
     Two-step, the way SUTime/HeidelTime split extraction from normalisation:
-    :func:`scan_day_deadlines` finds the duration; this function is the only
-    place an external date is applied. An in-text date on the hit wins.
+    the scanners find the duration; this function is the only place an
+    external date is applied. Feature 1 calls it with the message's received
+    date for day-counts. Feature 2 calls it with a date a human typed, for
+    month/week/year hits that must not be guessed from receipt. An in-text
+    date on the hit wins.
     Arithmetic is calendar days on a :class:`~datetime.date`, never a
     timezone-aware timedelta — ten days across the October shift is ten dates,
     not 240 hours.
@@ -878,6 +893,94 @@ def anchor_relative(hits: list[RelativeHit], *, reference_date: date) -> list[Re
                 unit=hit.unit,
                 before=hit.before,
                 anchor_iso=anchor_iso,
+            )
+        )
+    return out
+
+
+def _unit_index(words: list[str], duration: DurationTerm) -> int:
+    """The token that names the unit, inside a duration that may run on to an anchor word."""
+    for j in range(duration.span.start + 1, duration.span.end + 1):
+        if DURATION_UNITS.get(_lower(words[j])) == duration.unit:
+            return j
+    return duration.span.end
+
+
+def scan_unanchored_deadlines(words: list[str], *, reach: int = 12) -> list[RelativeHit]:
+    """Month/week/year deadlines whose start is not a date in the text.
+
+    Feature 1 owns day-counts that can be counted from receipt. This scanner
+    never sees a day unit — :data:`DURATION_UNITS` has none — and never fills
+    ``anchor_iso``. Applying a mailbox timestamp here would be the guess that
+    makes "inom tre månader" due three months from whenever Graph delivered
+    the copy.
+
+    A duration that already has an in-text date is
+    :func:`scan_relative_deadlines`' job and is skipped here.
+    """
+    out: list[RelativeHit] = []
+    n = len(words)
+    dated_spans = [hit.span for hit in scan_relative_deadlines(words, reach=reach)]
+    for duration in scan_durations(words):
+        if any(span.start <= duration.span.start <= span.end for span in dated_spans):
+            continue
+        i = duration.span.start
+        unit_at = _unit_index(words, duration)
+
+        particle_start: int | None = None
+        for k in range(max(0, i - 3), i):
+            if _lower(words[k]) == "inom":
+                particle_start = k
+                break
+        if particle_start is None:
+            for k in range(max(0, i - 4), i - 1 if i else 0):
+                if _lower(words[k]) == "senast" and _lower(words[k + 1]) == "om":
+                    particle_start = k
+                    break
+        if particle_start is None:
+            for k in range(max(0, i - 2), i):
+                if _lower(words[k]) == "senast":
+                    particle_start = k
+                    break
+
+        particle_end: int | None = None
+        for k in range(unit_at + 1, min(n, unit_at + 3)):
+            if _lower(words[k]) in _PA_ER and k + 1 < n and _lower(words[k + 1]) == "er":
+                particle_end = k + 1
+                break
+
+        direction: bool | None = None
+        operator_at = -1
+        for k in range(unit_at + 1, min(n, unit_at + 4)):
+            # Direction is a property of the sentence the duration was read
+            # from. Crossing ".?!" to pick up "senast" from the next sentence
+            # is how "inom tre månader" became three months backward.
+            if any(_ends_a_sentence(words[j]) for j in range(unit_at, k)):
+                break
+            token = _lower(words[k])
+            if token in _BEFORE_WORDS:
+                direction, operator_at = True, k
+                break
+            if token in _AFTER_WORDS:
+                direction, operator_at = False, k
+                break
+
+        if particle_start is None and particle_end is None and direction is None:
+            continue
+
+        start = i if particle_start is None else particle_start
+        end = unit_at
+        if particle_end is not None:
+            end = max(end, particle_end)
+        if operator_at >= 0:
+            end = max(end, operator_at)
+        out.append(
+            RelativeHit(
+                span=Span(start, end),
+                count=duration.count,
+                unit=duration.unit,
+                before=bool(direction),
+                anchor_iso="",
             )
         )
     return out
@@ -961,6 +1064,7 @@ __all__ = [
     "scan_dates",
     "scan_day_deadlines",
     "scan_durations",
+    "scan_unanchored_deadlines",
     "scan_index_clauses",
     "scan_notice_periods",
     "scan_periods",

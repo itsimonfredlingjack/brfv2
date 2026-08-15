@@ -124,6 +124,7 @@ class TestRelativeDeadlines:
         would let the contract scan start counting from a mailbox timestamp."""
         assert "reference_date" not in inspect.signature(terms.scan_relative_deadlines).parameters
         assert "reference_date" not in inspect.signature(terms.scan_dates).parameters
+        assert "reference_date" not in inspect.signature(terms.scan_unanchored_deadlines).parameters
 
 
 class TestDayDeadlines:
@@ -163,6 +164,112 @@ class TestDayDeadlines:
     def test_scan_relative_deadlines_still_ignores_unanchored_day_counts(self):
         assert terms.scan_relative_deadlines(words("Ni har tio dagar på er.")) == []
         assert terms.scan_relative_deadlines(words("Svara inom tio dagar.")) == []
+
+
+class TestUnanchoredDeadlines:
+    """Month/week/year frists whose start is not a date in the text.
+
+    Feature 1 owns day-counts that can be counted from receipt. This scanner
+    is the other path: applying the mailbox timestamp to "inom tre månader"
+    would be the guess that makes the date wrong, so the hit carries no
+    anchor and ``anchor_relative`` is not called until a human supplies one.
+    """
+
+    def test_inom_three_months_is_a_hit_with_no_anchor(self):
+        (hit,) = terms.scan_unanchored_deadlines(words("Svara inom tre månader."))
+        assert hit.count == 3
+        assert hit.unit == "month"
+        assert hit.anchor_iso == ""
+        assert hit.before is False
+
+    def test_two_weeks_after_a_named_event_is_a_hit(self):
+        (hit,) = terms.scan_unanchored_deadlines(
+            words("Senast två veckor efter besiktningen.")
+        )
+        assert hit.count == 2
+        assert hit.unit == "week"
+        assert hit.anchor_iso == ""
+        assert hit.before is False
+
+    def test_a_day_count_is_not_this_scanner(self):
+        assert terms.scan_unanchored_deadlines(words("Svara inom tio dagar.")) == []
+        assert terms.scan_unanchored_deadlines(words("Ni har tio dagar på er.")) == []
+
+    def test_an_in_text_date_is_not_unanchored(self):
+        assert terms.scan_unanchored_deadlines(
+            words(
+                "Avtalet förlängs automatiskt om det inte sägs upp senast tre "
+                "månader före den 31 december 2026."
+            )
+        ) == []
+
+    def test_a_bare_duration_without_a_deadline_particle_is_not_a_hit(self):
+        assert terms.scan_unanchored_deadlines(words("Arbetet tog tre månader.")) == []
+
+    def test_a_human_anchor_is_counted_with_the_same_arithmetic(self):
+        hits = terms.scan_unanchored_deadlines(words("Svara inom tre månader."))
+        (anchored,) = terms.anchor_relative(hits, reference_date=date(2026, 9, 1))
+        assert anchored.resolve() == "2026-12-01"
+
+    def test_two_phrases_in_one_body_keep_the_direction_of_their_own_sentence(self):
+        """The case a green suite missed: both phrases in the same body.
+
+        Solo "Svara inom tre månader." is before=False. Solo "senast två
+        veckor efter besiktningen." is its own hit. Together, "senast" in
+        the second sentence was leaking into the first as minus direction,
+        so a human anchor of 2026-09-01 became three months *backward*.
+        """
+        hits = terms.scan_unanchored_deadlines(
+            words(
+                "Svara inom tre månader. Garantin gäller senast två veckor "
+                "efter besiktningen."
+            )
+        )
+        month = next(hit for hit in hits if hit.unit == "month")
+        week = next(hit for hit in hits if hit.unit == "week")
+        assert month.count == 3
+        assert month.before is False
+        assert week.count == 2
+        assert week.before is False
+        (anchored,) = terms.anchor_relative([month], reference_date=date(2026, 9, 1))
+        assert anchored.resolve() == "2026-12-01"
+
+    def test_inom_then_senast_om_keep_their_own_sentences(self):
+        hits = terms.scan_unanchored_deadlines(
+            words("Svara inom tre månader. Betala senast om två veckor.")
+        )
+        month = next(hit for hit in hits if hit.unit == "month")
+        week = next(hit for hit in hits if hit.unit == "week")
+        assert month.before is False
+        assert week.before is False
+        assert week.count == 2
+
+    def test_pa_er_then_inom_keep_their_own_sentences(self):
+        hits = terms.scan_unanchored_deadlines(
+            words("Ni har tre månader på er. Svara inom två veckor.")
+        )
+        month = next(hit for hit in hits if hit.unit == "month")
+        week = next(hit for hit in hits if hit.unit == "week")
+        assert month.before is False
+        assert week.before is False
+        assert month.count == 3
+        assert week.count == 2
+
+    def test_senast_om_then_inom_keep_their_own_sentences(self):
+        hits = terms.scan_unanchored_deadlines(
+            words("Svara senast om tre månader. Garantin gäller inom två veckor.")
+        )
+        month = next(hit for hit in hits if hit.unit == "month")
+        week = next(hit for hit in hits if hit.unit == "week")
+        assert month.before is False
+        assert week.before is False
+
+    def test_direction_in_the_same_sentence_is_still_the_duration_s(self):
+        (hit,) = terms.scan_unanchored_deadlines(
+            words("Svara tre månader före besiktningen.")
+        )
+        assert hit.before is True
+        assert hit.unit == "month"
 
 
 class TestAnchorRelative:
@@ -355,6 +462,24 @@ class TestDerivation:
         result = scan_documents(env.store, now_iso="2026-08-14T00:00:00+00:00")
         assert not [
             w for w in result.watches if w.source_document_name == "Paerinnelse.pdf"
+        ]
+
+    def test_an_email_style_unanchored_duration_is_not_a_contract_watch(self, integration_env):
+        """The mail path may ask "from which date?". The contract scan must
+        not invent a watch from the same sentence in a PDF."""
+        env = integration_env
+        build_document(
+            env.store,
+            "Paaminnelse-manader.pdf",
+            [
+                "Paaminnelse",
+                "Svara inom tre manader.",
+                "Senast tva veckor efter besiktningen.",
+            ],
+        )
+        result = scan_documents(env.store, now_iso="2026-08-14T00:00:00+00:00")
+        assert not [
+            w for w in result.watches if w.source_document_name == "Paaminnelse-manader.pdf"
         ]
 
     def test_a_dated_inspection_with_a_cycle_becomes_a_recurring_watch(self, integration_env):

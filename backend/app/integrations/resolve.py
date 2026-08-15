@@ -88,7 +88,7 @@ from datetime import date
 from ..schemas import CitationOut
 from ..store import Store
 from ..tasks.models import Task, TaskEvent, TaskOrigin
-from ..terms import parse_iso
+from ..terms import RelativeHit, Span, anchor_relative, parse_iso
 from ..watches.models import DEFAULT_REMIND_LEAD_DAYS, Watch
 from .intake import AdoptionError, adopt_attachment
 from .models import (
@@ -440,6 +440,42 @@ def _create_task(
     )
 
 
+def _due_date_from_spec(event: SourceEvent, spec: dict) -> str:
+    """The watch's due date: typed, or computed from a human-supplied anchor.
+
+    ``anchor_date`` is Feature 2: the missing start of an unanchored frist.
+    The arithmetic is :func:`app.terms.anchor_relative`, the same function
+    Feature 1 uses for day-counts. A received-date never enters here.
+    """
+    anchor_text = _text(spec, "anchor_date")
+    if anchor_text:
+        return _due_from_human_anchor(event, spec, anchor_text)
+    due = _text(spec, "due_date")
+    if parse_iso(due) is None:
+        raise ResolutionError("Bevakningen behöver ett datum, skrivet ÅÅÅÅ-MM-DD.")
+    return due
+
+
+def _due_from_human_anchor(event: SourceEvent, spec: dict, anchor_text: str) -> str:
+    anchor = parse_iso(anchor_text)
+    if anchor is None:
+        raise ResolutionError("Ankaret behöver ett datum, skrivet ÅÅÅÅ-MM-DD.")
+    questions = list(event.triage.anchor_questions) if event.triage else []
+    if not questions:
+        raise ResolutionError("Det finns ingen öppen frist att ankra.")
+    quote = _text(spec, "quote")
+    question = next((q for q in questions if q.quote == quote), questions[0]) if quote else questions[0]
+    hit = RelativeHit(
+        span=Span(0, 0),
+        count=question.count,
+        unit=question.unit,
+        before=question.before,
+        anchor_iso="",
+    )
+    (anchored,) = anchor_relative([hit], reference_date=anchor)
+    return anchored.resolve()
+
+
 def _create_watch(
     store: Store,
     event: SourceEvent,
@@ -460,10 +496,14 @@ def _create_watch(
     ``derived_due_date`` and ``derivation`` are still filled in honestly: the
     date came from a human reading incoming post, and the record says exactly
     that rather than implying an arithmetic nobody performed.
+
+    Feature 2: when the spec carries ``anchor_date`` and the card has an
+    unanswered :class:`~app.integrations.models.AnchorQuestion`, the due date
+    is computed here through :func:`app.terms.anchor_relative` — the same
+    function Feature 1 uses. The human types the missing start; they do not
+    type the deadline.
     """
-    due = _text(spec, "due_date")
-    if parse_iso(due) is None:
-        raise ResolutionError("Bevakningen behöver ett datum, skrivet ÅÅÅÅ-MM-DD.")
+    due = _due_date_from_spec(event, spec)
     kind = _text(spec, "kind") or ("expected_reply" if _awaits_reply(event) else "stated_deadline")
     if kind not in ("stated_deadline", "expected_reply"):
         raise ResolutionError(
@@ -493,10 +533,7 @@ def _create_watch(
         title=title[:200],
         due_date=due,
         derived_due_date=due,
-        derivation=(
-            f"Datum ur inkommande post: {event.subject or '(utan ämne)'} från {event.origin}, "
-            f"{(event.occurred_at or event.received_at)[:10]}. Satt av en människa vid granskningen."
-        ),
+        derivation=_watch_derivation(event, spec, due),
         recurrence="none",
         responsible=_text(spec, "responsible"),
         remind_lead_days=remind,
@@ -514,6 +551,22 @@ def _create_watch(
         label=RESOLUTION_LABELS["monitor"],
         ref_id=stored.id,
         ref_label=f"{stored.title} ({stored.public(today)['bucket']})",
+    )
+
+
+def _watch_derivation(event: SourceEvent, spec: dict, due: str) -> str:
+    anchor_text = _text(spec, "anchor_date")
+    if anchor_text:
+        quote = ""
+        if event.triage and event.triage.anchor_questions:
+            quote = event.triage.anchor_questions[0].quote
+        return (
+            f"Fristen «{quote}» räknad från {anchor_text} till {due}, "
+            f"angivet av en människa vid granskningen."
+        )
+    return (
+        f"Datum ur inkommande post: {event.subject or '(utan ämne)'} från {event.origin}, "
+        f"{(event.occurred_at or event.received_at)[:10]}. Satt av en människa vid granskningen."
     )
 
 

@@ -36,7 +36,11 @@ import re
 import unicodedata
 from dataclasses import dataclass, field
 
+from datetime import date, datetime
+from zoneinfo import ZoneInfo
+
 from .models import SourceEvent, TRIAGE_CATEGORY_LABELS
+from ..terms import STOCKHOLM_TZ, calendar_date_in
 
 # Reply and forward prefixes, Swedish and English, as a mail client writes
 # them: "Re:", "SV:", "Sv:", "VB:", "Fwd:", "Ang:", and the numbered forms
@@ -305,10 +309,67 @@ def build_threads(events: list[SourceEvent]) -> list[Thread]:
     return threads
 
 
+# How many unanswered-anchor cards the queue shows at once. More than this
+# and the rest collapse to a count — alert fatigue is a documented failure
+# mode, not a display preference.
+OPEN_ANCHOR_SHOWN = 3
+
+
+def open_anchor_summaries(
+    threads: list[Thread],
+    *,
+    today: date | None = None,
+    cap: int = OPEN_ANCHOR_SHOWN,
+) -> dict:
+    """Unanswered "från vilket datum?" questions, oldest first, capped.
+
+    An unanswered question that sits in a long list is the same silent drop
+    Feature 2 exists to close. The queue therefore counts them, ages them,
+    and refuses to render more than ``cap`` cards at once.
+
+    Each question is a row — two frists in one message are two questions, not
+    one card that hid the second. Age is calendar days in Europe/Stockholm,
+    the same zone :func:`calendar_date_in` uses for the received date.
+    """
+    now = today if today is not None else datetime.now(ZoneInfo(STOCKHOLM_TZ)).date()
+    items: list[dict] = []
+    for thread in threads:
+        if thread.open_count == 0:
+            continue
+        for event in thread.events:
+            if event.resolution is not None:
+                continue
+            questions = event.triage.anchor_questions if event.triage else []
+            asked_date = calendar_date_in(event.received_at)
+            age_days = (now - asked_date).days if asked_date is not None else 0
+            for question in questions:
+                items.append(
+                    {
+                        "thread_key": thread.key,
+                        "event_id": event.id,
+                        "subject": thread.subject,
+                        "quote": question.quote,
+                        "label": question.label,
+                        "asked_at": event.received_at,
+                        "age_days": max(0, age_days),
+                    }
+                )
+    items.sort(key=lambda row: (row["asked_at"], row["event_id"], row["quote"]))
+    shown = items[:cap]
+    return {
+        "total": len(items),
+        "cap": cap,
+        "shown": shown,
+        "hidden": max(0, len(items) - len(shown)),
+    }
+
+
 __all__ = [
+    "OPEN_ANCHOR_SHOWN",
     "Thread",
     "build_threads",
     "normalize_subject",
+    "open_anchor_summaries",
     "participants",
     "strip_reply_prefixes",
     "subject_key",

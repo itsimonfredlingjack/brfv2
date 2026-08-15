@@ -1086,6 +1086,103 @@
 
 .intake .muted { color: var(--muted-foreground); font-size: var(--text-base); }
 
+/* Unanswered "från vilket datum?" — counted and aged so they cannot sit
+   silently in the thread list. Own name: this is not a thread-row and not
+   a reading-signal. */
+.open-anchors {
+  margin-bottom: var(--s3);
+  padding: var(--s3) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.open-anchors h4 {
+  margin: 0 0 var(--s2);
+  font-size: var(--text-md);
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.open-anchors ul {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+}
+
+.open-anchor-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: var(--s1) var(--s2);
+  width: 100%;
+  padding: var(--s2h) var(--s3h);
+  border: 1px solid var(--kant-kontroll);
+  border-radius: var(--radius-2xl);
+  background: var(--card);
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.open-anchor-subject {
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.open-anchor-quote {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--muted-foreground);
+}
+
+.open-anchor-age {
+  font-size: var(--text-xs);
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.open-anchors-more {
+  margin: var(--s2) 0 0;
+  font-size: var(--text-sm);
+  color: var(--muted-foreground);
+}
+
+.anchor-question {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s2);
+  margin-bottom: var(--s3);
+  padding-bottom: var(--s3);
+  border-bottom: 1px solid var(--border);
+}
+
+.anchor-question-quote {
+  margin: 0;
+  font-size: var(--text-base);
+  color: var(--foreground);
+}
+
+.anchor-question label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s1);
+  font-size: var(--text-sm);
+  font-weight: 500;
+  color: var(--foreground);
+}
+
+.anchor-question input[type="date"] {
+  font: inherit;
+  padding: var(--s2h) var(--s3h);
+  border: 1px solid var(--kant-kontroll);
+  border-radius: var(--radius-md);
+  background: var(--card);
+  color: var(--foreground);
+}
+
 /* ---------- narrower ---------- */
 
 /* Below this the two panes stop being two panes: 300px of list next to 380px of

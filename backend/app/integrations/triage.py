@@ -56,10 +56,12 @@ from ..terms import (
     scan_notice_periods,
     scan_recurrence,
     scan_relative_deadlines,
+    scan_unanchored_deadlines,
     svenskt_datum,
 )
 from .models import (
     TRIAGE_CATEGORY_LABELS,
+    AnchorQuestion,
     RelatedRecord,
     SourceEvent,
     TriageSignal,
@@ -373,6 +375,10 @@ def _date_signals(source: _TextSource, *, reference_date: date | None = None) ->
     extra the mail path does: they are resolved against the message's
     received date, never against a contract's signing date, and never by
     changing the scanners the watch engine calls.
+
+    Month/week/year frists with no date ("inom tre månader") are *not*
+    resolved here. That is Feature 2, and it lives in
+    :func:`_unanchored_questions` so a received-date cannot leak onto them.
     """
     words = source.words
     signals: list[TriageSignal] = []
@@ -449,6 +455,37 @@ def _date_signals(source: _TextSource, *, reference_date: date | None = None) ->
             )
         )
     return signals
+
+
+def _unanchored_questions(source: _TextSource) -> list[AnchorQuestion]:
+    """Frists whose start is not a date and must not be guessed from receipt.
+
+    Explicitly a different path from :func:`_date_signals`. This function
+    takes no ``reference_date`` so "inom tre månader" cannot be counted from
+    when Graph delivered the copy.
+
+    Deferred (do not do in a terms.py fingerprint bump unless that is the
+    task): the particle walk is cloned from ``scan_day_deadlines``;
+    ``terms.py`` / this file / IntakeQueue.jsx+css have crossed 1k lines;
+    the mail-only scanner still lives in fingerprinted ``terms.py``;
+    the card has a second submit beside Bevaka; answering one question
+    still settles the event (remaining questions drop); resolve builds a
+    dummy ``RelativeHit``; ``open_anchor_summaries`` is an untyped dict
+    and the strip ignores ``event_id``.
+    """
+    questions: list[AnchorQuestion] = []
+    for hit in scan_unanchored_deadlines(source.words):
+        questions.append(
+            AnchorQuestion(
+                quote=source.quote(hit.span.start, hit.span.end),
+                count=hit.count,
+                unit=hit.unit,
+                before=hit.before,
+                source=source.source,
+                source_ref=source.ref,
+            )
+        )
+    return questions
 
 
 def _amount_signals(source: _TextSource) -> list[TriageSignal]:
@@ -736,10 +773,12 @@ def analyze(store: Store, event: SourceEvent) -> TriageSuggestion:
         category, category_signals = classify(sources, asks_something=awaiting)
 
         signals: list[TriageSignal] = []
+        anchor_questions: list[AnchorQuestion] = []
         reference_date = calendar_date_in(event.received_at, zone=STOCKHOLM_TZ)
         for source in sources:
             signals.extend(_date_signals(source, reference_date=reference_date))
             signals.extend(_amount_signals(source))
+            anchor_questions.extend(_unanchored_questions(source))
         if question_signal is not None:
             signals.append(question_signal)
         decision_signal = _decision_signal(sources)
@@ -774,6 +813,7 @@ def analyze(store: Store, event: SourceEvent) -> TriageSuggestion:
             supplier_name=supplier,
             signals=_dedupe(signals),
             related=find_related(store, event, supplier),
+            anchor_questions=anchor_questions,
             suggested_by="regelmotor",
             uncertainty=uncertainty,
             created_at=utc_now_iso(),

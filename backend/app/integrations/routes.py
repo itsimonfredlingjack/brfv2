@@ -57,7 +57,7 @@ from .resolve import (
     resolve_source_event,
 )
 from .store import FindingNotFound, SourceEventNotFound
-from .threads import build_threads
+from .threads import build_threads, open_anchor_summaries
 from .triage import analyze_and_refine
 from ..auth import display_actor
 from .oauth import PendingLogins
@@ -564,6 +564,7 @@ def build_router(
             "categoryLabels": TRIAGE_CATEGORY_LABELS,
             "resolutionLabels": RESOLUTION_LABELS,
             "mailbox": checkpoint.public(),
+            "openAnchors": open_anchor_summaries(threads),
             "counts": {
                 "threads": len(threads),
                 "openThreads": len(open_threads),

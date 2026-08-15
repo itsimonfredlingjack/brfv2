@@ -236,6 +236,82 @@ function ThreadRow({ thread, selected, onSelect, rowRef }) {
 // not sit below a wall of them.
 const SIGNALS_SHOWN = 4;
 
+function ageLabel(days) {
+  if (!days || days <= 0) return 'idag';
+  if (days === 1) return '1 dag';
+  return `${days} dagar`;
+}
+
+/** Unanswered "från vilket datum?" questions: counted, aged, capped. */
+function OpenAnchorsStrip({ openAnchors, onSelect }) {
+  if (!openAnchors?.total) return null;
+  const { total, shown, hidden } = openAnchors;
+  return (
+    <section className="open-anchors" role="region" aria-label="Obesvarade frågor">
+      <h4>{total} obesvarade {total === 1 ? 'fråga' : 'frågor'}</h4>
+      <ul>
+        {shown.map((row) => (
+          <li key={`${row.event_id}:${row.quote}`}>
+            <button type="button" className="open-anchor-card" onClick={() => onSelect(row.thread_key)}>
+              <span className="open-anchor-subject">{row.subject}</span>
+              <q className="open-anchor-quote">{row.quote}</q>
+              <span className="open-anchor-age">{ageLabel(row.age_days)}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      {hidden > 0 && <p className="open-anchors-more">{hidden} till</p>}
+    </section>
+  );
+}
+
+/** One date field per question. The quote sits next to it so the answerer sees what they anchor. */
+function AnchorQuestionFields({ question, busy, onSubmit }) {
+  const [anchorDate, setAnchorDate] = useState('');
+  return (
+    <article className="anchor-question">
+      <q className="anchor-question-quote">{question.quote}</q>
+      <label>
+        {question.label}
+        <input
+          type="date"
+          value={anchorDate}
+          disabled={busy}
+          onChange={(e) => setAnchorDate(e.target.value)}
+        />
+      </label>
+      <button
+        type="button"
+        className="ui-btn ui-btn--primary"
+        disabled={!anchorDate || busy}
+        onClick={() => onSubmit(anchorDate)}
+      >
+        Bevaka från detta datum
+      </button>
+    </article>
+  );
+}
+
+function AnchorQuestionForm({ event, busy, onResolve }) {
+  const questions = event.triage?.anchor_questions || [];
+  if (!questions.length || event.resolution) return null;
+  return (
+    <section className="anchor-questions" role="region" aria-label="Frist utan datum">
+      {questions.map((question) => (
+        <AnchorQuestionFields
+          key={question.quote}
+          question={question}
+          busy={busy}
+          onSubmit={(anchorDate) => onResolve(event.id, {
+            outcomes: ['monitor'],
+            watch: { kind: 'stated_deadline', anchor_date: anchorDate, quote: question.quote },
+          })}
+        />
+      ))}
+    </section>
+  );
+}
+
 /** What the app believes, with the words it believes it from. */
 function ReadingPanel({ thread, categories, busy, onConfirm }) {
   const [open, setOpen] = useState(false);
@@ -774,12 +850,15 @@ function ThreadDetail({
                 onOpenDocument={onOpenDocument}
               />
             ) : (
-              <ResolveForm
-                event={event}
-                resolutions={resolutions}
-                busy={busy}
-                onResolve={onResolve}
-              />
+              <>
+                <AnchorQuestionForm event={event} busy={busy} onResolve={onResolve} />
+                <ResolveForm
+                  event={event}
+                  resolutions={resolutions}
+                  busy={busy}
+                  onResolve={onResolve}
+                />
+              </>
             )}
           </section>
         ))}
@@ -990,6 +1069,16 @@ export default function IntakeQueue({
             </select>
           </label>
         </div>
+      )}
+
+      {!loading && (
+        <OpenAnchorsStrip
+          openAnchors={queue?.openAnchors}
+          onSelect={(key) => {
+            setFilter('open');
+            setSelectedKey(key);
+          }}
+        />
       )}
 
       {loading && <p className="ui-loading intake-loading"><Loader2 size={16} className="spin" /> Hämtar…</p>}

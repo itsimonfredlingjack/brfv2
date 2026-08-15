@@ -435,6 +435,61 @@ class TestThreads:
         key, subject = thread_key_for(first, [])
         assert subject == "Offert"
 
+    def test_two_questions_on_one_event_are_both_counted(self, queue):
+        """A question that exists but is not counted is the same silent drop
+        Feature 2 was built to close — at message granularity, not only across
+        events."""
+        from app.integrations.threads import open_anchor_summaries
+
+        event = queue.take_in(
+            message(
+                subject="Påminnelse",
+                body=(
+                    "Svara inom tre månader. Garantin gäller senast två veckor "
+                    "efter besiktningen."
+                ),
+                message_id="<two-q@x.example>",
+            )
+        )
+        summary = open_anchor_summaries(build_threads([event]))
+        assert summary["total"] == 2
+        quotes = " ".join(row["quote"].casefold() for row in summary["shown"])
+        assert "månader" in quotes
+        assert "veckor" in quotes
+
+    def test_unspecified_today_is_stockholm_not_the_process_date(self, queue, monkeypatch):
+        """Age is calendar days in Europe/Stockholm, like everything else here.
+
+        A host clock still on the 14th UTC at 22:30 is already the 15th in
+        Stockholm. Counting against date.today() then says "idag" about a
+        message from yesterday.
+        """
+        from datetime import datetime as real_datetime, timezone
+
+        from app.integrations import threads as threads_mod
+        from app.integrations.threads import open_anchor_summaries
+
+        event = queue.take_in(
+            message(
+                subject="Påminnelse",
+                body="Svara inom tre månader.",
+                message_id="<age-tz@x.example>",
+            )
+        )
+        event = event.model_copy(update={"received_at": "2026-08-14T10:00:00Z"})
+
+        instant = real_datetime(2026, 8, 14, 22, 30, tzinfo=timezone.utc)
+
+        class FrozenDateTime(real_datetime):
+            @classmethod
+            def now(cls, tz=None):
+                return instant if tz is None else instant.astimezone(tz)
+
+        monkeypatch.setattr(threads_mod, "datetime", FrozenDateTime)
+
+        summary = open_anchor_summaries(build_threads([event]))
+        assert summary["shown"][0]["age_days"] == 1
+
 
 # ---------------------------------------------------------------------------
 # Triage
@@ -565,6 +620,75 @@ class TestTriage:
         event = event.model_copy(update={"received_at": "2026-08-14T10:00:00Z"})
         triage = analyze(queue.store, event)
         assert [s for s in triage.signals if s.kind == "deadline"] == []
+
+    def test_an_unanchored_duration_is_a_question_not_a_deadline(self, queue):
+        """"inom tre månader" has no calendar start. Counting from receipt
+        would be the guess Feature 2 exists to refuse."""
+        event = queue.take_in(
+            message(
+                subject="Påminnelse",
+                body="Svara inom tre månader.",
+                message_id="<months-1@x.example>",
+            )
+        )
+        event = event.model_copy(update={"received_at": "2026-08-14T10:00:00Z"})
+        triage = analyze(queue.store, event)
+        assert [s for s in triage.signals if s.kind == "deadline"] == []
+        assert "2026-11-14" not in {s.value for s in triage.signals}
+        (question,) = triage.anchor_questions
+        assert question.label == "Från vilket datum?"
+        assert "inom tre månader" in question.quote.casefold()
+        assert question.count == 3
+        assert question.unit == "month"
+
+    def test_two_weeks_after_an_inspection_is_a_question(self, queue):
+        event = queue.take_in(
+            message(
+                subject="Besiktning",
+                body="Senast två veckor efter besiktningen.",
+                message_id="<weeks-1@x.example>",
+            )
+        )
+        triage = analyze(queue.store, event)
+        assert [s for s in triage.signals if s.kind == "deadline"] == []
+        (question,) = triage.anchor_questions
+        assert "två veckor" in question.quote.casefold() or "tva veckor" in question.quote.casefold()
+        assert question.unit == "week"
+
+    def test_two_unanchored_phrases_in_one_body_keep_their_own_direction(self, queue):
+        """Same body, two sentences. The mail path must not hide the leak
+        the scanner tests now catch: "senast" in the second sentence is not
+        minus direction on the first."""
+        event = queue.take_in(
+            message(
+                subject="Påminnelse",
+                body=(
+                    "Svara inom tre månader. Garantin gäller senast två veckor "
+                    "efter besiktningen."
+                ),
+                message_id="<two-phrases@x.example>",
+            )
+        )
+        triage = analyze(queue.store, event)
+        assert len(triage.anchor_questions) == 2
+        month = next(q for q in triage.anchor_questions if q.unit == "month")
+        week = next(q for q in triage.anchor_questions if q.unit == "week")
+        assert month.before is False
+        assert week.before is False
+        assert "veckor" not in month.quote.casefold()
+
+    def test_a_day_count_still_goes_the_received_date_path_not_as_a_question(self, queue):
+        event = queue.take_in(
+            message(
+                subject="Föreläggande",
+                body="Ni har tio dagar på er att svara.",
+                message_id="<days-not-q@x.example>",
+            )
+        )
+        event = event.model_copy(update={"received_at": "2026-08-14T10:00:00Z"})
+        triage = analyze(queue.store, event)
+        assert [s.value for s in triage.signals if s.kind == "deadline"] == ["2026-08-24"]
+        assert triage.anchor_questions == []
 
     def test_a_message_with_nothing_readable_is_unclear_not_guessed(self, queue):
         event = queue.take_in(message(subject="...", body="...", message_id="<e@x.example>"))
@@ -951,6 +1075,59 @@ class TestResolution:
         assert queue.store.tasks.get_task(task_id) is not None
         assert document_id in queue.store.documents
 
+    def test_an_unanchored_question_is_not_a_watch_until_answered(self, queue):
+        event = self._event(
+            queue,
+            subject="Påminnelse",
+            body="Svara inom tre månader.",
+            message_id="<q-anchor-1@x.example>",
+        )
+        assert event.triage.anchor_questions
+        assert queue.store.watches.list_watches() == []
+
+        with pytest.raises(ResolutionError):
+            resolve_source_event(
+                store=queue.store, event_id=event.id, user_id="admin-1",
+                kinds=["monitor"], watch={"kind": "stated_deadline"},
+            )
+        assert queue.store.watches.list_watches() == []
+
+        settled = resolve_source_event(
+            store=queue.store, event_id=event.id, user_id="admin-1",
+            kinds=["monitor"],
+            watch={"kind": "stated_deadline", "anchor_date": "2026-09-01"},
+        )
+        watch_id = next(o.ref_id for o in settled.resolution.outcomes if o.kind == "monitor")
+        watch = queue.store.watches.get_watch(watch_id)
+        assert watch.status == "approved"
+        assert watch.due_date == "2026-12-01"
+        assert not [w for w in queue.store.watches.list_watches() if w.status == "proposed"]
+
+    def test_two_phrases_in_one_body_still_count_three_months_forward(self, queue):
+        event = self._event(
+            queue,
+            subject="Påminnelse",
+            body=(
+                "Svara inom tre månader. Garantin gäller senast två veckor "
+                "efter besiktningen."
+            ),
+            message_id="<q-anchor-2@x.example>",
+        )
+        month = next(q for q in event.triage.anchor_questions if q.unit == "month")
+        assert month.before is False
+        settled = resolve_source_event(
+            store=queue.store, event_id=event.id, user_id="admin-1",
+            kinds=["monitor"],
+            watch={
+                "kind": "stated_deadline",
+                "anchor_date": "2026-09-01",
+                "quote": month.quote,
+            },
+        )
+        watch_id = next(o.ref_id for o in settled.resolution.outcomes if o.kind == "monitor")
+        watch = queue.store.watches.get_watch(watch_id)
+        assert watch.due_date == "2026-12-01"
+
 
 # ---------------------------------------------------------------------------
 # The HTTP surface, and the boundary it inherits
@@ -987,6 +1164,34 @@ class TestQueueOverHttp:
         assert "invoice" in body["categoryLabels"]
         assert "take_in" in body["resolutionLabels"]
         assert body["mailbox"]["hasFetched"] is False
+
+    def test_the_open_question_cap_holds_and_the_rest_are_a_count(self, two_tenant_app):
+        """Alert fatigue: more open questions than the cap must not become
+        more cards. The overflow is a number, not a longer list."""
+        from app.integrations.threads import OPEN_ANCHOR_SHOWN
+
+        app = two_tenant_app
+        total = OPEN_ANCHOR_SHOWN + 2
+        for i in range(total):
+            self._import(
+                app, app.admin_a_headers,
+                message(
+                    subject=f"Påminnelse {i + 1}",
+                    body="Svara inom tre månader.",
+                    message_id=f"<cap-{i}@x.example>",
+                ),
+            )
+
+        reply = app.client.get("/api/brf/brf-a/integrations/intake", headers=app.admin_a_headers)
+        assert reply.status_code == 200, reply.text
+        body = reply.json()
+        anchors = body["openAnchors"]
+        assert anchors["total"] == total
+        assert anchors["cap"] == OPEN_ANCHOR_SHOWN
+        assert len(anchors["shown"]) == OPEN_ANCHOR_SHOWN
+        assert anchors["hidden"] == 2
+        assert all(row["quote"] for row in anchors["shown"])
+        assert all("age_days" in row for row in anchors["shown"])
 
     def test_a_member_may_read_the_queue_and_not_resolve_it(self, two_tenant_app):
         app = two_tenant_app

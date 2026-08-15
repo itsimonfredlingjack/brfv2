@@ -286,6 +286,25 @@ class TriageSignal(BaseModel):
     source_ref: str = ""
 
 
+class AnchorQuestion(BaseModel):
+    """A deadline whose start date is not in the text and must not be guessed.
+
+    Feature 1 anchors day-counts to ``receivedDateTime``. This is the other
+    path: "inom tre månader" has no calendar start, and applying the receipt
+    date would be the guess that makes the date wrong. The hit stays a
+    question until a human types the missing date; only then does
+    :func:`app.terms.anchor_relative` compute a due date.
+    """
+
+    quote: str
+    count: int
+    unit: Literal["month", "week", "year"]
+    before: bool = False
+    source: Literal["subject", "body", "attachment"]
+    source_ref: str = ""
+    label: str = "Från vilket datum?"
+
+
 class RelatedRecord(BaseModel):
     """Something already in this association's records that this may concern.
 
@@ -337,6 +356,9 @@ class TriageSuggestion(BaseModel):
 
     signals: list[TriageSignal] = Field(default_factory=list)
     related: list[RelatedRecord] = Field(default_factory=list)
+    # Feature 2: frists with no calendar start. Empty is the usual case, and
+    # an unanswered question here is not a bevakning — see resolve.py.
+    anchor_questions: list[AnchorQuestion] = Field(default_factory=list)
 
     suggested_by: str = "regelmotor"
     # What could not be established. Required in spirit for anything but a

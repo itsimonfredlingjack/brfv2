@@ -192,6 +192,7 @@ function mountWith({
   threads = [THREAD],
   mailbox = { hasFetched: false, last_new_count: 0, last_fetched_at: '', last_error: '' },
   counts = { threads: 1, openThreads: 1, openMessages: 1, awaitingReply: 0, unclear: 0 },
+  openAnchors = { total: 0, cap: 3, shown: [], hidden: 0 },
   isAdmin = true,
   mailboxConnected = true,
   onOpenDocument = vi.fn(),
@@ -202,6 +203,7 @@ function mountWith({
     resolutionLabels: RESOLUTION_LABELS,
     mailbox,
     counts,
+    openAnchors,
   });
   return render(
     <IntakeQueue
@@ -400,6 +402,116 @@ describe('what the app believes', () => {
     });
     expect(await screen.findByText(/ingen text som den här läsningen känner igen/))
       .toBeInTheDocument();
+  });
+});
+
+describe('an unanchored deadline on the card', () => {
+  const QUESTION_EVENT = {
+    ...EVENT,
+    subject: 'Påminnelse garanti',
+    body_text: 'Svara inom tre månader.',
+    triage: {
+      ...EVENT.triage,
+      signals: EVENT.triage.signals.filter((s) => s.kind !== 'date'),
+      anchor_questions: [{
+        quote: 'Svara inom tre månader.',
+        count: 3,
+        unit: 'month',
+        before: false,
+        source: 'body',
+        source_ref: '',
+        label: 'Från vilket datum?',
+      }],
+    },
+  };
+  const QUESTION_THREAD = {
+    ...THREAD,
+    key: 'subject:påminnelse garanti|gjutformen12.example,snosvangen.example',
+    subject: 'Påminnelse garanti',
+    events: [QUESTION_EVENT],
+    signals: QUESTION_EVENT.triage.signals,
+  };
+
+  it('asks for the missing date next to the quote, and is not a bevakning yet', async () => {
+    mountWith({ threads: [QUESTION_THREAD] });
+    await waitForQueue();
+
+    const question = screen.getByRole('region', { name: 'Frist utan datum' });
+    expect(within(question).getByText('Från vilket datum?')).toBeInTheDocument();
+    expect(within(question).getByText(/inom tre månader/)).toBeInTheDocument();
+    const field = within(question).getByLabelText('Från vilket datum?');
+    expect(field).toHaveAttribute('type', 'date');
+    expect(within(question).getByRole('button', { name: /Bevaka från detta datum/ })).toBeDisabled();
+  });
+
+  it('sends the human date as the anchor, not a precomputed due date', async () => {
+    mountWith({ threads: [QUESTION_THREAD] });
+    await waitForQueue();
+
+    fireEvent.change(screen.getByLabelText('Från vilket datum?'), {
+      target: { value: '2026-09-01' },
+    });
+    intakeApi.resolve.mockResolvedValue(QUESTION_EVENT);
+    fireEvent.click(screen.getByRole('button', { name: /Bevaka från detta datum/ }));
+
+    await waitFor(() => expect(intakeApi.resolve).toHaveBeenCalled());
+    const [, eventId, payload] = intakeApi.resolve.mock.calls[0];
+    expect(eventId).toBe(QUESTION_EVENT.id);
+    expect(payload.outcomes).toEqual(['monitor']);
+    expect(payload.watch.anchor_date).toBe('2026-09-01');
+    expect(payload.watch.due_date).toBeFalsy();
+    expect(payload.watch.quote).toBe('Svara inom tre månader.');
+  });
+
+  it('shows every question from the same event, not only the first', async () => {
+    const twoQuestions = {
+      ...QUESTION_EVENT,
+      triage: {
+        ...QUESTION_EVENT.triage,
+        anchor_questions: [
+          QUESTION_EVENT.triage.anchor_questions[0],
+          {
+            quote: 'Garantin gäller senast två veckor efter besiktningen.',
+            count: 2,
+            unit: 'week',
+            before: false,
+            source: 'body',
+            source_ref: '',
+            label: 'Från vilket datum?',
+          },
+        ],
+      },
+    };
+    mountWith({
+      threads: [{ ...QUESTION_THREAD, events: [twoQuestions], signals: twoQuestions.triage.signals }],
+    });
+    await waitForQueue();
+    const region = screen.getByRole('region', { name: 'Frist utan datum' });
+    expect(within(region).getByText(/inom tre månader/)).toBeInTheDocument();
+    expect(within(region).getByText(/två veckor/)).toBeInTheDocument();
+    expect(within(region).getAllByLabelText('Från vilket datum?')).toHaveLength(2);
+  });
+
+  it('shows the open questions counted and aged, and caps the cards', async () => {
+    const shown = [1, 2, 3].map((n) => ({
+      thread_key: `t${n}`,
+      event_id: `ev${n}`,
+      subject: `Påminnelse ${n}`,
+      quote: 'Svara inom tre månader.',
+      label: 'Från vilket datum?',
+      asked_at: '2026-08-01T10:00:00+00:00',
+      age_days: n,
+    }));
+    mountWith({
+      threads: [QUESTION_THREAD],
+      openAnchors: { total: 5, cap: 3, shown, hidden: 2 },
+    });
+    const strip = await screen.findByRole('region', { name: 'Obesvarade frågor' });
+    expect(within(strip).getByText(/5 obesvarade frågor/)).toBeInTheDocument();
+    expect(within(strip).getAllByText(/Påminnelse \d/)).toHaveLength(3);
+    expect(within(strip).getByText(/2 till/)).toBeInTheDocument();
+    expect(within(strip).getByText(/3 dagar/)).toBeInTheDocument();
+    expect(within(strip).queryByText('Påminnelse 4')).not.toBeInTheDocument();
   });
 });
 
