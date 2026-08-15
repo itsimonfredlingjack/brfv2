@@ -52,6 +52,21 @@ def _textless_pdf() -> bytes:
     return build_pdf([[]])
 
 
+def _full_page_lines(tag: str = "ord") -> list[tuple]:
+    """Eight lines of eight words — 64 words on the page, comfortably above
+    MIN_WORDS_PER_PAGE. One long line will not do: PyMuPDF drops the glyphs
+    that run off the page edge, so a 60-word single line extracts as 19."""
+    return [(" ".join(f"{tag}{i}{j}" for j in range(8)), 72.0, 100.0 + 14.0 * i)
+            for i in range(8)]
+
+
+def _page_of_real_text() -> bytes:
+    """One page carrying an ordinary amount of text, so the digital path is
+    exercised on merit rather than on a three-word fixture that a real archive
+    would call empty."""
+    return build_pdf([_full_page_lines()])
+
+
 class TestDispatch:
     def test_ocr_dispatch_ingests_chunks_indexes_and_marks_source_scanned(self, tmp_path, monkeypatch):
         monkeypatch.setattr("app.store.tesseract_available", lambda: True)
@@ -84,9 +99,87 @@ class TestDispatch:
         monkeypatch.setattr("app.store.ocr_pdf", _boom)
 
         store = Store(data_dir=tmp_path)
-        pdf = build_pdf([[("Vanlig digital text.", 72, 100)]])
-        meta = store.add_document("Digital.pdf", pdf)
+        meta = store.add_document("Digital.pdf", _page_of_real_text())
         assert meta.source == "digital"
+        assert meta.thin is False
+        assert meta.thin_pages == 0
+
+
+class TestThinTextLayer:
+    """The defect this class exists for: dispatching on `total_words == 0` let a
+    PDF whose only text is a running header through as digital, and it entered
+    the index carrying nothing. Measured on eight real BRF archives — three of
+    58 handlingar, 55 pages, went in at 1–17 words/page with no error anywhere.
+    Dispatch is on words-per-page now, and a document that stays thin says so."""
+
+    def test_header_only_page_goes_to_ocr_instead_of_passing_as_digital(
+        self, tmp_path, monkeypatch
+    ):
+        monkeypatch.setattr("app.store.tesseract_available", lambda: True)
+        monkeypatch.setattr("app.store.ocr_pdf", lambda data, **kw: [PAGE1, PAGE3])
+
+        store = Store(data_dir=tmp_path)
+        # Four words on the page — a running header, and under the old
+        # `total_words == 0` dispatch this was ingested as a digital document.
+        thin_pdf = build_pdf([[("Brf Ekhagen 2024 årsredovisning", 72, 40)]])
+        meta = store.add_document("Tunn.pdf", thin_pdf)
+
+        assert meta.source == "scanned"
+        assert meta.words == len(PAGE1.words) + len(PAGE3.words)
+
+    def test_ocr_that_finds_less_than_the_thin_layer_does_not_replace_it(
+        self, tmp_path, monkeypatch
+    ):
+        """Widening the dispatch must not be able to make a document worse."""
+        monkeypatch.setattr("app.store.tesseract_available", lambda: True)
+        monkeypatch.setattr(
+            "app.store.ocr_pdf",
+            lambda data, **kw: [PageData(number=1, width=595.0, height=842.0,
+                                         rotation=0, words=_line_words(["Brf"]))],
+        )
+        store = Store(data_dir=tmp_path)
+        thin_pdf = build_pdf([[("Brf Ekhagen 2024 årsredovisning", 72, 40)]])
+        meta = store.add_document("Tunn.pdf", thin_pdf)
+
+        assert meta.source == "digital"   # the thin layer survived
+        assert meta.words == 4            # not the single OCR word
+        assert meta.thin is True
+
+    def test_document_still_thin_after_ocr_is_ingested_and_flagged(self, tmp_path, monkeypatch):
+        monkeypatch.setattr("app.store.tesseract_available", lambda: True)
+        monkeypatch.setattr(
+            "app.store.ocr_pdf",
+            lambda data, **kw: [PageData(number=1, width=595.0, height=842.0,
+                                         rotation=0, words=_line_words(["Protokoll", "2024"]))],
+        )
+        store = Store(data_dir=tmp_path)
+        meta = store.add_document("Nästan tomt.pdf", _textless_pdf())
+
+        assert meta.thin is True          # loud, not silent
+        assert meta.thin_pages == 1
+        assert meta.id in store.documents  # but ingested, not rejected
+        # and it survives a reload — the flag is persisted, not just returned
+        assert Store(data_dir=tmp_path).documents[meta.id].thin is True
+
+    def test_thin_pages_counted_in_a_document_that_averages_above_the_threshold(
+        self, tmp_path, monkeypatch
+    ):
+        """The case document-level dispatch cannot catch: one near-empty page
+        inside an otherwise digital PDF. The average stays above the threshold
+        so OCR never runs — thin_pages is the only trace it leaves."""
+        def _boom(data, **kw):
+            raise AssertionError("a document above the threshold must not reach OCR")
+
+        monkeypatch.setattr("app.store.tesseract_available", lambda: True)
+        monkeypatch.setattr("app.store.ocr_pdf", _boom)
+
+        store = Store(data_dir=tmp_path)
+        meta = store.add_document("Blandad.pdf", build_pdf(
+            [_full_page_lines("a"), [("Bilaga", 72, 100)], _full_page_lines("b")]))
+
+        assert meta.source == "digital"
+        assert meta.thin is False      # the document as a whole is fine
+        assert meta.thin_pages == 1    # but one page is not, and it is visible
 
 
 class TestPageCountGuardOrdering:
