@@ -60,6 +60,16 @@ class DocumentMeta(BaseModel):
     # documents.json entries predate this field and load as "digital" via
     # the default.
     source: Literal["digital", "scanned"] = "digital"
+    # True when the document still carries less than MIN_WORDS_PER_PAGE words
+    # per page after ingestion — it is searchable in name only. Ingested, not
+    # rejected, but never silently: the archive list marks it. Documents that
+    # predate the field load as False.
+    thin: bool = False
+    # Pages individually under that threshold. Catches the case the
+    # document-level dispatch cannot: a mostly-digital PDF with a handful of
+    # scanned pages averages above the threshold and never reaches OCR, so
+    # this is the only place those pages show up at all.
+    thin_pages: int = 0
     # Corpus-isolation guard (CI2): stamped from the tenant's corpus_origin at
     # ingestion (Store.add_document) — never caller-supplied, never inferred
     # from path/filename. Deliberately NO pydantic default: Store loads raw

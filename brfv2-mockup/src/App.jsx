@@ -344,6 +344,10 @@ function App() {
     name: d.name,
     date: datum(d.uploaded_at),
     pages: d.pages,
+    // Backend stamps this when a document is searchable in name only (under
+    // MIN_WORDS_PER_PAGE even after OCR). Shown in the archive list because a
+    // handling that answers nothing must not look identical to one that does.
+    thin: d.thin === true,
     status: 'Färdigbehandlad', // upload is synchronous server-side — every listed doc is done
   });
 
@@ -1377,6 +1381,7 @@ function App() {
                                 <button className="doc-open-btn" onClick={() => openDocument(doc.id)} aria-label={`Öppna ${doc.name}`}>
                                   <span className="truncate">{doc.name}</span>
                                   {doc.id === highlightDocId && <span className="new-doc-badge">Ny</span>}
+                                  {doc.thin && <span className="thin-doc-badge" title="Handlingen gick in i arkivet nästan utan text — troligen en skanning som inte gick att läsa. Sökningen hittar ingenting i den.">Tunn</span>}
                                 </button>
                               </td>
                               <td className="meta-cell num-col">{doc.pages != null ? doc.pages : '—'}</td>
@@ -1412,6 +1417,7 @@ function App() {
                                 <FileText size={16} color="var(--text-secondary)" />
                                 <h4 className="truncate">{doc.name}</h4>
                                 {doc.id === highlightDocId && <span className="new-doc-badge">Ny</span>}
+                                {doc.thin && <span className="thin-doc-badge" title="Handlingen gick in i arkivet nästan utan text — troligen en skanning som inte gick att läsa. Sökningen hittar ingenting i den.">Tunn</span>}
                               </div>
                               <div className="doc-card-meta">
                                  <span>{doc.date}</span>

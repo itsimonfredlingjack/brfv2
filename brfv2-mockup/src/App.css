@@ -850,7 +850,15 @@
 .status-text.warning { color: var(--warn); }
 .status-text.muted { color: var(--muted-foreground); }
 
-.new-doc-badge {
+/* NOTE: this shape now exists six times under six names — .new-doc-badge and
+   .thin-doc-badge here, plus .task-badge, .watch-badge, .badge and .run-badge
+   on four other screens. That is the missing-component symptom CLAUDE.md
+   describes, and it wants one primitive. Not extracted here because that is a
+   change across five screens and needs before/after shots of each; adding the
+   sixth under its own name is the smaller debt than styling a "Tunn" state
+   through a class called new-doc-badge. */
+.new-doc-badge,
+.thin-doc-badge {
   flex-shrink: 0;
   padding: var(--s0h) var(--s2);
   border: 1px solid var(--border-strong);
@@ -858,6 +866,13 @@
   color: var(--foreground);
   font-size: var(--text-xs);
   font-weight: 500;
+}
+
+/* A handling that reached the index carrying almost no text. It answers
+   nothing, so it must not look the same as one that does. */
+.thin-doc-badge {
+  border-color: var(--warn);
+  color: var(--warn);
 }
 
 /* ========================================================================= */

@@ -32,6 +32,20 @@ logger = logging.getLogger("brf.store")
 
 MAX_DOCUMENT_PAGES = 400  # resource guard: reject absurd page counts up front
 
+# A text layer can exist and still be empty. Dispatching OCR on "are there zero
+# words in the whole document" let a PDF whose only text is a running header
+# through as digital, and it entered the index carrying nothing — silently, with
+# no error and no signal anywhere.
+#
+# The threshold is read off real documents, not guessed. Across 58 handlingar
+# from eight public BRF archives (798 pages, measured 2026-08-14) every document
+# with a genuine text layer sits at 80 words/page or above — the sparsest is an
+# energideklaration, which is mostly form boxes. The three broken ones sat at
+# 1.0, 16.7 and 17.0. The band between 17 and 80 is empty, so the threshold goes
+# in the middle of it: under 40 words per page a page carries less than a short
+# paragraph, and the document should be OCR'd rather than indexed as it stands.
+MIN_WORDS_PER_PAGE = 40
+
 
 def _atomic_write(path: Path, content: str) -> None:
     """Write `content` to `path` atomically: write to a temp file in the SAME
@@ -401,22 +415,27 @@ class Store:
                 f"Dokumentet har {len(pages)} sidor — max {MAX_DOCUMENT_PAGES}. Dela upp filen."
             )
         total_words = sum(len(p.words) for p in pages)
+        per_page = total_words / max(len(pages), 1)
         source: str = "digital"
-        if total_words == 0:
-            # Document-level dispatch: a scanned PDF has zero digital words on
-            # EVERY page, so "no text layer anywhere" is treated as "this is
-            # the scanned case" and OCR replaces the whole document's
-            # extraction. Mixed digital/scanned documents (e.g. one scanned
-            # page inside an otherwise digital PDF) are out of scope — such a
-            # document already has total_words > 0 and never reaches OCR.
+        thin = False
+        if per_page < MIN_WORDS_PER_PAGE:
+            # Document-level dispatch on CONTENT, not on the presence of a
+            # layer: a fully scanned PDF has zero digital words, but a PDF
+            # whose text layer holds only a running header has a few dozen —
+            # both are "there is nothing here to search" and both belong in
+            # OCR. Mixed digital/scanned documents (one scanned page inside an
+            # otherwise digital PDF) still average above the threshold and are
+            # still out of scope; `thin_pages` below is what makes them
+            # visible instead of silent.
             if not tesseract_available():
                 raise ValueError(
-                    "Dokumentet saknar textlager (troligen en skannad PDF). "
-                    "OCR kräver tesseract med svenskt språkstöd, vilket inte "
-                    "är tillgängligt på den här servern."
+                    "Dokumentet saknar textlager, eller har ett för tunt för att "
+                    "kunna sökas i (troligen en skannad PDF). OCR kräver tesseract "
+                    "med svenskt språkstöd, vilket inte är tillgängligt på den "
+                    "här servern."
                 )
             try:
-                pages = ocr_pdf(pdf_bytes)
+                ocr_pages = ocr_pdf(pdf_bytes)
             except RuntimeError as exc:
                 # tesseract exited non-zero (environment problem, not a
                 # content problem) — surface as a user-facing Swedish 422
@@ -428,10 +447,29 @@ class Store:
                 raise ValueError(
                     "OCR-motorn tog för lång tid (timeout) — kontrollera tesseract-installationen."
                 ) from exc
-            total_words = sum(len(p.words) for p in pages)
+            ocr_words = sum(len(p.words) for p in ocr_pages)
+            # Keep whichever extraction actually carries more text. Without
+            # this, widening the dispatch could make a document WORSE than
+            # before the fix: a thin-but-real text layer replaced by an OCR
+            # pass that found even less.
+            if ocr_words > total_words:
+                pages, total_words, source = ocr_pages, ocr_words, "scanned"
             if total_words == 0:
                 raise ValueError("OCR kunde inte hitta någon läsbar text i dokumentet.")
-            source = "scanned"
+            per_page = total_words / max(len(pages), 1)
+            thin = per_page < MIN_WORDS_PER_PAGE
+
+        # A document that lands under the threshold anyway is ingested — a thin
+        # document is still better than no document — but it must not disappear
+        # quietly the way the three in the measurement did. It is stamped on the
+        # meta (so the API and the archive list can show it), and logged here.
+        thin_pages = sum(1 for p in pages if len(p.words) < MIN_WORDS_PER_PAGE)
+        if thin:
+            logger.warning(
+                "tunn handling: %s — %d ord på %d sidor (%.1f ord/sida, källa=%s); "
+                "under %d ord/sida även efter OCR",
+                name, total_words, len(pages), per_page, source, MIN_WORDS_PER_PAGE,
+            )
         doc_id = uuid.uuid4().hex[:12]
         with self.lock:
             try:
@@ -445,6 +483,8 @@ class Store:
                     chunks=0,
                     uploaded_at=datetime.now(timezone.utc).isoformat(timespec="seconds"),
                     source=source,
+                    thin=thin,
+                    thin_pages=thin_pages,
                     # Corpus-isolation guard (CI2): stamped from the tenant's
                     # own origin. add_document takes NO caller-supplied
                     # origin parameter — there is no argument to abuse, so a
