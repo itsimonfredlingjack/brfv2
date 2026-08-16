@@ -93,8 +93,9 @@ def test_probe_order_keeps_prefix_stable(tmp_path):
     rt = StubRuntime()
     ask(st, "Fraga ett?", provider=fake, corpus_runtime=rt)
     ask(st, "Helt annan fraga?", provider=fake, corpus_runtime=rt)
-    prefix0 = fake.calls[0]["user"].split("\n\nFRÅGA:")[0]
-    prefix1 = fake.calls[1]["user"].split("\n\nFRÅGA:")[0]
+    gen = fake.non_judge_calls()
+    prefix0 = gen[0]["user"].split("\n\nFRÅGA:")[0]
+    prefix1 = gen[1]["user"].split("\n\nFRÅGA:")[0]
     assert prefix0 == prefix1
 
 

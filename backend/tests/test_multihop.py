@@ -306,7 +306,7 @@ class TestPlannedAnswering:
         assert not result.response.refusal, result.response.answer
         assert "Menar du" not in result.response.answer
         assert [c.chunk_id for c in result.response.citations] == [ersättning]
-        assert len(fake.calls) == 2, "frågan ska ha nått både planeraren och syntesen"
+        assert len(fake.non_judge_calls()) == 2, "frågan ska ha nått både planeraren och syntesen"
 
     def test_two_document_answer_verifies_through_the_existing_path(self, store):
         avtal = chunk_id_containing(store, "Vinterservice AB")
@@ -538,7 +538,7 @@ class TestFullCorpusSkipsPlanner:
         assert not result.response.refusal
         assert result.plan.mode == "single"
         assert result.plan.subqueries == ["Vad star det?"]
-        assert len(fake.calls) == 1
+        assert len(fake.non_judge_calls()) == 1
         assert fake.calls[0]["user"].startswith("UTDRAG:")
 
 
@@ -568,7 +568,7 @@ class TestDocumentPathSkipsPlanner:
         result = ask_planned(st, "Vad star det?", provider=fake, corpus_runtime=StubRuntime())
         assert not result.response.refusal
         assert result.plan.mode == "single"
-        assert len(fake.calls) == 2
+        assert len(fake.non_judge_calls()) == 2
         assert fake.calls[0]["user"].startswith("HANDLINGAR:")
         assert fake.calls[1]["user"].startswith("UTDRAG:")
 

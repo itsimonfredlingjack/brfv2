@@ -11,6 +11,7 @@ const ALL_REASONS: RefusalReason[] = [
   'grounding_failed',
   'provider_error',
   'numeric_grounding_failed',
+  'citation_contradicted',
 ]
 
 const ALL_REJECTS: RejectReason[] = [
@@ -45,6 +46,7 @@ describe('refusalCopy', () => {
       'insufficient_data',
       'grounding_failed',
       'numeric_grounding_failed',
+      'citation_contradicted',
     ]
     for (const reason of refusals) {
       expect(refusalCopy(reason).tone, reason).toBe('refusal')

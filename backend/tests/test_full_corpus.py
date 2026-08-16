@@ -235,11 +235,12 @@ def test_prefix_identical_across_questions(tmp_path):
     rt = StubRuntime()
     ask(st, "Fraga ett?", provider=fake, corpus_runtime=rt)
     ask(st, "Helt annan fraga?", provider=fake, corpus_runtime=rt)
-    p0, p1 = fake.calls[0]["user"], fake.calls[1]["user"]
+    gen = fake.non_judge_calls()
+    p0, p1 = gen[0]["user"], gen[1]["user"]
     prefix0 = p0.split("\n\nFRÅGA:")[0]
     prefix1 = p1.split("\n\nFRÅGA:")[0]
     assert prefix0 == prefix1
-    assert fake.calls[0]["system"] == fake.calls[1]["system"]
+    assert gen[0]["system"] == gen[1]["system"]
 
 
 def test_prefix_changes_when_document_added(tmp_path):
@@ -252,7 +253,8 @@ def test_prefix_changes_when_document_added(tmp_path):
     ask(st, "Fraga?", provider=fake, corpus_runtime=rt)
     st.add_document("C.pdf", build_pdf([[("Tredje dokumentet.", 72, 100)]]))
     ask(st, "Fraga?", provider=fake, corpus_runtime=rt)
-    assert fake.calls[0]["user"].split("\n\nFRÅGA:")[0] != fake.calls[1]["user"].split("\n\nFRÅGA:")[0]
+    gen = fake.non_judge_calls()
+    assert gen[0]["user"].split("\n\nFRÅGA:")[0] != gen[1]["user"].split("\n\nFRÅGA:")[0]
 
 
 def test_prefix_fingerprint_hashes_system_and_excerpts():

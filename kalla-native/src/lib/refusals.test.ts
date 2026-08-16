@@ -8,6 +8,7 @@ const ALL_REASONS: RefusalReason[] = [
   'grounding_failed',
   'provider_error',
   'numeric_grounding_failed',
+  'citation_contradicted',
 ]
 
 const ALL_REJECT_REASONS: RejectReason[] = [

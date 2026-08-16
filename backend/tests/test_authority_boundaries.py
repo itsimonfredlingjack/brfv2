@@ -170,7 +170,7 @@ class TestK2SovereignInference:
 
         ask_planned(store, "Vem är leverantör och godkände styrelsen avtalet?")
 
-        assert len(fake.calls) == 2, "förväntade planeringsanrop + syntesanrop"
+        assert len(fake.non_judge_calls()) == 2, "förväntade planeringsanrop + syntesanrop"
         assert calls["n"] == 1, (
             f"leverantören löstes upp {calls['n']} gånger — planering och syntes ska dela "
             "en och samma redan upplösta leverantör, annars kan de tala med olika endpoints."

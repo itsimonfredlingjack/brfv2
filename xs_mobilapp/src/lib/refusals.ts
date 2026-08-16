@@ -47,6 +47,12 @@ const COPY: Record<RefusalReason, RefusalCopy> = {
     body: 'Svaret innehöll en siffra som inte gick att belägga i den citerade texten, så det visas inte.',
     next: 'Fråga efter passagen i stället, så kan du läsa siffran i källan.',
   },
+  citation_contradicted: {
+    tone: 'refusal',
+    title: 'Svaret motsäger källan',
+    body: 'Ett svar togs fram men det gick emot den citerade texten, så det visas inte.',
+    next: 'Läs citatet i källan. Frågan kan behöva formuleras om.',
+  },
   provider_error: {
     tone: 'error',
     title: 'Modelltjänsten svarar inte',

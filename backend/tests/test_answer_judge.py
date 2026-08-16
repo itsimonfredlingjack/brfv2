@@ -1,9 +1,10 @@
-"""Parser and wiring for the eval-only answer judge. Not a gate."""
+"""Parser and ask-path wiring for the answer judge."""
 
 import inspect
 
-from app.answer_judge import judge_prompt, parse_verdict
+from app.answer_judge import judge_prompt, parse_verdict, should_judge
 from app.llm import FakeLLM
+from app.schemas import AskResponse
 
 
 def test_parse_verdict_three_outcomes():
@@ -47,9 +48,20 @@ def test_judge_answer_is_one_complete_call():
     assert len(fake.calls) == 1
 
 
-def test_ask_does_not_import_answer_judge():
+def test_should_judge_skips_refusals_and_empty_citations():
+    refused = AskResponse(answer="saknas", refusal=True, refusal_reason="insufficient_data")
+    assert should_judge(refused) is False
+    empty = AskResponse(answer="osäkert", refusal=False, citations=[])
+    assert should_judge(empty) is False
+
+
+def test_ask_wires_answer_judge_not_entailment():
     import app.answer as answer_mod
 
     src = inspect.getsource(answer_mod)
-    assert "answer_judge" not in src
-    assert "judge_answer" not in src
+    assert "judge_answer" in src
+    assert "should_judge" in src
+    assert "citation_contradicted" in src
+    assert "INCOMPLETE_MARK" in src
+    assert "entailment" not in src
+    assert "check_entailment" not in src

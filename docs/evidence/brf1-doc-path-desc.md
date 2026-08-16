@@ -196,4 +196,4 @@ Dokumentvägen med beskrivningsurval är huvudväg (`choose_ask_path` i `app/ans
 
 LettuceDetect är **inte** produktyta. EuroBERT-210M (tyskt huvud) på svenska missade R1:s polaritetsfel och flaggade 2 av 8 korrekta svar; tysk kontroll på samma vikter var ren. Svenskan saknas i checkpointen, och tokenförankring kan inte se R1:s felklass. Mätningen och den avstängda diagnostiken står i `docs/evidence/brf1-entailment.md`.
 
-Samma felklass mättes med den lokala modellen som domare (besvarar frågan, givet citaten): `docs/evidence/brf1-answer-judge.md`. Inte en grind.
+Samma felklass mättes med den lokala modellen som domare (besvarar frågan, givet citaten): `docs/evidence/brf1-answer-judge.md`. Utfallet är delat: `motsager_citatet` fäller, `besvarar_inte` visar med markering, `besvarar` oförändrat. Domaren ser inte handlingen — fel handling är en separat kontroll.

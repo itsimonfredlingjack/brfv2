@@ -2,13 +2,16 @@
 
 Two refusal gates before and after the LLM (SPEC §2.9), plus the grounding
 gate (§2.1): answers whose every citation fails verification are refused when
-requireSources is on.
+requireSources is on. After numeric grounding, the answer judge refuses
+citation contradictions and marks incomplete answers; it never runs without
+accepted quotes.
 """
 
 from __future__ import annotations
 
 from collections.abc import Iterable
 import logging
+import time
 from dataclasses import dataclass
 from typing import Literal
 
@@ -25,6 +28,12 @@ from .full_corpus import (
     measure_tokens,
     prefix_fingerprint,
     user_prompt,
+)
+from .answer_judge import (
+    CONTRADICTION_REFUSAL,
+    INCOMPLETE_MARK,
+    judge_answer,
+    should_judge,
 )
 from .llm import LLMError, LLMFormatError, LLMProvider, parse_llm_json, pick_provider
 from .linked_context import append_linked_table_legends
@@ -513,12 +522,13 @@ def _synthesize(
     low_relevance: bool,
     full_corpus: bool = False,
 ) -> AskResponse:
-    """Generate → verify citations → gate → numeric-ground, over a fixed set
-    of excerpts.
+    """Generate → verify citations → gate → numeric-ground → answer judge.
 
     Extracted verbatim from `ask` so the planned multi-search path (BRF-1)
     reaches the SAME verification, rather than growing a parallel one. It
     takes the excerpts as given and makes no retrieval decisions of its own.
+    The judge runs only on answers with accepted citation quotes: contradiction
+    refuses, incomplete marks, otherwise unchanged.
     """
     s = store.settings
     system = _system_prompt(s)
@@ -685,6 +695,38 @@ def _synthesize(
         filename the model merely claims to cite."""
         return [*trusted_names, *(c.document_name for c in resp.citations)]
 
+    def _with_answer_judge(resp: AskResponse) -> AskResponse:
+        """After citations are verified and numeric grounding has passed.
+
+        Skips refusals and answers with no accepted quotes — the judge
+        otherwise reads refusal prose as an answer. ``motsager_citatet``
+        refuses; ``besvarar_inte`` marks; anything else is unchanged.
+        """
+        if not should_judge(resp):
+            return resp
+        quotes = [q for c in resp.citations for q in c.quotes]
+        t0 = time.perf_counter()
+        try:
+            judged = judge_answer(provider, question, quotes, resp.answer, model=generation_model)
+        except Exception as exc:
+            logger.warning("svarsdomare misslyckades: %s", exc)
+            return resp
+        elapsed = time.perf_counter() - t0
+        logger.info("svarsdomare utfall=%s elapsed_s=%.3f", judged.outcome, elapsed)
+        if judged.outcome == "motsager_citatet":
+            return _refusal(
+                "citation_contradicted",
+                CONTRADICTION_REFUSAL,
+                retrieval=hits,
+                provider=provider.name,
+                model=model,
+                rejected=resp.rejected_citations,
+            )
+        if judged.outcome == "besvarar_inte":
+            warning = ((resp.warning + " ") if resp.warning else "") + INCOMPLETE_MARK
+            return resp.model_copy(update={"warning": warning})
+        return resp
+
     # Numeric grounding gate (SPEC §2.10): citation verification proves a
     # QUOTE is verbatim-real; it says nothing about whether the model's own
     # free-text `answer` asserts a DIFFERENT number alongside a valid quote
@@ -704,7 +746,7 @@ def _synthesize(
     support_quotes = [q for c in resp.citations for q in c.quotes]
     result = check_numeric_grounding(resp.answer, support_quotes, trusted_names=_trusted_spans(resp))
     if result.ok:
-        return resp
+        return _with_answer_judge(resp)
 
     logger.warning("Numerisk grundningskontroll misslyckades, försöker reparera: %s", describe_mismatch(result))
     repaired = _attempt(system + _numeric_repair_nudge(result))
@@ -715,7 +757,7 @@ def _synthesize(
         repaired.answer, repaired_support, trusted_names=_trusted_spans(repaired)
     )
     if repaired_result.ok:
-        return repaired
+        return _with_answer_judge(repaired)
 
     logger.error(
         "Numerisk grundningskontroll misslyckades även efter reparationsförsök: %s",

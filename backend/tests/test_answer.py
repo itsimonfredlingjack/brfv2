@@ -11,6 +11,7 @@ import pytest
 
 import app.answer as answer_mod
 from app.answer import ask
+from app.answer_judge import CONTRADICTION_REFUSAL, INCOMPLETE_MARK
 from app.llm import FakeLLM, LLMError, OpenAICompatProvider
 from app.schemas import PageData, Settings, Word
 from app.store import Store
@@ -235,7 +236,7 @@ class TestRobustness:
         fake = FakeLLM(["inte json alls", good_response(store)])
         resp = ask(store, "När löper jourperioden?", provider=fake)
         assert not resp.refusal
-        assert len(fake.calls) == 2
+        assert len(fake.non_judge_calls()) == 2
         assert "VIKTIGT" in fake.calls[1]["system"]
 
     def test_llm_prompt_contains_chunks_and_contract(self, store):
@@ -531,6 +532,16 @@ class TestEnvelopeTruncation:
         def handler(request: httpx.Request) -> httpx.Response:
             body = json.loads(request.content)
             seen_max_tokens.append(body["max_tokens"])
+            system = ""
+            for message in body.get("messages") or []:
+                if message.get("role") == "system":
+                    system = message.get("content") or ""
+                    break
+            if system.startswith("Du är en domare."):
+                return httpx.Response(
+                    200,
+                    json={"choices": [{"message": {"content": '{"utfall": "besvarar"}'}, "finish_reason": "stop"}]},
+                )
             if body["max_tokens"] < tokens_needed:
                 truncated = full_content[: body["max_tokens"] * 4]
                 return httpx.Response(
@@ -569,7 +580,11 @@ class TestEnvelopeTruncation:
             ("Ersättning utgår med 1250 kr per påbörjad timme",),
             ("Organisationsnummer", "769600-1234"),
         }
-        assert seen_max_tokens[-1] == s.maxResponseLength + answer_mod._CITATION_HEADROOM_TOKENS
+        assert seen_max_tokens[-1] in (
+            s.maxResponseLength + answer_mod._CITATION_HEADROOM_TOKENS,
+            64,
+        )
+        assert s.maxResponseLength + answer_mod._CITATION_HEADROOM_TOKENS in seen_max_tokens
 
     def test_still_refuses_honestly_when_envelope_budget_also_exceeded(self, envelope_store, monkeypatch):
         # A genuinely oversized reply — the fix adds headroom, it doesn't
@@ -633,7 +648,7 @@ class TestNumericGroundingGate:
         resp = ask(numeric_store, "Vad är den totala utgiften?", provider=fake)
         assert resp.refusal and resp.refusal_reason == "numeric_grounding_failed"
         assert "1 565 956" not in resp.answer
-        assert len(fake.calls) == 2  # exactly one repair attempt — not unbounded
+        assert len(fake.non_judge_calls()) == 2  # exactly one repair attempt — not unbounded
 
     def test_wrong_investment_figure_refused(self, numeric_store):
         cid = numeric_chunk_id(numeric_store)
@@ -697,7 +712,7 @@ class TestNumericGroundingGate:
         }])
         resp = ask(numeric_store, "Vad är den totala utgiften?", provider=fake)
         assert not resp.refusal
-        assert len(fake.calls) == 1  # no repair needed
+        assert len(fake.non_judge_calls()) == 1  # no repair needed
 
     def test_equivalent_whitespace_separators_pass(self, numeric_store):
         cid = numeric_chunk_id(numeric_store)
@@ -753,13 +768,13 @@ class TestNumericGroundingGate:
         }])
         resp = ask(numeric_store, "Vad handlar dokumentet om?", provider=fake)
         assert not resp.refusal
-        assert len(fake.calls) == 1
+        assert len(fake.non_judge_calls()) == 1
 
     def test_safe_refusal_with_no_asserted_claims_untouched_by_gate(self, numeric_store):
         fake = FakeLLM([{"answer": "Uppgift saknas.", "citations": [], "insufficient_data": True}])
         resp = ask(numeric_store, "Vad kostar det icke-existerande garaget?", provider=fake)
         assert resp.refusal and resp.refusal_reason == "insufficient_data"
-        assert len(fake.calls) == 1  # refusal never enters the numeric-repair loop
+        assert len(fake.non_judge_calls()) == 1  # refusal never enters the numeric-repair loop
 
     # ---- repair behavior ----
 
@@ -779,7 +794,7 @@ class TestNumericGroundingGate:
         resp = ask(numeric_store, "Vad är den totala utgiften?", provider=fake)
         assert not resp.refusal
         assert "15 659 566" in resp.answer
-        assert len(fake.calls) == 2
+        assert len(fake.non_judge_calls()) == 2
         # The repair prompt must describe the specific mismatch, not just
         # generically ask the model to try again.
         assert "1 565 956" in fake.calls[1]["system"]
@@ -800,7 +815,7 @@ class TestNumericGroundingGate:
         resp = ask(numeric_store, "Vad är den totala utgiften?", provider=fake)
         assert resp.refusal and resp.refusal_reason == "numeric_grounding_failed"
         assert "1 565 956" not in resp.answer and "15 995 656" not in resp.answer
-        assert len(fake.calls) == 2  # bounded — no third attempt
+        assert len(fake.non_judge_calls()) == 2  # bounded — no third attempt
 
     def test_base_prompt_instructs_copying_numbers_exactly(self, numeric_store):
         fake = FakeLLM([{"answer": "x", "citations": [], "insufficient_data": True}])
@@ -837,7 +852,7 @@ class TestNumericIdentifierExemption:
         }])
         resp = ask(numeric_store, "Hur många lägenheter har föreningen?", provider=fake, trusted_names=[self.TENANT])
         assert not resp.refusal, resp.refusal_reason
-        assert len(fake.calls) == 1  # no repair needed — nothing was ever unsupported
+        assert len(fake.non_judge_calls()) == 1  # no repair needed — nothing was ever unsupported
 
     def test_without_trusted_names_the_same_answer_is_refused(self, numeric_store):
         """Control case: omitting trusted_names (the pre-fix default for
@@ -1022,7 +1037,7 @@ class TestNumericIdentifierExemption:
         resp = ask(numeric_store, "Hur många lägenheter?", provider=fake, trusted_names=trusted_names_generator)
         assert not resp.refusal, resp.refusal_reason
         assert "56" in resp.answer
-        assert len(fake.calls) == 2  # repair happened, and the tenant name was still exempt on it
+        assert len(fake.non_judge_calls()) == 2  # repair happened, and the tenant name was still exempt on it
 
 
 TITLED_LINES = [
@@ -1072,6 +1087,50 @@ class TestAcceptedCitationTitleAsTrustedSpan:
         fake = FakeLLM([bad, bad])
         resp = ask(titled_store, "Vad är den totala utgiften?", provider=fake)
         assert resp.refusal and resp.refusal_reason == "numeric_grounding_failed"
+
+
+class TestAnswerJudgeGate:
+    """Split outcomes after numeric grounding. Never a call without quotes."""
+
+    def test_not_called_without_accepted_citations(self, store):
+        store.update_settings(
+            store.settings.model_copy(update={"insufficientDataBehavior": "warn", "minRelevance": 0.0})
+        )
+        fake = FakeLLM([{"answer": "Osäkert svar.", "citations": [], "insufficient_data": True}])
+        resp = ask(store, "Vad kostar garaget?", provider=fake)
+        assert not resp.refusal
+        assert fake.non_judge_calls()
+        assert all(not c["system"].startswith("Du är en domare.") for c in fake.calls)
+
+    def test_not_called_on_grounding_refusal(self, store):
+        fake = FakeLLM(
+            [
+                {
+                    "answer": "Hittat på.",
+                    "citations": [{"chunk_id": first_chunk_id(store), "quote": "Jouren pågår hela året utan uppehåll"}],
+                    "insufficient_data": False,
+                }
+            ]
+        )
+        resp = ask(store, "När löper jourperioden?", provider=fake)
+        assert resp.refusal and resp.refusal_reason == "grounding_failed"
+        assert all(not c["system"].startswith("Du är en domare.") for c in fake.calls)
+
+    def test_besvarar_inte_marks_and_does_not_refuse(self, store):
+        fake = FakeLLM([good_response(store), {"utfall": "besvarar_inte"}])
+        resp = ask(store, "När löper jourperioden?", provider=fake)
+        assert not resp.refusal
+        assert resp.citations
+        assert resp.warning == INCOMPLETE_MARK
+        assert "15 november" in resp.answer
+
+    def test_motsager_citatet_refuses_and_hides_the_answer(self, store):
+        fake = FakeLLM([good_response(store), {"utfall": "motsager_citatet"}])
+        resp = ask(store, "När löper jourperioden?", provider=fake)
+        assert resp.refusal and resp.refusal_reason == "citation_contradicted"
+        assert resp.citations == []
+        assert "15 november" not in resp.answer
+        assert CONTRADICTION_REFUSAL in resp.answer
 
 
 class TestEntailmentNotOnAskPath:

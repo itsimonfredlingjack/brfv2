@@ -173,6 +173,13 @@ class TestFakeLLM:
         with pytest.raises(LLMError):
             fake.complete("sys", "user", max_tokens=100, model="m")
 
+    def test_judge_prompt_defaults_without_consuming_the_queue(self):
+        fake = FakeLLM([{"answer": "kept", "citations": [], "insufficient_data": False}])
+        out = fake.complete("Du är en domare. rest", "user", max_tokens=64, model="m")
+        assert json.loads(out)["utfall"] == "besvarar"
+        leftover = fake.complete("sys", "user", max_tokens=100, model="m")
+        assert json.loads(leftover)["answer"] == "kept"
+
 
 def _ok_payload(content: str) -> dict:
     return {"choices": [{"message": {"content": content}, "finish_reason": "stop"}]}

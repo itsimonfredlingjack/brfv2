@@ -72,6 +72,7 @@ export type RefusalReason =
   | 'grounding_failed'
   | 'provider_error'
   | 'numeric_grounding_failed'
+  | 'citation_contradicted'
 
 export type RejectReason =
   | 'quote_not_found'

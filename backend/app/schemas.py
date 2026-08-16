@@ -154,6 +154,10 @@ RefusalReason = Literal[
     # from grounding_failed (no citation verified at all) because here the
     # citation itself is real; only the prose claim is unsupported.
     "numeric_grounding_failed",
+    # Answer contradicts the verified citation quotes (answer-judge
+    # ``motsager_citatet``). Distinct from grounding_failed (no citation
+    # verified) and numeric_grounding_failed (unsupported number in prose).
+    "citation_contradicted",
 ]
 
 
