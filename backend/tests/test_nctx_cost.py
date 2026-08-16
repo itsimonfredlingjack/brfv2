@@ -1,4 +1,5 @@
 from app.needle_haystack import CANARIES, build_haystack, recommend_nctx
+from scripts.measure_nctx_cost import canary_hit, override_compose_cmd, restore_compose_cmd
 
 
 def _count(text: str) -> int:
@@ -63,3 +64,20 @@ def test_recommend_ignores_nctx_that_did_not_start():
     ]
     rec = recommend_nctx(rows)
     assert rec["n_ctx"] == 16384
+
+
+def test_canary_hit_is_exact_substring():
+    assert canary_hit("foo NEEDLE10-A7K3M2 bar", "NEEDLE10-A7K3M2") is True
+    assert canary_hit("NEEDLE10-A7K3M2XXXX", "NEEDLE10-A7K3M2") is True
+    assert canary_hit("NEEDLE50-P9Q4W1", "NEEDLE10-A7K3M2") is False
+
+
+def test_restore_compose_cmd_has_no_override_file():
+    cmd = restore_compose_cmd("/home/simon/llama-cpp")
+    assert cmd == ["docker", "compose", "-f", "/home/simon/llama-cpp/docker-compose.yml", "up", "-d"]
+
+
+def test_override_cmd_includes_tmp_file_and_nctx():
+    cmd = override_compose_cmd("/home/simon/llama-cpp", "/tmp/llama-nctx.yml")
+    assert cmd[:4] == ["docker", "compose", "-f", "/home/simon/llama-cpp/docker-compose.yml"]
+    assert "/tmp/llama-nctx.yml" in cmd
