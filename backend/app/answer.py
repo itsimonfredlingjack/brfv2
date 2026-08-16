@@ -17,6 +17,8 @@ from .full_corpus import (
     CorpusRuntime,
     FitDecision,
     decide_fit,
+    document_ids_for_probe,
+    document_ids_for_question,
     hits_for_full_corpus,
     measure_tokens,
     prefix_fingerprint,
@@ -116,13 +118,21 @@ def evaluate_full_corpus(
     chunks: dict,
     documents: dict,
     runtime: CorpusRuntime,
+    *,
+    question: str | None = None,
 ) -> tuple[FitDecision, list] | None:
     """Tokenize and decide. None means the tokenizer failed (already logged)."""
     s = store.settings
-    full_hits = hits_for_full_corpus(chunks, documents)
+    order = getattr(store, "_full_corpus_order", "probe")
+    document_ids = None
+    if order == "probe":
+        document_ids = document_ids_for_probe(store.index, s, documents, chunks)
+    elif order == "query" and question:
+        document_ids = document_ids_for_question(store.index, s, documents, chunks, question)
+    full_hits = hits_for_full_corpus(chunks, documents, document_ids=document_ids)
     system = _system_prompt(s)
     excerpts, _alias = _render_excerpts(full_hits)
-    token_key = (tuple(sorted(chunks)), s.systemPrompt)
+    token_key = (tuple(sorted(chunks)), s.systemPrompt, order, tuple(document_ids or ()))
     cached = getattr(store, "_full_corpus_tokens", None)
     try:
         if cached is not None and cached[0] == token_key:
@@ -335,7 +345,7 @@ def ask(
         )
 
     if corpus_runtime is not None:
-        evaluated = evaluate_full_corpus(store, chunks, documents, corpus_runtime)
+        evaluated = evaluate_full_corpus(store, chunks, documents, corpus_runtime, question=question)
         if evaluated is not None:
             decision, full_hits = evaluated
             if decision.use_full_corpus:

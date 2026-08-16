@@ -107,6 +107,7 @@ class Store:
         self.index = HybridIndex(get_embedder())
         self._full_corpus_tokens = None
         self._full_corpus_prefix_fp = None
+        self._warmup_gen = 0
         self._rebuild()
 
         # The tenant this Store *is*. TenantRegistry passes the brf_id it
@@ -399,6 +400,9 @@ class Store:
             self.index = new_index
             self._full_corpus_tokens = None
             self._full_corpus_prefix_fp = None
+        from .prefix_warmup import schedule_warm_prefix
+
+        schedule_warm_prefix(self)
 
     def snapshot(self) -> tuple[HybridIndex, dict, dict, dict]:
         """Consistent (index, chunks, pages, documents) view for one request."""

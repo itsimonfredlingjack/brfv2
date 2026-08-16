@@ -186,11 +186,11 @@ class Settings(BaseModel):
     candidateCount: int = Field(default=100, ge=1, le=1000)
     topK: int = Field(default=6, ge=1, le=50)
     minRelevance: float = Field(default=0.18, ge=0.0, le=1.0)
-    # Size-gated full-corpus ask: skip retrieval when chunk_token_sum is at
-    # or below this knob AND the rendered prefix fits live n_ctx. 0 forces
-    # retrieval (before/after on the same commit). Default is an arbitrary
-    # starting value, not a Gemma 4 quality ceiling — n_ctx often binds first.
-    fullCorpusTokenThreshold: int = Field(default=32000, ge=0)
+    # Optional extra ceiling on full-corpus prefix_tokens. None = only the
+    # real window cap (n_ctx − question reserve − response budget). 0 forces
+    # retrieval (before/after on the same commit). A positive N binds only
+    # when it is tighter than the window.
+    fullCorpusTokenThreshold: int | None = Field(default=None, ge=0)
     # Cross-encoder rerank stage (fix/rerank-financial-tables): retrieve a
     # wide candidate pool, cross-encode each against the query, and pass only
     # the top topK onward — fixes true financial-table answer rows ranking

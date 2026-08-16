@@ -105,7 +105,7 @@ def pack_documents(
     system: str,
     n_ctx: int | None,
     response_budget: int,
-    threshold: int,
+    threshold: int | None,
 ) -> PackDecision:
     if threshold == 0:
         return PackDecision(False, "threshold", [], scores, None)

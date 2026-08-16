@@ -1,7 +1,7 @@
 """Measure n_ctx cost and three-depth needle quality on loopback llama.cpp.
 
 Temporarily overrides `-c` via a gitignored compose file, then always restores
-16384. Stdout is numbers only — never haystack text.
+the operational n_ctx (65536). Stdout is numbers only — never haystack text.
 
 Usage (from backend/):
     uv run python -m scripts.measure_nctx_cost --out out/nctx-cost
@@ -36,6 +36,7 @@ from app.needle_haystack import (  # noqa: E402
 from scripts.eval import install_network_audit  # noqa: E402
 
 N_CTXS = (16384, 32768, 65536)
+OPERATIONAL_N_CTX = 65536
 LOREM_FILLED_16K = {"hit_10": True, "hit_50": False, "hit_90": False}
 COMPOSE_DIR_DEFAULT = "/home/simon/llama-cpp"
 OVERRIDE_PATH = Path("/tmp/llama-nctx-override.yml")
@@ -325,11 +326,11 @@ def measure_one(origin: str, n_ctx: int, runtime: LlamaCppRuntime) -> dict:
     return row
 
 
-def _restore_16384(compose_dir: str, origin: str) -> None:
-    print("restoring n_ctx=16384", file=sys.stderr, flush=True)
+def _restore_ops(compose_dir: str, origin: str) -> None:
+    print(f"restoring n_ctx={OPERATIONAL_N_CTX}", file=sys.stderr, flush=True)
     _run(restore_compose_cmd(compose_dir))
-    if not wait_n_ctx(origin, 16384, timeout_s=WAIT_NCTX_S):
-        print("RESTORE FAILED — /props n_ctx is not 16384", file=sys.stderr, flush=True)
+    if not wait_n_ctx(origin, OPERATIONAL_N_CTX, timeout_s=WAIT_NCTX_S):
+        print(f"RESTORE FAILED — /props n_ctx is not {OPERATIONAL_N_CTX}", file=sys.stderr, flush=True)
         sys.exit(2)
 
 
@@ -382,7 +383,7 @@ def run_filled_window(origin: str, base: str, compose_dir: str, out: Path) -> No
                 flush=True,
             )
     finally:
-        _restore_16384(compose_dir, origin)
+        _restore_ops(compose_dir, origin)
 
     rec = recommend_nctx(rows)
     payload = {"mode": "filled-window", "rows": rows, "recommended": rec}
@@ -450,10 +451,14 @@ def run_occupancy(origin: str, base: str, compose_dir: str, out: Path) -> None:
             except Exception:
                 server["stable"] = False
     finally:
-        _restore_16384(compose_dir, origin)
+        _restore_ops(compose_dir, origin)
 
     print("control haystack=16000 at n_ctx=16384", file=sys.stderr, flush=True)
     try:
+        write_override_yaml(OVERRIDE_PATH, 16384)
+        rc = _run(override_compose_cmd(compose_dir, str(OVERRIDE_PATH)))
+        if rc != 0 or not wait_n_ctx(origin, 16384):
+            raise RuntimeError("kunde inte starta n_ctx=16384 för 16k-kontroll")
         control = ask_needles(origin, LlamaCppRuntime(base), 16000)
     except Exception as exc:
         print(f"control 16k@16384 failed: {exc}", file=sys.stderr, flush=True)
@@ -466,6 +471,8 @@ def run_occupancy(origin: str, base: str, compose_dir: str, out: Path) -> None:
             "needles": [],
             "error": type(exc).__name__,
         }
+    finally:
+        _restore_ops(compose_dir, origin)
     print(
         f"control 16k@16384 hay_tokens={control['hay_tokens']} "
         f"10={control['hit_10']} 50={control['hit_50']} 90={control['hit_90']}",

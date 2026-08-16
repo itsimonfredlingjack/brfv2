@@ -162,6 +162,6 @@ def test_require_production_embedder_rejects_hashed(monkeypatch):
 def test_archive_live_uses_nctx_bound_not_product_threshold():
     from scripts.live_full_corpus import ARCHIVE_AFTER_THRESHOLD, QUESTIONS
 
-    assert ARCHIVE_AFTER_THRESHOLD == 100000
+    assert ARCHIVE_AFTER_THRESHOLD is None
     assert [q[0] for q in QUESTIONS] == ["q_name", "q_seat", "q_notice"]
 

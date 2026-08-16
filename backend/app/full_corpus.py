@@ -18,6 +18,7 @@ from .schemas import Chunk, DocumentMeta, RetrievalHit
 logger = logging.getLogger("brf.full_corpus")
 
 QUESTION_RESERVE_TOKENS = 512
+ARCHIVE_PROBE = "stadgar styrelse förening kallelse årsredovisning ekonomi"
 _UNSET = object()
 
 Bound = Literal["fits", "threshold", "n_ctx", "n_ctx_missing", "tokenizer_error"]
@@ -30,7 +31,7 @@ class FitDecision:
     chunk_token_sum: int
     prefix_tokens: int
     n_ctx: int | None
-    threshold: int
+    threshold: int | None
     effective_cap: int | None
 
 
@@ -39,12 +40,19 @@ def decide_fit(
     chunk_token_sum: int,
     prefix_tokens: int,
     n_ctx: int | None,
-    threshold: int,
+    threshold: int | None,
     question_reserve: int = QUESTION_RESERVE_TOKENS,
     response_budget: int,
 ) -> FitDecision:
-    """Two-bound gate: chunk sum vs threshold, then prefix vs live n_ctx."""
-    effective_cap = (n_ctx - question_reserve - response_budget) if n_ctx is not None else None
+    """Window cap is n_ctx minus reserves. Optional threshold is an extra ceiling."""
+    window_cap = (n_ctx - question_reserve - response_budget) if n_ctx is not None else None
+    extra = threshold if threshold is not None and threshold > 0 else None
+    if window_cap is None:
+        effective_cap = extra
+    elif extra is None:
+        effective_cap = window_cap
+    else:
+        effective_cap = min(window_cap, extra)
 
     if threshold == 0:
         bound: Bound = "threshold"
@@ -52,12 +60,13 @@ def decide_fit(
     elif n_ctx is None:
         bound = "n_ctx_missing"
         use = False
-    elif chunk_token_sum > threshold:
-        bound = "threshold"
-        use = False
-    elif prefix_tokens + question_reserve + response_budget > n_ctx:
-        bound = "n_ctx"
-        use = False
+    elif effective_cap is not None and prefix_tokens > effective_cap:
+        if extra is not None and window_cap is not None and extra < window_cap and prefix_tokens > extra:
+            bound = "threshold"
+            use = False
+        else:
+            bound = "n_ctx"
+            use = False
     else:
         bound = "fits"
         use = True
@@ -98,21 +107,87 @@ def user_prompt(question: str, excerpts: str, *, full_corpus: bool) -> str:
     return f"FRÅGA: {question}\n\nUTDRAG:\n{excerpts}"
 
 
+def edge_order(ranked_high_to_low: list[str]) -> list[str]:
+    """U-shape: best first and last, worst toward the middle."""
+    left: list[str] = []
+    right: list[str] = []
+    for i, item in enumerate(ranked_high_to_low):
+        if i % 2 == 0:
+            left.append(item)
+        else:
+            right.append(item)
+    return left + list(reversed(right))
+
+
+def ranked_document_ids(scores, documents: dict[str, DocumentMeta]) -> list[str]:
+    scored = [row.document_id for row in scores if row.document_id in documents]
+    seen = set(scored)
+    rest = sorted(
+        (doc_id for doc_id in documents if doc_id not in seen),
+        key=lambda doc_id: (documents[doc_id].name, doc_id),
+    )
+    return edge_order(scored + rest)
+
+
+def document_ids_for_probe(index, settings, documents: dict[str, DocumentMeta], chunks: dict) -> list[str]:
+    """Query-independent ranking: frozen probe, then U-shape. Stable across questions."""
+    return _document_ids_from_query(index, settings, documents, chunks, ARCHIVE_PROBE)
+
+
+def document_ids_for_question(
+    index,
+    settings,
+    documents: dict[str, DocumentMeta],
+    chunks: dict,
+    question: str,
+) -> list[str]:
+    """Query-dependent ranking. Prefix changes with the question — kills KV cache."""
+    return _document_ids_from_query(index, settings, documents, chunks, question)
+
+
+def _document_ids_from_query(index, settings, documents, chunks, query: str) -> list[str]:
+    from .document_ask import score_documents
+
+    n_chunks = max(len(chunks), 1)
+    wide = index.search(
+        query,
+        weight=settings.searchWeighting / 100.0,
+        candidates=max(settings.candidateCount, n_chunks),
+        top_k=n_chunks,
+        min_confidence=0.0,
+    )
+    return ranked_document_ids(score_documents(wide), documents)
+
+
 def hits_for_full_corpus(
     chunks: dict[str, Chunk],
     documents: dict[str, DocumentMeta],
+    *,
+    document_ids: list[str] | None = None,
 ) -> list[RetrievalHit]:
     """Every chunk as a hit, in a total order. Scores are not retrieval scores."""
-    ordered = sorted(
-        chunks.values(),
-        key=lambda c: (
-            documents[c.document_id].name if c.document_id in documents else "",
-            c.document_id,
-            c.page,
-            c.word_start,
-            c.id,
-        ),
-    )
+    if document_ids is None:
+        ordered = sorted(
+            chunks.values(),
+            key=lambda c: (
+                documents[c.document_id].name if c.document_id in documents else "",
+                c.document_id,
+                c.page,
+                c.word_start,
+                c.id,
+            ),
+        )
+    else:
+        rank = {doc_id: i for i, doc_id in enumerate(document_ids)}
+        ordered = sorted(
+            chunks.values(),
+            key=lambda c: (
+                rank.get(c.document_id, len(rank)),
+                c.page,
+                c.word_start,
+                c.id,
+            ),
+        )
     hits: list[RetrievalHit] = []
     for chunk in ordered:
         meta = documents.get(chunk.document_id)

@@ -67,35 +67,48 @@ QUESTION_RESERVE = 512
 RESPONSE = 1800  # 1200 + 600 headroom, matches defaults
 
 
+def test_default_threshold_is_none():
+    from app.schemas import Settings
+
+    assert Settings().fullCorpusTokenThreshold is None
+
+
 def test_threshold_zero_forces_retrieval():
     d = decide_fit(chunk_token_sum=10, prefix_tokens=20, n_ctx=16384, threshold=0, response_budget=RESPONSE)
     assert d.use_full_corpus is False and d.bound == "threshold"
 
 
 def test_missing_n_ctx_is_not_a_fit():
-    d = decide_fit(chunk_token_sum=10, prefix_tokens=20, n_ctx=None, threshold=32000, response_budget=RESPONSE)
+    d = decide_fit(chunk_token_sum=10, prefix_tokens=20, n_ctx=None, threshold=None, response_budget=RESPONSE)
     assert d.use_full_corpus is False and d.bound == "n_ctx_missing"
 
 
-def test_n_ctx_binds_when_threshold_is_decorative():
-    # 32000 > 16384 on this host: an archive under the knob can still miss the window.
-    # prefix + 512 + 1800 must exceed n_ctx; 14000 still fits (effective cap 14072).
+def test_none_threshold_fits_when_prefix_under_window():
+    d = decide_fit(chunk_token_sum=40000, prefix_tokens=200, n_ctx=16384, threshold=None, response_budget=RESPONSE)
+    assert d.use_full_corpus is True and d.bound == "fits"
+    assert d.effective_cap == 16384 - QUESTION_RESERVE - RESPONSE
+
+
+def test_chunk_token_sum_is_not_a_gate():
+    d = decide_fit(chunk_token_sum=40000, prefix_tokens=100, n_ctx=16384, threshold=None, response_budget=RESPONSE)
+    assert d.use_full_corpus is True and d.bound == "fits"
+
+
+def test_n_ctx_binds_when_prefix_over_window():
     prefix = 14100
     d = decide_fit(
-        chunk_token_sum=5000, prefix_tokens=prefix, n_ctx=16384, threshold=32000, response_budget=RESPONSE
+        chunk_token_sum=5000, prefix_tokens=prefix, n_ctx=16384, threshold=None, response_budget=RESPONSE
     )
     assert d.use_full_corpus is False and d.bound == "n_ctx"
     assert d.effective_cap == 16384 - QUESTION_RESERVE - RESPONSE
 
 
-def test_both_bounds_hold():
-    d = decide_fit(chunk_token_sum=100, prefix_tokens=200, n_ctx=16384, threshold=32000, response_budget=RESPONSE)
-    assert d.use_full_corpus is True and d.bound == "fits"
-
-
-def test_threshold_binds_before_n_ctx():
-    d = decide_fit(chunk_token_sum=40000, prefix_tokens=100, n_ctx=16384, threshold=32000, response_budget=RESPONSE)
+def test_optional_cap_binds_on_prefix_not_chunk_sum():
+    d = decide_fit(
+        chunk_token_sum=100, prefix_tokens=40000, n_ctx=65536, threshold=32000, response_budget=RESPONSE
+    )
     assert d.use_full_corpus is False and d.bound == "threshold"
+    assert d.effective_cap == 32000
 
 
 class StubRuntime:
@@ -113,12 +126,14 @@ def _two_chunk_store(tmp_path):
     st = Store(data_dir=tmp_path)
     st.add_document("B.pdf", build_pdf([[("Andra dokumentets enda mening.", 72, 100)]]))
     st.add_document("A.pdf", build_pdf([[("Forsta dokumentets enda mening.", 72, 100)]]))
+    # Tests that cite K1 as A.pdf assume name/page order, not the product probe U-shape.
+    st._full_corpus_order = "page"
     return st
 
 
 def test_full_corpus_skips_search_and_puts_question_last(tmp_path, monkeypatch):
     st = _two_chunk_store(tmp_path)
-    st.update_settings(st.settings.model_copy(update={"minRelevance": 1.0, "fullCorpusTokenThreshold": 32000}))
+    st.update_settings(st.settings.model_copy(update={"minRelevance": 1.0}))
     fake = FakeLLM([{
         "answer": "Forsta dokumentets enda mening.",
         "citations": [{"chunk_id": "K1", "quote": "Forsta dokumentets enda mening."}],
