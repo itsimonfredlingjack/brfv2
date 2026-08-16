@@ -7,14 +7,71 @@ CANARIES = (
     {"depth": 0.50, "marker": "MID", "code": "NEEDLE50-P9Q4W1"},
     {"depth": 0.90, "marker": "OMEGA", "code": "NEEDLE90-Z2R8C5"},
 )
-FILLER_WORD = "lorem"
+HAYSTACK_SIZES = (8000, 16000, 32000, 48000, 62000)
 GPU_FREE_MIN_MIB = 1024
+STRUCTURE_VOCAB = (
+    "styrelsen",
+    "rakenskap",
+    "avgift",
+    "underhall",
+    "fonden",
+    "lanet",
+    "amortering",
+    "byggnaden",
+    "marken",
+    "kassan",
+    "skulden",
+    "rantan",
+    "motet",
+    "stamma",
+    "ledamot",
+    "revisor",
+    "budget",
+    "kostnad",
+    "intakt",
+    "kapital",
+    "anlaggning",
+    "omsattning",
+    "avskrivning",
+    "lagenhet",
+    "garage",
+    "vatten",
+    "fiber",
+    "sophantering",
+)
+HEADER_EVERY = 48
+
+
+def structured_filler_words(n: int) -> list[str]:
+    if n < 1:
+        return []
+    headers = (
+        ("Avsnitt", "Forvaltning"),
+        ("Avsnitt", "Resultat"),
+        ("Avsnitt", "Balans"),
+        ("Avsnitt", "Noter"),
+    )
+    out: list[str] = []
+    vocab_i = 0
+    header_i = 0
+    while len(out) < n:
+        if len(out) % HEADER_EVERY == 0:
+            pair = headers[header_i % len(headers)]
+            header_i += 1
+            for token in pair:
+                if len(out) >= n:
+                    break
+                out.append(token)
+            continue
+        out.append(STRUCTURE_VOCAB[vocab_i % len(STRUCTURE_VOCAB)])
+        vocab_i += 1
+    return out[:n]
 
 
 def build_haystack(*, target_tokens: int, count) -> tuple[str, list[dict]]:
     if target_tokens < 32:
         raise ValueError("target_tokens too small")
-    words = [FILLER_WORD] * target_tokens
+    words = structured_filler_words(target_tokens)
     placements = []
     for needle in CANARIES:
         payload = f"Markor {needle['marker']} {needle['code']}".split()
@@ -66,3 +123,39 @@ def recommend_nctx(rows: list[dict]) -> dict:
 
     chosen = max(alive, key=depth_score)
     return {"n_ctx": chosen["n_ctx"], "reason": "deepest_then_smallest", "discarded": discarded}
+
+
+def _hay_row(rows: list[dict], size: int) -> dict | None:
+    exact = [r for r in rows if r.get("target_tokens") == size]
+    if exact:
+        return exact[0]
+    slop = max(512, int(size * 0.05))
+    near = [r for r in rows if abs((r.get("hay_tokens") or 0) - size) <= slop]
+    return near[0] if near else None
+
+
+def occupancy_holds_for_archive(rows: list[dict]) -> dict:
+    server = next((r for r in rows if r.get("n_ctx") == 65536), None)
+    if server is None:
+        server = next((r for r in rows if "started" in r), {}) or {}
+    if not server.get("started", True):
+        return {"holds": False, "reason": "not_started"}
+    if server.get("stable") is False:
+        return {"holds": False, "reason": "unstable"}
+    total = server.get("gpu_total_mib")
+    used = server.get("vram_full_mib")
+    if total and used is not None and (total - used) < GPU_FREE_MIN_MIB:
+        return {"holds": False, "reason": "gpu_low"}
+    hay = _hay_row(rows, 48000)
+    if hay is None:
+        return {"holds": False, "reason": "48k_missing"}
+    if hay.get("hit_10") or hay.get("hit_50") or hay.get("hit_90"):
+        return {"holds": True, "reason": "48k_hit"}
+    return {"holds": False, "reason": "48k_miss"}
+
+
+def occupancy_explains_old_miss(*, filled_16k: dict, unfilled_16k_in_64k: dict) -> bool:
+    for key in ("hit_50", "hit_90"):
+        if unfilled_16k_in_64k.get(key) and not filled_16k.get(key):
+            return True
+    return False
