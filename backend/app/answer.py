@@ -12,11 +12,23 @@ import logging
 
 from .citations import Rejected, Resolved, resolve_citation
 from .evidence import EvidencePack
+from .document_ask import evaluate_document_path, hits_for_document_ids
+from .full_corpus import (
+    CorpusRuntime,
+    FitDecision,
+    decide_fit,
+    document_ids_for_probe,
+    document_ids_for_question,
+    hits_for_full_corpus,
+    measure_tokens,
+    prefix_fingerprint,
+    user_prompt,
+)
 from .llm import LLMError, LLMFormatError, LLMProvider, parse_llm_json, pick_provider
 from .linked_context import append_linked_table_legends
 from .numeric_grounding import NumericGroundingResult, check_numeric_grounding, describe_mismatch
 from .rerank import rerank_chunks, reranker_available
-from .schemas import AskResponse, CitationOut, RejectedCitation, RetrievalHit
+from .schemas import AskResponse, CitationOut, RejectedCitation, RetrievalHit, Settings
 from .store import Store
 
 logger = logging.getLogger("brf.answer")
@@ -96,6 +108,114 @@ def _refusal(reason: str, message: str, *, retrieval: list[RetrievalHit], provid
     )
 
 
+def _system_prompt(settings: Settings) -> str:
+    extra = settings.systemPrompt.strip()
+    return (extra + "\n\n" if extra else "") + GROUNDING_CONTRACT
+
+
+def evaluate_full_corpus(
+    store: Store,
+    chunks: dict,
+    documents: dict,
+    runtime: CorpusRuntime,
+    *,
+    question: str | None = None,
+) -> tuple[FitDecision, list] | None:
+    """Tokenize and decide. None means the tokenizer failed (already logged)."""
+    s = store.settings
+    # Product order is document name then page. "probe"/"query" U-shape is
+    # opt-in for measurement scripts (scripts/live_edge_order.py).
+    order = getattr(store, "_full_corpus_order", "page")
+    document_ids = None
+    if order == "probe":
+        document_ids = document_ids_for_probe(store.index, s, documents, chunks)
+    elif order == "query" and question:
+        document_ids = document_ids_for_question(store.index, s, documents, chunks, question)
+    full_hits = hits_for_full_corpus(chunks, documents, document_ids=document_ids)
+    system = _system_prompt(s)
+    excerpts, _alias = _render_excerpts(full_hits)
+    token_key = (tuple(sorted(chunks)), s.systemPrompt, order, tuple(document_ids or ()))
+    cached = getattr(store, "_full_corpus_tokens", None)
+    try:
+        if cached is not None and cached[0] == token_key:
+            chunk_token_sum, prefix_tokens = cached[1]
+        else:
+            chunk_token_sum, prefix_tokens = measure_tokens(
+                runtime, chunks, system=system, excerpts=excerpts
+            )
+            store._full_corpus_tokens = (token_key, (chunk_token_sum, prefix_tokens))
+        n_ctx = runtime.n_ctx()
+    except Exception as exc:
+        logger.warning(
+            "full_corpus bound=tokenizer_error use=False chunk_tokens=? prefix_tokens=? n_ctx=? threshold=%s — %s",
+            s.fullCorpusTokenThreshold,
+            exc,
+        )
+        return None
+    decision = decide_fit(
+        chunk_token_sum=chunk_token_sum,
+        prefix_tokens=prefix_tokens,
+        n_ctx=n_ctx,
+        threshold=s.fullCorpusTokenThreshold,
+        response_budget=s.maxResponseLength + _CITATION_HEADROOM_TOKENS,
+    )
+    return decision, full_hits
+
+
+def _document_path_response(
+    *,
+    store: Store,
+    question: str,
+    index,
+    chunks: dict,
+    pages: dict,
+    documents: dict,
+    provider: LLMProvider,
+    generation_model: str,
+    model: str,
+    trusted_names: tuple[str, ...],
+    corpus_runtime: CorpusRuntime,
+) -> AskResponse | None:
+    """Pack whole documents when the top-scoring document fits. None → retrieval."""
+    s = store.settings
+    pack = evaluate_document_path(
+        question=question,
+        index=index,
+        chunks=chunks,
+        documents=documents,
+        runtime=corpus_runtime,
+        settings=s,
+    )
+    if not pack.use_documents:
+        logger.info(
+            "ask_path=retrieval bound=%s n_docs=0 prefix_tokens=%s",
+            pack.bound,
+            pack.prefix_tokens,
+        )
+        return None
+    hits = hits_for_document_ids(chunks, documents, pack.document_ids)
+    logger.info(
+        "ask_path=documents n_docs=%s prefix_tokens=%s bound=%s",
+        len(pack.document_ids),
+        pack.prefix_tokens,
+        pack.bound,
+    )
+    return _synthesize(
+        store=store,
+        question=question,
+        hits=hits,
+        chunks=chunks,
+        pages=pages,
+        documents=documents,
+        provider=provider,
+        generation_model=generation_model,
+        model=model,
+        trusted_names=trusted_names,
+        low_relevance=False,
+        full_corpus=True,
+    )
+
+
 def ask(
     store: Store,
     question: str,
@@ -103,6 +223,7 @@ def ask(
     *,
     trusted_names: Iterable[str] = (),
     evidence: "EvidencePack | None" = None,
+    corpus_runtime: CorpusRuntime | None = None,
 ) -> AskResponse:
     """`evidence` (optional, keyword-only): a pre-gathered EvidencePack from
     the planned multi-search path (app/multihop.py, BRF-1). When supplied,
@@ -225,6 +346,48 @@ def ask(
             low_relevance=low_relevance,
         )
 
+    if corpus_runtime is not None:
+        evaluated = evaluate_full_corpus(store, chunks, documents, corpus_runtime, question=question)
+        if evaluated is not None:
+            decision, full_hits = evaluated
+            if decision.use_full_corpus:
+                system = _system_prompt(s)
+                excerpts, _alias = _render_excerpts(full_hits)
+                fp = prefix_fingerprint(system, excerpts)
+                prev = getattr(store, "_full_corpus_prefix_fp", None)
+                if prev != fp:
+                    logger.info("full_corpus prefix_changed tenant=%s", store.tenant_id)
+                    store._full_corpus_prefix_fp = fp
+                return _synthesize(
+                    store=store,
+                    question=question,
+                    hits=full_hits,
+                    chunks=chunks,
+                    pages=pages,
+                    documents=documents,
+                    provider=provider,
+                    generation_model=generation_model,
+                    model=model,
+                    trusted_names=trusted_names,
+                    low_relevance=False,
+                    full_corpus=True,
+                )
+            packed = _document_path_response(
+                store=store,
+                question=question,
+                index=index,
+                chunks=chunks,
+                pages=pages,
+                documents=documents,
+                provider=provider,
+                generation_model=generation_model,
+                model=model,
+                trusted_names=trusted_names,
+                corpus_runtime=corpus_runtime,
+            )
+            if packed is not None:
+                return packed
+
     # Retrieve WIDE when reranking so the cross-encoder has a real pool to
     # rescore from; candidates (the bm25/dense fusion pool) is widened to
     # match so a low candidateCount can't silently starve the reranker.
@@ -300,6 +463,7 @@ def _synthesize(
     model: str,
     trusted_names: tuple[str, ...],
     low_relevance: bool,
+    full_corpus: bool = False,
 ) -> AskResponse:
     """Generate → verify citations → gate → numeric-ground, over a fixed set
     of excerpts.
@@ -309,9 +473,9 @@ def _synthesize(
     takes the excerpts as given and makes no retrieval decisions of its own.
     """
     s = store.settings
-    system = (s.systemPrompt.strip() + "\n\n" if s.systemPrompt.strip() else "") + GROUNDING_CONTRACT
+    system = _system_prompt(s)
     excerpts, alias_map = _render_excerpts(hits)
-    user = f"FRÅGA: {question}\n\nUTDRAG:\n{excerpts}"
+    user = user_prompt(question, excerpts, full_corpus=full_corpus)
 
     # maxResponseLength keeps its user-facing meaning (answer budget); the
     # envelope sent to the provider gets extra headroom for citation JSON.
@@ -385,7 +549,7 @@ def _synthesize(
                         quotes=spans,
                         chunk_id=chunk.id,
                         rects=res.rects,
-                        score=hit_scores.get(chunk.id, 0.0),
+                        score=None if full_corpus else hit_scores.get(chunk.id, 0.0),
                         # Reality report condition 3: OCR rects clip more than
                         # digital ones (never misplaced) — flag so the UI can
                         # mark the highlight as approximate.

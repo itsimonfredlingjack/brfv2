@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
 import time
@@ -212,13 +213,16 @@ def _render_highlight(src: "fitz.Document", citation, slug: str, qid: str, ci: i
 # ---------- the question loop ----------
 
 
-def _process_question(store, meta, src, qid: str, question: str, labels: list[str] | None, slug: str, hl_dir: Path) -> dict:
+def _process_question(
+    store, meta, src, qid: str, question: str, labels: list[str] | None, slug: str, hl_dir: Path, *,
+    corpus_runtime=None,
+) -> dict:
     from app.answer import ask
 
     row: dict = {"qid": qid, "labels": labels}
     t0 = time.perf_counter()
     try:
-        resp = ask(store, question)
+        resp = ask(store, question, corpus_runtime=corpus_runtime)
     except Exception as exc:  # the failure IS a finding — keep going
         row["error"] = repr(exc)
         row["elapsed_s"] = round(time.perf_counter() - t0, 3)
@@ -272,6 +276,16 @@ def _process_document(
         if rerank:
             store.update_settings(store.settings.model_copy(update={"rerankEnabled": True}))
 
+        raw_threshold = os.environ.get("BRF_FULL_CORPUS_THRESHOLD")
+        if raw_threshold is not None and raw_threshold != "":
+            store.update_settings(
+                store.settings.model_copy(update={"fullCorpusTokenThreshold": int(raw_threshold)})
+            )
+
+        from app.full_corpus import live_corpus_runtime
+
+        corpus_runtime = live_corpus_runtime()
+
         doc_report.update(pages=meta.pages, words=meta.words, chunks=meta.chunks, source=meta.source)
         if meta.source != "digital":
             raise SystemExit(
@@ -284,7 +298,9 @@ def _process_document(
         try:
             question_rows = []
             for qid, question, labels in questions:
-                row = _process_question(store, meta, src, qid, question, labels, slug, hl_dir)
+                row = _process_question(
+                    store, meta, src, qid, question, labels, slug, hl_dir, corpus_runtime=corpus_runtime
+                )
                 question_rows.append(row)
                 extra = f" citations={row['n_citations']}" if "n_citations" in row else f" error={row.get('error')}"
                 print(f"  {qid}: refused={row.get('refused')}{extra}", flush=True)

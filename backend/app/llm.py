@@ -214,6 +214,8 @@ class OpenAICompatProvider:
         # budget in a hidden reasoning channel and return empty content on
         # grounding prompts — ask for no reasoning; degrade once if rejected.
         self._reasoning_off = True
+        # llama.cpp prefix-KV hint; degrade once if the server 400s on it.
+        self._cache_prompt = True
 
     def complete(self, system: str, user: str, *, max_tokens: int, model: str) -> str:
         payload = {
@@ -229,6 +231,8 @@ class OpenAICompatProvider:
             payload["response_format"] = {"type": "json_object"}
         if self._reasoning_off:
             payload["reasoning_effort"] = "none"
+        if self._cache_prompt:
+            payload["cache_prompt"] = True
         try:
             resp = self._client.post("/chat/completions", json=payload)
         except Exception as exc:
@@ -243,6 +247,10 @@ class OpenAICompatProvider:
             logger.warning("LLM-servern avvisade response_format — fortsätter utan JSON-läge")
             self._json_mode = False
             return self.complete(system, user, max_tokens=max_tokens, model=model)
+        if resp.status_code == 400 and self._cache_prompt and "cache_prompt" in resp.text:
+            logger.warning("LLM-servern avvisade cache_prompt — fortsätter utan")
+            self._cache_prompt = False
+            return self.complete(system, user, max_tokens=max_tokens, model=model)
         if resp.status_code != 200:
             logger.error("LLM-servern %s → %d: %s", self.base_url, resp.status_code, resp.text[:300])
             raise LLMError(f"LLM-servern svarade {resp.status_code}.")
@@ -252,6 +260,14 @@ class OpenAICompatProvider:
             content = choice["message"]["content"]
         except Exception as exc:
             raise LLMError(f"Oväntat svar från LLM-servern: {resp.text[:200]!r}") from exc
+        timings = data.get("timings")
+        if isinstance(timings, dict):
+            logger.info(
+                "llama.cpp timings prompt_n=%s prompt_ms=%s cache_n=%s",
+                timings.get("prompt_n"),
+                timings.get("prompt_ms"),
+                timings.get("cache_n"),
+            )
         if choice.get("finish_reason") == "length":
             if not (isinstance(content, str) and content.strip()):
                 # The budget went to a hidden reasoning channel, not the answer —
@@ -326,10 +342,12 @@ class DeterministicTestLLM:
             time.sleep(delay_ms / 1000)
 
         question_match = re.search(r"^FRÅGA:\s*(.*?)\n\nUTDRAG:", user, re.DOTALL)
+        if not question_match:
+            question_match = re.search(r"\n\nFRÅGA:\s*(.*?)\Z", user, re.DOTALL)
         question = question_match.group(1).strip() if question_match else ""
         question_terms = self._terms(question)
         excerpts = re.findall(
-            r"\[(K\d+)\] \([^\n]*\)\n(.*?)(?=\n---\n|\Z)",
+            r"\[(K\d+)\] \([^\n]*\)\n(.*?)(?=\n---\n|\n\nFRÅGA:|\Z)",
             user,
             re.DOTALL,
         )

@@ -42,6 +42,9 @@ backend/eval/last_run.json
 backend/eval/last_planner_run.json
 backend/eval/network_audit.json
 
+# Linked git worktrees (isolated feature checkouts)
+.worktrees/
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

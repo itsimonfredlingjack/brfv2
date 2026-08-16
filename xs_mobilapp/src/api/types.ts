@@ -60,7 +60,7 @@ export interface Citation {
   chunk_id: string
   /** [x0, y0, x1, y1] in PDF points, TOP-LEFT origin. */
   rects: number[][]
-  score: number
+  score: number | null
   approximate: boolean
   corpus_origin: string | null
 }
