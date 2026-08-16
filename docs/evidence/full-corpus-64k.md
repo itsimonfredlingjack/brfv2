@@ -15,3 +15,5 @@ Headline per fall: **`verified_to_refused=0`**, `refused_to_verified=0`. Alla tr
 Kall prefill ~30.7 s (`prompt_ms=30676`). Fråga två och tre: `prompt_n` 17 och 25, `prompt_ms` ~70 ms, `cache_n=54552`. Prefix-KV är poängen med vägen och den höll.
 
 Frågorna är stadgar-formade (namn, säte, kallelsetid). Retrieval verifierade dem också — det här är inte ett retrieval-miss-experiment. Det är evidens att arkivet **rymmer**, att vägen **eldar**, och att den andra frågan är billig. Ränte- och soliditetsfrågor väntar på en årsredovisning som inte finns i de 10 PDF:erna.
+
+Drift efter den här mätningen (65536 i compose, tröskel `None`, förvärmning, sidordning): `docs/evidence/nctx-ops-65536.md`.

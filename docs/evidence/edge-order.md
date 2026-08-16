@@ -26,4 +26,6 @@ Utdragen är samma chunkar. Skillnaden är dokumentordningen i blocket. Inom ett
 
 ## Beslut
 
-Behåll **frågeoberoende U-form (`probe`)** som produktordning. Den försämrar inte verifiering mot sidordning och dödar inte prefix-KV. Frågeberoende ordning skeppas inte.
+Tre frågor räcker inte för att motivera en omordning i renderaren. **Produktordning är dokumentnamn sedan sida.** U-form (`probe` / `query`) finns kvar bakom `store._full_corpus_order` för `scripts/live_edge_order.py` och är av i drift.
+
+Frågeberoende ordning skeppas inte: den dödar prefix-KV utan mätbar vinst här.
