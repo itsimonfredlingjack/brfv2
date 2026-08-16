@@ -81,3 +81,13 @@ def test_override_cmd_includes_tmp_file_and_nctx():
     cmd = override_compose_cmd("/home/simon/llama-cpp", "/tmp/llama-nctx.yml")
     assert cmd[:4] == ["docker", "compose", "-f", "/home/simon/llama-cpp/docker-compose.yml"]
     assert "/tmp/llama-nctx.yml" in cmd
+
+
+def test_document_kind_from_filename():
+    from scripts.live_document_ask import document_kind
+
+    assert document_kind("Stadgar Brf.pdf") == "stadgar"
+    assert document_kind("Årsredovisning 2024.pdf") == "annual_report"
+    assert document_kind("arsredovisning.pdf") == "annual_report"
+    assert document_kind("Avtal ekonomisk forvaltning.pdf") == "other"
+
