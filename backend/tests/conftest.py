@@ -5,6 +5,7 @@ import pytest
 # Tests must be offline + deterministic: no model downloads, no real LLM.
 os.environ.setdefault("BRF_EMBEDDER", "hashed")
 os.environ.setdefault("BRF_LLM", "fake")
+os.environ["BRF_ENTAILMENT"] = "0"
 
 
 def pytest_collection_modifyitems(config, items):

@@ -6,13 +6,18 @@ Sista diagnostiken före arkitekturbeslut, sedan produkt. Samma elva fall, samma
 
 **Vad som mättes:** `evaluate_document_path` fick modellurval över beskrivningarna (1–3 handlingar) i stället för max fused score. Valda handlingar packades hela under `n_ctx`. Helarkiv blockerades. Grind, citat, numerik — oförändrat. Den vägen är nu produktens huvudväg; se slutet.
 
-**Baslinjer:**
+**Måttlärdom:** tre mått i följd räknade något som låg intill det vi ville veta — citat som fanns, citat ur rätt handling, och först därefter svar som besvarar frågan.
 
-| väg | `verifierat_i_facit` | `verifierat_i_fel_handling` | `vägrad` |
-| --- | ---: | ---: | ---: |
-| retrieval (`docs/evidence/brf1-full-corpus.md`) | 5 | 1 | 5 |
-| helarkiv + katalog (`docs/evidence/brf1-doc-descriptions.md`) | 6 | 1 | 4 |
-| **dokumentväg + beskrivningsurval** | **9** | **2** | **0** |
+Jämförelsen 5 mot 9 (`verifierat_i_facit` retrieval mot dokumentväg) stryks. Det är inte samma sak som om frågan besvaras. Baslinjen är retrieval klassad för hand med samma fyrutfallsmått:
+
+| utfall | retrieval | dokumentväg + beskrivningsurval |
+| --- | ---: | ---: |
+| besvarar frågan korrekt | **4** | **8** |
+| citerar rätt handling men svarar fel eller ofullständigt | 1 | 1 |
+| fel handling | 1 | 2 |
+| vägrad | 5 | 0 |
+
+Den verkliga förbättringen är **4 → 8**. Retrievals 5 `verifierat_i_facit` och dokumentvägens 9 är kvar som citatmått i tabellerna nedan, men de är inte baslinjen.
 
 ---
 
@@ -104,6 +109,23 @@ Det är inte att 494 var fel — det är att ett tillägg som skulle ge översik
 
 ---
 
+## Retrieval klassad med samma mått
+
+Samma elva fall, `fullCorpusTokenThreshold=0`, samma store, samma modell. Svarstexterna fanns inte i `before.json`; de lästes från en omkörning. Citatmåttet återkom oförändrat (5 / 1 / 5). Klassning för hand mot frågan:
+
+| utfall | fall | n |
+| --- | --- | ---: |
+| besvarar frågan korrekt | R2, R4, R6, R8 | **4** |
+| citerar rätt handling men svarar fel eller ofullständigt | R3b | **1** |
+| fel handling | R1 | **1** |
+| vägrad | R3, R5, R7, R5b, R7b | **5** |
+
+R2 nej + nio månader. R4 inte fast pris efter 2024-03-31. R6 andel BOA+LOA och 3446/20362 för 117:14. R8 tom 2047-03-31, nio månader. R3b citerar G (facit) men svarar med parkeringsfriskrivningen på en fråga om *gården*. R1 svarar ja utifrån D s11/s9 (10 % / 50 % fasta platser); facit är G. Vägran: R3/R5/R7/R7b `insufficient_data`, R5b `numeric_grounding_failed`.
+
+**4 är retrievalbaslinjen för om frågan besvaras.** Dokumentvägen är 8 mot den baslinjen, inte 9 mot 5.
+
+---
+
 ## Måttet räknar fortfarande fel sorts träff
 
 `verifierat` slogs ihop till `verifierat_i_facit` för att det första räknade fel sorts träff (citat ur fel handling). Samma invändning gäller nu `verifierat_i_facit`: ett ordagrant citat ur rätt handling betyder inte att svaret besvarar frågan. R5-diagnosen visade det redan — citatet var korrekt och prosan innehöll en siffra som inte fanns i källan. Noll vägringar gör hålet skarpare, inte mildare: systemet svarar alltid.
@@ -118,7 +140,7 @@ Klassning för hand mot frågan, inte mot citatgrinden:
 | citerar rätt handling men svarar fel eller ofullständigt | R1 | **1** |
 | fel handling | R3b, R7b | **2** |
 
-**8 är siffran som gäller framåt för om frågan besvaras**, inte 9. Det är inte ett ras — det är ett fall. R1 citerade G s1 men vände meningen: *"Hyresgästen förbinder sig att anvisa de boende en egen plats i garaget då detta strider mot tecknat Mobilitetsavtal."* Facitfrågan är ja/nej om reserverad plats. Svaret är osammanhängande och svarar inte.
+**8 är siffran som gäller framåt för dokumentvägen**, inte 9. Mot retrievals 4 är det plus fyra. R1 citerade G s1 men vände meningen: *"Hyresgästen förbinder sig att anvisa de boende en egen plats i garaget då detta strider mot tecknat Mobilitetsavtal."* Facitfrågan är ja/nej om reserverad plats. Svaret är osammanhängande och svarar inte.
 
 R2 nej + nio månader. R3 friskrivning om inte oaktsamhet. R4 inte fast pris efter 2024-04-01 (schablon Q1–3, verkliga kostnader). R5 och R5b 494 i administrationskostnad. R6 andel av BOA+LOA / verkliga kostnader för 117:14. R7 varsko om betydande prisjusteringar. R8 nio månader, gäller tom 2047-03-31.
 
@@ -162,10 +184,14 @@ Enpack av 1–3 → 1 som produktregel kostar de fall som behövde flera handlin
 
 Fråga: *Vem står för kostnaden om en bil får en skada på gården?* Facit G (hyresavtal parkering). Urvalet tog B (teknisk förvaltning). Citatet B s11 handlar om skadegörelse vid avrop, inte bil på gården.
 
-Frågans pekord (*gården*, *bil*, *skada*) finns inte i facithandlingen. G talar om parkering, friskrivning, personbil i lokalen. Det är inte lösbart med en bättre metod på samma underlag: beskrivning, BM25, fused score och titel+struktur missade alla. **Det är det första kända fallet som kräver att någon skriver kopplingen för hand** (den här frågan hör till parkeringsavtalet, inte till teknisk förvaltning eller gården som ord).
+Frågans pekord (*gården*, *bil*, *skada*) finns inte i facithandlingen. G talar om parkering, friskrivning, personbil i lokalen. Det är inte lösbart med en bättre metod på samma underlag: beskrivning, BM25, fused score och titel+struktur missade alla. **Det är det första kända fallet som kräver att någon skriver kopplingen för hand** (den här frågan hör till parkeringsavtalet, inte till teknisk förvaltning eller gården som ord). Bygg inte den kopplingen än.
+
+Motsvarande mekanism är redan mätt: Marcel (Trienes et al., EMNLP 2025 demos, [arXiv:2507.13937](https://arxiv.org/abs/2507.13937)) lade ett handkurerat frågelager — 36 FAQ:er, varje kopplad till relevanta handlingar — ovanpå BM25+dense och fick **+75 % MRR**. Vi behöver inte återupptäcka det. R3b är skälet att införa samma slags lager här, inte ett nytt forskningsproblem.
 
 ---
 
 ## Produkt
 
 Dokumentvägen med beskrivningsurval är huvudväg (`choose_ask_path` i `app/answer.py`). Beskrivningar genereras vid ingestion och när extraherad text ändras, cachas på dokumentet. Urval 1–3 över beskrivningarna. Max fused score styr inte. Helarkiv ligger kvar bakom `Store._prefer_full_corpus`. Retrieval är fallback när urvalet inte kan köras eller paketet inte ryms. Citatkedja, numerisk grind och koordinater oförändrade.
+
+Efter att citaten verifierats och ritats, och numeriken släppt, körs LettuceDetect som **varning** mot de accepterade citaten. Den fäller ingenting. Mätningen står i `docs/evidence/brf1-entailment.md`: R1 fångas inte, 2 av de 8 korrekta flaggas.

@@ -28,6 +28,7 @@ from .full_corpus import (
 )
 from .llm import LLMError, LLMFormatError, LLMProvider, parse_llm_json, pick_provider
 from .linked_context import append_linked_table_legends
+from .entailment import check_entailment, format_warning
 from .numeric_grounding import NumericGroundingResult, check_numeric_grounding, describe_mismatch
 from .rerank import rerank_chunks, reranker_available
 from .schemas import AskResponse, CitationOut, RejectedCitation, RetrievalHit, Settings
@@ -513,12 +514,13 @@ def _synthesize(
     low_relevance: bool,
     full_corpus: bool = False,
 ) -> AskResponse:
-    """Generate → verify citations → gate → numeric-ground, over a fixed set
-    of excerpts.
+    """Generate → verify citations → gate → numeric-ground → entailment warning.
 
     Extracted verbatim from `ask` so the planned multi-search path (BRF-1)
     reaches the SAME verification, rather than growing a parallel one. It
     takes the excerpts as given and makes no retrieval decisions of its own.
+    Entailment warns on the already-drawn answer; it never replaces citation
+    verification or numeric grounding, and it never refuses.
     """
     s = store.settings
     system = _system_prompt(s)
@@ -685,6 +687,17 @@ def _synthesize(
         filename the model merely claims to cite."""
         return [*trusted_names, *(c.document_name for c in resp.citations)]
 
+    def _with_entailment_warning(resp: AskResponse, quotes: list[str]) -> AskResponse:
+        """After citations are verified (and drawn) and numeric grounding has
+        passed: warn when a claim sentence does not follow from the accepted
+        quotes. Never a refusal — false-positive rate is measured first."""
+        checked = check_entailment(resp.answer, quotes, question)
+        text = format_warning(checked)
+        if not text:
+            return resp
+        warning = ((resp.warning + " ") if resp.warning else "") + text
+        return resp.model_copy(update={"warning": warning})
+
     # Numeric grounding gate (SPEC §2.10): citation verification proves a
     # QUOTE is verbatim-real; it says nothing about whether the model's own
     # free-text `answer` asserts a DIFFERENT number alongside a valid quote
@@ -704,7 +717,7 @@ def _synthesize(
     support_quotes = [q for c in resp.citations for q in c.quotes]
     result = check_numeric_grounding(resp.answer, support_quotes, trusted_names=_trusted_spans(resp))
     if result.ok:
-        return resp
+        return _with_entailment_warning(resp, support_quotes)
 
     logger.warning("Numerisk grundningskontroll misslyckades, försöker reparera: %s", describe_mismatch(result))
     repaired = _attempt(system + _numeric_repair_nudge(result))
@@ -715,7 +728,7 @@ def _synthesize(
         repaired.answer, repaired_support, trusted_names=_trusted_spans(repaired)
     )
     if repaired_result.ok:
-        return repaired
+        return _with_entailment_warning(repaired, repaired_support)
 
     logger.error(
         "Numerisk grundningskontroll misslyckades även efter reparationsförsök: %s",

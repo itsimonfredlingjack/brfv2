@@ -20,6 +20,10 @@ rerank = [
     "sentence-transformers>=3.0",
     "transformers>=4.44,<5",
 ]
+entailment = [
+    "lettucedetect>=0.1.7",
+    "transformers>=4.48.3,<5",
+]
 
 [dependency-groups]
 dev = ["pytest>=8"]

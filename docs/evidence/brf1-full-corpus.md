@@ -20,7 +20,7 @@ Produktens grind *verifierat* (inte vägrad, minst ett godkänt citat) är otill
 
 Den gamla kolumnen *verifierat* slår ihop de två första. Det är fel sorts träff.
 
-Samma invändning gäller `verifierat_i_facit`: ett ordagrant citat ur rätt handling betyder inte att svaret besvarar frågan. Se `docs/evidence/brf1-doc-path-desc.md` (R1: citat i facit, svaret vänder meningen).
+Samma invändning gäller `verifierat_i_facit`: ett ordagrant citat ur rätt handling betyder inte att svaret besvarar frågan. Retrievalvägens svar klassades senare för hand mot frågan: **4 besvarar / 1 ofullständigt / 1 fel handling / 5 vägrade**. Det är baslinjen i `docs/evidence/brf1-doc-path-desc.md`. 5 `verifierat_i_facit` är inte 4 som besvarar frågan.
 
 ## Hypotesen, utfallet
 

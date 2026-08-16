@@ -1072,3 +1072,51 @@ class TestAcceptedCitationTitleAsTrustedSpan:
         fake = FakeLLM([bad, bad])
         resp = ask(titled_store, "Vad är den totala utgiften?", provider=fake)
         assert resp.refusal and resp.refusal_reason == "numeric_grounding_failed"
+
+
+class TestEntailmentWarning:
+    """LettuceDetect runs after citations are verified and drawn. It warns.
+    It does not refuse, and it does not replace citation or numeric gates."""
+
+    def test_flags_unsupported_claim_without_refusing(self, store, monkeypatch):
+        monkeypatch.setenv("BRF_ENTAILMENT", "1")
+
+        def fake_spans(quotes, question, answer, min_confidence):
+            assert quotes
+            return [{"start": 0, "end": len(answer), "confidence": 0.88, "text": answer}]
+
+        monkeypatch.setattr("app.entailment._predict_spans", fake_spans)
+        fake = FakeLLM([good_response(store)])
+        resp = ask(store, "När löper jourperioden?", provider=fake)
+        assert not resp.refusal
+        assert resp.citations
+        assert resp.warning
+        assert "citerade källorna" in resp.warning
+
+    def test_does_not_warn_when_detector_finds_no_spans(self, store, monkeypatch):
+        monkeypatch.setenv("BRF_ENTAILMENT", "1")
+        monkeypatch.setattr("app.entailment._predict_spans", lambda *_a, **_k: [])
+        fake = FakeLLM([good_response(store)])
+        resp = ask(store, "När löper jourperioden?", provider=fake)
+        assert not resp.refusal
+        assert resp.citations
+        assert resp.warning is None
+
+    def test_does_not_replace_citation_refusal(self, store, monkeypatch):
+        monkeypatch.setenv("BRF_ENTAILMENT", "1")
+
+        def boom(*_a, **_k):
+            raise AssertionError("entailment must not run on a citation refusal")
+
+        monkeypatch.setattr("app.entailment._predict_spans", boom)
+        fake = FakeLLM(
+            [
+                {
+                    "answer": "Hittat på.",
+                    "citations": [{"chunk_id": first_chunk_id(store), "quote": "Jouren pågår hela året utan uppehåll"}],
+                    "insufficient_data": False,
+                }
+            ]
+        )
+        resp = ask(store, "När löper jourperioden?", provider=fake)
+        assert resp.refusal and resp.refusal_reason == "grounding_failed"
