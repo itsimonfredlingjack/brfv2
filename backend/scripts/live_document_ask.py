@@ -27,12 +27,15 @@ from scripts.eval import install_network_audit  # noqa: E402
 
 logger = logging.getLogger("brf.live_document_ask")
 
-ONE_DOC = [
+ONE_DOC_SUPPORTED = [
     ("q_name", "Vad heter föreningen?"),
     ("q_seat", "Var har styrelsen sitt säte?"),
+]
+ONE_DOC_FINANCIAL = [
     ("q_interest", "Hur stora var föreningens räntekostnader under året?"),
     ("q_solidity", "Hur stor är föreningens soliditet i procent?"),
 ]
+ONE_DOC = ONE_DOC_SUPPORTED + ONE_DOC_FINANCIAL
 TWO_DOC = [
     (
         "q_fund_vs_stadgar",
@@ -43,6 +46,14 @@ TWO_DOC = [
         "Vilken kallelsetid till stämman gäller enligt stadgarna, och vilket datum hölls senaste stämman enligt årsredovisningen?",
     ),
 ]
+
+
+def require_production_embedder(*, allow_hashed: bool) -> str:
+    choice = (os.environ.get("BRF_EMBEDDER") or "model2vec").strip() or "model2vec"
+    if choice == "hashed" and not allow_hashed:
+        raise SystemExit("hashed är teststubben; sätt BRF_EMBEDDER=model2vec eller --allow-hashed")
+    os.environ["BRF_EMBEDDER"] = choice
+    return choice
 
 
 def document_kind(name: str) -> str:
@@ -193,16 +204,28 @@ def main() -> None:
     ap.add_argument("--folder", type=Path, required=True)
     ap.add_argument("--out", type=Path, default=Path("out/document-ask"))
     ap.add_argument("--slice", choices=("one-doc", "two-doc"), required=True)
+    ap.add_argument("--allow-hashed", action="store_true")
+    ap.add_argument(
+        "--include-financial",
+        action="store_true",
+        help="Include q_interest/q_solidity (only if the tenant has an annual report)",
+    )
     args = ap.parse_args()
 
-    os.environ.setdefault("BRF_EMBEDDER", "hashed")
+    os.environ.setdefault("BRF_EMBEDDER", "model2vec")
     os.environ.setdefault("HF_HUB_OFFLINE", "1")
     os.environ.setdefault("BRF_LLM", "selfhosted")
     os.environ.setdefault("BRF_LLM_BASE_URL", "http://127.0.0.1:8000/v1")
     os.environ.setdefault("BRF_LLM_MODEL", "gemma4:e12b")
+    require_production_embedder(allow_hashed=args.allow_hashed)
 
     audit_log, _allowed = install_network_audit()
-    questions = ONE_DOC if args.slice == "one-doc" else TWO_DOC
+    if args.slice == "one-doc":
+        questions = list(ONE_DOC_SUPPORTED)
+        if args.include_financial:
+            questions.extend(ONE_DOC_FINANCIAL)
+    else:
+        questions = TWO_DOC
     args.out.mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as tmp:
         before = run_slice(args.folder, questions, 0, Path(tmp) / "before")

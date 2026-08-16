@@ -146,3 +146,22 @@ def test_document_kind_from_filename():
     assert document_kind("arsredovisning.pdf") == "annual_report"
     assert document_kind("Avtal ekonomisk forvaltning.pdf") == "other"
 
+
+def test_require_production_embedder_rejects_hashed(monkeypatch):
+    from scripts.live_document_ask import require_production_embedder
+
+    monkeypatch.setenv("BRF_EMBEDDER", "hashed")
+    try:
+        require_production_embedder(allow_hashed=False)
+        raise AssertionError("expected SystemExit")
+    except SystemExit as exc:
+        assert "hashed" in str(exc)
+    assert require_production_embedder(allow_hashed=True) == "hashed"
+
+
+def test_archive_live_uses_nctx_bound_not_product_threshold():
+    from scripts.live_full_corpus import ARCHIVE_AFTER_THRESHOLD, QUESTIONS
+
+    assert ARCHIVE_AFTER_THRESHOLD == 100000
+    assert [q[0] for q in QUESTIONS] == ["q_name", "q_seat", "q_notice"]
+
