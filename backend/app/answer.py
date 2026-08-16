@@ -12,7 +12,7 @@ import logging
 
 from .citations import Rejected, Resolved, resolve_citation
 from .evidence import EvidencePack
-from .document_ask import hits_for_document_ids, pack_documents, score_documents
+from .document_ask import evaluate_document_path, hits_for_document_ids
 from .full_corpus import (
     CorpusRuntime,
     FitDecision,
@@ -166,24 +166,13 @@ def _document_path_response(
 ) -> AskResponse | None:
     """Pack whole documents when the top-scoring document fits. None → retrieval."""
     s = store.settings
-    n_chunks = len(chunks)
-    wide = index.search(
-        question,
-        weight=s.searchWeighting / 100.0,
-        candidates=max(s.candidateCount, n_chunks),
-        top_k=max(n_chunks, 1),
-        min_confidence=0.0,
-    )
-    scores = score_documents(wide)
-    pack = pack_documents(
-        scores=scores,
+    pack = evaluate_document_path(
+        question=question,
+        index=index,
         chunks=chunks,
         documents=documents,
         runtime=corpus_runtime,
-        system=_system_prompt(s),
-        n_ctx=corpus_runtime.n_ctx(),
-        response_budget=s.maxResponseLength + _CITATION_HEADROOM_TOKENS,
-        threshold=s.fullCorpusTokenThreshold,
+        settings=s,
     )
     if not pack.use_documents:
         logger.info(

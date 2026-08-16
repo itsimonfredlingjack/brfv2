@@ -540,3 +540,58 @@ class TestFullCorpusSkipsPlanner:
         assert len(fake.calls) == 1
         assert fake.calls[0]["user"].startswith("UTDRAG:")
 
+
+class TestDocumentPathSkipsPlanner:
+    def test_ask_planned_skips_planner_when_top_document_fits(self, tmp_path, monkeypatch):
+        from tests.test_full_corpus import StubRuntime, _two_chunk_store
+
+        st = _two_chunk_store(tmp_path)
+        st.update_settings(st.settings.model_copy(update={
+            "fullCorpusTokenThreshold": 1,
+            "minRelevance": 0.0,
+        }))
+        fake = FakeLLM([{
+            "answer": "Forsta dokumentets enda mening.",
+            "citations": [{"chunk_id": "K1", "quote": "Forsta dokumentets enda mening."}],
+            "insufficient_data": False,
+        }])
+
+        def boom(*_args, **_kwargs):
+            raise AssertionError("plan_query får inte köras när dokumentvägen packar")
+
+        monkeypatch.setattr("app.multihop.plan_query", boom)
+        result = ask_planned(st, "Vad star det?", provider=fake, corpus_runtime=StubRuntime())
+        assert not result.response.refusal
+        assert result.plan.mode == "single"
+        assert len(fake.calls) == 1
+        assert fake.calls[0]["user"].startswith("UTDRAG:")
+
+    def test_ask_planned_calls_planner_when_top_document_does_not_fit(self, tmp_path, monkeypatch):
+        from app.query_plan import QueryPlan
+        from tests.test_document_ask import _fat_pdf, _ANSWER
+        from tests.test_full_corpus import StubRuntime
+        from tests.pdf_fixtures import build_pdf
+
+        st = Store(data_dir=tmp_path)
+        st.add_document("big.pdf", _fat_pdf("alpha"))
+        st.add_document("small.pdf", build_pdf([[("beta only", 72, 100)]]))
+        st.update_settings(st.settings.model_copy(update={
+            "fullCorpusTokenThreshold": 32000,
+            "minRelevance": 0.0,
+        }))
+        called = []
+
+        def record(question, provider, document_names=None, model=""):
+            called.append(question)
+            return QueryPlan(mode="single", subqueries=[question], degraded=False)
+
+        monkeypatch.setattr("app.multihop.plan_query", record)
+        fake = FakeLLM([_ANSWER])
+        ask_planned(
+            st,
+            "alpha word extra padding?",
+            provider=fake,
+            corpus_runtime=StubRuntime(n=567),
+        )
+        assert called, "plan_query måste köras när toppdokumentet inte ryms"
+

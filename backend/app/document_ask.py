@@ -64,6 +64,38 @@ def hits_for_document_ids(
     return hits_for_full_corpus(subset, documents)
 
 
+def evaluate_document_path(
+    *,
+    question: str,
+    index,
+    chunks: dict[str, Chunk],
+    documents: dict[str, DocumentMeta],
+    runtime,
+    settings,
+) -> PackDecision:
+    n_chunks = len(chunks)
+    wide = index.search(
+        question,
+        weight=settings.searchWeighting / 100.0,
+        candidates=max(settings.candidateCount, n_chunks),
+        top_k=max(n_chunks, 1),
+        min_confidence=0.0,
+    )
+    scores = score_documents(wide)
+    from .answer import _CITATION_HEADROOM_TOKENS, _system_prompt
+
+    return pack_documents(
+        scores=scores,
+        chunks=chunks,
+        documents=documents,
+        runtime=runtime,
+        system=_system_prompt(settings),
+        n_ctx=runtime.n_ctx(),
+        response_budget=settings.maxResponseLength + _CITATION_HEADROOM_TOKENS,
+        threshold=settings.fullCorpusTokenThreshold,
+    )
+
+
 def pack_documents(
     *,
     scores: list[DocumentScore],

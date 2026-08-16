@@ -23,6 +23,7 @@ import os
 from collections.abc import Iterable
 
 from .answer import ask, evaluate_full_corpus
+from .document_ask import evaluate_document_path
 from .evidence import EvidencePack, expand_context
 from .full_corpus import CorpusRuntime
 from .llm import LLMProvider, pick_provider
@@ -128,6 +129,23 @@ def ask_planned(
             return PlannedAnswer(
                 resp, QueryPlan(mode="single", subqueries=[question], degraded=False), pack
             )
+        if evaluated is not None:
+            doc_decision = evaluate_document_path(
+                question=question,
+                index=index,
+                chunks=chunks,
+                documents=documents,
+                runtime=corpus_runtime,
+                settings=s,
+            )
+            if doc_decision.use_documents:
+                resp = ask(
+                    store, question, provider, trusted_names=trusted_names, corpus_runtime=corpus_runtime
+                )
+                pack.planned_subqueries = [question]
+                return PlannedAnswer(
+                    resp, QueryPlan(mode="single", subqueries=[question], degraded=False), pack
+                )
 
     doc_names = catalogue_names(documents)
     plan = plan_query(question, provider, document_names=doc_names, model=generation_model)
