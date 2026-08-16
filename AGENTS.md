@@ -102,10 +102,35 @@ Read-only intelligence layer—not an accounting system or mail client. Domain m
 
 ---
 
+## Two machines
+
+Same git project, different jobs. GitHub `origin` is the hub. Do not rsync
+worktrees or copy `.venv` / `node_modules` between hosts.
+
+| Host | Role |
+| --- | --- |
+| Laptop (`linuxtop`) | UI, frontend, the running app, anything that needs a screen |
+| `agenntserver` | SSH/Cursor agents, research, evals, backend against local Gemma 4 12B |
+
+On **agenntserver** (`/home/simon/brfv2`): backend only — `cd backend && uv sync`,
+not full `make setup`. Gemma is `http://127.0.0.1:8000/v1` (no tunnel). Swedish
+OCR needs `tesseract-ocr` + `tesseract-ocr-swe` on the host. Skip
+`brfv2-mockup/node_modules`, `kalla-native`, and `src-tauri/target` unless the
+task is explicitly that surface. Details:
+[`docs/superpowers/specs/2026-08-16-agenntserver-checkout-design.md`](docs/superpowers/specs/2026-08-16-agenntserver-checkout-design.md).
+
+On the **laptop**, `make setup` / `make frontend` / desktop targets stay the
+normal path. Tunnel Gemma only when the app there must generate:
+`ssh -N -L 8000:127.0.0.1:8000` to this host (see `docs/DEPLOY-SELFHOSTED-LLM.md`).
+
+Pull before starting work if the other machine may have pushed.
+
+---
+
 ## Commands (repo root)
 
 ```bash
-make setup              # uv, backend venv, embedder weights, node_modules, Playwright chromium
+make setup              # uv, backend venv, embedder weights, node_modules, Playwright chromium (laptop / full checkout)
 make backend            # API :8787 (dev mode — see inference boundary)
 make frontend           # brfv2-mockup :5173
 make mobile             # xs_mobilapp :5174 (needs backend)
