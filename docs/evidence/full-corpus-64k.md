@@ -2,6 +2,8 @@
 
 **Gren:** `feat/full-corpus-ask` · **Host:** agenntserver · **Modell:** Gemma 4 12B IT · tillfällig `-c 65536` · restore `/props` **16384** · embedder `model2vec:potion-multilingual-128M`
 
+> **Enkörning.** Headline och per-fråge-tider är en körning. Spann för BRF-1:s elva fall: `docs/evidence/brf1-variance.md`.
+
 Gate A eldade på föreningens 10 PDF:er för första gången. `chunk_tokens=48923`, `prefix_tokens=54539`, `bound=fits` vid `threshold=100000` (produktens default 32000 skulle fortfarande bundit på tröskeln; den knoppen ändrades inte i git). Retrieval-före: `threshold=0`.
 
 Headline per fall: **`verified_to_refused=0`**, `refused_to_verified=0`. Alla tre efter-vägarna `full_corpus`.
@@ -16,6 +18,6 @@ Den rubriken räknade fel sorts träff. `compare_ask_cases` sätter `verified` =
 
 Kall prefill ~30.7 s (`prompt_ms=30676`). Fråga två och tre: `prompt_n` 17 och 25, `prompt_ms` ~70 ms, `cache_n=54552`. Prefix-KV är poängen med vägen och den höll.
 
-Frågorna är stadgar-formade (namn, säte, kallelsetid). Retrieval släppte också igenom dem utan vägran — det här är inte ett retrieval-miss-experiment. Det är evidens att arkivet **rymmer**, att vägen **eldar**, och att den andra frågan är billig. Ränte- och soliditetsfrågor väntar på en årsredovisning som inte finns i de 10 PDF:erna. Att båda vägarna inte vägrade är inte `verifierat_i_facit`.
+Frågorna är stadgar-formade (namn, säte, kallelsetid). Retrieval släppte också igenom dem utan vägran — det här är inte ett retrieval-miss-experiment. Det är evidens att arkivet **rymmer**, att vägen **eldar**, och att den andra frågan är billig. Ränte- och soliditetsfrågor väntade på en årsredovisning som inte fanns i de 10 PDF:erna; den ligger nu i arkivet som J (`docs/evidence/brf1-annual-report.md`) men är inte omkörd här. Att båda vägarna inte vägrade är inte `verifierat_i_facit`.
 
 Drift efter den här mätningen (65536 i compose, tröskel `None`, förvärmning, sidordning): `docs/evidence/nctx-ops-65536.md`.

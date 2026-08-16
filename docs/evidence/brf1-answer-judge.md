@@ -2,6 +2,8 @@
 
 **Host:** agenntserver · **Modell:** Gemma 4 12B IT · **commit (svaren):** `4ee12d7` · loopback
 
+> **Enkörning.** Alla `ask()`-siffror här är en körning per fall. Spann över fem körningar: `docs/evidence/brf1-variance.md`. De 22 handklassade svaren är ett fryst ögonblick, inte ett spann.
+
 R1:s fel är att svaret inte besvarar frågan, inte att det saknar förankring. LettuceDetect missade det (tokenöverlapp). Den här mätningen ger den lokala modellen frågan, de accepterade citaten och svaret, och frågar en sak: besvarar svaret frågan, givet citaten?
 
 Tre utfall: `besvarar` / `besvarar_inte` / `motsager_citatet`. Ett `complete()` per svar. Ingen ny svarsväg. Prompten skrevs en gång, rakt, och rördes inte mot de 22 — de är den enda ärliga etikettmängden. Den körningen fällde ingenting. Utfallet delades senare in i produkten: se slutet.
@@ -101,9 +103,9 @@ Domaren körs aldrig utan accepterade citat. Tre av fem retrievalvägringar fick
 
 Samma elva dokumentvägsfall kördes om med grinden i `ask()` (`scripts/eval_answer_judge_gate.py`, commit efter `6eeb439`). Ny generering, inte ombedömning av de 22.
 
-Treutfall (`verifierat_i_facit` / `verifierat_i_fel_handling` / `vägrad`): **6 / 1 / 4**
+Treutfall (`verifierat_i_facit` / `verifierat_i_fel_handling` / `vägrad`), **enkörning:** **6 / 1 / 4**
 
-Visat / markerat / vägrat: **6 / 1 / 4**
+Visat / markerat / vägrat, **enkörning:** **6 / 1 / 4**
 
 | fall | tre | display | grind |
 | --- | --- | --- | --- |

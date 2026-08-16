@@ -218,8 +218,10 @@ någon av de blandade, så siffrorna nedan är en ny mätning, inte en omtolknin
 
 ### Tvärdokumentsfallen — sorterad katalog
 
-Girig avkodning gör en körning per fall till hela sanningen för en given prompt.
-r01 kördes ändå tre gånger som kontroll: **multi×3, recall 1.00 varje gång.**
+Girig avkodning (`temperature: 0` i requesten, se `docs/evidence/brf1-sampling.md`)
+är vad som kördes. Siffrorna här är enkörning. r01 kördes ändå tre gånger som
+kontroll: **multi×3, recall 1.00 varje gång.** Femkörningsspann för BRF-1:s elva
+`ask()`-fall: `docs/evidence/brf1-variance.md`.
 
 | Fall | Läge | Recall | Enkel baslinje | Mot uppladdningsordning |
 |---|---|---:|---:|---|

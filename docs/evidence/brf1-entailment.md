@@ -2,6 +2,8 @@
 
 **Host:** agenntserver · **Modell (svar):** Gemma 4 12B IT · **detektor:** `KRLabsOrg/lettucedect-210m-eurobert-de-v1` · CPU · **commit (mätning):** `4ee12d7` · **produktyta:** avstängd
 
+> **Enkörning.** Svaren som detektorn läste är ett fryst `ask()`-ögonblick, samma som i `brf1-doc-path-desc.md`. Spann över fem körningar: `docs/evidence/brf1-variance.md`.
+
 Grinden verifierar att citatet står i handlingen. Ingenting kontrollerade att svaret följer av citatet. R1 är målfallet: citatet är äkta, numeriken släpper, men meningen vänder innebörden.
 
 Steget mättes som varning efter verifierade citat. Det är **inte** produktyta. `ask()` importerar inte `app.entailment`. Diagnostiken körs med `BRF_ENTAILMENT=1` från `scripts/eval_entailment.py`.

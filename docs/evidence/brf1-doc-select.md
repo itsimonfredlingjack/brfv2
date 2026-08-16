@@ -2,6 +2,8 @@
 
 **Host:** agenntserver · **Modell:** Gemma 4 12B IT · `n_ctx=65536` · **commit:** `25e40d7` · **embedder:** `model2vec:potion-multilingual-128M`
 
+> **Enkörning.** 1/11, 0/11 och 6/11 är en körning per fall. Spann över fem `ask()`-körningar: `docs/evidence/brf1-variance.md`.
+
 Samma elva fall och samma nio handlingar (130 chunkar) som `docs/evidence/brf1-full-corpus.md`. Ingen ny svarsväg, ingen grind, `ask()` anropades inte, fan-out rördes inte, `r01` kördes inte. Trafik bara loopback.
 
 Frågan är: kan systemet *namnge* facithandlingen, utan att besvara frågan?

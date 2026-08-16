@@ -2,6 +2,8 @@
 
 **Gren:** `feat/full-corpus-ask` · **Host:** agenntserver · **Modell:** Gemma 4 12B IT via llama.cpp `b9976` · `n_ctx=16384` · tokenizer `POST {origin}/tokenize`
 
+> **Enkörning.** Live före/efter är en körning. Spann för BRF-1:s elva fall: `docs/evidence/brf1-variance.md`.
+
 Effektiva taket är **14072** prefix-token (`n_ctx − 512 − 1800`), inte defaultknappen `fullCorpusTokenThreshold=32000`. På den här hosten binder `n_ctx` så fort tröskeln släpper igenom.
 
 Offlinesvit: `make test` → 1354 passed, 62 skipped.

@@ -2,6 +2,8 @@
 
 **Host:** agenntserver · **Modell:** Gemma 4 12B IT · `n_ctx=65536` · **commit:** `4b6b4aa` · **embedder:** `model2vec:potion-multilingual-128M`
 
+> **Enkörning.** Retrieval 5/1/5 och helarkiv 5/1/5 är en körning per fall. Spann över fem körningar: `docs/evidence/brf1-variance.md`.
+
 Samma elva fall som i `planner-vs-real-model.md` tillägg 7–9 och `eval_real_corpus.py --fall`, mot samma nio handlingar (130 chunkar). Två körningar, samma store: `fullCorpusTokenThreshold=0` (retrieval, dagens väg) och `None` (helarkiv). Fan-out rördes inte. `r01` kördes inte.
 
 Korpusen ryms: `prefix_tokens=47402` under taket `65536 − 512 − 1800 = 63224`, `bound=fits`. Helarkivvägen eldade på alla elva efter-frågorna.
@@ -33,6 +35,8 @@ Hypotesen var smal: om felet var att fel handling rankades överst ska det felet
 | `verifierat_i_facit` | 5 | 5 |
 | `verifierat_i_fel_handling` | 1 | 1 |
 | `vägrad` | 5 | 5 |
+
+Alla tre raderna är enkörning. Retrievals femkörningsspann står i `docs/evidence/brf1-variance.md`.
 
 Gamla *verifierat* hade räknat 6 → 6 (R1 retrieval och R7b helarkiv som vinster).
 

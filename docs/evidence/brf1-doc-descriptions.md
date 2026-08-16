@@ -2,6 +2,8 @@
 
 **Host:** agenntserver · **Modell:** Gemma 4 12B IT · `n_ctx=65536` · **commit:** `f82f753` · **embedder:** `model2vec:potion-multilingual-128M`
 
+> **Enkörning.** 7/11, 5/1/5 och 7/1/3 är en körning per fall. Spann över fem körningar av `ask()`: `docs/evidence/brf1-variance.md`.
+
 Samma elva fall och samma nio handlingar som `docs/evidence/brf1-doc-select.md` och `docs/evidence/brf1-full-corpus.md`. Ingen produktändring — mätning via skript som patchar prompten i minnet. Ingen ny svarsväg, ingen grind, fan-out rördes inte, `r01` kördes inte. Trafik bara loopback.
 
 Två mätningar på samma genererade beskrivningar:

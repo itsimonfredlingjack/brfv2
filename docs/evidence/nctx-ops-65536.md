@@ -4,6 +4,8 @@ Vad som faktiskt körs efter merge till `main`. Läs det här, inte de tillfäll
 
 **Host:** agenntserver · **Modell:** Gemma 4 12B IT (llama.cpp) · **Embedder:** `model2vec:potion-multilingual-128M`
 
+Sampling i `ask()`: `temperature: 0` i requesten, `top_p` och `seed` skickas inte. Se `docs/evidence/brf1-sampling.md`.
+
 ## n_ctx = 65536
 
 Trackad fil: `/home/simon/llama-cpp/docker-compose.yml`, `-c 65536` (inte en gitignorerad override).

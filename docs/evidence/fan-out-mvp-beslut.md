@@ -54,9 +54,10 @@ Två populationer:
   samma golden produkten redan mäts mot, inte en lista skriven för experimentet.
   Där är `multi` en kostnad, inte ett resultat.
 
-Alla siffror nedan är med **sorterad dokumentkatalog** (`03623e9`). Avkodningen
-är girig, så en körning per fall är hela sanningen för en given prompt; r01
-kördes tre gånger som kontroll och gav samma resultat varje gång.
+Alla siffror nedan är med **sorterad dokumentkatalog** (`03623e9`). Requesten
+sätter `temperature: 0`; siffrorna är enkörning. r01 kördes tre gånger som
+kontroll och gav samma resultat varje gång. Femkörningsspann för BRF-1:s elva
+`ask()`-fall: `docs/evidence/brf1-variance.md`.
 
 ## Resultat
 

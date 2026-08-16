@@ -2,6 +2,8 @@
 
 **Gren:** `feat/full-corpus-ask` · **n_ctx=65536** (drift) · embedder `model2vec` · frågor `q_name` / `q_seat` / `q_notice` · 10 PDF, `prefix_tokens=54539`, `bound=fits`, `threshold=None`
 
+> **Enkörning.** Tabellen är en körning per läge och fråga. Spann för BRF-1:s elva fall: `docs/evidence/brf1-variance.md`.
+
 Utdragen är samma chunkar. Skillnaden är dokumentordningen i blocket. Inom ett dokument är sidordningen orörd. Citatkedjan orörd.
 
 `page`: namn/sida (kontroll). `probe`: fryst sond + U-form, en gång per arkiv. `query`: samma U-form per fråga.

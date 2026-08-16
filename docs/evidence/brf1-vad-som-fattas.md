@@ -45,8 +45,10 @@ Det här dokumentet beskriver vad som återstår — och varför det viktigaste 
 ## Vad som är mätt
 
 Alla siffror är körda mot en riktig modell (`gemma-4-12b-it`, Q4_K_XL, llama.cpp)
-genom produktionens egen kodväg. Avkodningen är girig, så en körning per fall är
-hela sanningen för en given prompt.
+genom produktionens egen kodväg. Requesten sätter `temperature: 0` (girig
+avkodning), se `docs/evidence/brf1-sampling.md`. Att en körning per fall skulle
+vara hela sanningen är den hypotes femkörningen i `docs/evidence/brf1-variance.md`
+prövar. Siffrorna i *det här* dokumentet är enkörning.
 
 | Villkor | Innehåll | Status |
 |---|---|---|

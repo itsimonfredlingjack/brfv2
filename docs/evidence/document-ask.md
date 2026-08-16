@@ -2,6 +2,8 @@
 
 **Gren:** `feat/full-corpus-ask` · **Host:** agenntserver · **Modell:** Gemma 4 12B IT · `n_ctx=16384` efter restore
 
+> **Enkörning.** Headline och per-fråge-rader är en körning. Spann för BRF-1:s elva fall: `docs/evidence/brf1-variance.md`. Sampling mot llama.cpp: `docs/evidence/brf1-sampling.md`.
+
 Första körningen använde `BRF_EMBEDDER=hashed`. Rankningen **är** dokumentvägen; de talen är stubbrus och ska inte användas som B-kvalitet. Kostnaden (prefill, `cache_n`) från den körningen är däremot giltig.
 
 Omkörning: `model2vec:potion-multilingual-128M`, bara frågor korpusen kan bära (`q_name`, `q_seat`). Ränta/soliditet kördes inte om.
@@ -12,7 +14,9 @@ Filnamnsklassificeraren (`stadgar` / `årsred|arsred|årsr|arsr` / `other`) fick
 
 De 10 PDF:erna är stadgar, underhållsplan, förvaltningsavtal, övriga avtal och en 3-sidig utskrift. Ett born-digital förvaltningsavtal nämner ordet årsredovisning i brödtexten; det är fortfarande ett avtal. Åtta filer saknar textlager (skannade, inklusive stadgarna). En 3-sidig utskrift är inte en årsredovisning.
 
-**Dokumentet saknas.** q_interest / q_solidity och två-dokumentsfrågorna väntar på en riktig årsredovisning.
+**Dokumentet saknades i den här mätningen.** q_interest / q_solidity och två-dokumentsfrågorna väntade på en riktig årsredovisning.
+
+Uppdatering samma kväll: en born-digital årsredovisning ligger i arkivet som handling J. Se `docs/evidence/brf1-annual-report.md`. Ränta/soliditet är inte omkörda här.
 
 ## En-dokumentssnitt @ 16384 — model2vec (giltig rankning)
 
