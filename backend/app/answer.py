@@ -12,6 +12,7 @@ import logging
 
 from .citations import Rejected, Resolved, resolve_citation
 from .evidence import EvidencePack
+from .document_ask import hits_for_document_ids, pack_documents, score_documents
 from .full_corpus import (
     CorpusRuntime,
     FitDecision,
@@ -147,6 +148,71 @@ def evaluate_full_corpus(
         response_budget=s.maxResponseLength + _CITATION_HEADROOM_TOKENS,
     )
     return decision, full_hits
+
+
+def _document_path_response(
+    *,
+    store: Store,
+    question: str,
+    index,
+    chunks: dict,
+    pages: dict,
+    documents: dict,
+    provider: LLMProvider,
+    generation_model: str,
+    model: str,
+    trusted_names: tuple[str, ...],
+    corpus_runtime: CorpusRuntime,
+) -> AskResponse | None:
+    """Pack whole documents when the top-scoring document fits. None → retrieval."""
+    s = store.settings
+    n_chunks = len(chunks)
+    wide = index.search(
+        question,
+        weight=s.searchWeighting / 100.0,
+        candidates=max(s.candidateCount, n_chunks),
+        top_k=max(n_chunks, 1),
+        min_confidence=0.0,
+    )
+    scores = score_documents(wide)
+    pack = pack_documents(
+        scores=scores,
+        chunks=chunks,
+        documents=documents,
+        runtime=corpus_runtime,
+        system=_system_prompt(s),
+        n_ctx=corpus_runtime.n_ctx(),
+        response_budget=s.maxResponseLength + _CITATION_HEADROOM_TOKENS,
+        threshold=s.fullCorpusTokenThreshold,
+    )
+    if not pack.use_documents:
+        logger.info(
+            "ask_path=retrieval bound=%s n_docs=0 prefix_tokens=%s",
+            pack.bound,
+            pack.prefix_tokens,
+        )
+        return None
+    hits = hits_for_document_ids(chunks, documents, pack.document_ids)
+    logger.info(
+        "ask_path=documents n_docs=%s prefix_tokens=%s bound=%s",
+        len(pack.document_ids),
+        pack.prefix_tokens,
+        pack.bound,
+    )
+    return _synthesize(
+        store=store,
+        question=question,
+        hits=hits,
+        chunks=chunks,
+        pages=pages,
+        documents=documents,
+        provider=provider,
+        generation_model=generation_model,
+        model=model,
+        trusted_names=trusted_names,
+        low_relevance=False,
+        full_corpus=True,
+    )
 
 
 def ask(
@@ -305,6 +371,21 @@ def ask(
                     low_relevance=False,
                     full_corpus=True,
                 )
+            packed = _document_path_response(
+                store=store,
+                question=question,
+                index=index,
+                chunks=chunks,
+                pages=pages,
+                documents=documents,
+                provider=provider,
+                generation_model=generation_model,
+                model=model,
+                trusted_names=trusted_names,
+                corpus_runtime=corpus_runtime,
+            )
+            if packed is not None:
+                return packed
 
     # Retrieve WIDE when reranking so the cross-encoder has a real pool to
     # rescore from; candidates (the bm25/dense fusion pool) is widened to

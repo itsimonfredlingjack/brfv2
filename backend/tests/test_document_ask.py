@@ -1,8 +1,10 @@
+from app.answer import ask
 from app.document_ask import pack_documents, score_documents
+from app.llm import FakeLLM
 from app.schemas import RetrievalHit
 from app.store import Store
 from tests.pdf_fixtures import build_pdf
-from tests.test_full_corpus import StubRuntime
+from tests.test_full_corpus import StubRuntime, _two_chunk_store
 
 
 def _hit(doc, name, score, n=1, page=1):
@@ -134,4 +136,58 @@ def test_packer_threshold_zero_is_off(tmp_path):
     )
     assert decision.use_documents is False
     assert decision.bound == "threshold"
+
+
+_ANSWER = {
+    "answer": "Forsta dokumentets enda mening.",
+    "citations": [{"chunk_id": "K1", "quote": "Forsta dokumentets enda mening."}],
+    "insufficient_data": False,
+}
+
+
+def test_document_path_puts_all_chunks_of_packed_docs_and_question_last(tmp_path):
+    st = _two_chunk_store(tmp_path)
+    st.update_settings(st.settings.model_copy(update={
+        "fullCorpusTokenThreshold": 1,
+        "minRelevance": 0.0,
+        "topK": 1,
+    }))
+    fake = FakeLLM([_ANSWER])
+    resp = ask(st, "Forsta dokumentets enda mening?", provider=fake, corpus_runtime=StubRuntime())
+    assert not resp.refusal
+    user = fake.calls[0]["user"]
+    assert user.startswith("UTDRAG:")
+    assert user.index("UTDRAG:") < user.index("FRÅGA:")
+    assert len(resp.retrieval) == len(st.chunks)
+    assert all(c.score is None for c in resp.citations)
+
+
+def test_threshold_zero_still_question_first_on_document_sized_archive(tmp_path):
+    st = _two_chunk_store(tmp_path)
+    st.update_settings(st.settings.model_copy(update={
+        "fullCorpusTokenThreshold": 0,
+        "minRelevance": 0.0,
+    }))
+    fake = FakeLLM([_ANSWER])
+    ask(st, "Vad star det?", provider=fake, corpus_runtime=StubRuntime())
+    assert fake.calls[0]["user"].startswith("FRÅGA:")
+
+
+def test_document_path_does_not_call_rerank(tmp_path, monkeypatch):
+    st = _two_chunk_store(tmp_path)
+    st.update_settings(st.settings.model_copy(update={
+        "fullCorpusTokenThreshold": 1,
+        "minRelevance": 0.0,
+        "rerankEnabled": True,
+    }))
+    monkeypatch.setattr("app.answer.reranker_available", lambda: True)
+
+    def boom(*_a, **_k):
+        raise AssertionError("rerank must not run on document path")
+
+    monkeypatch.setattr("app.answer.rerank_chunks", boom)
+    fake = FakeLLM([_ANSWER])
+    resp = ask(st, "Forsta dokumentets enda mening?", provider=fake, corpus_runtime=StubRuntime())
+    assert not resp.refusal
+    assert fake.calls[0]["user"].startswith("UTDRAG:")
 
