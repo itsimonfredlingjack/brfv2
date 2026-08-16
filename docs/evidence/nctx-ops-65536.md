@@ -49,7 +49,7 @@ Offlinesvit: **1400 passed**, 62 skipped.
 
 ## Utdragsordning
 
-Produkt: dokumentnamn, sedan sida. U-form bakom `store._full_corpus_order` (`probe`/`query`) för `scripts/live_edge_order.py` — av i drift. Tre stadgarfrågor visade ingen kvalitetsvinst mot sidordning; frågeberoende ordning dödade cachen. Se `docs/evidence/edge-order.md`.
+Produkt: dokumentnamn, sedan sida. U-form bakom `store._full_corpus_order` (`probe`/`query`) för `scripts/live_edge_order.py` — av i drift. Tre stadgarfrågor visade ingen kvalitetsvinst mot sidordning; frågeberoende ordning dödade cachen. Prövad mot R2, R6 och R7b med `verifierat_i_facit`: återställde R2, inte R6, R7b nådde inte facit. Stannar bakom flaggan. Se `docs/evidence/edge-order.md` och `docs/evidence/brf1-full-corpus.md`.
 
 ## Överflödigt på helarkivvägen, kvar på retrieval
 

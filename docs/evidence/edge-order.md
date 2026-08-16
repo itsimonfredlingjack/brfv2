@@ -24,8 +24,10 @@ Utdragen är samma chunkar. Skillnaden är dokumentordningen i blocket. Inom ett
 
 `verified_to_refused` mot `page`: **0** för både `probe` och `query`. Ingen kvalitetsvinst på de här tre stadgarfrågorna. `query` betalar kall prefill varje gång (`cache_n=550`). `probe` behåller varm cache på fråga ett (`prompt_n` 14–25, `cache_n=54552`).
 
+Den nollan räknade fel sorts träff, och fallen var triviala. `verified` = inte vägrad. Facit är stadgarna. JSON:en sparade inte citerad handling, så `verifierat_i_facit` mot `verifierat_i_fel_handling` kan inte räknas om här. Att sidordning och U-form båda släppte igenom tre obesvärade stadgarfrågor säger ingenting om fallen där sidordning faktiskt tappar (R2, R6) eller citerar fel handling (R7b) — se `docs/evidence/brf1-full-corpus.md`.
+
 ## Beslut
 
-Tre frågor räcker inte för att motivera en omordning i renderaren. **Produktordning är dokumentnamn sedan sida.** U-form (`probe` / `query`) finns kvar bakom `store._full_corpus_order` för `scripts/live_edge_order.py` och är av i drift.
+Tre stadgarfrågor räcker inte för att motivera en omordning i renderaren. U-form prövades därefter mot R2, R6 och R7b med måttet `verifierat_i_facit` (`docs/evidence/brf1-full-corpus.md`). Den återställde R2, inte R6, och R7b nådde inte facit. **Produktordning är dokumentnamn sedan sida.** U-form (`probe` / `query`) finns kvar bakom `store._full_corpus_order` för `scripts/live_edge_order.py` — av i drift. Den prövades mot verkliga fall och höll inte som produktdefault.
 
 Frågeberoende ordning skeppas inte: den dödar prefix-KV utan mätbar vinst här.

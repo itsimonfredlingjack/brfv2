@@ -18,6 +18,8 @@ De 10 PDF:erna är stadgar, underhållsplan, förvaltningsavtal, övriga avtal o
 
 `threshold=0` mot default 32000. Headline packed-only: **`verified_to_refused=0`**, `refused_to_verified=0`. **`top_miss_rate=0.0`**. Topp dokument: stadgar båda frågorna.
 
+Den rubriken räknade fel sorts träff. `verified` = inte vägrad, inte "citat ur facithandlingen". Facit för `q_name` / `q_seat` är stadgarna. JSON:en har `top_document_kind=stadgar` och `n_citations=1`, men inte vilken handling citatet pekade på. Dokumentvägen packade 2 respektive 3 handlingar (`stadgar` överst, sedan `other`), så ett godkänt citat kan ha kommit ur packed-följet — inte nödvändigtvis ur stadgarna. `verifierat_i_facit` kan alltså inte räknas om från den här körningen. Nollan är "ingen vägran tillkom".
+
 | qid | retrieval refused | documents refused | packed | top kind | top max_score | top n_chunks | retrieval s | documents s |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | q_name | no | no | 2 | stadgar | 0.9775 | 20 | 3.436 | 8.289 |

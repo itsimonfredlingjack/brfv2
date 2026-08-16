@@ -22,6 +22,13 @@ Live-prefixet 7476 mot mätscriptets 7656 är samma dokument med olika `document
 
 Två generiska frågor, `minRelevance=0`, samma Gemma. Headline: **`verified_to_refused=0`**, `refused_to_verified=0`. Båda verifierade före och efter.
 
+Den rubriken räknade fel sorts träff (`verified` = inte vägrad). Här råkar den sammanfalla med `verifierat_i_facit`: arkivet är ett enda stadgedokument, så varje godkänt citat är ur facithandlingen. Det är inte evidens för att samma rubrik håller mot ett blandat arkiv.
+
+| fall | facit | retrieval | helarkiv |
+| --- | --- | --- | --- |
+| q_name | stadgar | verifierat_i_facit | verifierat_i_facit |
+| q_seat | stadgar | verifierat_i_facit | verifierat_i_facit |
+
 | Väg | threshold | hits | Q1 elapsed_s | Q2 elapsed_s |
 | --- | --- | --- | --- | --- |
 | retrieval | 0 | 6 | 2.813 | 2.699 |
