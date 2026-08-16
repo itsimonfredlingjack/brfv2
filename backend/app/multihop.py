@@ -105,7 +105,6 @@ def ask_planned(
     trusted_names = tuple(trusted_names)
     provider_model = getattr(provider, "model", "") or ""
     generation_model = provider_model or s.aiModel
-    model = "" if provider.name in ("fake", "none") else generation_model
 
     index, chunks, pages, documents = store.snapshot()
     pack = EvidencePack(question=question)
