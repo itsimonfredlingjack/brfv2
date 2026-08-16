@@ -1,0 +1,19 @@
+---
+description: Laptop vs agenntserver — where agents, UI, and Gemma run
+alwaysApply: true
+---
+
+# Two machines
+
+Same git repo (`itsimonfredlingjack/brfv2`). GitHub `origin` is the hub. Do not rsync worktrees or copy `.venv` / `node_modules` between hosts.
+
+| | Laptop (`linuxtop`) | This Ubuntu host (`agenntserver`) |
+| --- | --- | --- |
+| Path | `/home/aidev/Projects/brfv2` | `/home/simon/brfv2` |
+| Do | UI, frontend, the app, anything that needs a screen | SSH/Cursor agents, research, evals, backend vs local Gemma |
+| Setup | `make setup` | `cd backend && uv sync` only — **not** full `make setup` |
+| Gemma | Tunnel `ssh -N -L 8000:127.0.0.1:8000` when the *app* must generate | `http://127.0.0.1:8000/v1` (no tunnel) |
+
+On agenntserver skip `brfv2-mockup/node_modules`, `kalla-native`, and `src-tauri/target` unless the task is explicitly that surface. Swedish OCR: `tesseract-ocr` + `tesseract-ocr-swe`. `git pull` before work if the other machine may have pushed.
+
+Human README: `README.md` § Två maskiner. Spec: `docs/superpowers/specs/2026-08-16-agenntserver-checkout-design.md`.

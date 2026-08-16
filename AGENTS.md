@@ -10,6 +10,7 @@ Tracked operational instructions for coding agents. **Conductor** is the source 
 | TDD, commits, review, checkpoints | [`conductor/workflow.md`](conductor/workflow.md) |
 | Active work units | [`conductor/tracks.md`](conductor/tracks.md) |
 | Human-facing product overview (Swedish) | [`README.md`](README.md) |
+| Laptop vs agenntserver | [`README.md`](README.md) § Två maskiner — **read before installing or starting UI/agents** |
 
 Most product docs under `docs/` and the root README are Swedish. Code, many newer technical docs, and this file are English. Both are normal.
 

@@ -21,6 +21,25 @@ föreningens dokument ska avvisas i stället för att gissas.
 - [Källstyrda bevakningar och årshjul](docs/BEVAKNINGAR.md)
 - [Uppgifter och ansvar](docs/UPPGIFTER.md)
 - [Hemsidan](docs/HEMSIDA.md) — föreningens egen webbplats, byggd i produkten
+- [Två maskiner](#två-maskiner) — var agenter, UI och Gemma körs
+
+## Två maskiner
+
+Samma git-repo, två roller. GitHub `origin` är navet. Spegla inte worktrees
+med rsync och kopiera inte `.venv` / `node_modules` mellan värdar.
+
+| | Laptop (`linuxtop`) | `agenntserver` |
+| --- | --- | --- |
+| Sökväg | `/home/aidev/Projects/brfv2` | `/home/simon/brfv2` |
+| Jobb | UI, frontend, appen, allt som behöver skärm | SSH/Cursor-agenter, research, evals, backend mot Gemma |
+| Setup | `make setup` (hela kedjan) | bara `cd backend && uv sync` — inte `make setup` |
+| Gemma 4 12B | tunnel `ssh -N -L 8000:127.0.0.1:8000` hit när appen ska generera | `http://127.0.0.1:8000/v1` lokalt, ingen tunnel |
+| Inte här | tunga agent-sessioner (laptopen fryser) | `brfv2-mockup`/`kalla-native`/`src-tauri`-byggen, Fedora-RPM |
+
+`git pull` innan du börjar om den andra maskinen kan ha pushat. Research som
+ska leva committas under `docs/research/`. Detaljer:
+[designspec](docs/superpowers/specs/2026-08-16-agenntserver-checkout-design.md),
+[AGENTS.md](AGENTS.md) § Two machines, [pilotdrift](docs/DEPLOY-SELFHOSTED-LLM.md).
 
 ## Ett repo, en produkt
 
