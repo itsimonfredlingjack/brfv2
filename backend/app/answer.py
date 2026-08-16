@@ -9,10 +9,12 @@ from __future__ import annotations
 
 from collections.abc import Iterable
 import logging
+from dataclasses import dataclass
+from typing import Literal
 
 from .citations import Rejected, Resolved, resolve_citation
 from .evidence import EvidencePack
-from .document_ask import evaluate_document_path, hits_for_document_ids
+from .document_ask import PackDecision, evaluate_document_path, hits_for_document_ids
 from .full_corpus import (
     CorpusRuntime,
     FitDecision,
@@ -48,6 +50,61 @@ logger = logging.getLogger("brf.answer")
 # request's actual topK — a deployment that raises topK well above the
 # default can still see truncation on extreme quote-dense answers.
 _CITATION_HEADROOM_TOKENS = 600
+
+
+@dataclass(frozen=True)
+class ChosenAskPath:
+    """The single routing decision for ask() / ask_planned()."""
+
+    name: Literal["full_corpus", "documents", "retrieval"]
+    bound: str
+    full_hits: list | None = None
+    pack: PackDecision | None = None
+
+
+def choose_ask_path(
+    *,
+    store: Store,
+    question: str,
+    index,
+    chunks: dict,
+    documents: dict,
+    runtime: CorpusRuntime | None,
+    settings: Settings,
+    provider: LLMProvider,
+) -> ChosenAskPath:
+    """Decide full_corpus / documents / retrieval in one place.
+
+    Product default: description-selected document pack, then retrieval.
+    Full corpus only when `store._prefer_full_corpus` is set (measurement
+    scripts). `fullCorpusTokenThreshold == 0` forces retrieval.
+    """
+    if runtime is None:
+        return ChosenAskPath("retrieval", "no_runtime")
+    if settings.fullCorpusTokenThreshold == 0:
+        return ChosenAskPath("retrieval", "threshold")
+
+    prefer_full = getattr(store, "_prefer_full_corpus", False)
+    if prefer_full:
+        evaluated = evaluate_full_corpus(store, chunks, documents, runtime, question=question)
+        if evaluated is not None and evaluated[0].use_full_corpus:
+            decision, hits = evaluated
+            return ChosenAskPath("full_corpus", decision.bound, full_hits=hits)
+
+    pack = evaluate_document_path(
+        question=question,
+        index=index,
+        chunks=chunks,
+        documents=documents,
+        runtime=runtime,
+        settings=settings,
+        provider=provider,
+        store=store,
+    )
+    if pack.use_documents:
+        return ChosenAskPath("documents", pack.bound, pack=pack)
+    return ChosenAskPath("retrieval", pack.bound)
+
 
 GROUNDING_CONTRACT = """Du är en dokumentassistent för en bostadsrättsförenings styrelse. Du svarar på svenska.
 
@@ -166,7 +223,6 @@ def _document_path_response(
     *,
     store: Store,
     question: str,
-    index,
     chunks: dict,
     pages: dict,
     documents: dict,
@@ -174,25 +230,9 @@ def _document_path_response(
     generation_model: str,
     model: str,
     trusted_names: tuple[str, ...],
-    corpus_runtime: CorpusRuntime,
-) -> AskResponse | None:
-    """Pack whole documents when the top-scoring document fits. None → retrieval."""
-    s = store.settings
-    pack = evaluate_document_path(
-        question=question,
-        index=index,
-        chunks=chunks,
-        documents=documents,
-        runtime=corpus_runtime,
-        settings=s,
-    )
-    if not pack.use_documents:
-        logger.info(
-            "ask_path=retrieval bound=%s n_docs=0 prefix_tokens=%s",
-            pack.bound,
-            pack.prefix_tokens,
-        )
-        return None
+    pack: PackDecision,
+) -> AskResponse:
+    """Synthesize over whole packed documents. Caller already decided this path."""
     hits = hits_for_document_ids(chunks, documents, pack.document_ids)
     logger.info(
         "ask_path=documents n_docs=%s prefix_tokens=%s bound=%s",
@@ -224,6 +264,7 @@ def ask(
     trusted_names: Iterable[str] = (),
     evidence: "EvidencePack | None" = None,
     corpus_runtime: CorpusRuntime | None = None,
+    chosen_path: ChosenAskPath | None = None,
 ) -> AskResponse:
     """`evidence` (optional, keyword-only): a pre-gathered EvidencePack from
     the planned multi-search path (app/multihop.py, BRF-1). When supplied,
@@ -347,35 +388,29 @@ def ask(
         )
 
     if corpus_runtime is not None:
-        evaluated = evaluate_full_corpus(store, chunks, documents, corpus_runtime, question=question)
-        if evaluated is not None:
-            decision, full_hits = evaluated
-            if decision.use_full_corpus:
-                system = _system_prompt(s)
-                excerpts, _alias = _render_excerpts(full_hits)
-                fp = prefix_fingerprint(system, excerpts)
-                prev = getattr(store, "_full_corpus_prefix_fp", None)
-                if prev != fp:
-                    logger.info("full_corpus prefix_changed tenant=%s", store.tenant_id)
-                    store._full_corpus_prefix_fp = fp
-                return _synthesize(
-                    store=store,
-                    question=question,
-                    hits=full_hits,
-                    chunks=chunks,
-                    pages=pages,
-                    documents=documents,
-                    provider=provider,
-                    generation_model=generation_model,
-                    model=model,
-                    trusted_names=trusted_names,
-                    low_relevance=False,
-                    full_corpus=True,
-                )
-            packed = _document_path_response(
+        chosen = chosen_path or choose_ask_path(
+            store=store,
+            question=question,
+            index=index,
+            chunks=chunks,
+            documents=documents,
+            runtime=corpus_runtime,
+            settings=s,
+            provider=provider,
+        )
+        if chosen.name == "full_corpus":
+            full_hits = chosen.full_hits or []
+            system = _system_prompt(s)
+            excerpts, _alias = _render_excerpts(full_hits)
+            fp = prefix_fingerprint(system, excerpts)
+            prev = getattr(store, "_full_corpus_prefix_fp", None)
+            if prev != fp:
+                logger.info("full_corpus prefix_changed tenant=%s", store.tenant_id)
+                store._full_corpus_prefix_fp = fp
+            return _synthesize(
                 store=store,
                 question=question,
-                index=index,
+                hits=full_hits,
                 chunks=chunks,
                 pages=pages,
                 documents=documents,
@@ -383,10 +418,23 @@ def ask(
                 generation_model=generation_model,
                 model=model,
                 trusted_names=trusted_names,
-                corpus_runtime=corpus_runtime,
+                low_relevance=False,
+                full_corpus=True,
             )
-            if packed is not None:
-                return packed
+        if chosen.name == "documents" and chosen.pack is not None:
+            return _document_path_response(
+                store=store,
+                question=question,
+                chunks=chunks,
+                pages=pages,
+                documents=documents,
+                provider=provider,
+                generation_model=generation_model,
+                model=model,
+                trusted_names=trusted_names,
+                pack=chosen.pack,
+            )
+        logger.info("ask_path=retrieval bound=%s n_docs=0 prefix_tokens=%s", chosen.bound, None)
 
     # Retrieve WIDE when reranking so the cross-encoder has a real pool to
     # rescore from; candidates (the bm25/dense fusion pool) is widened to

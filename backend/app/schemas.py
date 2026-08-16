@@ -78,6 +78,13 @@ class DocumentMeta(BaseModel):
     # ever validates them, so a bare model load never silently mis-defaults a
     # real tenant's documents to the wrong corpus.
     corpus_origin: CorpusOrigin
+    # What the document regulates (parties, amounts, questions it can answer),
+    # generated at ingestion / re-OCR by the local model. Not a summary of the
+    # text. None on documents that predate the field or when generation was
+    # skipped. description_fp is a hash of the extracted page text; a mismatch
+    # regenerates the description.
+    description: str | None = None
+    description_fp: str | None = None
 
 
 class RetrievalHit(BaseModel):
@@ -186,11 +193,11 @@ class Settings(BaseModel):
     candidateCount: int = Field(default=100, ge=1, le=1000)
     topK: int = Field(default=6, ge=1, le=50)
     minRelevance: float = Field(default=0.18, ge=0.0, le=1.0)
-    # Optional extra ceiling on full-corpus prefix_tokens. None = only the
-    # real window cap (n_ctx − question reserve − response budget). 0 forces
-    # retrieval (before/after on the same commit). A positive N binds only
-    # when it is tighter than the window. A persisted 32000 (the old default)
-    # is migrated to None on load — see Store._load_settings.
+    # Optional extra ceiling on full-corpus prefix_tokens. 0 forces retrieval
+    # (before/after on the same commit). None / a positive N are used only when
+    # the full-corpus path is opted in (`Store._prefer_full_corpus`); the
+    # product default is description-selected document packing. A persisted
+    # 32000 (the old default) is migrated to None on load — see Store._load_settings.
     fullCorpusTokenThreshold: int | None = Field(default=None, ge=0)
     # Cross-encoder rerank stage (fix/rerank-financial-tables): retrieve a
     # wide candidate pool, cross-encode each against the query, and pass only

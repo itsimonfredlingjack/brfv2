@@ -51,6 +51,7 @@ def _parse_timings(line: str) -> dict:
 
 def run_modes(folder: Path, data_dir: Path) -> list[dict]:
     store = Store(data_dir=data_dir)
+    store._prefer_full_corpus = True
     _ingest(store, folder)
     runtime = live_corpus_runtime()
     if runtime is None:

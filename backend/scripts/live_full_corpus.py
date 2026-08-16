@@ -89,6 +89,7 @@ def _ask_case(store: Store, qid: str, question: str, runtime, timings: list[str]
 
 def run_slice(folder: Path, threshold: int | None, data_dir: Path) -> dict:
     store = Store(data_dir=data_dir)
+    store._prefer_full_corpus = True
     _ingest(store, folder)
     store.update_settings(
         store.settings.model_copy(update={"fullCorpusTokenThreshold": threshold, "minRelevance": 0.0})

@@ -48,6 +48,13 @@ def _id_named(store: Store, name: str) -> str:
     return next(d.id for d in store.documents.values() if d.name == name)
 
 
+def _set_descriptions(store: Store, text: str = "Reglerar dokumentet.") -> None:
+    for doc_id, meta in list(store.documents.items()):
+        store.documents[doc_id] = meta.model_copy(
+            update={"description": f"{text} {meta.name}", "description_fp": "test"}
+        )
+
+
 def _score_named(store: Store, name: str, score: float):
     doc_id = _id_named(store, name)
     chunk = next(c for c in store.chunks.values() if c.document_id == doc_id)
@@ -120,7 +127,8 @@ def test_packer_skips_later_too_large_keeps_top(tmp_path):
     assert "third.pdf" in names
 
 
-def test_packer_threshold_zero_is_off(tmp_path):
+def test_packer_threshold_is_ignored(tmp_path):
+    """Force-retrieval is choose_ask_path's job, not the packer's."""
     st = Store(data_dir=tmp_path)
     st.add_document("a.pdf", build_pdf([[("hello there", 72, 100)]]))
     scores = score_documents([_score_named(st, "a.pdf", 1.0)])
@@ -134,8 +142,8 @@ def test_packer_threshold_zero_is_off(tmp_path):
         response_budget=5,
         threshold=0,
     )
-    assert decision.use_documents is False
-    assert decision.bound == "threshold"
+    assert decision.use_documents is True
+    assert decision.bound == "fits"
 
 
 _ANSWER = {
@@ -147,15 +155,15 @@ _ANSWER = {
 
 def test_document_path_puts_all_chunks_of_packed_docs_and_question_last(tmp_path):
     st = _two_chunk_store(tmp_path)
+    _set_descriptions(st)
     st.update_settings(st.settings.model_copy(update={
-        "fullCorpusTokenThreshold": 1,
         "minRelevance": 0.0,
         "topK": 1,
     }))
-    fake = FakeLLM([_ANSWER])
+    fake = FakeLLM([{"documents": ["A", "B"]}, _ANSWER])
     resp = ask(st, "Forsta dokumentets enda mening?", provider=fake, corpus_runtime=StubRuntime())
     assert not resp.refusal
-    user = fake.calls[0]["user"]
+    user = fake.calls[1]["user"]
     assert user.startswith("UTDRAG:")
     assert user.index("UTDRAG:") < user.index("FRÅGA:")
     assert len(resp.retrieval) == len(st.chunks)
@@ -175,8 +183,8 @@ def test_threshold_zero_still_question_first_on_document_sized_archive(tmp_path)
 
 def test_document_path_does_not_call_rerank(tmp_path, monkeypatch):
     st = _two_chunk_store(tmp_path)
+    _set_descriptions(st)
     st.update_settings(st.settings.model_copy(update={
-        "fullCorpusTokenThreshold": 1,
         "minRelevance": 0.0,
         "rerankEnabled": True,
     }))
@@ -186,8 +194,8 @@ def test_document_path_does_not_call_rerank(tmp_path, monkeypatch):
         raise AssertionError("rerank must not run on document path")
 
     monkeypatch.setattr("app.answer.rerank_chunks", boom)
-    fake = FakeLLM([_ANSWER])
+    fake = FakeLLM([{"documents": ["A", "B"]}, _ANSWER])
     resp = ask(st, "Forsta dokumentets enda mening?", provider=fake, corpus_runtime=StubRuntime())
     assert not resp.refusal
-    assert fake.calls[0]["user"].startswith("UTDRAG:")
+    assert fake.calls[1]["user"].startswith("UTDRAG:")
 

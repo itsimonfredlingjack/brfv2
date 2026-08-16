@@ -2,9 +2,9 @@
 
 **Host:** agenntserver · **Modell:** Gemma 4 12B IT · `n_ctx=65536` · **commit:** `c21db3d` · **embedder:** `model2vec:potion-multilingual-128M`
 
-Sista diagnostiken före arkitekturbeslut. Samma elva fall, samma nio handlingar, samma beskrivningar som `docs/evidence/brf1-doc-descriptions.md`.
+Sista diagnostiken före arkitekturbeslut, sedan produkt. Samma elva fall, samma nio handlingar, samma beskrivningar som `docs/evidence/brf1-doc-descriptions.md`.
 
-**Vad som ändrades (mätning, inte produkt):** `evaluate_document_path` fick modellurval över beskrivningarna (1–3 handlingar) i stället för max fused score. Valda handlingar packades hela under `n_ctx`. Helarkiv blockerades. Grind, citat, numerik — oförändrat.
+**Vad som mättes:** `evaluate_document_path` fick modellurval över beskrivningarna (1–3 handlingar) i stället för max fused score. Valda handlingar packades hela under `n_ctx`. Helarkiv blockerades. Grind, citat, numerik — oförändrat. Den vägen är nu produktens huvudväg; se slutet.
 
 **Baslinjer:**
 
@@ -104,14 +104,68 @@ Det är inte att 494 var fel — det är att ett tillägg som skulle ge översik
 
 ---
 
-## Arkitekturrekommendation
+## Måttet räknar fortfarande fel sorts träff
 
-**Beskrivningsurval + dokumentväg är den starkaste vägen på facit (9/11)** och eliminerar alla vägringar i den här körningen. Den slår retrieval, helarkiv och helarkiv+katalog på det måttet.
+`verifierat` slogs ihop till `verifierat_i_facit` för att det första räknade fel sorts träff (citat ur fel handling). Samma invändning gäller nu `verifierat_i_facit`: ett ordagrant citat ur rätt handling betyder inte att svaret besvarar frågan. R5-diagnosen visade det redan — citatet var korrekt och prosan innehöll en siffra som inte fanns i källan. Noll vägringar gör hålet skarpare, inte mildare: systemet svarar alltid.
 
-Men:
+Svarstexterna sparades inte i `result.json`. De lästes från en omkörning av samma patchade väg (samma store, samma beskrivningar, samma 1–3-urval). Urval och fel-handling-fall återkom; R4 gick genom numerisk reparation (`2024`) och släpptes.
 
-1. **`verifierat_i_fel_handling` går inte till noll** med 1–3-handlingspack — R7b kvarstår när distraktor packas med.
-2. **Urvalet är 10/11**, inte 7/11 — multipelval hjälper. Förlust i svarssteget: **ett fall** (R7b).
-3. **Cachen faller** — ~8 s/fall mot ~4–5 s cachad helarkiv, och `cache_n` i princip noll på svarsgenerering.
+Klassning för hand mot frågan, inte mot citatgrinden:
 
-Beskrivningarna hör hemma i produkten som urvalsstyrning för dokumentvägen. Helarkiv+katalog är billigare men svagare. Enpack-vs-multipack är nästa designfråga: enpack eliminerar R7b-strukturfel men tappar R5/R6.
+| utfall | fall | n |
+| --- | --- | ---: |
+| besvarar frågan korrekt | R2, R3, R4, R5, R6, R7, R8, R5b | **8** |
+| citerar rätt handling men svarar fel eller ofullständigt | R1 | **1** |
+| fel handling | R3b, R7b | **2** |
+
+**8 är siffran som gäller framåt för om frågan besvaras**, inte 9. Det är inte ett ras — det är ett fall. R1 citerade G s1 men vände meningen: *"Hyresgästen förbinder sig att anvisa de boende en egen plats i garaget då detta strider mot tecknat Mobilitetsavtal."* Facitfrågan är ja/nej om reserverad plats. Svaret är osammanhängande och svarar inte.
+
+R2 nej + nio månader. R3 friskrivning om inte oaktsamhet. R4 inte fast pris efter 2024-04-01 (schablon Q1–3, verkliga kostnader). R5 och R5b 494 i administrationskostnad. R6 andel av BOA+LOA / verkliga kostnader för 117:14. R7 varsko om betydande prisjusteringar. R8 nio månader, gäller tom 2047-03-31.
+
+---
+
+## Noll vägringar är inte en avstängd grind
+
+Samma `_synthesize` som retrieval: `insufficient_data`, `grounding_failed` (requireSources), `numeric_grounding_failed` (med en reparation). Dokumentvägen sätter `low_relevance=False` och hoppar över minRelevance; retrieval vägrade inte på den grinden i de här elva fallen heller.
+
+| fall | retrieval (före) | dokumentväg, grindar | dokumentväg, utfall |
+| --- | --- | --- | --- |
+| R1 | — (fel handling) | utvärderade, inga föll | svarade, se R1 ovan |
+| R2 | — | utvärderade, inga föll | korrekt |
+| R3 | `insufficient_data` | utvärderade, inga föll | korrekt |
+| R4 | — | numerisk grind föll på `2024`, reparation gick igenom | korrekt |
+| R5 | `insufficient_data` | utvärderade, inga föll | korrekt |
+| R6 | — | utvärderade, inga föll | korrekt |
+| R7 | `insufficient_data` | utvärderade, inga föll | korrekt |
+| R8 | — | utvärderade, inga föll | korrekt |
+| R3b | — | utvärderade, inga föll | fel handling |
+| R5b | `numeric_grounding_failed` | utvärderade, inga föll | korrekt |
+| R7b | `insufficient_data` | utvärderade, inga föll | fel handling |
+
+Retrievalvägrade där modellen sa `insufficient_data` eller där numeriken föll. På dokumentvägen sa modellen inte `insufficient_data`, citaten verifierades, och numeriken släppte (R4 efter reparation). Grinden slutade inte fälla för att vägen byttes. Svaren hittades — utom R1 som släpptes med ett citat som inte besvarar frågan, och R3b/R7b som släpptes med citat ur fel handling. Det är måtthålet, inte en avstängd grind.
+
+---
+
+## R7b: enpack mot R5 och R6
+
+Facit E var packad (A, B, E). Modellen citerade B s3 (tilläggsarbete / prislista), inte E s2 (varsko om prisjusteringar).
+
+Enpack av *rätt* handling skulle ta bort felet strukturellt: B finns inte att citera ur. Den enpacken har vi inte vid körning. Isolerat beskrivningsurval (en handling) valde **A** på R7b, inte E. Enpack av modellens förstahandsval hade packat fel handling.
+
+Enpack av 1–3 → 1 som produktregel kostar de fall som behövde flera handlingar i paketet: **R5** (D+E) och **R6** (C+D+E). Gör inte om den upptäckten genom att sätta max 1 som default för att tysta R7b.
+
+**Åtgärd:** behåll 1–3. Inför inte enpack. R7b är ett svarsstegfel bland packade handlingar, inte ett packbreddsfel att "rätta" med max 1. Nästa steg mot R7b är samma klass som R3b — en handskriven koppling fråga→handling — inte en smalare packare.
+
+---
+
+## R3b: första kända fallet som kräver en handskriven koppling
+
+Fråga: *Vem står för kostnaden om en bil får en skada på gården?* Facit G (hyresavtal parkering). Urvalet tog B (teknisk förvaltning). Citatet B s11 handlar om skadegörelse vid avrop, inte bil på gården.
+
+Frågans pekord (*gården*, *bil*, *skada*) finns inte i facithandlingen. G talar om parkering, friskrivning, personbil i lokalen. Det är inte lösbart med en bättre metod på samma underlag: beskrivning, BM25, fused score och titel+struktur missade alla. **Det är det första kända fallet som kräver att någon skriver kopplingen för hand** (den här frågan hör till parkeringsavtalet, inte till teknisk förvaltning eller gården som ord).
+
+---
+
+## Produkt
+
+Dokumentvägen med beskrivningsurval är huvudväg (`choose_ask_path` i `app/answer.py`). Beskrivningar genereras vid ingestion och när extraherad text ändras, cachas på dokumentet. Urval 1–3 över beskrivningarna. Max fused score styr inte. Helarkiv ligger kvar bakom `Store._prefer_full_corpus`. Retrieval är fallback när urvalet inte kan köras eller paketet inte ryms. Citatkedja, numerisk grind och koordinater oförändrade.

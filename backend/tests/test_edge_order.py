@@ -85,6 +85,7 @@ def test_probe_order_keeps_prefix_stable(tmp_path):
     st = _two_chunk_store(tmp_path)
     st.add_document("C.pdf", build_pdf([[("Tredje dokumentets enda mening.", 72, 100)]]))
     st._full_corpus_order = "probe"
+    st._prefer_full_corpus = True
     fake = FakeLLM([
         {"answer": "a", "citations": [{"chunk_id": "K1", "quote": "Forsta dokumentets enda mening."}], "insufficient_data": False},
         {"answer": "b", "citations": [{"chunk_id": "K1", "quote": "Forsta dokumentets enda mening."}], "insufficient_data": False},

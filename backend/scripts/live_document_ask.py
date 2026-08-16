@@ -18,9 +18,9 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from app.answer import ask  # noqa: E402
-from app.document_ask import evaluate_document_path  # noqa: E402
+from app.answer import ask, choose_ask_path  # noqa: E402
 from app.full_corpus import live_corpus_runtime  # noqa: E402
+from app.llm import pick_provider  # noqa: E402
 from app.store import Store  # noqa: E402
 from scripts.compare_ask_cases import compare_runs, format_table  # noqa: E402
 from scripts.eval import install_network_audit  # noqa: E402
@@ -88,30 +88,37 @@ def _score_rows(decision) -> list[dict]:
 
 def _ask_case(store: Store, qid: str, question: str, runtime, timings: list[str]) -> dict:
     index, chunks, pages, documents = store.snapshot()
-    decision = evaluate_document_path(
+    provider = pick_provider()
+    chosen = choose_ask_path(
+        store=store,
         question=question,
         index=index,
         chunks=chunks,
         documents=documents,
         runtime=runtime,
         settings=store.settings,
+        provider=provider,
     )
     t0 = time.perf_counter()
-    resp = ask(store, question, corpus_runtime=runtime)
+    resp = ask(
+        store,
+        question,
+        provider=provider,
+        corpus_runtime=runtime,
+        chosen_path=chosen,
+    )
     elapsed = round(time.perf_counter() - t0, 3)
-    if store.settings.fullCorpusTokenThreshold == 0:
-        ask_path = "retrieval"
-        bound = "threshold"
-        n_packed = 0
-    elif decision.use_documents:
+    pack = chosen.pack
+    if chosen.name == "documents" and pack is not None:
         ask_path = "documents"
-        bound = decision.bound
-        n_packed = len(decision.document_ids)
+        bound = chosen.bound
+        n_packed = len(pack.document_ids)
+        top_kind = document_kind(pack.scores[0].document_name) if pack.scores else None
     else:
         ask_path = "retrieval"
-        bound = decision.bound
+        bound = chosen.bound
         n_packed = 0
-    top_kind = document_kind(decision.scores[0].document_name) if decision.scores else None
+        top_kind = document_kind(pack.scores[0].document_name) if pack and pack.scores else None
     return {
         "qid": qid,
         "refused": resp.refusal,
@@ -122,7 +129,7 @@ def _ask_case(store: Store, qid: str, question: str, runtime, timings: list[str]
         "bound": bound,
         "n_packed": n_packed,
         "top_document_kind": top_kind,
-        "scores": _score_rows(decision),
+        "scores": _score_rows(pack) if pack is not None else [],
         "n_retrieval": len(resp.retrieval),
         "timings_log": list(timings[-1:]),
     }

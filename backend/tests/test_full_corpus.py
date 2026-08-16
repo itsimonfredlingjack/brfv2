@@ -164,8 +164,13 @@ def _two_chunk_store(tmp_path):
     return st
 
 
+def _prefer_full(st: Store) -> Store:
+    st._prefer_full_corpus = True
+    return st
+
+
 def test_full_corpus_skips_search_and_puts_question_last(tmp_path, monkeypatch):
-    st = _two_chunk_store(tmp_path)
+    st = _prefer_full(_two_chunk_store(tmp_path))
     st.update_settings(st.settings.model_copy(update={"minRelevance": 1.0}))
     fake = FakeLLM([{
         "answer": "Forsta dokumentets enda mening.",
@@ -185,7 +190,7 @@ def test_full_corpus_skips_search_and_puts_question_last(tmp_path, monkeypatch):
 
 
 def test_excerpt_count_equals_chunk_count(tmp_path):
-    st = _two_chunk_store(tmp_path)
+    st = _prefer_full(_two_chunk_store(tmp_path))
     fake = FakeLLM([{
         "answer": "x",
         "citations": [{"chunk_id": "K1", "quote": "Forsta dokumentets enda mening."}],
@@ -222,7 +227,7 @@ def test_citation_out_score_has_no_default():
 
 
 def test_prefix_identical_across_questions(tmp_path):
-    st = _two_chunk_store(tmp_path)
+    st = _prefer_full(_two_chunk_store(tmp_path))
     fake = FakeLLM([
         {"answer": "a", "citations": [{"chunk_id": "K1", "quote": "Forsta dokumentets enda mening."}], "insufficient_data": False},
         {"answer": "b", "citations": [{"chunk_id": "K1", "quote": "Forsta dokumentets enda mening."}], "insufficient_data": False},
@@ -238,7 +243,7 @@ def test_prefix_identical_across_questions(tmp_path):
 
 
 def test_prefix_changes_when_document_added(tmp_path):
-    st = _two_chunk_store(tmp_path)
+    st = _prefer_full(_two_chunk_store(tmp_path))
     fake = FakeLLM([
         {"answer": "a", "citations": [{"chunk_id": "K1", "quote": "Forsta dokumentets enda mening."}], "insufficient_data": False},
         {"answer": "b", "citations": [{"chunk_id": "K1", "quote": "Forsta dokumentets enda mening."}], "insufficient_data": False},
@@ -260,7 +265,7 @@ def test_prefix_fingerprint_hashes_system_and_excerpts():
 
 
 def test_prefix_change_logged_on_first_ask_and_after_upload(tmp_path, caplog):
-    st = _two_chunk_store(tmp_path)
+    st = _prefer_full(_two_chunk_store(tmp_path))
     fake = FakeLLM([
         {"answer": "a", "citations": [{"chunk_id": "K1", "quote": "Forsta dokumentets enda mening."}], "insufficient_data": False},
         {"answer": "b", "citations": [{"chunk_id": "K1", "quote": "Forsta dokumentets enda mening."}], "insufficient_data": False},

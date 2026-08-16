@@ -113,6 +113,7 @@ class Store:
         self._full_corpus_tokens = None
         self._full_corpus_prefix_fp = None
         self._full_corpus_order = "page"
+        self._prefer_full_corpus = False
         self._warmup_gen = 0
         self._rebuild()
 
@@ -530,7 +531,6 @@ class Store:
                 self.pages = {**self.pages, doc_id: pages}
                 self._rebuild()
                 self._save_documents()
-                return self.documents[doc_id]
             except Exception:
                 # Roll back: no orphaned files, no half-registered document.
                 self.documents.pop(doc_id, None)
@@ -538,6 +538,15 @@ class Store:
                 (self.data_dir / "docs" / f"{doc_id}.pdf").unlink(missing_ok=True)
                 (self.data_dir / "extract" / f"{doc_id}.json").unlink(missing_ok=True)
                 raise
+        self.refresh_description(doc_id)
+        with self.lock:
+            return self.documents[doc_id]
+
+    def refresh_description(self, doc_id: str, provider=None) -> None:
+        """Generate or refresh the cached regulatory description. Never raises."""
+        from .document_describe import refresh_document_description
+
+        refresh_document_description(self, doc_id, provider)
 
     def delete_document(self, doc_id: str) -> bool:
         with self.lock:
