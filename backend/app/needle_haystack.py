@@ -125,7 +125,7 @@ def recommend_nctx(rows: list[dict]) -> dict:
     return {"n_ctx": chosen["n_ctx"], "reason": "deepest_then_smallest", "discarded": discarded}
 
 
-def _hay_row(rows: list[dict], size: int) -> dict | None:
+def haystack_row(rows: list[dict], size: int) -> dict | None:
     exact = [r for r in rows if r.get("target_tokens") == size]
     if exact:
         return exact[0]
@@ -146,7 +146,7 @@ def occupancy_holds_for_archive(rows: list[dict]) -> dict:
     used = server.get("vram_full_mib")
     if total and used is not None and (total - used) < GPU_FREE_MIN_MIB:
         return {"holds": False, "reason": "gpu_low"}
-    hay = _hay_row(rows, 48000)
+    hay = haystack_row(rows, 48000)
     if hay is None:
         return {"holds": False, "reason": "48k_missing"}
     if hay.get("hit_10") or hay.get("hit_50") or hay.get("hit_90"):

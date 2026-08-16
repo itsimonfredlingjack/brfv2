@@ -5,6 +5,8 @@ Temporarily overrides `-c` via a gitignored compose file, then always restores
 
 Usage (from backend/):
     uv run python -m scripts.measure_nctx_cost --out out/nctx-cost
+    uv run python -m scripts.measure_nctx_cost --mode occupancy --out out/nctx-cost
+    uv run python -m scripts.measure_nctx_cost --mode filled-window --out out/nctx-cost
     uv run python -m scripts.measure_nctx_cost --dry-run
 """
 
@@ -22,10 +24,19 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app.full_corpus import LlamaCppRuntime, server_origin  # noqa: E402
-from app.needle_haystack import CANARIES, build_haystack, recommend_nctx  # noqa: E402
+from app.needle_haystack import (  # noqa: E402
+    CANARIES,
+    HAYSTACK_SIZES,
+    build_haystack,
+    haystack_row,
+    occupancy_explains_old_miss,
+    occupancy_holds_for_archive,
+    recommend_nctx,
+)
 from scripts.eval import install_network_audit  # noqa: E402
 
 N_CTXS = (16384, 32768, 65536)
+LOREM_FILLED_16K = {"hit_10": True, "hit_50": False, "hit_90": False}
 COMPOSE_DIR_DEFAULT = "/home/simon/llama-cpp"
 OVERRIDE_PATH = Path("/tmp/llama-nctx-override.yml")
 GGUF_IN_CONTAINER = (
@@ -245,6 +256,39 @@ def _enforce_loopback(audit_log: list[dict]) -> None:
         )
 
 
+def ask_needles(origin: str, runtime: LlamaCppRuntime, target_tokens: int) -> dict:
+    hay, placements = fit_haystack(target_tokens, runtime.count)
+    row: dict = {
+        "target_tokens": target_tokens,
+        "hay_tokens": placements[0]["hay_tokens"] if placements else None,
+        "hit_10": False,
+        "hit_50": False,
+        "hit_90": False,
+        "needles": [],
+    }
+    system = "Svara med enbart koden. Inget annat."
+    for needle, key in zip(CANARIES, ("hit_10", "hit_50", "hit_90"), strict=True):
+        user = hay + f"\n\nFRÅGA: Vilken kod står vid markören {needle['marker']}?"
+        result = chat_completion(origin, system, user, max_tokens=64)
+        hit = canary_hit(result["text"], needle["code"])
+        row[key] = hit
+        row["needles"].append(
+            {
+                "marker": needle["marker"],
+                "depth": needle["depth"],
+                "token_depth": next(
+                    (p["token_depth"] for p in placements if p["marker"] == needle["marker"]),
+                    None,
+                ),
+                "hit": hit,
+                "prompt_n": result["prompt_n"],
+                "prompt_ms": result["prompt_ms"],
+                "cache_n": result["cache_n"],
+            }
+        )
+    return row
+
+
 def measure_one(origin: str, n_ctx: int, runtime: LlamaCppRuntime) -> dict:
     row: dict = {
         "n_ctx": n_ctx,
@@ -266,29 +310,8 @@ def measure_one(origin: str, n_ctx: int, runtime: LlamaCppRuntime) -> dict:
     row["vram_loaded_mib"] = used
     row["gpu_total_mib"] = total
     row["ram_loaded_mib"] = docker_mem_mib()
-    target = max(32, n_ctx - 256)
-    hay, placements = fit_haystack(target, runtime.count)
-    row["hay_tokens"] = placements[0]["hay_tokens"] if placements else None
-    system = "Svara med enbart koden. Inget annat."
-    for needle, key in zip(CANARIES, ("hit_10", "hit_50", "hit_90"), strict=True):
-        user = hay + f"\n\nFRÅGA: Vilken kod står vid markören {needle['marker']}?"
-        result = chat_completion(origin, system, user, max_tokens=64)
-        hit = canary_hit(result["text"], needle["code"])
-        row[key] = hit
-        row["needles"].append(
-            {
-                "marker": needle["marker"],
-                "depth": needle["depth"],
-                "token_depth": next(
-                    (p["token_depth"] for p in placements if p["marker"] == needle["marker"]),
-                    None,
-                ),
-                "hit": hit,
-                "prompt_n": result["prompt_n"],
-                "prompt_ms": result["prompt_ms"],
-                "cache_n": result["cache_n"],
-            }
-        )
+    needles = ask_needles(origin, runtime, max(32, n_ctx - 256))
+    row.update({k: needles[k] for k in ("target_tokens", "hay_tokens", "hit_10", "hit_50", "hit_90", "needles")})
     used_full, _ = nvidia_memory()
     row["vram_full_mib"] = used_full
     row["ram_full_mib"] = docker_mem_mib()
@@ -302,36 +325,21 @@ def measure_one(origin: str, n_ctx: int, runtime: LlamaCppRuntime) -> dict:
     return row
 
 
-def main() -> None:
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--out", type=Path, default=Path("out/nctx-cost"))
-    ap.add_argument("--compose-dir", default=COMPOSE_DIR_DEFAULT)
-    ap.add_argument("--dry-run", action="store_true")
-    args = ap.parse_args()
+def _restore_16384(compose_dir: str, origin: str) -> None:
+    print("restoring n_ctx=16384", file=sys.stderr, flush=True)
+    _run(restore_compose_cmd(compose_dir))
+    if not wait_n_ctx(origin, 16384, timeout_s=WAIT_NCTX_S):
+        print("RESTORE FAILED — /props n_ctx is not 16384", file=sys.stderr, flush=True)
+        sys.exit(2)
 
-    if args.dry_run:
-        hay, places = build_haystack(target_tokens=1000, count=lambda t: len(t.split()))
-        report = {
-            "dry_run": True,
-            "hay_words": 1000,
-            "depths": [{"marker": p["marker"], "depth": p["depth"]} for p in places],
-            "codes": [c["code"] for c in CANARIES],
-        }
-        print(json.dumps(report), flush=True)
-        return
 
-    base = os.environ.get("BRF_LLM_BASE_URL", "").strip()
-    if not base:
-        raise SystemExit("BRF_LLM_BASE_URL saknas")
-    origin = server_origin(base)
-    audit_log, _allowed = install_network_audit()
-    args.out.mkdir(parents=True, exist_ok=True)
+def run_filled_window(origin: str, base: str, compose_dir: str, out: Path) -> None:
     rows: list[dict] = []
     try:
         for n_ctx in N_CTXS:
             print(f"n_ctx={n_ctx} starting override", file=sys.stderr, flush=True)
             write_override_yaml(OVERRIDE_PATH, n_ctx)
-            rc = _run(override_compose_cmd(args.compose_dir, str(OVERRIDE_PATH)))
+            rc = _run(override_compose_cmd(compose_dir, str(OVERRIDE_PATH)))
             if rc != 0 or not wait_n_ctx(origin, n_ctx):
                 rows.append(
                     {
@@ -374,18 +382,147 @@ def main() -> None:
                 flush=True,
             )
     finally:
-        print("restoring n_ctx=16384", file=sys.stderr, flush=True)
-        _run(restore_compose_cmd(args.compose_dir))
-        if not wait_n_ctx(origin, 16384, timeout_s=WAIT_NCTX_S):
-            print("RESTORE FAILED — /props n_ctx is not 16384", file=sys.stderr, flush=True)
-            sys.exit(2)
+        _restore_16384(compose_dir, origin)
 
     rec = recommend_nctx(rows)
-    payload = {"rows": rows, "recommended": rec}
-    (args.out / "run.json").write_text(json.dumps(payload), encoding="utf-8")
+    payload = {"mode": "filled-window", "rows": rows, "recommended": rec}
+    (out / "run.json").write_text(json.dumps(payload), encoding="utf-8")
     rec_n = rec.get("n_ctx")
-    (args.out / "recommended.txt").write_text("" if rec_n is None else str(rec_n), encoding="utf-8")
+    (out / "recommended.txt").write_text("" if rec_n is None else str(rec_n), encoding="utf-8")
     print(json.dumps({"recommended_n_ctx": rec_n, "reason": rec.get("reason"), "discarded": rec.get("discarded")}), flush=True)
+
+
+def run_occupancy(origin: str, base: str, compose_dir: str, out: Path) -> None:
+    hay_rows: list[dict] = []
+    used, total = nvidia_memory()
+    server: dict = {
+        "n_ctx": 65536,
+        "started": False,
+        "stable": False,
+        "vram_loaded_mib": used,
+        "vram_full_mib": None,
+        "gpu_total_mib": total,
+        "ram_loaded_mib": docker_mem_mib(),
+        "ram_full_mib": None,
+    }
+    try:
+        print("n_ctx=65536 occupancy override", file=sys.stderr, flush=True)
+        write_override_yaml(OVERRIDE_PATH, 65536)
+        rc = _run(override_compose_cmd(compose_dir, str(OVERRIDE_PATH)))
+        if rc != 0 or not wait_n_ctx(origin, 65536):
+            print("n_ctx=65536 started=false", file=sys.stderr, flush=True)
+        else:
+            server["started"] = True
+            used, total = nvidia_memory()
+            server["vram_loaded_mib"] = used
+            server["gpu_total_mib"] = total
+            server["ram_loaded_mib"] = docker_mem_mib()
+            runtime = LlamaCppRuntime(base)
+            for size in HAYSTACK_SIZES:
+                print(f"haystack={size} starting", file=sys.stderr, flush=True)
+                try:
+                    row = ask_needles(origin, runtime, size)
+                except Exception as exc:
+                    print(f"haystack={size} failed: {exc}", file=sys.stderr, flush=True)
+                    row = {
+                        "target_tokens": size,
+                        "hay_tokens": None,
+                        "hit_10": False,
+                        "hit_50": False,
+                        "hit_90": False,
+                        "needles": [],
+                        "error": type(exc).__name__,
+                    }
+                hay_rows.append(row)
+                print(
+                    f"haystack={size} hay_tokens={row['hay_tokens']} "
+                    f"10={row['hit_10']} 50={row['hit_50']} 90={row['hit_90']}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+            used_full, _ = nvidia_memory()
+            server["vram_full_mib"] = used_full
+            server["ram_full_mib"] = docker_mem_mib()
+            time.sleep(STABLE_WAIT_S)
+            try:
+                tiny = chat_completion(origin, "Svara med ett ord.", "Hej?", max_tokens=16)
+                server["stable"] = bool(tiny.get("text") is not None)
+            except Exception:
+                server["stable"] = False
+    finally:
+        _restore_16384(compose_dir, origin)
+
+    print("control haystack=16000 at n_ctx=16384", file=sys.stderr, flush=True)
+    try:
+        control = ask_needles(origin, LlamaCppRuntime(base), 16000)
+    except Exception as exc:
+        print(f"control 16k@16384 failed: {exc}", file=sys.stderr, flush=True)
+        control = {
+            "target_tokens": 16000,
+            "hay_tokens": None,
+            "hit_10": False,
+            "hit_50": False,
+            "hit_90": False,
+            "needles": [],
+            "error": type(exc).__name__,
+        }
+    print(
+        f"control 16k@16384 hay_tokens={control['hay_tokens']} "
+        f"10={control['hit_10']} 50={control['hit_50']} 90={control['hit_90']}",
+        file=sys.stderr,
+        flush=True,
+    )
+
+    holds = occupancy_holds_for_archive([*hay_rows, server])
+    unfilled = haystack_row(hay_rows, 16000) or {}
+    payload = {
+        "mode": "occupancy",
+        "server": server,
+        "haystacks": hay_rows,
+        "control_16k_at_16384": control,
+        "holds_for_archive": holds,
+        "explains_vs_lorem": occupancy_explains_old_miss(
+            filled_16k=LOREM_FILLED_16K, unfilled_16k_in_64k=unfilled
+        ),
+        "explains_vs_structured_control": occupancy_explains_old_miss(
+            filled_16k=control, unfilled_16k_in_64k=unfilled
+        ),
+    }
+    (out / "occupancy.json").write_text(json.dumps(payload), encoding="utf-8")
+    print(json.dumps({"holds_for_archive": holds, "explains_vs_lorem": payload["explains_vs_lorem"]}), flush=True)
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--out", type=Path, default=Path("out/nctx-cost"))
+    ap.add_argument("--compose-dir", default=COMPOSE_DIR_DEFAULT)
+    ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--mode", choices=("occupancy", "filled-window"), default="occupancy")
+    args = ap.parse_args()
+
+    if args.dry_run:
+        hay, places = build_haystack(target_tokens=1000, count=lambda t: len(t.split()))
+        report = {
+            "dry_run": True,
+            "mode": args.mode,
+            "hay_words": 1000,
+            "depths": [{"marker": p["marker"], "depth": p["depth"]} for p in places],
+            "codes": [c["code"] for c in CANARIES],
+            "lorem": "lorem" in hay.casefold(),
+        }
+        print(json.dumps(report), flush=True)
+        return
+
+    base = os.environ.get("BRF_LLM_BASE_URL", "").strip()
+    if not base:
+        raise SystemExit("BRF_LLM_BASE_URL saknas")
+    origin = server_origin(base)
+    audit_log, _allowed = install_network_audit()
+    args.out.mkdir(parents=True, exist_ok=True)
+    if args.mode == "filled-window":
+        run_filled_window(origin, base, args.compose_dir, args.out)
+    else:
+        run_occupancy(origin, base, args.compose_dir, args.out)
     _enforce_loopback(audit_log)
 
 

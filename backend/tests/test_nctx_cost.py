@@ -132,6 +132,12 @@ def test_override_cmd_includes_tmp_file_and_nctx():
     assert "/tmp/llama-nctx.yml" in cmd
 
 
+def test_lorem_filled_16k_matches_first_evidence():
+    from scripts.measure_nctx_cost import LOREM_FILLED_16K
+
+    assert LOREM_FILLED_16K == {"hit_10": True, "hit_50": False, "hit_90": False}
+
+
 def test_document_kind_from_filename():
     from scripts.live_document_ask import document_kind
 
