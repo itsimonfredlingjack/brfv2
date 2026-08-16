@@ -17,7 +17,9 @@ Måttet är treutfall mot facithandling (`verifierat_i_facit` / `verifierat_i_fe
 | dokumentväg | **6–6** (6, 6, 6, 6, 6) | 1–1 | 4–4 |
 | retrieval | **5–5** (5, 5, 5, 5, 5) | 1–1 | 5–5 |
 
-Dokumentvägen ger 6–6 av 11 över fem körningar, retrieval ger 5–5.
+Gällande tal: dokumentväg **6 facit** mot retrieval **5 facit** över fem körningar. Spannet är 6–6 mot 5–5.
+
+**4 → 8** i `docs/evidence/brf1-doc-path-desc.md` var enkörning utan domargrind (handklassat). De tidigare talen är märkta där som just det.
 
 Inom de fem körningarna rörde sig inte treutfallet. Ett fall bytte bara hur många E-citat som accepterades (R4 dokumentväg: tre citat i körning 1, ett citat i körning 2–5). Fortfarande facit.
 
@@ -63,7 +65,9 @@ Retrievals 5/1/5 i `docs/evidence/brf1-full-corpus.md` återkom identiskt i treu
 
 Requesten är redan greedy. Inom en tätt följd av fem körningar på samma process, samma store och samma prefixcache försvann treutfallsdriften.
 
-Det är inte bevis att varje enkörning landar på samma fall. Grindkörningen samma dag (`docs/evidence/brf1-answer-judge.md`) var också 6/1/4 på dokumentvägen, men med R5 som fel handling (C) och R6 som vägrad. Här är det omvänt: R5 vägrad, R6 fel handling (C). Samma totalsumma, andra fall. Den skillnaden sitter *mellan* sessioner, inte i de fem körningarna.
+Det är inte bevis att varje enkörning landar på samma fall. Grindkörningen samma dag (`docs/evidence/brf1-answer-judge.md`) var också 6/1/4 på dokumentvägen, men med R5 som fel handling (C) och R6 som vägrad. Här är det omvänt: R5 vägrad, R6 fel handling (C). Samma totalsumma, andra fall. Den skillnaden sitter *mellan* sessioner, inte i de fem körningarna. Urvalet i tjugo processer är 20/20 identiskt per fall (`docs/evidence/brf1-selection-stability.md`) — det är inte processgränsen.
+
+R5/R7/R7b:s `insufficient_data` i femkörningen: facittexten fanns inte i prompten (`docs/evidence/brf1-refusal-prompt.md`).
 
 Defaulten rördes inte. Ingen andra matris vid temperature 0 — det var redan noll.
 

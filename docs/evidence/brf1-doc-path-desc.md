@@ -2,7 +2,7 @@
 
 **Host:** agenntserver · **Modell:** Gemma 4 12B IT · `n_ctx=65536` · **commit:** `c21db3d` · **embedder:** `model2vec:potion-multilingual-128M`
 
-> **Enkörning.** Alla `ask()`-siffror här är en körning per fall, inklusive 8 mot 4 och 9/2/0. Spann över fem körningar: `docs/evidence/brf1-variance.md`.
+> **Enkörning utan domargrind.** 4 → 8 (handklassat) och 9/2/0 (citatmått) är en körning per fall, före svarsdomaren. Gällande tal: dokumentväg **6 facit** mot retrieval **5 facit** över fem körningar, med grinden i `ask()` — `docs/evidence/brf1-variance.md`.
 
 Sista diagnostiken före arkitekturbeslut, sedan produkt. Samma elva fall, samma nio handlingar, samma beskrivningar som `docs/evidence/brf1-doc-descriptions.md`.
 
@@ -10,7 +10,7 @@ Sista diagnostiken före arkitekturbeslut, sedan produkt. Samma elva fall, samma
 
 **Måttlärdom:** tre mått i följd räknade något som låg intill det vi ville veta — citat som fanns, citat ur rätt handling, och först därefter svar som besvarar frågan.
 
-Jämförelsen 5 mot 9 (`verifierat_i_facit` retrieval mot dokumentväg) stryks. Det är inte samma sak som om frågan besvaras. Baslinjen är retrieval klassad för hand med samma fyrutfallsmått:
+Baslinjen i **den här enkörningen utan grind** är retrieval klassad för hand med samma fyrutfallsmått:
 
 | utfall | retrieval | dokumentväg + beskrivningsurval |
 | --- | ---: | ---: |
@@ -19,7 +19,7 @@ Jämförelsen 5 mot 9 (`verifierat_i_facit` retrieval mot dokumentväg) stryks. 
 | fel handling | 1 | 2 |
 | vägrad | 5 | 0 |
 
-Den verkliga förbättringen är **4 → 8** (enkörning, handklassat). Retrievals 5 `verifierat_i_facit` och dokumentvägens 9 är kvar som citatmått i tabellerna nedan, men de är inte baslinjen. Spann: `docs/evidence/brf1-variance.md`.
+**4 → 8** var enkörning utan domargrind, handklassat mot frågan. Det är inte gällande tal. Gällande: dokumentväg 6 facit mot retrieval 5 facit över fem körningar (`docs/evidence/brf1-variance.md`). Retrievals 5 `verifierat_i_facit` och dokumentvägens 9 i tabellerna nedan är samma sorts enkörning utan grind, citatmått.
 
 ---
 
@@ -124,7 +124,7 @@ Samma elva fall, `fullCorpusTokenThreshold=0`, samma store, samma modell. Svarst
 
 R2 nej + nio månader. R4 inte fast pris efter 2024-03-31. R6 andel BOA+LOA och 3446/20362 för 117:14. R8 tom 2047-03-31, nio månader. R3b citerar G (facit) men svarar med parkeringsfriskrivningen på en fråga om *gården*. R1 svarar ja utifrån D s11/s9 (10 % / 50 % fasta platser); facit är G. Vägran: R3/R5/R7/R7b `insufficient_data`, R5b `numeric_grounding_failed`.
 
-**4 är retrievalbaslinjen för om frågan besvaras** (enkörning, handklassat). Dokumentvägen är 8 mot den baslinjen, inte 9 mot 5. Spann: `docs/evidence/brf1-variance.md`.
+**4 är retrievalbaslinjen för om frågan besvaras** i den här enkörningen utan grind, handklassat. Dokumentvägen är 8 mot den baslinjen i samma körning, inte 9 mot 5. Gällande treutfall med grind: 6 mot 5 över fem körningar (`docs/evidence/brf1-variance.md`).
 
 ---
 
@@ -142,7 +142,7 @@ Klassning för hand mot frågan, inte mot citatgrinden:
 | citerar rätt handling men svarar fel eller ofullständigt | R1 | **1** |
 | fel handling | R3b, R7b | **2** |
 
-**8 är siffran som gäller framåt för dokumentvägen** (enkörning, handklassat), inte 9. Mot retrievals 4 är det plus fyra. Spann: `docs/evidence/brf1-variance.md`. R1 citerade G s1 men vände meningen: *"Hyresgästen förbinder sig att anvisa de boende en egen plats i garaget då detta strider mot tecknat Mobilitetsavtal."* Facitfrågan är ja/nej om reserverad plats. Svaret är osammanhängande och svarar inte.
+**8 är inte siffran som gäller framåt.** Det är enkörning utan grind, handklassat, inte 9. Gällande tal är dokumentväg 6 facit mot retrieval 5 facit över fem körningar med grind. R1 citerade G s1 men vände meningen: *"Hyresgästen förbinder sig att anvisa de boende en egen plats i garaget då detta strider mot tecknat Mobilitetsavtal."* Facitfrågan är ja/nej om reserverad plats. Svaret är osammanhängande och svarar inte.
 
 R2 nej + nio månader. R3 friskrivning om inte oaktsamhet. R4 inte fast pris efter 2024-04-01 (schablon Q1–3, verkliga kostnader). R5 och R5b 494 i administrationskostnad. R6 andel av BOA+LOA / verkliga kostnader för 117:14. R7 varsko om betydande prisjusteringar. R8 nio månader, gäller tom 2047-03-31.
 

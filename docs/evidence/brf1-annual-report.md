@@ -26,4 +26,6 @@ Efter tillägget: `prefix_tokens=77888`, tak `65536 − 512 − 1800 = 63224`, `
 
 Ränte-, soliditets- och tvådokumentsfrågorna är inte omkörda mot J. Arkivet finns. Frågorna väntar på en människa.
 
+Det här är **inte** Ekens egen årsredovisning. En annan förenings offentliga rapport duger för att mäta ränta och soliditet. Den ska inte sättas framför Ekens styrelse. Styrelsesittningen väntar på deras egna handlingar.
+
 Stadgarna från laptopens tiofilersarkiv ingår inte i den här tian. Att lägga till dem under namn som `Stadgar …` skulle hamna mitt i A–I och flytta bokstäverna.
