@@ -1,5 +1,10 @@
-"""U-shape document order for full-corpus excerpts."""
+"""U-shape document order for full-corpus excerpts.
 
+Product order is document name then page. U-shape is opt-in via
+store._full_corpus_order for measurement scripts only.
+"""
+
+from app.answer import evaluate_full_corpus
 from app.full_corpus import (
     ARCHIVE_PROBE,
     document_ids_for_probe,
@@ -7,8 +12,24 @@ from app.full_corpus import (
     hits_for_full_corpus,
     ranked_document_ids,
 )
+from app.store import Store
 from tests.pdf_fixtures import build_pdf
-from tests.test_full_corpus import _two_chunk_store
+from tests.test_full_corpus import StubRuntime, _two_chunk_store
+
+
+def test_product_default_is_page_order_not_probe(tmp_path, monkeypatch):
+    called: list[int] = []
+    monkeypatch.setattr(
+        "app.answer.document_ids_for_probe",
+        lambda *_a, **_k: called.append(1) or ["nope"],
+    )
+    st = Store(data_dir=tmp_path)
+    st.add_document("B.pdf", build_pdf([[("Andra dokumentets enda mening.", 72, 100)]]))
+    st.add_document("A.pdf", build_pdf([[("Forsta dokumentets enda mening.", 72, 100)]]))
+    evaluated = evaluate_full_corpus(st, st.chunks, st.documents, StubRuntime())
+    assert evaluated is not None
+    assert [h.document_name for h in evaluated[1]] == ["A.pdf", "B.pdf"]
+    assert called == []
 
 
 def test_edge_order_puts_best_first_and_last():

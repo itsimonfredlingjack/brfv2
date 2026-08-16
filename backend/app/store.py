@@ -28,6 +28,11 @@ from .indexer import HybridIndex
 from .ocr import ocr_pdf, tesseract_available
 from .schemas import CORPUS_ORIGINS, Chunk, CorpusOrigin, DocumentMeta, PageData, Settings
 
+# Old Settings default. A persisted 32000 still binds the archive against the
+# window cap and silently disables the full-corpus path. Load-time migration
+# clears exactly this value. Any other number is a deliberate choice; 0 stays off.
+_LEGACY_FULL_CORPUS_TOKEN_THRESHOLD = 32000
+
 logger = logging.getLogger("brf.store")
 
 MAX_DOCUMENT_PAGES = 400  # resource guard: reject absurd page counts up front
@@ -107,6 +112,7 @@ class Store:
         self.index = HybridIndex(get_embedder())
         self._full_corpus_tokens = None
         self._full_corpus_prefix_fp = None
+        self._full_corpus_order = "page"
         self._warmup_gen = 0
         self._rebuild()
 
@@ -314,12 +320,23 @@ class Store:
 
     def _load_settings(self) -> Settings:
         p = self.data_dir / "settings.json"
-        if p.exists():
-            try:
-                return Settings.model_validate_json(p.read_text("utf-8"))
-            except Exception as exc:
-                logger.warning("settings.json ogiltig (%s) — använder standard", exc)
-        return Settings()
+        if not p.exists():
+            return Settings()
+        try:
+            raw = json.loads(p.read_text("utf-8"))
+            settings = Settings.model_validate(raw)
+        except Exception as exc:
+            logger.warning("settings.json ogiltig (%s) — använder standard", exc)
+            return Settings()
+        if isinstance(raw, dict) and raw.get("fullCorpusTokenThreshold") == _LEGACY_FULL_CORPUS_TOKEN_THRESHOLD:
+            settings = settings.model_copy(update={"fullCorpusTokenThreshold": None})
+            logger.info(
+                "Migrerar fullCorpusTokenThreshold %s → None (gammal default) i %s",
+                _LEGACY_FULL_CORPUS_TOKEN_THRESHOLD,
+                self.data_dir,
+            )
+            p.write_text(settings.model_dump_json(indent=2), "utf-8")
+        return settings
 
     def _save_settings(self) -> None:
         (self.data_dir / "settings.json").write_text(self.settings.model_dump_json(indent=2), "utf-8")

@@ -189,7 +189,8 @@ class Settings(BaseModel):
     # Optional extra ceiling on full-corpus prefix_tokens. None = only the
     # real window cap (n_ctx − question reserve − response budget). 0 forces
     # retrieval (before/after on the same commit). A positive N binds only
-    # when it is tighter than the window.
+    # when it is tighter than the window. A persisted 32000 (the old default)
+    # is migrated to None on load — see Store._load_settings.
     fullCorpusTokenThreshold: int | None = Field(default=None, ge=0)
     # Cross-encoder rerank stage (fix/rerank-financial-tables): retrieve a
     # wide candidate pool, cross-encode each against the query, and pass only

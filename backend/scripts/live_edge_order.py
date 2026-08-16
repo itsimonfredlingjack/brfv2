@@ -1,5 +1,8 @@
 """Compare full-corpus excerpt order: page vs probe-edge vs query-edge.
 
+Product default is page (document name then page). This script is the only
+caller that sets store._full_corpus_order to probe/query.
+
 Usage (from backend/):
     uv run python -m scripts.live_edge_order --folder ../DONT_PUSH_brf_stuff --out out/edge-order
 """

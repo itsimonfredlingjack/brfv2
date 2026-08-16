@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import json
+
 import httpx
 import pytest
 from pydantic import ValidationError
@@ -73,6 +75,37 @@ def test_default_threshold_is_none():
     assert Settings().fullCorpusTokenThreshold is None
 
 
+@pytest.mark.parametrize(
+    "value,expected,migrates",
+    [
+        (32000, None, True),
+        (0, 0, False),
+        (16000, 16000, False),
+        (100000, 100000, False),
+        (None, None, False),
+    ],
+)
+def test_legacy_32000_threshold_migrates_on_load(tmp_path, caplog, value, expected, migrates):
+    (tmp_path / "settings.json").write_text(
+        json.dumps({"fullCorpusTokenThreshold": value}), encoding="utf-8"
+    )
+    with caplog.at_level("INFO"):
+        st = Store(data_dir=tmp_path)
+    assert st.settings.fullCorpusTokenThreshold == expected
+    dumped = json.loads((tmp_path / "settings.json").read_text(encoding="utf-8"))
+    assert dumped.get("fullCorpusTokenThreshold") == expected
+    if migrates:
+        assert "fullCorpusTokenThreshold 32000" in caplog.text
+        assert "gammal default" in caplog.text
+        caplog.clear()
+        with caplog.at_level("INFO"):
+            st2 = Store(data_dir=tmp_path)
+        assert st2.settings.fullCorpusTokenThreshold is None
+        assert "gammal default" not in caplog.text
+    else:
+        assert "gammal default" not in caplog.text
+
+
 def test_threshold_zero_forces_retrieval():
     d = decide_fit(chunk_token_sum=10, prefix_tokens=20, n_ctx=16384, threshold=0, response_budget=RESPONSE)
     assert d.use_full_corpus is False and d.bound == "threshold"
@@ -126,7 +159,7 @@ def _two_chunk_store(tmp_path):
     st = Store(data_dir=tmp_path)
     st.add_document("B.pdf", build_pdf([[("Andra dokumentets enda mening.", 72, 100)]]))
     st.add_document("A.pdf", build_pdf([[("Forsta dokumentets enda mening.", 72, 100)]]))
-    # Tests that cite K1 as A.pdf assume name/page order, not the product probe U-shape.
+    # Tests that cite K1 as A.pdf assume name/page order (the product default).
     st._full_corpus_order = "page"
     return st
 

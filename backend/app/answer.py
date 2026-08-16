@@ -123,7 +123,9 @@ def evaluate_full_corpus(
 ) -> tuple[FitDecision, list] | None:
     """Tokenize and decide. None means the tokenizer failed (already logged)."""
     s = store.settings
-    order = getattr(store, "_full_corpus_order", "probe")
+    # Product order is document name then page. "probe"/"query" U-shape is
+    # opt-in for measurement scripts (scripts/live_edge_order.py).
+    order = getattr(store, "_full_corpus_order", "page")
     document_ids = None
     if order == "probe":
         document_ids = document_ids_for_probe(store.index, s, documents, chunks)
