@@ -132,6 +132,15 @@ def test_evaluate_document_path_does_not_use_fused_scores(tmp_path, monkeypatch)
     assert names == ["A.pdf"]
 
 
+def test_ask_module_does_not_wire_entailment_or_judge():
+    import app.answer as answer_mod
+
+    src = inspect.getsource(answer_mod)
+    assert "entailment" not in src
+    assert "check_entailment" not in src
+    assert "answer_judge" not in src
+
+
 def test_ask_uses_description_selection_not_search(tmp_path, monkeypatch):
     st = _two_chunk_store(tmp_path)
     _set_descriptions(st)

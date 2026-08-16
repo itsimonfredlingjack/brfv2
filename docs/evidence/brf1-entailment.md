@@ -1,22 +1,22 @@
-# BRF-1: LettuceDetect som entailment-varning — 2026-08-16
+# BRF-1: LettuceDetect som entailment-diagnostik — 2026-08-16
 
-**Host:** agenntserver · **Modell (svar):** Gemma 4 12B IT · **detektor:** `KRLabsOrg/lettucedect-210m-eurobert-de-v1` · CPU · **commit (huvudväg):** `4ee12d7`
+**Host:** agenntserver · **Modell (svar):** Gemma 4 12B IT · **detektor:** `KRLabsOrg/lettucedect-210m-eurobert-de-v1` · CPU · **commit (mätning):** `4ee12d7` · **produktyta:** avstängd
 
 Grinden verifierar att citatet står i handlingen. Ingenting kontrollerade att svaret följer av citatet. R1 är målfallet: citatet är äkta, numeriken släpper, men meningen vänder innebörden.
 
-Kontrollsteget ligger efter att citaten verifierats och ritats, och efter numerisk grundning — aldrig i stället för. Det fäller ingenting. `AskResponse.warning` får texten *Delar av svaret följer inte av de citerade källorna.* när minst en påståendemening överlappar en flaggad span. Kontexten är bara accepterade citat.
+Steget mättes som varning efter verifierade citat. Det är **inte** produktyta. `ask()` importerar inte `app.entailment`. Diagnostiken körs med `BRF_ENTAILMENT=1` från `scripts/eval_entailment.py`.
 
 ## Detektorn
 
 LettuceDetect, MIT. Tokenklassificering på `(kontext, fråga, svar)`. Publicerat exempel-F1 på RAGTruth: **79,22 %** mot **63,4 %** för GPT-4-turbo (Kovács & Recski, [arXiv:2502.17125](https://arxiv.org/abs/2502.17125)).
 
-Publicerade checkpoints: engelska, tyska, franska, spanska, italienska, polska, kinesiska, ungerska. **Inte svenska.** Produkten använder det tyska EuroBERT-210M-huvudet på en flerspråkig encoder, på CPU så den inte tar VRAM från llama-server. Den byts inte ut på känsla.
+Publicerade checkpoints: engelska, tyska, franska, spanska, italienska, polska, kinesiska, ungerska. **Inte svenska.** Mätningen använde det tyska EuroBERT-210M-huvudet på en flerspråkig encoder, på CPU.
 
 Tysk kontroll (samma checkpoint, samma API som README):
 
 > Kontext: Paris är huvudstad, befolkning 67 miljoner. Svar: Paris är huvudstad. Befolkning 69 miljoner.
 
-Utfallet: bara 69-miljonersmeningen flaggades (konfidens 0,78). Paris-meningen släpptes. Huvudet fungerar på sitt träningsspråk.
+Utfallet: bara 69-miljonersmeningen flaggades (konfidens 0,78). Paris-meningen släpptes. Huvudet fungerar på sitt träningsspråk. **Tysk kontroll på samma vikter är ren.**
 
 ## De elva fallen
 
@@ -42,10 +42,10 @@ Samma dokumentvägssvar som klassades för hand i `docs/evidence/brf1-doc-path-d
 
 R3b och R7b flaggas inte. Det är samma tokenöverlapp: fel handling, men citatet bär svaret.
 
-## Fälla eller varna
+## Slutsats
 
-2/8 falsklarm plus miss på målfallet. Steget får inte fälla. Det varnar.
+EuroBERT-210M (tyskt huvud) på svenska missar polaritetsfelet och flaggar 2 av 8 korrekta svar; tysk kontroll på samma vikter är ren. **Svenskan saknas i checkpointen.** Tokenförankring kan ändå inte se R1:s felklass: felet är att svaret inte besvarar frågan, inte att citatet saknas.
 
-Svenskan är för svag för den här checkpointen, med siffror: tyska kontrollen är ren, samma vikter på BRF-1 flaggar kopierad källtext och missar en innebördsvändning. Det är inte underlag för att byta modell. Det är underlag för att låta varningen ligga.
+Steget är avstängt som produktyta. Det ligger kvar som diagnostik i eval (`scripts/eval_entailment.py`, `BRF_ENTAILMENT=1`). Det fäller ingenting.
 
-`BRF_ENTAILMENT=0` stänger av. Default `auto` kör när extra `entailment` är installerad och vikterna redan ligger i cachen — ingen nedladdning i `ask()`.
+R1:s felklass är att svaret inte besvarar frågan. Den uppgiften mättes separat med den lokala modellen som domare: `docs/evidence/brf1-answer-judge.md`.

@@ -1,23 +1,14 @@
-"""Entailment warning after verified citations (not a refusal).
+"""Eval diagnostic: LettuceDetect against verified citation quotes.
 
-Citation verification proves a quote is verbatim in the document. The
-numeric gate checks that numbers in the prose appear in those quotes.
-Neither checks whether the answer *follows from* the quotes. BRF-1 R1
-is the motivating case: the quote is real, the numbers (none) pass, and
-the sentence reverses the source's meaning.
+Not a product surface. `ask()` does not import this module. Opt in with
+`BRF_ENTAILMENT=1` from `scripts/eval_entailment.py`.
 
-This step runs LettuceDetect (MIT, token classification on
-(context, question, answer); RAGTruth example-level F1 79.22 % vs 63.4 %
-for GPT-4-turbo) against the accepted quotes only. It never refuses.
-False-positive rate on real Swedish cases is measured before the warning
-may become a gate.
-
-Published LettuceDetect checkpoints cover English, German, French,
-Spanish, Italian, Polish, Chinese, Hungarian — not Swedish. The product
-uses the German EuroBERT-210M head on a multilingual encoder, on CPU so
-it does not contend with llama-server. If that is too weak on Swedish,
-the measurement says so with numbers; the detector is not swapped on
-feeling.
+EuroBERT-210M with a German head misses BRF-1 R1's polarity error on
+Swedish and flags 2 of 8 answers that do answer the question. The same
+weights are clean on a German control. Swedish is missing from the
+checkpoint; token-level grounding still cannot see R1's error class
+(the answer does not answer the question). See
+`docs/evidence/brf1-entailment.md`.
 """
 
 from __future__ import annotations
@@ -72,12 +63,9 @@ def model_lang() -> str:
 
 
 def entailment_enabled() -> bool:
-    flag = os.environ.get("BRF_ENTAILMENT", "auto").strip().lower()
-    if flag in ("0", "false", "off", "no"):
-        return False
-    if flag in ("1", "true", "on", "yes"):
-        return True
-    return entailment_available()
+    """Off unless an eval script sets BRF_ENTAILMENT=1. Never auto-on."""
+    flag = os.environ.get("BRF_ENTAILMENT", "0").strip().lower()
+    return flag in ("1", "true", "on", "yes")
 
 
 def entailment_available() -> bool:

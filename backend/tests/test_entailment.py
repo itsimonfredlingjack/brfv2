@@ -1,7 +1,7 @@
-"""Unit tests for the post-citation entailment warning.
+"""Unit tests for the eval-only LettuceDetect diagnostic.
 
-Never a refusal. The real LettuceDetect weights are not loaded here —
-`_predict_spans` is the injection seam, same pattern as app/rerank.py.
+Never a refusal and never on the ask path. The real weights are not
+loaded here — `_predict_spans` is the injection seam.
 """
 
 from app.entailment import (
@@ -30,8 +30,8 @@ def test_claim_sentences_keeps_offsets():
     assert text[sentences[1].start : sentences[1].end] == "Andra meningen?"
 
 
-def test_disabled_by_default_skips(monkeypatch):
-    monkeypatch.setenv("BRF_ENTAILMENT", "0")
+def test_disabled_when_unset(monkeypatch):
+    monkeypatch.delenv("BRF_ENTAILMENT", raising=False)
     called = []
 
     def boom(*_a, **_k):

@@ -194,4 +194,6 @@ Motsvarande mekanism är redan mätt: Marcel (Trienes et al., EMNLP 2025 demos, 
 
 Dokumentvägen med beskrivningsurval är huvudväg (`choose_ask_path` i `app/answer.py`). Beskrivningar genereras vid ingestion och när extraherad text ändras, cachas på dokumentet. Urval 1–3 över beskrivningarna. Max fused score styr inte. Helarkiv ligger kvar bakom `Store._prefer_full_corpus`. Retrieval är fallback när urvalet inte kan köras eller paketet inte ryms. Citatkedja, numerisk grind och koordinater oförändrade.
 
-Efter att citaten verifierats och ritats, och numeriken släppt, körs LettuceDetect som **varning** mot de accepterade citaten. Den fäller ingenting. Mätningen står i `docs/evidence/brf1-entailment.md`: R1 fångas inte, 2 av de 8 korrekta flaggas.
+LettuceDetect är **inte** produktyta. EuroBERT-210M (tyskt huvud) på svenska missade R1:s polaritetsfel och flaggade 2 av 8 korrekta svar; tysk kontroll på samma vikter var ren. Svenskan saknas i checkpointen, och tokenförankring kan inte se R1:s felklass. Mätningen och den avstängda diagnostiken står i `docs/evidence/brf1-entailment.md`.
+
+Samma felklass mättes med den lokala modellen som domare (besvarar frågan, givet citaten): `docs/evidence/brf1-answer-judge.md`. Inte en grind.

@@ -1074,28 +1074,17 @@ class TestAcceptedCitationTitleAsTrustedSpan:
         assert resp.refusal and resp.refusal_reason == "numeric_grounding_failed"
 
 
-class TestEntailmentWarning:
-    """LettuceDetect runs after citations are verified and drawn. It warns.
-    It does not refuse, and it does not replace citation or numeric gates."""
+class TestEntailmentNotOnAskPath:
+    """LettuceDetect is an eval diagnostic. ask() must not call it, even when
+    BRF_ENTAILMENT=1 — the product surface is off."""
 
-    def test_flags_unsupported_claim_without_refusing(self, store, monkeypatch):
+    def test_does_not_call_detector_when_enabled(self, store, monkeypatch):
         monkeypatch.setenv("BRF_ENTAILMENT", "1")
 
-        def fake_spans(quotes, question, answer, min_confidence):
-            assert quotes
-            return [{"start": 0, "end": len(answer), "confidence": 0.88, "text": answer}]
+        def boom(*_a, **_k):
+            raise AssertionError("entailment must not run on the ask path")
 
-        monkeypatch.setattr("app.entailment._predict_spans", fake_spans)
-        fake = FakeLLM([good_response(store)])
-        resp = ask(store, "När löper jourperioden?", provider=fake)
-        assert not resp.refusal
-        assert resp.citations
-        assert resp.warning
-        assert "citerade källorna" in resp.warning
-
-    def test_does_not_warn_when_detector_finds_no_spans(self, store, monkeypatch):
-        monkeypatch.setenv("BRF_ENTAILMENT", "1")
-        monkeypatch.setattr("app.entailment._predict_spans", lambda *_a, **_k: [])
+        monkeypatch.setattr("app.entailment._predict_spans", boom)
         fake = FakeLLM([good_response(store)])
         resp = ask(store, "När löper jourperioden?", provider=fake)
         assert not resp.refusal
