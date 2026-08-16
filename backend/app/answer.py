@@ -12,11 +12,20 @@ import logging
 
 from .citations import Rejected, Resolved, resolve_citation
 from .evidence import EvidencePack
+from .full_corpus import (
+    CorpusRuntime,
+    FitDecision,
+    decide_fit,
+    hits_for_full_corpus,
+    measure_tokens,
+    prefix_fingerprint,
+    user_prompt,
+)
 from .llm import LLMError, LLMFormatError, LLMProvider, parse_llm_json, pick_provider
 from .linked_context import append_linked_table_legends
 from .numeric_grounding import NumericGroundingResult, check_numeric_grounding, describe_mismatch
 from .rerank import rerank_chunks, reranker_available
-from .schemas import AskResponse, CitationOut, RejectedCitation, RetrievalHit
+from .schemas import AskResponse, CitationOut, RejectedCitation, RetrievalHit, Settings
 from .store import Store
 
 logger = logging.getLogger("brf.answer")
@@ -96,6 +105,50 @@ def _refusal(reason: str, message: str, *, retrieval: list[RetrievalHit], provid
     )
 
 
+def _system_prompt(settings: Settings) -> str:
+    extra = settings.systemPrompt.strip()
+    return (extra + "\n\n" if extra else "") + GROUNDING_CONTRACT
+
+
+def evaluate_full_corpus(
+    store: Store,
+    chunks: dict,
+    documents: dict,
+    runtime: CorpusRuntime,
+) -> tuple[FitDecision, list] | None:
+    """Tokenize and decide. None means the tokenizer failed (already logged)."""
+    s = store.settings
+    full_hits = hits_for_full_corpus(chunks, documents)
+    system = _system_prompt(s)
+    excerpts, _alias = _render_excerpts(full_hits)
+    token_key = (tuple(sorted(chunks)), s.systemPrompt)
+    cached = getattr(store, "_full_corpus_tokens", None)
+    try:
+        if cached is not None and cached[0] == token_key:
+            chunk_token_sum, prefix_tokens = cached[1]
+        else:
+            chunk_token_sum, prefix_tokens = measure_tokens(
+                runtime, chunks, system=system, excerpts=excerpts
+            )
+            store._full_corpus_tokens = (token_key, (chunk_token_sum, prefix_tokens))
+        n_ctx = runtime.n_ctx()
+    except Exception as exc:
+        logger.warning(
+            "full_corpus bound=tokenizer_error use=False chunk_tokens=? prefix_tokens=? n_ctx=? threshold=%s — %s",
+            s.fullCorpusTokenThreshold,
+            exc,
+        )
+        return None
+    decision = decide_fit(
+        chunk_token_sum=chunk_token_sum,
+        prefix_tokens=prefix_tokens,
+        n_ctx=n_ctx,
+        threshold=s.fullCorpusTokenThreshold,
+        response_budget=s.maxResponseLength + _CITATION_HEADROOM_TOKENS,
+    )
+    return decision, full_hits
+
+
 def ask(
     store: Store,
     question: str,
@@ -103,6 +156,7 @@ def ask(
     *,
     trusted_names: Iterable[str] = (),
     evidence: "EvidencePack | None" = None,
+    corpus_runtime: CorpusRuntime | None = None,
 ) -> AskResponse:
     """`evidence` (optional, keyword-only): a pre-gathered EvidencePack from
     the planned multi-search path (app/multihop.py, BRF-1). When supplied,
@@ -225,6 +279,33 @@ def ask(
             low_relevance=low_relevance,
         )
 
+    if corpus_runtime is not None:
+        evaluated = evaluate_full_corpus(store, chunks, documents, corpus_runtime)
+        if evaluated is not None:
+            decision, full_hits = evaluated
+            if decision.use_full_corpus:
+                system = _system_prompt(s)
+                excerpts, _alias = _render_excerpts(full_hits)
+                fp = prefix_fingerprint(system, excerpts)
+                prev = getattr(store, "_full_corpus_prefix_fp", None)
+                if prev != fp:
+                    logger.info("full_corpus prefix_changed tenant=%s", store.tenant_id)
+                    store._full_corpus_prefix_fp = fp
+                return _synthesize(
+                    store=store,
+                    question=question,
+                    hits=full_hits,
+                    chunks=chunks,
+                    pages=pages,
+                    documents=documents,
+                    provider=provider,
+                    generation_model=generation_model,
+                    model=model,
+                    trusted_names=trusted_names,
+                    low_relevance=False,
+                    full_corpus=True,
+                )
+
     # Retrieve WIDE when reranking so the cross-encoder has a real pool to
     # rescore from; candidates (the bm25/dense fusion pool) is widened to
     # match so a low candidateCount can't silently starve the reranker.
@@ -300,6 +381,7 @@ def _synthesize(
     model: str,
     trusted_names: tuple[str, ...],
     low_relevance: bool,
+    full_corpus: bool = False,
 ) -> AskResponse:
     """Generate → verify citations → gate → numeric-ground, over a fixed set
     of excerpts.
@@ -309,9 +391,9 @@ def _synthesize(
     takes the excerpts as given and makes no retrieval decisions of its own.
     """
     s = store.settings
-    system = (s.systemPrompt.strip() + "\n\n" if s.systemPrompt.strip() else "") + GROUNDING_CONTRACT
+    system = _system_prompt(s)
     excerpts, alias_map = _render_excerpts(hits)
-    user = f"FRÅGA: {question}\n\nUTDRAG:\n{excerpts}"
+    user = user_prompt(question, excerpts, full_corpus=full_corpus)
 
     # maxResponseLength keeps its user-facing meaning (answer budget); the
     # envelope sent to the provider gets extra headroom for citation JSON.
@@ -385,7 +467,7 @@ def _synthesize(
                         quotes=spans,
                         chunk_id=chunk.id,
                         rects=res.rects,
-                        score=hit_scores.get(chunk.id, 0.0),
+                        score=None if full_corpus else hit_scores.get(chunk.id, 0.0),
                         # Reality report condition 3: OCR rects clip more than
                         # digital ones (never misplaced) — flag so the UI can
                         # mark the highlight as approximate.

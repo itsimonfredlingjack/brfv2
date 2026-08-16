@@ -22,8 +22,9 @@ import logging
 import os
 from collections.abc import Iterable
 
-from .answer import ask
+from .answer import ask, evaluate_full_corpus
 from .evidence import EvidencePack, expand_context
+from .full_corpus import CorpusRuntime
 from .llm import LLMProvider, pick_provider
 from .query_plan import QueryPlan, plan_query
 from .schemas import AskResponse
@@ -90,6 +91,7 @@ def ask_planned(
     *,
     trusted_names: Iterable[str] = (),
     expand: bool = True,
+    corpus_runtime: CorpusRuntime | None = None,
 ) -> PlannedAnswer:
     """Answer `question`, retrieving across documents when the plan says so.
 
@@ -111,10 +113,21 @@ def ask_planned(
         # Same refusal as the single-search path; planning an empty corpus is
         # a waste of a model call.
         return PlannedAnswer(
-            ask(store, question, provider, trusted_names=trusted_names),
+            ask(store, question, provider, trusted_names=trusted_names, corpus_runtime=corpus_runtime),
             QueryPlan(mode="single", subqueries=[question], degraded=True),
             pack,
         )
+
+    if corpus_runtime is not None:
+        evaluated = evaluate_full_corpus(store, chunks, documents, corpus_runtime)
+        if evaluated is not None and evaluated[0].use_full_corpus:
+            resp = ask(
+                store, question, provider, trusted_names=trusted_names, corpus_runtime=corpus_runtime
+            )
+            pack.planned_subqueries = [question]
+            return PlannedAnswer(
+                resp, QueryPlan(mode="single", subqueries=[question], degraded=False), pack
+            )
 
     doc_names = catalogue_names(documents)
     plan = plan_query(question, provider, document_names=doc_names, model=generation_model)
@@ -123,7 +136,13 @@ def ask_planned(
     if plan.mode == "single":
         # One search — hand straight back to the unchanged single path so
         # this stays literally the same code, not a copy that can drift.
-        resp = ask(store, plan.subqueries[0] if plan.subqueries else question, provider, trusted_names=trusted_names)
+        resp = ask(
+            store,
+            plan.subqueries[0] if plan.subqueries else question,
+            provider,
+            trusted_names=trusted_names,
+            corpus_runtime=corpus_runtime,
+        )
         pack.add_query(plan.subqueries[0] if plan.subqueries else question, list(resp.retrieval), plan_index=0)
         return PlannedAnswer(resp, plan, pack)
 
@@ -144,7 +163,7 @@ def ask_planned(
 
     if not pack.hits:
         return PlannedAnswer(
-            ask(store, question, provider, trusted_names=trusted_names), plan, pack
+            ask(store, question, provider, trusted_names=trusted_names, corpus_runtime=corpus_runtime), plan, pack
         )
 
     if expand:
@@ -159,5 +178,7 @@ def ask_planned(
     # The ORIGINAL question is what gets answered — the subqueries were a
     # retrieval instrument, and asking the model to answer one of them would
     # answer a question the board never asked.
-    resp = ask(store, question, provider, trusted_names=trusted_names, evidence=pack)
+    resp = ask(
+        store, question, provider, trusted_names=trusted_names, evidence=pack, corpus_runtime=corpus_runtime
+    )
     return PlannedAnswer(resp, plan, pack)

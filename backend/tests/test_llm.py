@@ -206,6 +206,50 @@ class TestOpenAICompatProvider:
         assert body["reasoning_effort"] == "none"
         assert body["messages"][0] == {"role": "system", "content": "systemkontrakt"}
 
+    def test_cache_prompt_true_in_payload(self, monkeypatch):
+        seen: dict = {}
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            seen["body"] = json.loads(request.content)
+            return httpx.Response(200, json=_ok_payload('{"answer": "ok"}'))
+
+        p = self._provider(handler, monkeypatch)
+        p.complete("s", "u", max_tokens=10, model="m")
+        assert seen["body"]["cache_prompt"] is True
+
+    def test_timings_logged_from_llama_cpp_payload(self, monkeypatch, caplog):
+        def handler(request: httpx.Request) -> httpx.Response:
+            return httpx.Response(
+                200,
+                json={
+                    **_ok_payload('{"answer": "ok"}'),
+                    "timings": {"prompt_n": 10, "prompt_ms": 1, "cache_n": 9},
+                },
+            )
+
+        p = self._provider(handler, monkeypatch)
+        with caplog.at_level("INFO"):
+            assert p.complete("s", "u", max_tokens=10, model="m") == '{"answer": "ok"}'
+        text = caplog.text
+        assert "prompt_n=10" in text
+        assert "prompt_ms=1" in text
+        assert "cache_n=9" in text
+
+    def test_cache_prompt_rejection_degrades_once(self, monkeypatch):
+        bodies: list[dict] = []
+
+        def handler(request: httpx.Request) -> httpx.Response:
+            body = json.loads(request.content)
+            bodies.append(body)
+            if body.get("cache_prompt") is True:
+                return httpx.Response(400, text="unsupported parameter: cache_prompt")
+            return httpx.Response(200, json=_ok_payload("utan cache_prompt"))
+
+        p = self._provider(handler, monkeypatch)
+        assert p.complete("s", "u", max_tokens=10, model="m") == "utan cache_prompt"
+        assert len(bodies) == 2 and "cache_prompt" not in bodies[1]
+
+
     def test_settings_model_used_when_env_model_empty(self, monkeypatch):
         def handler(request: httpx.Request) -> httpx.Response:
             assert json.loads(request.content)["model"] == "settings-model"
@@ -427,6 +471,25 @@ class TestDeterministicTestLLM:
         parsed = parse_llm_json(raw)
         assert parsed["insufficient_data"] is True
         assert parsed["citations"] == []
+
+    def test_cites_excerpt_when_question_is_last(self):
+        provider = DeterministicTestLLM()
+        raw = provider.complete(
+            "system",
+            "UTDRAG:\n"
+            "[K1] (Stadgar.pdf, sida 1)\nStyrelsen har sitt säte i Göteborgs kommun.\n"
+            "---\n[K2] (Avtal.pdf, sida 1)\nJourperioden löper under vintern.\n"
+            "\nFRÅGA: Var har styrelsen sitt säte?",
+            max_tokens=100,
+            model="ignored",
+        )
+        parsed = parse_llm_json(raw)
+        assert parsed["insufficient_data"] is False
+        assert parsed["answer"] == "Styrelsen har sitt säte i Göteborgs kommun."
+        assert parsed["citations"] == [{
+            "chunk_id": "K1",
+            "quotes": ["Styrelsen har sitt säte i Göteborgs kommun."],
+        }]
 
 
 @pytest.mark.llm

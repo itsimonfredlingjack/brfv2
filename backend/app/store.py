@@ -105,6 +105,8 @@ class Store:
             self._save_documents()
         self.chunks: dict[str, Chunk] = {}
         self.index = HybridIndex(get_embedder())
+        self._full_corpus_tokens = None
+        self._full_corpus_prefix_fp = None
         self._rebuild()
 
         # The tenant this Store *is*. TenantRegistry passes the brf_id it
@@ -395,6 +397,8 @@ class Store:
             new_index.build(list(new_chunks.values()), {d.id: d.name for d in self.documents.values()})
             self.chunks = new_chunks
             self.index = new_index
+            self._full_corpus_tokens = None
+            self._full_corpus_prefix_fp = None
 
     def snapshot(self) -> tuple[HybridIndex, dict, dict, dict]:
         """Consistent (index, chunks, pages, documents) view for one request."""
@@ -564,6 +568,7 @@ class Store:
             old = self.settings
             rechunk = new.chunking_signature() != old.chunking_signature()
             self.settings = new
+            self._full_corpus_tokens = None
             if rechunk:
                 logger.info("Chunk-inställningar ändrade — chunkar om och bygger nytt index")
                 try:

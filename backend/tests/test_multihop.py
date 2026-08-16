@@ -516,3 +516,27 @@ class TestPlannedAnswering:
         result = ask_planned(st, "Vad gäller?", provider=fake)
         assert result.response.refusal_reason == "no_documents"
         assert fake.calls == [], "en tom korpus ska inte kosta ett planeringsanrop"
+
+
+class TestFullCorpusSkipsPlanner:
+    def test_ask_planned_does_not_call_plan_query_when_archive_fits(self, tmp_path, monkeypatch):
+        from tests.test_full_corpus import StubRuntime, _two_chunk_store
+
+        st = _two_chunk_store(tmp_path)
+        fake = FakeLLM([{
+            "answer": "Forsta dokumentets enda mening.",
+            "citations": [{"chunk_id": "K1", "quote": "Forsta dokumentets enda mening."}],
+            "insufficient_data": False,
+        }])
+
+        def boom(*_args, **_kwargs):
+            raise AssertionError("plan_query får inte köras när hela arkivet ryms")
+
+        monkeypatch.setattr("app.multihop.plan_query", boom)
+        result = ask_planned(st, "Vad star det?", provider=fake, corpus_runtime=StubRuntime())
+        assert not result.response.refusal
+        assert result.plan.mode == "single"
+        assert result.plan.subqueries == ["Vad star det?"]
+        assert len(fake.calls) == 1
+        assert fake.calls[0]["user"].startswith("UTDRAG:")
+

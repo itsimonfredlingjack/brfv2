@@ -312,22 +312,58 @@ def classify(pages: list[PageData], retrieved_chunks: list[Chunk], labels: list[
     return result
 
 
-def bucket_case(store: Store, doc_id: str, question: str, labels: list[str]) -> dict:
+def bucket_case(
+    store: Store,
+    doc_id: str,
+    question: str,
+    labels: list[str],
+    *,
+    prompt_chunks: bool = False,
+    corpus_runtime=None,
+) -> dict:
     """Retrieve (mirroring `app/answer.py:ask()`'s call at ~:98 exactly) then
     hand off the retrieved chunks + pages to `classify` for the actual
-    decision."""
+    decision.
+
+    `--prompt-chunks` uses the same fit gate as `ask()`: every chunk when the
+    archive fits, otherwise today's `index.search` topK.
+    """
     s = store.settings
-    index, chunks, pages_by_doc, _documents = store.snapshot()
-    hits = index.search(
-        question,
-        weight=s.searchWeighting / 100.0,
-        candidates=s.candidateCount,
-        top_k=s.topK,
-        min_confidence=0.0,
-    )
-    retrieved_chunks = [chunks[h.chunk_id] for h in hits]
+    index, chunks, pages_by_doc, documents = store.snapshot()
+    used_full_corpus = False
+    if prompt_chunks:
+        from app.answer import evaluate_full_corpus
+
+        if corpus_runtime is not None:
+            evaluated = evaluate_full_corpus(store, chunks, documents, corpus_runtime)
+            if evaluated is not None and evaluated[0].use_full_corpus:
+                retrieved_chunks = [chunks[h.chunk_id] for h in evaluated[1] if h.chunk_id in chunks]
+                used_full_corpus = True
+            else:
+                hits = index.search(
+                    question,
+                    weight=s.searchWeighting / 100.0,
+                    candidates=s.candidateCount,
+                    top_k=s.topK,
+                    min_confidence=0.0,
+                )
+                retrieved_chunks = [chunks[h.chunk_id] for h in hits]
+        else:
+            retrieved_chunks = list(chunks.values())
+            used_full_corpus = True
+    else:
+        hits = index.search(
+            question,
+            weight=s.searchWeighting / 100.0,
+            candidates=s.candidateCount,
+            top_k=s.topK,
+            min_confidence=0.0,
+        )
+        retrieved_chunks = [chunks[h.chunk_id] for h in hits]
     pages = pages_by_doc[doc_id]
-    return classify(pages, retrieved_chunks, labels)
+    result = classify(pages, retrieved_chunks, labels)
+    result["used_full_corpus"] = used_full_corpus
+    return result
 
 
 # ---------- multi-span probe ----------
@@ -525,10 +561,23 @@ def main() -> None:
     ap.add_argument("--out", type=Path, default=DEFAULT_OUT)
     ap.add_argument("--multispan-probe", action="store_true")
     ap.add_argument("--max-probe-cases", type=int, default=5)
+    ap.add_argument(
+        "--prompt-chunks",
+        action="store_true",
+        help="classify against the chunks ask() would put in the prompt (fit gate); default remains index.search topK",
+    )
     args = ap.parse_args()
 
     audit_log, allowed = common.install_network_audit()
     print(f"Nätverksrevision aktiv — tillåtna värdar: {sorted(allowed)}", flush=True)
+
+    corpus_runtime = None
+    if args.prompt_chunks:
+        base = os.environ.get("BRF_LLM_BASE_URL", "").strip()
+        if base:
+            from app.full_corpus import LlamaCppRuntime
+
+            corpus_runtime = LlamaCppRuntime(base)
 
     cases = load_refused_cases(args.run_json)
     print(f"Loaded {len(cases)} non-control refused (doc, question) pairs from {args.run_json}", flush=True)
@@ -553,13 +602,35 @@ def main() -> None:
             store, meta = doc_ctx[rel_doc]
             question, labels = _Q[qid]
             assert labels is not None
-            bucketed = bucket_case(store, meta.id, question, labels)
+            bucketed = bucket_case(
+                store,
+                meta.id,
+                question,
+                labels,
+                prompt_chunks=args.prompt_chunks,
+                corpus_runtime=corpus_runtime,
+            )
             bucketed["doc"] = doc_slug(rel_doc)
             bucketed["rel_doc"] = rel_doc
             bucketed["qid"] = qid
             results.append(bucketed)
 
         print_bucket_table(results)
+
+        if args.prompt_chunks:
+            misses = [
+                r
+                for r in results
+                if r.get("used_full_corpus")
+                and r["bucket_label"] == "retrieval_miss"
+                and r.get("n_answer_bearing_occurrences", 0) > 0
+            ]
+            if misses:
+                ids = [f"{r['doc']}/{r['qid']}" for r in misses]
+                raise SystemExit(
+                    "prompt-chunks: retrieval_miss på answer-bearing rad "
+                    f"({len(misses)} fall) — grinden routar inte som tänkt: {ids}"
+                )
 
         if args.multispan_probe:
             bucket3 = [r for r in results if r["bucket"] == 3]

@@ -18,6 +18,7 @@ from scripts.reality import common
 from scripts.reality.refusal_buckets import (
     GARBLE_DISTANCE_TOKENS,
     GARBLE_INTERLEAVE_FOREIGN,
+    bucket_case,
     chunk_contains_occurrence,
     classify,
     construct_multispan_fragments,
@@ -311,3 +312,38 @@ class TestMultiSpanProbeConstruction:
         fragments = construct_multispan_fragments(page, chunk, occ, metrics)
 
         assert fragments is None
+
+
+class TestPromptChunksMode:
+    def test_prompt_chunks_with_contained_row_is_not_retrieval_miss(self, tmp_path):
+        from tests.test_full_corpus import StubRuntime
+
+        store = Store(data_dir=tmp_path)
+        store.update_settings(store.settings.model_copy(update={"minRelevance": 0.0, "topK": 1}))
+        pdf = build_pdf([[("Räntekostnader för verksamhetsåret 45 000 kr", 72, 100)]])
+        meta = store.add_document("Arsredovisning.pdf", pdf)
+        result = bucket_case(
+            store,
+            meta.id,
+            "Hur stora var räntekostnaderna?",
+            ["räntekostnader"],
+            prompt_chunks=True,
+            corpus_runtime=StubRuntime(),
+        )
+        assert result["n_answer_bearing_occurrences"] >= 1
+        assert result["bucket_label"] != "retrieval_miss"
+
+    def test_default_mode_still_uses_index_search(self, tmp_path, monkeypatch):
+        store = Store(data_dir=tmp_path)
+        store.update_settings(store.settings.model_copy(update={"minRelevance": 0.0, "topK": 1}))
+        pdf = build_pdf([[("Räntekostnader för verksamhetsåret 45 000 kr", 72, 100)]])
+        meta = store.add_document("Arsredovisning.pdf", pdf)
+
+        def empty_search(*_args, **_kwargs):
+            return []
+
+        monkeypatch.setattr(store.index, "search", empty_search)
+        result = bucket_case(store, meta.id, "Hur stora var räntekostnaderna?", ["räntekostnader"])
+        assert result["bucket_label"] == "retrieval_miss"
+        assert result["retrieved_chunk_ids"] == []
+

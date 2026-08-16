@@ -106,7 +106,10 @@ class CitationOut(BaseModel):
     quotes: list[str] = Field(default_factory=list)  # the verified spans (1..MAX_SPANS)
     chunk_id: str
     rects: list[list[float]]  # [[x0, y0, x1, y1], ...] one per text line, union over spans
-    score: float
+    # Retrieval path: fused hit score. Full-corpus path: JSON null — 0.0 would
+    # read as weak evidence, and the field is required (no default) so a
+    # builder cannot forget it.
+    score: float | None
     # True when the cited document's DocumentMeta.source == "scanned": rects
     # come from OCR word boxes, which clip ~9-27% of the time vs. exact on
     # born-digital PDFs (never misplaced — see reality-check evidence). The
@@ -183,6 +186,11 @@ class Settings(BaseModel):
     candidateCount: int = Field(default=100, ge=1, le=1000)
     topK: int = Field(default=6, ge=1, le=50)
     minRelevance: float = Field(default=0.18, ge=0.0, le=1.0)
+    # Size-gated full-corpus ask: skip retrieval when chunk_token_sum is at
+    # or below this knob AND the rendered prefix fits live n_ctx. 0 forces
+    # retrieval (before/after on the same commit). Default is an arbitrary
+    # starting value, not a Gemma 4 quality ceiling — n_ctx often binds first.
+    fullCorpusTokenThreshold: int = Field(default=32000, ge=0)
     # Cross-encoder rerank stage (fix/rerank-financial-tables): retrieve a
     # wide candidate pool, cross-encode each against the query, and pass only
     # the top topK onward — fixes true financial-table answer rows ranking
