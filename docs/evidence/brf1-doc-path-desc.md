@@ -2,7 +2,7 @@
 
 **Host:** agenntserver · **Modell:** Gemma 4 12B IT · `n_ctx=65536` · **commit:** `c21db3d` · **embedder:** `model2vec:potion-multilingual-128M`
 
-> **Enkörning utan domargrind.** 4 → 8 (handklassat) och 9/2/0 (citatmått) är en körning per fall, före svarsdomaren. Gällande tal: dokumentväg **6 facit** mot retrieval **5 facit** över fem körningar, med grinden i `ask()` — `docs/evidence/brf1-variance.md`.
+> **Enkörning utan domargrind.** 4 → 8 (handklassat) och 9/2/0 (citatmått) är en körning per fall, före svarsdomaren. Femkörning med räknetak tre: dokumentväg **6 facit** mot retrieval **5 facit** — `docs/evidence/brf1-variance.md`. Gällande dokumentväg efter frysta beskrivningar och packning till tokentaket: **8–8** — `docs/evidence/brf1-locked-pack.md`.
 
 Sista diagnostiken före arkitekturbeslut, sedan produkt. Samma elva fall, samma nio handlingar, samma beskrivningar som `docs/evidence/brf1-doc-descriptions.md`.
 
@@ -142,7 +142,7 @@ Klassning för hand mot frågan, inte mot citatgrinden:
 | citerar rätt handling men svarar fel eller ofullständigt | R1 | **1** |
 | fel handling | R3b, R7b | **2** |
 
-**8 är inte siffran som gäller framåt.** Det är enkörning utan grind, handklassat, inte 9. Gällande tal är dokumentväg 6 facit mot retrieval 5 facit över fem körningar med grind. R1 citerade G s1 men vände meningen: *"Hyresgästen förbinder sig att anvisa de boende en egen plats i garaget då detta strider mot tecknat Mobilitetsavtal."* Facitfrågan är ja/nej om reserverad plats. Svaret är osammanhängande och svarar inte.
+**8 är inte siffran som gäller framåt.** Det är enkörning utan grind, handklassat, inte 9. Femkörning med räknetak tre var dokumentväg 6 facit mot retrieval 5 facit med grind. Gällande dokumentväg efter att taket togs bort: 8–8 (`docs/evidence/brf1-locked-pack.md`). R1 citerade G s1 men vände meningen: *"Hyresgästen förbinder sig att anvisa de boende en egen plats i garaget då detta strider mot tecknat Mobilitetsavtal."* Facitfrågan är ja/nej om reserverad plats. Svaret är osammanhängande och svarar inte.
 
 R2 nej + nio månader. R3 friskrivning om inte oaktsamhet. R4 inte fast pris efter 2024-04-01 (schablon Q1–3, verkliga kostnader). R5 och R5b 494 i administrationskostnad. R6 andel av BOA+LOA / verkliga kostnader för 117:14. R7 varsko om betydande prisjusteringar. R8 nio månader, gäller tom 2047-03-31.
 
@@ -194,7 +194,7 @@ Motsvarande mekanism är redan mätt: Marcel (Trienes et al., EMNLP 2025 demos, 
 
 ## Produkt
 
-Dokumentvägen med beskrivningsurval är huvudväg (`choose_ask_path` i `app/answer.py`). Beskrivningar genereras vid ingestion och när extraherad text ändras, cachas på dokumentet. Urval 1–3 över beskrivningarna. Max fused score styr inte. Helarkiv ligger kvar bakom `Store._prefer_full_corpus`. Retrieval är fallback när urvalet inte kan köras eller paketet inte ryms. Citatkedja, numerisk grind och koordinater oförändrade.
+Dokumentvägen med beskrivningsurval är huvudväg (`choose_ask_path` i `app/answer.py`). Beskrivningar genereras en gång per extraherad textversion och skrivs om bara när sidtexten ändras; den gamla texten sparas i `description_previous`. Urvalsprompten ber om 1–3 handlingar; parser och packare har inget räknetak — packning följer modellens ordning tills `n_ctx`. Max fused score styr inte. Helarkiv ligger kvar bakom `Store._prefer_full_corpus`. Retrieval är fallback när urvalet inte kan köras eller paketet inte ryms. Citatkedja, numerisk grind och koordinater oförändrade.
 
 LettuceDetect är **inte** produktyta. EuroBERT-210M (tyskt huvud) på svenska missade R1:s polaritetsfel och flaggade 2 av 8 korrekta svar; tysk kontroll på samma vikter var ren. Svenskan saknas i checkpointen, och tokenförankring kan inte se R1:s felklass. Mätningen och den avstängda diagnostiken står i `docs/evidence/brf1-entailment.md`.
 

@@ -20,12 +20,12 @@ Beskrivning genererades vid ingestion (samma modell, loopback). Defaulten i `ask
 
 ## Helarkiv ryms inte
 
-Efter tillägget: `prefix_tokens=77888`, tak `65536 − 512 − 1800 = 63224`, `bound=n_ctx`, `use_full_corpus=False`. De nio ensamma rymdes (~47k). Dokumentvägen är produktens huvudväg och packar 1–3 handlingar; ränta/soliditet kan köras där utan att helarkivet ryms.
+Efter tillägget: `prefix_tokens=77888`, tak `65536 − 512 − 1800 = 63224`, `bound=n_ctx`, `use_full_corpus=False`. De nio ensamma rymdes (~47k). Dokumentvägen är produktens huvudväg och packar valda handlingar tills tokentaket nås (mätt 1–4 av 9 på BRF-1, `docs/evidence/brf1-locked-pack.md`); ränta/soliditet kan köras där utan att helarkivet ryms.
 
-## Inte kört än
+## Inte kört än mot J — kört mot Ekens egen
 
-Ränte-, soliditets- och tvådokumentsfrågorna är inte omkörda mot J. Arkivet finns. Frågorna väntar på en människa.
+Ränte-, soliditets- och tvådokumentsfrågorna kördes inte om mot J. De kördes 2026-08-17 mot Ekens *egen* årsredovisning och stadgar (`docs/evidence/brf1-eken-finance.md`, `docs/evidence/brf1-eken-egen.md`). J är kvar som digital baslinje från en annan förening: ränta och soliditet mot J gav 0–0 facit (numerisk grind), mot Ekens OCR-rapport 3–3 av 4.
 
-Det här är **inte** Ekens egen årsredovisning. En annan förenings offentliga rapport duger för att mäta ränta och soliditet. Den ska inte sättas framför Ekens styrelse. Styrelsesittningen väntar på deras egna handlingar.
+Ekens egen årsredovisning ligger i `DONT_PUSH_brf_stuff/eken-egen/`. Den är Print-to-PDF utan textlager och ingestas som `scanned`. Stadgarna från sajten är samma skanning som laptopens — identisk SHA-256, ingen digital tvilling.
 
-Stadgarna från laptopens tiofilersarkiv ingår inte i den här tian. Att lägga till dem under namn som `Stadgar …` skulle hamna mitt i A–I och flytta bokstäverna.
+Stadgarna från laptopens tiofilersarkiv ingår inte i tian med J. I `/tmp/brf1-store-eken` (nio plus fem egna) är de handling K och flyttar bokstäverna. BRF-1:s elva fall är orörda mot den nio handlingars store:n.

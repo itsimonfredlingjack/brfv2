@@ -2,7 +2,7 @@
 
 **Host:** agenntserver · **Modell:** Gemma 4 12B IT · **commit (svaren):** `4ee12d7` · loopback
 
-> **Enkörning med grind.** De 22 handklassade svaren är ett fryst ögonblick utan ny `ask()`. Grindkörningens 6/1/4 är en körning. Gällande tal: dokumentväg **6 facit** mot retrieval **5 facit** över fem körningar — `docs/evidence/brf1-variance.md`. **4 → 8** var enkörning utan grind.
+> **Enkörning med grind.** De 22 handklassade svaren är ett fryst ögonblick utan ny `ask()`. Grindkörningens 6/1/4 är en körning. Femkörning med räknetak tre: dokumentväg **6 facit** mot retrieval **5 facit** — `docs/evidence/brf1-variance.md`. Gällande dokumentväg efter frysta beskrivningar och packning till tokentaket: **8–8** — `docs/evidence/brf1-locked-pack.md`. **4 → 8** var enkörning utan grind.
 
 R1:s fel är att svaret inte besvarar frågan, inte att det saknar förankring. LettuceDetect missade det (tokenöverlapp). Den här mätningen ger den lokala modellen frågan, de accepterade citaten och svaret, och frågar en sak: besvarar svaret frågan, givet citaten?
 

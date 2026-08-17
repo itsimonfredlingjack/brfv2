@@ -36,6 +36,8 @@ Felklass: **urval kapade facit som fjärde handling.** Inte «facit i prompten, 
 
 Katalogordningen (`casefold`) gör att namn-E och katalog-E inte är samma handling. Det är fotnot till taket, inte en andra felklass.
 
+Analysen bekräftades när taket togs bort: R5 packade de fyra, citerade E, facit i fem körningar (`docs/evidence/brf1-locked-pack.md`).
+
 ## Inte den klassen
 
 Om E hade packats och E s2 legat i utdragen hade `insufficient_data` varit svarsstegs-avstående. Det var inte fallet. De tre tidigare träffarna (enkörning utan grind) hade E i paketet.

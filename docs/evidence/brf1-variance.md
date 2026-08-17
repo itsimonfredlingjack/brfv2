@@ -4,6 +4,8 @@
 
 Samma elva fall, samma nio handlingar, samma beskrivningar som `docs/evidence/brf1-doc-path-desc.md`. Svarsdomaren är inkopplad. Ingen default ändrades.
 
+> **Före borttaget räknetak.** 6–6 är femkörning med `MAX_FULL_DOCUMENTS=3`. Gällande dokumentväg efter frysta beskrivningar och packning till tokentaket: **8–8** — `docs/evidence/brf1-locked-pack.md`. Retrieval 5–5 nedan är oförändrad här.
+
 Sampling: `temperature: 0` i requesten, `top_p` och `seed` skickas inte. Serverns `--temp 1.0` vinns över. Se `docs/evidence/brf1-sampling.md`. Femkörningen *är* mätningen vid noll. Ingen andra matris.
 
 Måttet är treutfall mot facithandling (`verifierat_i_facit` / `verifierat_i_fel_handling` / `vägrad`), samma som grindkörningen. Det är inte det handklassade fyrutfallet (besvarar / ofullständigt / fel handling / vägrad).
@@ -17,7 +19,7 @@ Måttet är treutfall mot facithandling (`verifierat_i_facit` / `verifierat_i_fe
 | dokumentväg | **6–6** (6, 6, 6, 6, 6) | 1–1 | 4–4 |
 | retrieval | **5–5** (5, 5, 5, 5, 5) | 1–1 | 5–5 |
 
-Gällande tal: dokumentväg **6 facit** mot retrieval **5 facit** över fem körningar. Spannet är 6–6 mot 5–5.
+Gällande tal *i den här filen:* dokumentväg **6 facit** mot retrieval **5 facit** över fem körningar med räknetak tre. Spannet är 6–6 mot 5–5. Efter att taket togs bort: dokumentväg **8–8** (`docs/evidence/brf1-locked-pack.md`).
 
 **4 → 8** i `docs/evidence/brf1-doc-path-desc.md` var enkörning utan domargrind (handklassat). De tidigare talen är märkta där som just det.
 

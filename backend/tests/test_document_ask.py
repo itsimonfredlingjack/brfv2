@@ -1,5 +1,10 @@
 from app.answer import ask
-from app.document_ask import pack_documents, score_documents
+from app.document_ask import (
+    evaluate_document_path,
+    pack_documents,
+    parse_selected_letters,
+    score_documents,
+)
 from app.llm import FakeLLM
 from app.schemas import RetrievalHit
 from app.store import Store
@@ -125,6 +130,62 @@ def test_packer_skips_later_too_large_keeps_top(tmp_path):
     assert names[0] == "top.pdf"
     assert "huge.pdf" not in names
     assert "third.pdf" in names
+
+
+def test_parse_selected_letters_keeps_fourth():
+    raw = '{"documents": ["C", "D", "E", "F"]}'
+    assert parse_selected_letters(raw, {"C", "D", "E", "F", "G"}) == ["C", "D", "E", "F"]
+
+
+def test_packer_keeps_four_when_they_fit(tmp_path):
+    st = Store(data_dir=tmp_path)
+    for name in ("a.pdf", "b.pdf", "c.pdf", "d.pdf"):
+        st.add_document(name, build_pdf([[(f"{name} only", 72, 100)]]))
+    scores = score_documents(
+        [
+            _score_named(st, "a.pdf", 1.0),
+            _score_named(st, "b.pdf", 0.9),
+            _score_named(st, "c.pdf", 0.8),
+            _score_named(st, "d.pdf", 0.7),
+        ]
+    )
+    decision = pack_documents(
+        scores=scores,
+        chunks=st.chunks,
+        documents=st.documents,
+        runtime=StubRuntime(),
+        system="sys",
+        n_ctx=16384,
+        response_budget=5,
+        threshold=None,
+    )
+    assert decision.use_documents is True
+    assert [st.documents[i].name for i in decision.document_ids] == [
+        "a.pdf",
+        "b.pdf",
+        "c.pdf",
+        "d.pdf",
+    ]
+
+
+def test_document_path_packs_four_selected_letters(tmp_path):
+    st = Store(data_dir=tmp_path)
+    for name in ("a.pdf", "b.pdf", "c.pdf", "d.pdf"):
+        st.add_document(name, build_pdf([[(f"{name} only", 72, 100)]]))
+    _set_descriptions(st)
+    fake = FakeLLM([{"documents": ["A", "B", "C", "D"]}])
+    decision = evaluate_document_path(
+        question="Vad star det?",
+        index=st.index,
+        chunks=st.chunks,
+        documents=st.documents,
+        runtime=StubRuntime(),
+        settings=st.settings,
+        provider=fake,
+        store=st,
+    )
+    assert decision.use_documents is True
+    assert len(decision.document_ids) == 4
 
 
 def test_packer_threshold_is_ignored(tmp_path):

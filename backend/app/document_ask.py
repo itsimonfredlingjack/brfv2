@@ -1,9 +1,10 @@
 """Document-level selection and packing for the third ask() path.
 
-Product selection is the local model over cached regulatory descriptions
-(1–3 documents). Max fused score is not a scorer here — it measures 1/11 on
-BRF-1 document pick and must not steer packing. `score_documents` remains for
-measurement-only U-shape / probe ordering.
+Product selection is the local model over cached regulatory descriptions.
+Packing follows the model's order until the token budget is reached — there
+is no separate document-count cap. Max fused score is not a scorer here —
+it measures 1/11 on BRF-1 document pick and must not steer packing.
+`score_documents` remains for measurement-only U-shape / probe ordering.
 """
 
 from __future__ import annotations
@@ -18,8 +19,6 @@ from .llm import extract_json_object
 from .schemas import Chunk, DocumentMeta, RetrievalHit
 
 logger = logging.getLogger("brf.document_ask")
-
-MAX_FULL_DOCUMENTS = 3
 
 
 @dataclass(frozen=True)
@@ -114,15 +113,11 @@ def parse_selected_letters(raw: str, valid: set[str]) -> list[str]:
             letter = item.strip().upper()
             if letter in valid and letter not in out:
                 out.append(letter)
-            if len(out) >= MAX_FULL_DOCUMENTS:
-                break
         if out:
             return out
     for letter in re.findall(r"\b([A-Z]{1,2})\b", raw.upper()):
         if letter in valid and letter not in out:
             out.append(letter)
-        if len(out) >= MAX_FULL_DOCUMENTS:
-            break
     return out
 
 
@@ -133,7 +128,7 @@ def select_documents_by_description(
     provider,
     model: str,
 ) -> list[str]:
-    """Return document ids, 1–3, in the model's order. Empty = cannot select."""
+    """Return document ids in the model's order. Empty = cannot select."""
     entries = catalog_entries(documents)
     if not entries:
         return []
@@ -223,21 +218,20 @@ def pack_documents(
     packed: list[str] = []
     prefix_tokens: int | None = None
     for i, row in enumerate(scores):
-        if len(packed) >= MAX_FULL_DOCUMENTS:
-            break
         candidate = packed + [row.document_id]
-        prefix_tokens = _prefix_tokens(candidate, chunks, documents, runtime, system)
-        fits = prefix_tokens + QUESTION_RESERVE_TOKENS + response_budget <= n_ctx
+        candidate_tokens = _prefix_tokens(candidate, chunks, documents, runtime, system)
+        fits = candidate_tokens + QUESTION_RESERVE_TOKENS + response_budget <= n_ctx
         if i == 0 and not fits:
             logger.info(
                 "document_ask bound=top_document_n_ctx n_docs=0 prefix_tokens=%s top_max=%s top_n_chunks=%s",
-                prefix_tokens,
+                candidate_tokens,
                 row.max_score,
                 row.n_matching_chunks,
             )
-            return PackDecision(False, "top_document_n_ctx", [], scores, prefix_tokens)
+            return PackDecision(False, "top_document_n_ctx", [], scores, candidate_tokens)
         if fits:
             packed = candidate
+            prefix_tokens = candidate_tokens
 
     logger.info(
         "document_ask bound=fits n_docs=%s prefix_tokens=%s top_max=%s top_n_chunks=%s",

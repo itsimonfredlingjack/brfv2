@@ -79,12 +79,14 @@ class DocumentMeta(BaseModel):
     # real tenant's documents to the wrong corpus.
     corpus_origin: CorpusOrigin
     # What the document regulates (parties, amounts, questions it can answer),
-    # generated at ingestion / re-OCR by the local model. Not a summary of the
-    # text. None on documents that predate the field or when generation was
-    # skipped. description_fp is a hash of the extracted page text; a mismatch
-    # regenerates the description.
+    # generated once per extracted-text version by the local model. Not a
+    # summary of the text. None on documents that predate the field or when
+    # generation was skipped. description_fp is a hash of the extracted page
+    # text; a mismatch regenerates the description. description_previous keeps
+    # the last text so a behaviour change can be traced to a rewrite.
     description: str | None = None
     description_fp: str | None = None
+    description_previous: str | None = None
 
 
 class RetrievalHit(BaseModel):
