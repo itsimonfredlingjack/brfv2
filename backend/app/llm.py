@@ -294,6 +294,24 @@ def _is_judge_system(system: str) -> bool:
     return system.startswith("Du är en domare.")
 
 
+def _is_refusal_help_system(system: str) -> bool:
+    return system.startswith("Du säger vilken sorts handling") or system.startswith(
+        "Du matchar en handlingssort"
+    )
+
+
+def _is_kind_payload(response: dict | str) -> bool:
+    if isinstance(response, dict):
+        return "kind" in response and "insufficient_data" not in response
+    return False
+
+
+def _is_match_payload(response: dict | str) -> bool:
+    if isinstance(response, dict):
+        return "matches" in response and "insufficient_data" not in response
+    return False
+
+
 def _is_judge_payload(response: dict | str) -> bool:
     if isinstance(response, dict):
         return "utfall" in response
@@ -310,7 +328,11 @@ class FakeLLM:
         self.calls: list[dict] = []
 
     def non_judge_calls(self) -> list[dict]:
-        return [c for c in self.calls if not _is_judge_system(c["system"])]
+        return [
+            c
+            for c in self.calls
+            if not _is_judge_system(c["system"]) and not _is_refusal_help_system(c["system"])
+        ]
 
     def complete(self, system: str, user: str, *, max_tokens: int, model: str) -> str:
         self.calls.append({"system": system, "user": user, "max_tokens": max_tokens, "model": model})
@@ -319,6 +341,16 @@ class FakeLLM:
                 r = self._responses.pop(0)
                 return r if isinstance(r, str) else json.dumps(r, ensure_ascii=False)
             return json.dumps({"utfall": "besvarar"}, ensure_ascii=False)
+        if system.startswith("Du säger vilken sorts handling"):
+            if self._responses and _is_kind_payload(self._responses[0]):
+                r = self._responses.pop(0)
+                return r if isinstance(r, str) else json.dumps(r, ensure_ascii=False)
+            return json.dumps({"kind": ""}, ensure_ascii=False)
+        if system.startswith("Du matchar en handlingssort"):
+            if self._responses and _is_match_payload(self._responses[0]):
+                r = self._responses.pop(0)
+                return r if isinstance(r, str) else json.dumps(r, ensure_ascii=False)
+            return json.dumps({"matches": []}, ensure_ascii=False)
         if not self._responses:
             raise LLMError("FakeLLM har inga fler svar.")
         r = self._responses.pop(0)
@@ -360,6 +392,10 @@ class DeterministicTestLLM:
             time.sleep(delay_ms / 1000)
         if _is_judge_system(system):
             return json.dumps({"utfall": "besvarar"}, ensure_ascii=False)
+        if system.startswith("Du säger vilken sorts handling"):
+            return json.dumps({"kind": ""}, ensure_ascii=False)
+        if system.startswith("Du matchar en handlingssort"):
+            return json.dumps({"matches": []}, ensure_ascii=False)
 
         question_match = re.search(r"^FRÅGA:\s*(.*?)\n\nUTDRAG:", user, re.DOTALL)
         if not question_match:

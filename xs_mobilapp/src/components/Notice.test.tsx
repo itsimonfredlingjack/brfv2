@@ -28,6 +28,18 @@ describe('RefusalCard', () => {
     expect(screen.getByText('Inget svar visas utan belägg.')).toBeInTheDocument()
   })
 
+  it('shows backend refusal prose when the refusal is the answer', () => {
+    render(
+      <RefusalCard
+        reason="insufficient_data"
+        rejected={[]}
+        answer="Jag läste Teknisk förvaltning.pdf. Svaret står inte i dem."
+      />,
+    )
+    expect(screen.getByText(/Jag läste Teknisk förvaltning.pdf/)).toBeInTheDocument()
+    expect(screen.queryByText(/Dokumenten innehåller inte svaret/)).not.toBeInTheDocument()
+  })
+
   it('announces a refusal as status, not as an error', () => {
     render(<RefusalCard reason="low_relevance" rejected={[]} />)
     expect(screen.getByRole('status')).toBeInTheDocument()

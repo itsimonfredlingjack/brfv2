@@ -42,11 +42,15 @@ export function Notice({
 export function RefusalCard({
   reason,
   rejected,
+  answer,
 }: {
   reason: RefusalReason | null
   rejected: RejectedCitation[]
+  /** Backend prose when the refusal itself is the answer. */
+  answer?: string
 }) {
   const copy = refusalCopy(reason)
+  const body = answer?.trim() || copy.body
 
   return (
     <Notice
@@ -54,7 +58,7 @@ export function RefusalCard({
       title={copy.title}
       footer={<div className="notice__promise">{GROUNDING_PROMISE}</div>}
     >
-      <p>{copy.body}</p>
+      <p>{body}</p>
       {copy.next && <p style={{ marginTop: 'var(--s2)', color: 'var(--ink-2)' }}>{copy.next}</p>}
 
       {rejected.length > 0 && (

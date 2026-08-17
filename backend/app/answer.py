@@ -38,6 +38,7 @@ from .answer_judge import (
 from .llm import LLMError, LLMFormatError, LLMProvider, parse_llm_json, pick_provider
 from .linked_context import append_linked_table_legends
 from .numeric_grounding import NumericGroundingResult, check_numeric_grounding, describe_mismatch
+from .refusal_help import enrich_insufficient_refusal
 from .rerank import rerank_chunks, reranker_available
 from .schemas import AskResponse, CitationOut, RejectedCitation, RetrievalHit, Settings
 from .store import Store
@@ -576,7 +577,13 @@ def _synthesize(
 
         insufficient = parsed["insufficient_data"]
         if insufficient and s.insufficientDataBehavior == "refuse":
-            message = parsed["answer"] or "Dokumenten innehåller inte tillräcklig information för att besvara frågan."
+            message = enrich_insufficient_refusal(
+                question=question,
+                hits=hits,
+                documents=documents,
+                provider=provider,
+                model=generation_model,
+            )
             return _refusal("insufficient_data", message, retrieval=hits, provider=provider.name, model=model)
 
         hit_scores = {h.chunk_id: h.score for h in hits}

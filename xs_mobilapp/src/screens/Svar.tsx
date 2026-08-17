@@ -81,7 +81,11 @@ export function Svar({ brfId, entryId }: { brfId: string; entryId: string }) {
 
           {entry.refusal ? (
             <div style={{ marginTop: 'var(--s4)' }}>
-              <RefusalCard reason={entry.refusalReason} rejected={entry.rejected} />
+              <RefusalCard
+                reason={entry.refusalReason}
+                rejected={entry.rejected}
+                answer={entry.answer}
+              />
             </div>
           ) : (
             <>
