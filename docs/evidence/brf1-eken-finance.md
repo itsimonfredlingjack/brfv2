@@ -35,7 +35,7 @@ Gällande Eken: **3 facit av 4** över fem körningar. Spannet är 3–3. Den en
 
 `n_packed` **1–3** av 14. Tokentaket kapade inget. Tvådokumentsfrågorna citerade stadgar **och** årsredovisning i alla fem — båda `source=scanned`. Revisionsberättelsen packades som tredje handling (digital) men citerades inte.
 
-Ränta vilar på OCR-textlagret av Print-to-PDF. Soliditet packade rätt handling och föll i den numeriska grinden (`2025` i reparationsförsöket — årtal, inte nyckeltal). Tvådokumentsfrågorna vilar på OCR på båda facithandlingarna.
+Ränta vilar på OCR-textlagret av Print-to-PDF. Soliditet packade rätt handling och föll i den numeriska grinden. Tvådokumentsfrågorna vilar på OCR på båda facithandlingarna.
 
 I OCR-texten fanns `soliditet` två gånger och `ränte*` sju. Stadgarna hade `kallelsetid` en gång, inte strängen `underhållsfond` / `avsättning`; fondfrågan citerade likväl båda handlingarna. Treutfallet säger inte att beloppet stämde.
 
@@ -46,12 +46,25 @@ I OCR-texten fanns `soliditet` två gånger och `ränte*` sju. Stadgarna hade `k
 | ränta | 0 | 0 | 5 | `numeric_grounding_failed` / `grounding_failed` | årsredovisning | 30 951 |
 | soliditet | 0 | 0 | 5 | `numeric_grounding_failed` | årsredovisning | 30 951 |
 
-Urvalet tog rätt handling. Svaret visades inte. Det här är **inte** OCR-isolering av samma dokument: annan förening, annat räkenskapsår, born-digital textlager. Det visar att den numeriska grinden fäller ränta/soliditet även utan OCR.
+Urvalet tog rätt handling. Svaret visades inte. Det här är **inte** OCR-isolering av samma dokument: annan förening, annat räkenskapsår, born-digital textlager.
+
+## Varför soliditet vägras
+
+Ett enskilt fall, första `ask()`-försöket (samma grind som femkörningen). Ingen produktändring.
+
+**Eken (OCR).** Modellens prosa: *Föreningens soliditet (96) är 79,0 för 2025.* Tal i prosan: `96`, `79,0`, `2025`. Accepterat citat: *Soliditet (96) 79,0 79,1 78,9 78,9*. Tal i citatet: `96`, `79,0`, `79,1`, `78,9`. Grinden fällde `2025`. `79,0` fanns i citatet och matchade.
+
+Det är inte en uträkning av eget kapital genom tillgångar — nyckeltalet stod i citatet. Det är inte heller formatering av `79,0`. Vägran är året, som inte fanns i det accepterade citatet. Reparationsförsöket upprepade samma prosa.
+
+**Digital årsredovisning, annan förening.** Modellens prosa: *Föreningens soliditet är 55 %.* Tal i prosan: `55 %` (procentflagga). Accepterat citat: *Soliditet¹, % 55 55 57 58*. Tal i citatet: `55`, `55`, `57`, `58` (utan procentflagga). Grinden fällde `55 %`. Värdet 55 fanns; `%` satt på kolumnrubriken, inte på talet.
+
+Det är den andra klassen: talet fanns men matchade inte — procenttecken. Grinden fäller ett avskrivet svar. Inte en uträkning.
+
+De två vägran är alltså inte samma felklass. Ingen av dem är att modellen räknade ut soliditeten.
 
 ## Vad som inte är mätt
 
-- Samma årsredovisning som skanning och som digitalt textlager. Ekens rapport *är* Print-to-PDF; den andra föreningens rapport är en annan fil.
-- Samma stadgar som skanning och digitalt födda. Identisk SHA-256, båda utan textlager (`docs/evidence/brf1-eken-egen.md`).
+- OCR mot digitalt textlager på **samma** dokument. Frågan är öppen, inte besvarad. Stadgarna från sajt och laptop är identiska skanningar (samma SHA-256, inget textlager). Ekens årsredovisning saknar textlager (Print-to-PDF). Den andra föreningens rapport är en annan fil.
 - Retrievalvägen. Bara dokumentvägen.
 - Handklassad svarsriktighet på de tre facit-fallen.
 

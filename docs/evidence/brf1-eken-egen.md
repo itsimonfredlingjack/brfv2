@@ -8,7 +8,7 @@ Fem offentliga handlingar från föreningens sajt. Org.nr och personnamn stannar
 
 Laptopens stadgar och sajtens stadgar har **identisk SHA-256**. Båda saknar textlager (11 sidor, 0 tecken, 11 bilder). Det är inte en digitalt född tvilling till en OCR-version. Det är samma skannade fil.
 
-Därför gick OCR-isoleringen inte att köra. De elva fallen (facit E och G, båda skannade avtal) har ingen digital motpart på sajten. Att lägga in stadgarna i det nio handlingars arkivet flyttar dessutom bokstäverna — G är inte längre parkeringsavtalet — så en omkörning av de elva mot «båda» hade inte mätt OCR. Den mätningen är **inte gjord**, och ska inte räknas som nollskillnad.
+Därför gick OCR-isoleringen inte att köra. De elva fallen (facit E och G, båda skannade avtal) har ingen digital motpart på sajten. Att lägga in stadgarna i det nio handlingars arkivet flyttar dessutom bokstäverna — G är inte längre parkeringsavtalet — så en omkörning av de elva mot «båda» hade inte mätt OCR. Den mätningen är **inte gjord**, och ska inte räknas som nollskillnad. OCR mot digitalt textlager på samma dokument är en öppen fråga, inte ett resultat.
 
 Åtta av de ursprungliga tio på laptopen är skanningar. Stadgarna hör dit. De tre sajthandlingarna som faktiskt har textlager är revisionsberättelsen och bofaktabladet; årsredovisningen är Print-to-PDF utan textlager (se nedan).
 
@@ -36,4 +36,4 @@ Den andra föreningens digitala årsredovisning (`Årsredovisning.pdf`, J i `/tm
 
 ## Elva fallen
 
-Orörda. Ingen digital tvilling, ingen omkörning mot två stadgeversioner. Gällande dokumentväg för de elva är fortfarande 8–8 (`docs/evidence/brf1-locked-pack.md`).
+Orörda. Ingen digital tvilling, ingen omkörning mot två stadgeversioner. Gällande dokumentväg för de elva är fortfarande 8–8 (`docs/evidence/brf1-locked-pack.md`). Skillnaden OCR mot digitalt född text på samma handling är inte isolerad.
